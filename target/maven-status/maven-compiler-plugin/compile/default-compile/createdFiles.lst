@@ -1,0 +1,7 @@
+com\gamematcher\constant\GameList.class
+com\gamematcher\entity\User.class
+com\gamematcher\constant\Role.class
+com\gamematcher\entity\SocialLogin.class
+com\gamematcher\constant\Provider.class
+com\gamematcher\GameMatcherApplication.class
+com\gamematcher\constant\UserStatus.class
