@@ -7,7 +7,7 @@ todos:
     status: completed
   - id: phase2-domain
     content: Game, MatchRecord, MatchRecordParticipant, MatchRecordEvaluation 엔티티 및 Repository 구현
-    status: in_progress
+    status: completed
   - id: phase3-rule-score
     content: 규칙 기반 점수·등급 엔진 (GameAnalyzer 전략 패턴) 구현
     status: pending
@@ -36,7 +36,7 @@ isProject: false
 | 5 | 2, 3, 4 | AIEvaluationService 통합, 비동기 트리거 |
 | 6 | 5 | Controller, OpenAPI, 팀 연동 포인트 |
 
-**패키지 경로**: `com.gamematcher` ( entity | repository | service.ai | controller | dto.stats )
+**패키지 경로**: `com.gamematcher` ( entity.ai.evaluation | repository.ai.evaluation | dto.ai.evaluation | constant.ai.evaluation | service.ai | controller )
 
 ---
 
@@ -45,8 +45,8 @@ isProject: false
 ### ✓ 필수
 
 - **Phase 2 선행**: `rawStats`용 DTO 구조(`BaseStatsDTO`, 게임별 DTO, `StatsConverter`)를 엔티티보다 먼저 확립. 이 구조 없이 진행 시 추후 전면 수정 필요.
-- **전략 패턴**: 게임별 분석 로직은 `GameAnalyzer` 인터페이스 + 구현체(`ValorantAnalyzer`, `LolAnalyzer` 등)로 분리. `RuleBasedScoreService` 단일 클래스 + if-else/switch 분기 **금지**.
-- **LLM Response Format 강제**: 프롬프트에서 `{"summary":"...","detailedComment":"..."}` 형태로 응답 형식 명시 후 파싱 → DTO 매핑.
+- **전략 패턴**: 게임별 분석 로직은 `GameAnalyzer` 인터페이스 + 구현체(`ValorantAnalyzer`, `LolAnalyzer`, `GenericAnalyzer` 등)로 분리. `RuleBasedScoreService` 단일 클래스 + if-else/switch 분기 **금지**.
+- **LLM Response Format 강제**: 프롬프트에서 `{"summary":"...","detailedComment":"..."}` 형태로 응답 형식 명시 + **한국어 응답 명시** 후 파싱 → DTO 매핑.
 - **LLM Fallback**: LLM 실패(타임아웃, 할당량 등) 시 규칙 기반 점수·등급만이라도 반환. `summary`/`detailedComment`는 null 또는 기본 문구.
 
 ### ✗ 금지
@@ -55,6 +55,7 @@ isProject: false
 - 게임별 로직을 한 클래스에서 if-else/switch로 분기하는 방식
 - LLM에 "평가해줘"만 요청하고 응답 형식을 강제하지 않는 방식
 - LLM 실패 시 전체 실패로 두는 방식 (Fallback 없음)
+- `@Column(columnDefinition = "clob")` 단독 사용 (H2 전용) → `@Lob @Column` 사용
 
 ---
 
@@ -73,11 +74,14 @@ isProject: false
 
 ```
 src/main/java/com/gamematcher/
-├── entity/          # User, SocialLogin (기존) + Game, MatchRecord, MatchRecordParticipant, MatchRecordEvaluation
-├── repository/      # GameRepository, MatchRecordRepository, MatchRecordParticipantRepository, MatchRecordEvaluationRepository
-├── dto/stats/       # BaseStatsDTO, ValorantStatsDTO, LolStatsDTO, StatsConverter
+├── entity/          # User, SocialLogin (기존)
+├── entity/ai/evaluation/ # Game, MatchRecord, MatchRecordParticipant, MatchRecordEvaluation
+├── repository/      # UserRepository (기존)
+├── repository/ai/evaluation/ # GameRepository, MatchRecordRepository, MatchRecordParticipantRepository, MatchRecordEvaluationRepository
+├── dto/ai/evaluation/    # BaseStatsDTO, ValorantStatsDTO, LolStatsDTO, GenericStatsDTO, StatsConverter
+├── constant/ai/evaluation/ # Grade, EvaluationStatus, MatchResult
 ├── service/ai/
-│   ├── analyzer/    # GameAnalyzer, ValorantAnalyzer, LolAnalyzer, AnalyzerFactory
+│   ├── analyzer/    # GameAnalyzer, ValorantAnalyzer, LolAnalyzer, GenericAnalyzer, AnalyzerFactory
 │   ├── LlmEvaluationService
 │   └── AIEvaluationService
 └── controller/      # EvaluationController (/api/evaluations/**)
@@ -98,7 +102,7 @@ src/main/java/com/gamematcher/
 
 | 파일/클래스 | 역할 |
 |-------------|------|
-| `com.gamematcher.dto.stats.BaseStatsDTO` | KDA, 승리 여부 등 공통 필드 추상화 |
+| `com.gamematcher.dto.ai.evaluation.BaseStatsDTO` | KDA, 승리 여부 등 공통 필드 추상화 |
 | `ValorantStatsDTO`, `LolStatsDTO` 등 | Jackson `@JsonTypeInfo`/`@JsonSubTypes`로 `GameList` enum과 매핑 |
 | `StatsConverter` 또는 `ObjectMapper` | `rawStats` JSON ↔ DTO 변환 일원화 |
 
@@ -109,13 +113,13 @@ src/main/java/com/gamematcher/
 **권장**:
 
 1. **BaseStatsDTO** - `@JsonTypeInfo(property = "game")`, `@JsonSubTypes`로 게임별 DTO 다형성
-2. **StatsConverter** - `toDto(String rawStats, GameList game) → BaseStatsDTO`, `toJson(BaseStatsDTO dto) → String`. ObjectMapper는 JsonSubTypes 설정된 것 사용
-3. **엔티티** - `rawStats`는 `@JdbcTypeCode(SqlTypes.JSON)` 또는 `columnDefinition = "jsonb"`로 DB에 JSON 저장
-4. **서비스** - `statsConverter.toDto(participant.getRawStats(), game)`로 한 번 변환 후 (`participant` = MatchRecordParticipant) `BaseStatsDTO`(또는 ValorantStatsDTO 등)로 타입 안전하게 사용. 파싱은 Converter 내부에서만 발생
+2. **StatsConverter** - `toDto(String rawStats, String gameCode) → BaseStatsDTO`, `toJson(BaseStatsDTO dto) → String`. ObjectMapper는 JsonSubTypes 설정된 것 사용
+3. **엔티티** - `rawStats`는 `@Lob @Column`으로 DB에 대용량 텍스트(TEXT/CLOB) 저장. JSON 타입 컬럼이 필요한 경우 `@JdbcTypeCode(SqlTypes.JSON)` 사용
+4. **서비스** - `statsConverter.toDto(participant.getRawStats(), game.getCode())`로 한 번 변환 후 (`participant` = MatchRecordParticipant) `BaseStatsDTO`(또는 ValorantStatsDTO 등)로 타입 안전하게 사용. 파싱은 Converter 내부에서만 발생
 
 ```java
 // StatsConverter 시그니처
-BaseStatsDTO toDto(String rawStats, GameList game);
+BaseStatsDTO toDto(String rawStats, String gameCode);
 String toJson(BaseStatsDTO dto);
 
 // 서비스 사용 예
@@ -127,15 +131,18 @@ int kills = stats.getKills();  // 타입 안전
 
 | 엔티티 | 패키지 | 핵심 필드 |
 |--------|--------|-----------|
-| Game | `com.gamematcher.entity` | id, name, code, statsSchema |
-| MatchRecord | `com.gamematcher.entity` | id, gameId FK, matchId, result, playedAt, rawData (JSON) |
-| MatchRecordParticipant | `com.gamematcher.entity` | id, matchRecordId FK, userId FK→User, role, rawStats (JSON) |
-| MatchRecordEvaluation | `com.gamematcher.entity` | id, participantId FK, status, score, grade, summary, detailedComment, evaluatedAt |
+| Game | `com.gamematcher.entity.ai.evaluation` | id, name, code, statsSchema |
+| MatchRecord | `com.gamematcher.entity.ai.evaluation` | id, gameId FK, matchId, result (MatchResult enum), playedAt, rawData (JSON) |
+| MatchRecordParticipant | `com.gamematcher.entity.ai.evaluation` | id, matchRecordId FK, userId FK→User, role, rawStats (`@Lob`) |
+| MatchRecordEvaluation | `com.gamematcher.entity.ai.evaluation` | id, participantId FK, status, score, grade, summary, detailedComment (`@Lob`), **createdAt**, evaluatedAt |
 
 - `MatchRecordParticipant.userId` → `User.id` FK
 - `Game.code` → `GameList` enum 값
-- `rawData`, `rawStats`: `@JdbcTypeCode(SqlTypes.JSON)` 또는 JSON 컬럼
-- `MatchRecordEvaluation.status`: PENDING | IN_PROGRESS | COMPLETED | FAILED
+- `rawData`: `@JdbcTypeCode(SqlTypes.JSON)` + `columnDefinition = "clob"` (H2 호환)
+- `rawStats`, `detailedComment`: `@Lob @Column` (H2/PostgreSQL/MySQL 모두 호환, `columnDefinition = "clob"` 단독 사용 금지)
+- `MatchRecord.result`: `MatchResult` enum (constant.ai.evaluation), `@Enumerated(EnumType.STRING)`
+- `MatchRecordEvaluation.status`: `EvaluationStatus` enum (constant.ai.evaluation)
+- `MatchRecordEvaluation.createdAt`: 평가 요청 시각 (PENDING 진입 시 설정, 소요 시간 추적용)
 
 ### Repository
 
@@ -153,13 +160,40 @@ int kills = stats.getKills();  // 타입 안전
 
 | 구성 요소 | 패키지 | 역할 |
 |-----------|--------|------|
-| GameAnalyzer | `com.gamematcher.service.ai.analyzer` | `calculateScore()`, `getGrade()`, `buildPrompt()` 등 공통 규격 |
+| GameAnalyzer | `com.gamematcher.service.ai.analyzer` | `calculateScore()`, `getGrade()`, `getSupportedGame()` 등 공통 규격 |
 | ValorantAnalyzer, LolAnalyzer | `com.gamematcher.service.ai.analyzer` | `GameList.VALORANT`, `LEAGUE_OF_LEGENDS` 대응 |
-| AnalyzerFactory | `com.gamematcher.service.ai.analyzer` | `gameCode`/`GameList` → 구현체 반환 (Spring `@Component`) |
+| GenericAnalyzer | `com.gamematcher.service.ai.analyzer` | 전용 Analyzer가 없는 게임(PUBG, APEX 등)의 범용 KDA 기반 분석 |
+| AnalyzerFactory | `com.gamematcher.service.ai.analyzer` | `gameCode` → 구현체 반환. 전용 Analyzer 없으면 GenericAnalyzer로 fallback |
+
+> **주의**: `GameAnalyzer`는 점수 계산 책임만 가짐. LLM 프롬프트 구성(`buildPrompt()`)은 Phase 4의 `LlmEvaluationService` 내부 또는 별도 `PromptBuilder`로 분리.
+
+#### AnalyzerFactory 빈 수집 전략 (권장)
+
+Spring이 `GameAnalyzer` 구현체 빈을 자동 수집하도록 `List<GameAnalyzer>` 생성자 주입 사용:
+
+```java
+@Component
+public class AnalyzerFactory {
+    private final Map<String, GameAnalyzer> analyzerMap;
+    private final GameAnalyzer genericAnalyzer;
+
+    public AnalyzerFactory(List<GameAnalyzer> analyzers, GenericAnalyzer genericAnalyzer) {
+        this.analyzerMap = analyzers.stream()
+            .filter(a -> !(a instanceof GenericAnalyzer))
+            .collect(Collectors.toMap(GameAnalyzer::getSupportedGame, Function.identity()));
+        this.genericAnalyzer = genericAnalyzer;
+    }
+
+    public GameAnalyzer getAnalyzer(String gameCode) {
+        return analyzerMap.getOrDefault(gameCode, genericAnalyzer);
+    }
+}
+```
 
 - **입력**: K/D/A, 승리 여부, 킬 참여율, 게임 시간 등 (게임별 DTO)
 - **산출**: 점수, 등급(S/A/B/C/D)
-- **점수 방식**: 0–100 범위로 제한하지 않고, **기준점 100**을 두고 전적에 따라 가감. 100 = 평균 수준, 좋은 전적이면 +보너스, 나쁜 전적이면 -패널티로 최종 점수 산출.
+- **점수 방식**: **기준점 100**을 두고 전적에 따라 가감. 100 = 평균 수준, 좋은 전적이면 +보너스, 나쁜 전적이면 -패널티로 최종 점수 산출.
+- **등급 기준**: D-69점, C-70~89점, B-90~119점, A-120~149점, S-150점~
 - **예시 로직**: `100(기준점) + (KDA 보너스/패널티) + (결과 보너스) + (트렌드 보너스)` → 결과에 따라 등급 매핑
 - 단위 테스트 작성
 
@@ -170,15 +204,13 @@ int kills = stats.getKills();  // 타입 안전
 ### 작업
 
 - `pom.xml`: OpenAI / Anthropic API 클라이언트 의존성
-- `LlmEvaluationService`: 프롬프트 구성 → API 호출 → **JSON 파싱** → DTO 매핑
-- **Response Format**: 프롬프트에 `{"summary":"...","detailedComment":"..."}` 명시
+- `LlmEvaluationService`: **프롬프트 구성(PromptBuilder 역할 포함)** → API 호출 → **JSON 파싱** → DTO 매핑
+- **Response Format**: 프롬프트에 아래 두 가지를 반드시 명시
+  - 응답 형식: `{"summary":"...","detailedComment":"..."}`
+  - 응답 언어: **한국어로 작성** 명시
 - **Fallback**: LLM 실패 시 규칙 기반 점수·등급만 반환, `summary`/`detailedComment`는 null 또는 기본 문구
 - API 키: `application.properties` 또는 `AI_API_KEY` 환경 변수
 - rate limit, retry, 타임아웃 처리
-
-### 비용 절감 (선택)
-
-- S/A/B 등급만 LLM 호출 등 필터링 또는 캐싱
 
 ---
 
@@ -223,9 +255,10 @@ ai.rule.llm-for-grades=S,A,B
 ## 10. 주의사항
 
 - **비용**: LLM 호출 비용 누적 → 등급 필터링·캐싱·일일 한도 권장
-- **다중 게임**: `rawStats` 스키마 문서화, 게임 추가 시 `Game` + `GameList` + Analyzer만 확장
+- **다중 게임**: `rawStats` 스키마 문서화, 게임 추가 시 `Game` + `GameList` + Analyzer만 확장. 전용 Analyzer 없으면 `GenericAnalyzer` 자동 적용
 - **비동기**: `@Async` 또는 메시지 큐로 응답 지연 최소화
 - **팀 연동**: 매치 기록은 매칭 모듈 등록·관리, 평가 트리거만 본 모듈 API로 연동
+- **DB 컬럼 타입**: 대용량 텍스트 필드는 `@Lob @Column` 사용. `columnDefinition = "clob"` 단독 사용 시 H2 전용이므로 운영 DB 전환 시 문제 발생
 
 ---
 
@@ -246,7 +279,7 @@ erDiagram
         Long id PK
         Long gameId FK
         String matchId
-        String result
+        MatchResult result "VICTORY/DEFEAT/DRAW"
         LocalDateTime playedAt
         String rawData "JSON"
     }
@@ -255,7 +288,7 @@ erDiagram
         Long matchRecordId FK
         Long userId FK
         String role
-        String rawStats "JSON"
+        String rawStats "Lob"
     }
     MatchRecordEvaluation {
         Long id PK
@@ -264,7 +297,8 @@ erDiagram
         Integer score
         String grade
         String summary
-        String detailedComment
+        String detailedComment "Lob"
+        LocalDateTime createdAt
         LocalDateTime evaluatedAt
     }
 ```
@@ -285,10 +319,10 @@ flowchart LR
         Parser[응답 파싱]
     end
     subgraph output [출력]
-        Score[점수 (기준점 100 가감)]
+        Score[점수 기준점 100 가감]
         Grade[등급 S/A/B/C/D]
-        Summary[한 줄 요약]
-        Comment[상세 코멘트]
+        Summary[한 줄 요약 한국어]
+        Comment[상세 코멘트 한국어]
     end
     MatchData --> RuleEngine
     MatchData --> PromptBuilder
