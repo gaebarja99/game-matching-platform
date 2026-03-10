@@ -4,7 +4,7 @@ Spring Boot 기반 Maven 프로젝트입니다.
 
 # Project Version
 
-1
+5
 
 ## 프로젝트 구조
 

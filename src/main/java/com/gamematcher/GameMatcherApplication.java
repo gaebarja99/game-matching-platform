@@ -10,3 +10,4 @@ public class GameMatcherApplication {
         SpringApplication.run(GameMatcherApplication.class, args);
     }
 }
+//.\mvnw.cmd spring-boot:run
