@@ -8,7 +8,7 @@ import com.gamematcher.constant.ai.evaluation.MatchResult;
 import com.gamematcher.dto.ai.evaluation.*;
 import com.gamematcher.entity.User;
 import com.gamematcher.entity.ai.evaluation.*;
-import com.gamematcher.repository.UserRepository;
+import com.gamematcher.repository.common.UserRepository;
 import com.gamematcher.repository.ai.evaluation.*;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;

@@ -262,50 +262,7 @@ ai.rule.llm-for-grades=S,A,B
 
 ---
 
-## 부록 A: 도메인 ER 다이어그램
-
-```mermaid
-erDiagram
-    Game ||--o{ MatchRecord : has
-    MatchRecord ||--o{ MatchRecordParticipant : contains
-    MatchRecordParticipant ||--o{ MatchRecordEvaluation : receives
-    Game {
-        Long id PK
-        String name
-        String code
-        String statsSchema
-    }
-    MatchRecord {
-        Long id PK
-        Long gameId FK
-        String matchId
-        MatchResult result "VICTORY/DEFEAT/DRAW"
-        LocalDateTime playedAt
-        String rawData "JSON"
-    }
-    MatchRecordParticipant {
-        Long id PK
-        Long matchRecordId FK
-        Long userId FK
-        String role
-        String rawStats "Lob"
-    }
-    MatchRecordEvaluation {
-        Long id PK
-        Long participantId FK
-        String status "PENDING/IN_PROGRESS/COMPLETED/FAILED"
-        Integer score
-        String grade
-        String summary
-        String detailedComment "Lob"
-        LocalDateTime createdAt
-        LocalDateTime evaluatedAt
-    }
-```
-
----
-
-## 부록 B: AI 파이프라인 플로우
+## 부록 A: AI 파이프라인 플로우
 
 ```mermaid
 flowchart LR

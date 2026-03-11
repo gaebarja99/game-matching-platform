@@ -37,7 +37,7 @@ public class MatchRecord {
     private LocalDateTime playedAt;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "raw_data", columnDefinition = "clob")
+    @Column(name = "raw_data", columnDefinition = "json")
     private Map<String, Object> rawData;
 
     public MatchRecord(Game game, String matchId, MatchResult result, LocalDateTime playedAt, Map<String, Object> rawData) {

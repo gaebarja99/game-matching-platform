@@ -1,0 +1,30 @@
+-------------------------------------------------------------------------------
+Test set: com.gamematcher.mapper.ValorantMatchMapperTest$ToEntityTest
+-------------------------------------------------------------------------------
+Tests run: 4, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.597 s <<< FAILURE! -- in com.gamematcher.mapper.ValorantMatchMapperTest$ToEntityTest
+com.gamematcher.mapper.ValorantMatchMapperTest$ToEntityTest.toEntity_playerData_mappedCorrectly -- Time elapsed: 0.143 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: "Sage"
+ but was: "Neon"
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at com.gamematcher.mapper.ValorantMatchMapperTest$ToEntityTest.toEntity_playerData_mappedCorrectly(ValorantMatchMapperTest.java:77)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+com.gamematcher.mapper.ValorantMatchMapperTest$ToEntityTest.toEntity_validDto_convertsToEntity -- Time elapsed: 0.157 s <<< FAILURE!
+org.opentest4j.AssertionFailedError: 
+
+expected: "8ccac288-a70f-40f0-bc7e-89069c750aa3"
+ but was: "d8d224b9-b56e-4be2-b235-d996fbe22bcf"
+	at java.base/jdk.internal.reflect.DirectConstructorHandleAccessor.newInstance(DirectConstructorHandleAccessor.java:62)
+	at java.base/java.lang.reflect.Constructor.newInstanceWithCaller(Constructor.java:502)
+	at com.gamematcher.mapper.ValorantMatchMapperTest$ToEntityTest.toEntity_validDto_convertsToEntity(ValorantMatchMapperTest.java:49)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+

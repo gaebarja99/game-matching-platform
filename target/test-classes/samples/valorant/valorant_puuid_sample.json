@@ -1,0 +1,18 @@
+{
+  "status": 200,
+  "data": {
+    "puuid": "a43bf7f7-c60a-54b6-99fc-60517d1e13e8",
+    "region": "ap",
+    "account_level": 515,
+    "name": "WelcometotheShow",
+    "tag": "1111",
+    "card": {
+      "small": "https://media.valorant-api.com/playercards/a7e78a56-4557-383e-72a1-95ae97bcf2c1/smallart.png",
+      "large": "https://media.valorant-api.com/playercards/a7e78a56-4557-383e-72a1-95ae97bcf2c1/largeart.png",
+      "wide": "https://media.valorant-api.com/playercards/a7e78a56-4557-383e-72a1-95ae97bcf2c1/wideart.png",
+      "id": "a7e78a56-4557-383e-72a1-95ae97bcf2c1"
+    },
+    "last_update": "0 minutes ago",
+    "last_update_raw": 1773207667
+  }
+}
