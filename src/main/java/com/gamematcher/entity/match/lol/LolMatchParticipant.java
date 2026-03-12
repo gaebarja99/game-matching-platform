@@ -28,16 +28,18 @@ public class LolMatchParticipant {
     @Column(name = "participant_id", nullable = false)
     private Integer participantId;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 36)
     private String puuid;
 
     @Column(name = "summoner_id", length = 100)
     private String summonerId;
 
-    @Column(name = "riot_id_game_name", length = 100)
+    /** Riot Game Name: 3~16자 (한글·일본어 등 Unicode 지원) */
+    @Column(name = "riot_id_game_name", length = 20)
     private String riotIdGameName;
 
-    @Column(name = "riot_id_tagline", length = 20)
+    /** Riot Tag Line: 3~5자 (한글·일본어 등 Unicode 지원) */
+    @Column(name = "riot_id_tagline", length = 10)
     private String riotIdTagline;
 
     @Column(name = "champion_id")

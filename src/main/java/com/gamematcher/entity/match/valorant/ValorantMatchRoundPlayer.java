@@ -29,13 +29,14 @@ public class ValorantMatchRoundPlayer {
     @JoinColumn(name = "round_id", nullable = false)
     private ValorantMatchRound round;
 
-    @Column(name = "player_puuid", nullable = false, length = 100)
+    @Column(name = "player_puuid", nullable = false, length = 36)
     private String playerPuuid;
 
-    @Column(name = "player_display_name", length = 100)
+    /** Riot ID 표시명: GameName#TagLine 최대 22자 (한글·일본어 등 Unicode) */
+    @Column(name = "player_display_name", length = 50)
     private String playerDisplayName;
 
-    @Column(name = "player_team", length = 20)
+    @Column(name = "player_team", length = 100)
     private String playerTeam;
 
     private Integer damage;

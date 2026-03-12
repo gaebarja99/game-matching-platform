@@ -2,9 +2,11 @@ package com.gamematcher.dto.ai.evaluation;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
+import com.gamematcher.constant.ai.evaluation.MatchResult;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 /**
  * 게임별 전적 데이터 공통 추상화.
@@ -19,12 +21,13 @@ import lombok.Setter;
     defaultImpl = GenericStatsDTO.class
 )
 @JsonSubTypes({
-    @JsonSubTypes.Type(value = ValorantStatsDTO.class, name = "VALORANT"),
+    @JsonSubTypes.Type(value = ValorantMatchStatsDTO.class, name = "VALORANT"),
     @JsonSubTypes.Type(value = LolStatsDTO.class, name = "LEAGUE_OF_LEGENDS"),
 })
 @Getter
 @Setter
 @NoArgsConstructor
+@SuperBuilder
 public abstract class BaseStatsDTO {
 
     private String game;
@@ -32,13 +35,13 @@ public abstract class BaseStatsDTO {
     private int kills;
     private int deaths;
     private int assists;
-    private boolean won;
+    private MatchResult result;
 
-    protected BaseStatsDTO(String game, int kills, int deaths, int assists, boolean won) {
+    protected BaseStatsDTO(String game, int kills, int deaths, int assists, MatchResult result) {
         this.game = game;
         this.kills = kills;
         this.deaths = deaths;
         this.assists = assists;
-        this.won = won;
+        this.result = result;
     }
 }

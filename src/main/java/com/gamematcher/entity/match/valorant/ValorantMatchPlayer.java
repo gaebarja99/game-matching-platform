@@ -26,27 +26,29 @@ public class ValorantMatchPlayer {
     @JoinColumn(name = "match_id", nullable = false)
     private ValorantMatch match;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 36)
     private String puuid;
 
-    @Column(length = 100)
+    /** Riot Game Name: 3~16자 (한글·일본어 등 Unicode 지원) */
+    @Column(length = 20)
     private String name;
 
-    @Column(length = 50)
+    /** Riot Tag Line: 3~5자 (한글·일본어 등 Unicode 지원) */
+    @Column(length = 10)
     private String tag;
 
-    @Column(length = 20)
+    @Column(length = 100)
     private String team;
 
-    @Column(length = 50)
-    private String character;
+    @Column(name = "agent", length = 50)
+    private String agent;
 
     private Integer level;
 
     @Column(name = "current_tier")
     private Integer currentTier;
 
-    @Column(name = "current_tier_patched", length = 20)
+    @Column(name = "current_tier_patched", length = 50)
     private String currentTierPatched;
 
     private Integer kills;

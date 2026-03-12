@@ -4,9 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamematcher.config.api.ValorantApiProperties;
 import com.gamematcher.dto.valorant.ValorantMatchApiResponse;
 import com.gamematcher.dto.valorant.ValorantMatchDetailDto;
-import com.gamematcher.entity.match.valorant.ValorantMatch;
-import com.gamematcher.mapper.ValorantMatchMapper;
-import com.gamematcher.repository.match.ValorantMatchRepository;
+import com.gamematcher.dto.valorant.ValorantPuuidApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
@@ -25,10 +23,44 @@ import org.springframework.web.util.UriComponentsBuilder;
 public class ValorantApiService {
 
     private final ValorantApiProperties valorantApiProperties;
-    private final ValorantMatchRepository valorantMatchRepository;
-    private final ValorantMatchMapper valorantMatchMapper;
+    private final ValorantMatchService valorantMatchService;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
+
+    /**
+     * Henrik API로 name+tag에서 puuid 조회
+     * @param name Riot Game Name
+     * @param tag Riot Tag Line
+     * @return 계정 정보 (puuid, region, name, tag 등)
+     */
+    public ValorantPuuidApiResponse getAccountByNameTag(String name, String tag) {
+        String url = UriComponentsBuilder
+                .fromHttpUrl(valorantApiProperties.getBaseUrl())
+                .path("/valorant/v1/account/{name}/{tag}")
+                .buildAndExpand(name, tag)
+                .encode()
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        if (valorantApiProperties.hasApiKey()) {
+            headers.set("Authorization", valorantApiProperties.getApiKey());
+        }
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    String.class
+            );
+            return objectMapper.readValue(response.getBody(), ValorantPuuidApiResponse.class);
+        } catch (HttpStatusCodeException e) {
+            throw new RuntimeException("Valorant 계정 API 호출 실패: " + e.getStatusCode() + " / " + e.getResponseBodyAsString());
+        } catch (Exception e) {
+            throw new RuntimeException("Valorant 계정 조회 오류: " + e.getMessage(), e);
+        }
+    }
 
     /**
      * 지정 puuid의 최근 매치를 API에서 조회하여 DB에 저장
@@ -66,24 +98,7 @@ public class ValorantApiService {
                 return;
             }
 
-            int saved = 0;
-            for (ValorantMatchDetailDto matchDto : apiResponse.getData()) {
-                if (saved >= count) break;
-
-                if (matchDto.getMetadata() == null || matchDto.getMetadata().getMatchId() == null) {
-                    continue;
-                }
-                String matchId = matchDto.getMetadata().getMatchId();
-                if (valorantMatchRepository.existsByMatchId(matchId)) {
-                    continue;
-                }
-
-                ValorantMatch match = valorantMatchMapper.toEntity(matchDto);
-                if (match != null) {
-                    valorantMatchRepository.save(match);
-                    saved++;
-                }
-            }
+            valorantMatchService.saveMatches(apiResponse.getData(), count);
         } catch (HttpStatusCodeException e) {
             throw new RuntimeException("Valorant API 호출 실패: " + e.getStatusCode() + " / " + e.getResponseBodyAsString());
         } catch (Exception e) {

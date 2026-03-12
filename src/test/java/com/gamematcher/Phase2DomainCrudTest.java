@@ -75,10 +75,17 @@ class Phase2DomainCrudTest {
             new MatchRecord(game, "match-v1", MatchResult.VICTORY, LocalDateTime.now(), null)
         );
 
-        ValorantStatsDTO stats = new ValorantStatsDTO(
-            "VALORANT", 20, 5, 10, true,
-            13, 24, 8, 40
-        );
+        ValorantMatchStatsDTO stats = ValorantMatchStatsDTO.builder()
+                .game("VALORANT")
+                .kills(20)
+                .deaths(5)
+                .assists(10)
+                .result(MatchResult.VICTORY)
+                .roundsWon(13)
+                .roundsPlayed(24)
+                .headShots(8)
+                .totalShots(40)
+                .build();
         String rawStatsJson = statsConverter.toJson(stats);
 
         MatchRecordParticipant participant = new MatchRecordParticipant(record, user, "Duelist", rawStatsJson);
@@ -86,16 +93,16 @@ class Phase2DomainCrudTest {
 
         assertThat(saved.getRawStats()).isNotNull();
         BaseStatsDTO dto = statsConverter.toDto(saved.getRawStats(), game.getCode());
-        assertThat(dto).isInstanceOf(ValorantStatsDTO.class);
+        assertThat(dto).isInstanceOf(ValorantMatchStatsDTO.class);
         assertThat(dto.getKills()).isEqualTo(20);
-        assertThat(((ValorantStatsDTO) dto).getRoundsWon()).isEqualTo(13);
+        assertThat(((ValorantMatchStatsDTO) dto).getRoundsWon()).isEqualTo(13);
     }
 
     @Test
     @DisplayName("LolStatsDTO - JSON 직렬화/역직렬화")
     void lolStatsConverterRoundTrip() {
         LolStatsDTO original = new LolStatsDTO(
-            "LEAGUE_OF_LEGENDS", 8, 2, 15, true,
+            "LEAGUE_OF_LEGENDS", 8, 2, 15, MatchResult.VICTORY,
             12500, 180, 25000L, 45, 32
         );
         String json = statsConverter.toJson(original);
@@ -140,7 +147,7 @@ class Phase2DomainCrudTest {
         );
         User user = createTestUser();
 
-        GenericStatsDTO stats = new GenericStatsDTO("NEW_GAME_2025", 5, 3, 2, true);
+        GenericStatsDTO stats = new GenericStatsDTO("NEW_GAME_2025", 5, 3, 2, MatchResult.VICTORY);
         String rawStatsJson = statsConverter.toJson(stats);
         MatchRecordParticipant participant = participantRepository.save(
             new MatchRecordParticipant(record, user, "Attacker", rawStatsJson)

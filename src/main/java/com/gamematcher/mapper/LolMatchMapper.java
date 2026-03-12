@@ -105,8 +105,13 @@ public class LolMatchMapper {
         entity.setMatch(match);
         entity.setTeamId(t.getTeamId() != null ? t.getTeamId() : 0);
         entity.setWin(Boolean.TRUE.equals(t.getWin()));
-        entity.setBans(t.getBans());
-        entity.setObjectives(t.getObjectives());
+        try {
+            entity.setBans(t.getBans() != null ? objectMapper.writeValueAsString(t.getBans()) : null);
+            entity.setObjectives(t.getObjectives() != null ? objectMapper.writeValueAsString(t.getObjectives()) : null);
+        } catch (Exception e) {
+            entity.setBans(null);
+            entity.setObjectives(null);
+        }
         return entity;
     }
 
@@ -123,16 +128,16 @@ public class LolMatchMapper {
         if (dto.getInfo() != null) {
             entity.setFrameInterval(dto.getInfo().getFrameInterval());
             entity.setEndOfGameResult(dto.getInfo().getEndOfGameResult());
-            entity.setTimelineInfo(toTimelineInfoMap(dto.getInfo()));
+            entity.setTimelineInfo(toTimelineInfoJson(dto.getInfo()));
         }
 
         return entity;
     }
 
-    /** LolMatchTimelineDetailDto.Info → Map (JSON 저장용) */
-    private Object toTimelineInfoMap(LolMatchTimelineDetailDto.Info info) {
+    /** LolMatchTimelineDetailDto.Info → JSON 문자열 저장용 */
+    private String toTimelineInfoJson(LolMatchTimelineDetailDto.Info info) {
         try {
-            return objectMapper.convertValue(info, Map.class);
+            return info != null ? objectMapper.writeValueAsString(info) : null;
         } catch (Exception e) {
             return null;
         }
@@ -232,13 +237,17 @@ public class LolMatchMapper {
         LolMatchDetailDto.Info.Team team = new LolMatchDetailDto.Info.Team();
         team.setTeamId(t.getTeamId());
         team.setWin(t.isWin());
-        if (t.getBans() != null) {
-            team.setBans(objectMapper.convertValue(t.getBans(),
-                    objectMapper.getTypeFactory().constructCollectionType(List.class, LolMatchDetailDto.Info.Team.Ban.class)));
-        }
-        if (t.getObjectives() != null) {
-            team.setObjectives(objectMapper.convertValue(t.getObjectives(),
-                    objectMapper.getTypeFactory().constructMapType(Map.class, String.class, LolMatchDetailDto.Info.Team.Objective.class)));
+        try {
+            if (t.getBans() != null && !t.getBans().isBlank()) {
+                team.setBans(objectMapper.readValue(t.getBans(),
+                        objectMapper.getTypeFactory().constructCollectionType(List.class, LolMatchDetailDto.Info.Team.Ban.class)));
+            }
+            if (t.getObjectives() != null && !t.getObjectives().isBlank()) {
+                team.setObjectives(objectMapper.readValue(t.getObjectives(),
+                        objectMapper.getTypeFactory().constructMapType(Map.class, String.class, LolMatchDetailDto.Info.Team.Objective.class)));
+            }
+        } catch (Exception e) {
+            // JSON 파싱 실패 시 무시
         }
         return team;
     }

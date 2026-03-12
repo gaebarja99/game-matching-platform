@@ -28,13 +28,15 @@ public class RiotAccount {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false, unique = true, length = 100)
+    @Column(nullable = false, unique = true, length = 36)
     private String puuid;
 
-    @Column(name = "game_name", nullable = false, length = 100)
+    /** Riot Game Name: 3~16자 (한글·일본어 등 Unicode 지원) */
+    @Column(name = "game_name", nullable = false, length = 20)
     private String gameName;
 
-    @Column(name = "tag_line", nullable = false, length = 20)
+    /** Riot Tag Line: 3~5자 (한글·일본어 등 Unicode 지원) */
+    @Column(name = "tag_line", nullable = false, length = 10)
     private String tagLine;
 
     @Column(name = "created_at", nullable = false, updatable = false)

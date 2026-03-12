@@ -15,7 +15,8 @@ public class ValorantPlayerDto {
     private String tag;
     private String team;
     private int level;
-    private String character;
+    @JsonProperty("character")
+    private String agent;
 
     @JsonProperty("currenttier")
     private int currentTier;

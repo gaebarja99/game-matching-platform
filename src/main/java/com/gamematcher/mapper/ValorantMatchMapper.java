@@ -93,7 +93,7 @@ public class ValorantMatchMapper {
         entity.setName(p.getName());
         entity.setTag(p.getTag());
         entity.setTeam(p.getTeam());
-        entity.setCharacter(p.getCharacter());
+        entity.setAgent(p.getAgent());
         entity.setLevel(p.getLevel());
         entity.setCurrentTier(p.getCurrentTier());
         entity.setCurrentTierPatched(p.getCurrentTierPatched());
@@ -396,7 +396,7 @@ public class ValorantMatchMapper {
         dto.setName(p.getName());
         dto.setTag(p.getTag());
         dto.setTeam(p.getTeam());
-        dto.setCharacter(p.getCharacter());
+        dto.setAgent(p.getAgent());
         dto.setLevel(p.getLevel() != null ? p.getLevel() : 0);
         dto.setCurrentTier(p.getCurrentTier() != null ? p.getCurrentTier() : 0);
         dto.setCurrentTierPatched(p.getCurrentTierPatched());

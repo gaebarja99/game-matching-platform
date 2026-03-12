@@ -46,11 +46,11 @@ class ValorantMatchMapperTest {
 
             assertThat(entity).isNotNull();
             // metadata
-            assertThat(entity.getMatchId()).isEqualTo("8ccac288-a70f-40f0-bc7e-89069c750aa3");
-            assertThat(entity.getMap()).isEqualTo("Breeze");
-            assertThat(entity.getMode()).isEqualTo("Deathmatch");
-            assertThat(entity.getGameLength()).isEqualTo(322);
-            assertThat(entity.getRoundsPlayed()).isEqualTo(1);
+            assertThat(entity.getMatchId()).isEqualTo(sourceDto.getMetadata().getMatchId());
+            assertThat(entity.getMap()).isEqualTo(sourceDto.getMetadata().getMap());
+            assertThat(entity.getMode()).isEqualTo(sourceDto.getMetadata().getMode());
+            assertThat(entity.getGameLength()).isEqualTo(sourceDto.getMetadata().getGameLength());
+            assertThat(entity.getRoundsPlayed()).isEqualTo(sourceDto.getMetadata().getRoundsPlayed());
 
             // teams
             assertThat(entity.getRedRoundsWon()).isNotNull();
@@ -66,16 +66,17 @@ class ValorantMatchMapperTest {
         @DisplayName("플레이어 정보가 올바르게 매핑된다")
         void toEntity_playerData_mappedCorrectly() {
             ValorantMatch entity = mapper.toEntity(sourceDto);
+            var firstSourcePlayer = sourceDto.getPlayers().getAllPlayers().get(0);
 
             var firstPlayer = entity.getPlayers().stream()
-                    .filter(p -> "WelcometotheShow".equals(p.getName()))
+                    .filter(p -> firstSourcePlayer.getName().equals(p.getName()))
                     .findFirst()
                     .orElseThrow();
 
-            assertThat(firstPlayer.getPuuid()).isEqualTo("a43bf7f7-c60a-54b6-99fc-60517d1e13e8");
-            assertThat(firstPlayer.getTag()).isEqualTo("1111");
-            assertThat(firstPlayer.getCharacter()).isEqualTo("Sage");
-            assertThat(firstPlayer.getCurrentTierPatched()).isEqualTo("Unrated");
+            assertThat(firstPlayer.getPuuid()).isEqualTo(firstSourcePlayer.getPuuid());
+            assertThat(firstPlayer.getTag()).isEqualTo(firstSourcePlayer.getTag());
+            assertThat(firstPlayer.getAgent()).isEqualTo(firstSourcePlayer.getAgent());
+            assertThat(firstPlayer.getCurrentTierPatched()).isEqualTo(firstSourcePlayer.getCurrentTierPatched());
         }
 
         @Test
@@ -112,8 +113,8 @@ class ValorantMatchMapperTest {
 
             // metadata
             assertThat(dto.getMetadata()).isNotNull();
-            assertThat(dto.getMetadata().getMatchId()).isEqualTo("8ccac288-a70f-40f0-bc7e-89069c750aa3");
-            assertThat(dto.getMetadata().getMap()).isEqualTo("Breeze");
+            assertThat(dto.getMetadata().getMatchId()).isEqualTo(sourceDto.getMetadata().getMatchId());
+            assertThat(dto.getMetadata().getMap()).isEqualTo(sourceDto.getMetadata().getMap());
 
             // teams, players, rounds, kills
             assertThat(dto.getTeams()).isNotNull();

@@ -1,16 +1,24 @@
 package com.gamematcher.config;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamematcher.dto.lol.LolMatchDetailDto;
 import com.gamematcher.dto.lol.LolMatchTimelineDetailDto;
 import com.gamematcher.dto.valorant.ValorantMatchDetailDto;
-import com.gamematcher.entity.match.valorant.ValorantMatch;
-import com.gamematcher.mapper.ValorantMatchMapper;
-import com.gamematcher.repository.match.ValorantMatchRepository;
+import com.gamematcher.dto.valorant.ValorantMmrApiResponse;
+import com.gamematcher.dto.valorant.ValorantMmrHistoryApiResponse;
+import com.gamematcher.dto.valorant.ValorantPuuidApiResponse;
+import com.gamematcher.service.valorant.ValorantAccountService;
+import com.gamematcher.service.valorant.ValorantLifetimeJsonService;
+import com.gamematcher.service.valorant.ValorantLifetimeService;
+import com.gamematcher.service.valorant.ValorantMatchJsonService;
+import com.gamematcher.service.valorant.ValorantMatchJsonService.ValorantMatchJsonParseException;
+import com.gamematcher.service.valorant.ValorantMatchService;
+import com.gamematcher.service.valorant.ValorantMmrHistoryService;
+import com.gamematcher.service.valorant.ValorantMmrService;
 import com.gamematcher.service.lol.LolMatchJsonService;
 import com.gamematcher.service.lol.LolMatchJsonService.LolMatchJsonParseException;
 import com.gamematcher.service.lol.LolMatchService;
-import com.gamematcher.service.valorant.ValorantMatchJsonService;
-import com.gamematcher.service.valorant.ValorantMatchJsonService.ValorantMatchJsonParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.ApplicationArguments;
@@ -39,25 +47,38 @@ public class SampleDataLoader implements ApplicationRunner {
     /** 샘플 파일 경로 (기본: 프로젝트 루트 기준 src/test/resources/samples) */
     private static final String DEFAULT_SAMPLE_PATH = "src/test/resources/samples";
 
-    /** DB에 넣을 Valorant 매치 수 제한 (0 = 제한 없음) */
-    private static final int DEFAULT_VALORANT_MATCH_LIMIT = 5;
-
     private final ValorantMatchJsonService valorantMatchJsonService;
-    private final ValorantMatchMapper valorantMatchMapper;
-    private final ValorantMatchRepository valorantMatchRepository;
+    private final ValorantMatchService valorantMatchService;
+    private final ValorantAccountService valorantAccountService;
+    private final ValorantLifetimeJsonService valorantLifetimeJsonService;
+    private final ValorantLifetimeService valorantLifetimeService;
+    private final ValorantMmrService valorantMmrService;
+    private final ValorantMmrHistoryService valorantMmrHistoryService;
     private final LolMatchJsonService lolMatchJsonService;
     private final LolMatchService lolMatchService;
     private final Environment env;
 
+    private final ObjectMapper objectMapper = new ObjectMapper() {{
+        configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+    }};
+
     public SampleDataLoader(ValorantMatchJsonService valorantMatchJsonService,
-                            ValorantMatchMapper valorantMatchMapper,
-                            ValorantMatchRepository valorantMatchRepository,
+                            ValorantMatchService valorantMatchService,
+                            ValorantAccountService valorantAccountService,
+                            ValorantLifetimeJsonService valorantLifetimeJsonService,
+                            ValorantLifetimeService valorantLifetimeService,
+                            ValorantMmrService valorantMmrService,
+                            ValorantMmrHistoryService valorantMmrHistoryService,
                             LolMatchJsonService lolMatchJsonService,
                             LolMatchService lolMatchService,
                             Environment env) {
         this.valorantMatchJsonService = valorantMatchJsonService;
-        this.valorantMatchMapper = valorantMatchMapper;
-        this.valorantMatchRepository = valorantMatchRepository;
+        this.valorantMatchService = valorantMatchService;
+        this.valorantAccountService = valorantAccountService;
+        this.valorantLifetimeJsonService = valorantLifetimeJsonService;
+        this.valorantLifetimeService = valorantLifetimeService;
+        this.valorantMmrService = valorantMmrService;
+        this.valorantMmrHistoryService = valorantMmrHistoryService;
         this.lolMatchJsonService = lolMatchJsonService;
         this.lolMatchService = lolMatchService;
         this.env = env;
@@ -66,7 +87,6 @@ public class SampleDataLoader implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         String basePath = env.getProperty("sample.data.path", DEFAULT_SAMPLE_PATH);
-        int valorantLimit = env.getProperty("sample.valorant.match-limit", Integer.class, DEFAULT_VALORANT_MATCH_LIMIT);
 
         Path sampleDir = Path.of(System.getProperty("user.dir", "."), basePath);
         if (!Files.isDirectory(sampleDir)) {
@@ -74,54 +94,92 @@ public class SampleDataLoader implements ApplicationRunner {
             return;
         }
 
-        loadValorantSamples(sampleDir.resolve("valorant"), valorantLimit);
+        loadValorantSamples(sampleDir.resolve("valorant"));
         loadLolSamples(sampleDir.resolve("lol"));
     }
 
-    private void loadValorantSamples(Path valorantDir, int limit) {
-        Path file = valorantDir.resolve("valorant_match_sample.json");
-        if (!Files.isRegularFile(file)) {
-            log.info("[SampleDataLoader] Valorant 샘플 파일 없음: {}", file);
-            return;
+    /**
+     * Valorant 5종 샘플 JSON을 DB에 저장.
+     * 1. PUUID(계정) 2. Match 3. Lifetime 4. MMR 5. MMR History
+     * API 호출 없이 로컬 파일만 사용.
+     */
+    private void loadValorantSamples(Path valorantDir) {
+        String puuid = null;
+
+        // 1. valorant_puuid_sample.json → 계정(PUUID)
+        Path puuidFile = valorantDir.resolve("valorant_puuid_sample.json");
+        if (Files.isRegularFile(puuidFile)) {
+            try {
+                String json = Files.readString(puuidFile, StandardCharsets.UTF_8);
+                ValorantPuuidApiResponse response = objectMapper.readValue(json, ValorantPuuidApiResponse.class);
+                if (valorantAccountService.saveAccount(response) != null) {
+                    puuid = response.getData() != null ? response.getData().getPuuid() : null;
+                    log.info("[SampleDataLoader] Valorant PUUID(계정) 저장 완료");
+                }
+            } catch (Exception e) {
+                log.error("[SampleDataLoader] Valorant PUUID 샘플 로드 실패", e);
+            }
         }
 
-        try {
-            String json = Files.readString(file, StandardCharsets.UTF_8);
-            List<ValorantMatchDetailDto> matches = valorantMatchJsonService.parseMatchesFromApiResponse(json);
-
-            if (matches.isEmpty()) {
-                log.info("[SampleDataLoader] Valorant 샘플에 매치가 없습니다.");
-                return;
+        // 2. valorant_match_sample.json → 매치
+        Path matchFile = valorantDir.resolve("valorant_match_sample.json");
+        if (Files.isRegularFile(matchFile)) {
+            try {
+                String json = Files.readString(matchFile, StandardCharsets.UTF_8);
+                ValorantMatchDetailDto matchDto = valorantMatchJsonService.parseFirstMatch(json);
+                if (matchDto != null && valorantMatchService.saveMatch(matchDto) != null) {
+                    log.info("[SampleDataLoader] Valorant Match 저장 완료");
+                } else if (matchDto != null) {
+                    log.debug("[SampleDataLoader] Valorant Match 이미 존재");
+                }
+            } catch (ValorantMatchJsonParseException e) {
+                log.error("[SampleDataLoader] Valorant Match JSON 파싱 실패: {}", e.getMessage());
+            } catch (Exception e) {
+                log.error("[SampleDataLoader] Valorant Match 샘플 로드 실패", e);
             }
+        }
 
-            int saved = 0;
-            int max = limit > 0 ? Math.min(limit, matches.size()) : matches.size();
-
-            for (int i = 0; i < max; i++) {
-                ValorantMatchDetailDto dto = matches.get(i);
-                if (dto.getMetadata() == null || dto.getMetadata().getMatchId() == null) {
-                    continue;
-                }
-                String matchId = dto.getMetadata().getMatchId();
-                if (valorantMatchRepository.existsByMatchId(matchId)) {
-                    log.debug("[SampleDataLoader] 이미 존재하는 매치 건너뜀: {}", matchId);
-                    continue;
-                }
-
-                ValorantMatch entity = valorantMatchMapper.toEntity(dto);
-                if (entity != null) {
-                    valorantMatchRepository.save(entity);
-                    saved++;
-                    log.info("[SampleDataLoader] Valorant 매치 저장: {}", matchId);
-                }
+        // 3. valorant_lifetime_sample.json → Lifetime
+        Path lifetimeFile = valorantDir.resolve("valorant_lifetime_sample.json");
+        if (Files.isRegularFile(lifetimeFile)) {
+            try {
+                String json = Files.readString(lifetimeFile, StandardCharsets.UTF_8);
+                var dtos = valorantLifetimeJsonService.parseDataFromApiResponse(json);
+                int saved = valorantLifetimeService.saveRecords(dtos, 0);
+                log.info("[SampleDataLoader] Valorant Lifetime {} 건 저장 완료", saved);
+            } catch (ValorantLifetimeJsonService.ValorantLifetimeJsonParseException e) {
+                log.error("[SampleDataLoader] Valorant Lifetime JSON 파싱 실패: {}", e.getMessage());
+            } catch (Exception e) {
+                log.error("[SampleDataLoader] Valorant Lifetime 샘플 로드 실패", e);
             }
+        }
 
-            log.info("[SampleDataLoader] Valorant 샘플 {} 건 저장 완료", saved);
+        // 4. valorant_mmr_sample.json → MMR
+        Path mmrFile = valorantDir.resolve("valorant_mmr_sample.json");
+        if (Files.isRegularFile(mmrFile)) {
+            try {
+                String json = Files.readString(mmrFile, StandardCharsets.UTF_8);
+                ValorantMmrApiResponse response = objectMapper.readValue(json, ValorantMmrApiResponse.class);
+                if (valorantMmrService.saveMmr(response) != null) {
+                    puuid = response.getData() != null ? response.getData().getPuuid() : puuid;
+                    log.info("[SampleDataLoader] Valorant MMR 저장 완료");
+                }
+            } catch (Exception e) {
+                log.error("[SampleDataLoader] Valorant MMR 샘플 로드 실패", e);
+            }
+        }
 
-        } catch (ValorantMatchJsonParseException e) {
-            log.error("[SampleDataLoader] Valorant JSON 파싱 실패: {}", e.getMessage());
-        } catch (Exception e) {
-            log.error("[SampleDataLoader] Valorant 샘플 로드 실패", e);
+        // 5. valorant_mmr_history_sample.json → MMR History (puuid 필요)
+        Path mmrHistoryFile = valorantDir.resolve("valorant_mmr_history_sample.json");
+        if (Files.isRegularFile(mmrHistoryFile) && puuid != null && !puuid.isBlank()) {
+            try {
+                String json = Files.readString(mmrHistoryFile, StandardCharsets.UTF_8);
+                ValorantMmrHistoryApiResponse response = objectMapper.readValue(json, ValorantMmrHistoryApiResponse.class);
+                int saved = valorantMmrHistoryService.saveRecords(puuid, response, 0);
+                log.info("[SampleDataLoader] Valorant MMR History {} 건 저장 완료", saved);
+            } catch (Exception e) {
+                log.error("[SampleDataLoader] Valorant MMR History 샘플 로드 실패", e);
+            }
         }
     }
 

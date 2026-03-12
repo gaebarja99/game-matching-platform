@@ -32,7 +32,7 @@ public class ValorantMatchRound {
     @Column(name = "round_index", nullable = false)
     private Integer roundIndex;
 
-    @Column(name = "winning_team", length = 20)
+    @Column(name = "winning_team", length = 100)
     private String winningTeam;
 
     @Column(name = "end_type", length = 50)
@@ -50,7 +50,7 @@ public class ValorantMatchRound {
     @Column(name = "plant_time_in_round")
     private Integer plantTimeInRound;
 
-    @Column(name = "planted_by_puuid", length = 100)
+    @Column(name = "planted_by_puuid", length = 36)
     private String plantedByPuuid;
 
     @Column(name = "plant_location_x")
@@ -62,7 +62,7 @@ public class ValorantMatchRound {
     @Column(name = "defuse_time_in_round")
     private Integer defuseTimeInRound;
 
-    @Column(name = "defused_by_puuid", length = 100)
+    @Column(name = "defused_by_puuid", length = 36)
     private String defusedByPuuid;
 
     @Column(name = "defuse_location_x")

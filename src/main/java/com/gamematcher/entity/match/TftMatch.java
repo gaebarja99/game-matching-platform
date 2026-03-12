@@ -21,7 +21,7 @@ public class TftMatch {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false, length = 36)
     private String puuid;
 
     @Column(name = "match_id", nullable = false, length = 50)

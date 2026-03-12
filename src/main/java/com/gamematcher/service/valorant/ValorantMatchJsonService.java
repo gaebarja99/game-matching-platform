@@ -87,13 +87,19 @@ public class ValorantMatchJsonService {
         }
         try {
             var tree = objectMapper.readTree(json);
-            if (tree.has("data") && tree.get("data").isArray() && tree.get("data").size() > 0) {
-                return objectMapper.treeToValue(tree.get("data").get(0), ValorantMatchDetailDto.class);
+            if (tree.has("data")) {
+                var dataNode = tree.get("data");
+                if (dataNode.isArray() && dataNode.size() > 0) {
+                    return objectMapper.treeToValue(dataNode.get(0), ValorantMatchDetailDto.class);
+                }
+                if (dataNode.isObject()) {
+                    return objectMapper.treeToValue(dataNode, ValorantMatchDetailDto.class);
+                }
             }
             if (tree.has("metadata") && tree.has("players")) {
                 return objectMapper.treeToValue(tree, ValorantMatchDetailDto.class);
             }
-            throw new ValorantMatchJsonParseException("유효한 Valorant 전적 JSON 형식이 아닙니다 (data 배열 또는 metadata/players 필요)");
+            throw new ValorantMatchJsonParseException("유효한 Valorant 전적 JSON 형식이 아닙니다 (data 배열/객체 또는 metadata/players 필요)");
         } catch (IOException e) {
             throw new ValorantMatchJsonParseException("Valorant 전적 JSON 파싱 실패", e);
         }

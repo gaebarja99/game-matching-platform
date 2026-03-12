@@ -5,12 +5,9 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
-
 /**
  * LoL 매치 타임라인 (Riot Match-v5 Timeline)
- * frames 전체를 JSON으로 저장
+ * frames 전체를 JSON 문자열로 저장
  */
 @Entity
 @Table(name = "lol_match_timeline", uniqueConstraints = {
@@ -35,8 +32,7 @@ public class LolMatchTimeline {
     @Column(name = "end_of_game_result", length = 50)
     private String endOfGameResult;
 
-    /** info 전체 (frames, participants 등) - JSON */
-    @JdbcTypeCode(SqlTypes.JSON)
+    /** info 전체 (frames, participants 등) - JSON 문자열 */
     @Column(name = "timeline_info", columnDefinition = "json")
-    private Object timelineInfo;
+    private String timelineInfo;
 }

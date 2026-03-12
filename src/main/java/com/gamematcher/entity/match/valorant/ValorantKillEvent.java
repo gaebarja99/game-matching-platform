@@ -41,22 +41,24 @@ public class ValorantKillEvent {
     @Column(name = "kill_time_in_match")
     private Integer killTimeInMatch;
 
-    @Column(name = "killer_puuid", length = 100)
+    @Column(name = "killer_puuid", length = 36)
     private String killerPuuid;
 
-    @Column(name = "killer_display_name", length = 100)
+    /** Riot ID 표시명: GameName#TagLine 최대 22자 (한글·일본어 등 Unicode) */
+    @Column(name = "killer_display_name", length = 50)
     private String killerDisplayName;
 
-    @Column(name = "killer_team", length = 20)
+    @Column(name = "killer_team", length = 100)
     private String killerTeam;
 
-    @Column(name = "victim_puuid", length = 100)
+    @Column(name = "victim_puuid", length = 36)
     private String victimPuuid;
 
-    @Column(name = "victim_display_name", length = 100)
+    /** Riot ID 표시명: GameName#TagLine 최대 22자 (한글·일본어 등 Unicode) */
+    @Column(name = "victim_display_name", length = 50)
     private String victimDisplayName;
 
-    @Column(name = "victim_team", length = 20)
+    @Column(name = "victim_team", length = 100)
     private String victimTeam;
 
     @Column(name = "victim_death_x")

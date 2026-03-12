@@ -1,8 +1,10 @@
 package com.gamematcher.dto.ai.evaluation;
 
+import com.gamematcher.constant.ai.evaluation.MatchResult;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+import lombok.experimental.SuperBuilder;
 
 /**
  * 전용 DTO가 없는 게임용 범용 통계 DTO.
@@ -11,9 +13,10 @@ import lombok.Setter;
 @Getter
 @Setter
 @NoArgsConstructor
+@SuperBuilder
 public class GenericStatsDTO extends BaseStatsDTO {
 
-    public GenericStatsDTO(String game, int kills, int deaths, int assists, boolean won) {
-        super(game, kills, deaths, assists, won);
+    public GenericStatsDTO(String game, int kills, int deaths, int assists, MatchResult result) {
+        super(game, kills, deaths, assists, result);
     }
 }

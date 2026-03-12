@@ -26,12 +26,13 @@ public class ValorantKillAssistant {
     @JoinColumn(name = "kill_event_id", nullable = false)
     private ValorantKillEvent killEvent;
 
-    @Column(name = "assistant_puuid", nullable = false, length = 100)
+    @Column(name = "assistant_puuid", nullable = false, length = 36)
     private String assistantPuuid;
 
-    @Column(name = "assistant_display_name", length = 100)
+    /** Riot ID 표시명: GameName#TagLine 최대 22자 (한글·일본어 등 Unicode) */
+    @Column(name = "assistant_display_name", length = 50)
     private String assistantDisplayName;
 
-    @Column(name = "assistant_team", length = 20)
+    @Column(name = "assistant_team", length = 100)
     private String assistantTeam;
 }

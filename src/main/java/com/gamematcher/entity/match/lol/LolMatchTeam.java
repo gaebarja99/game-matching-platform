@@ -5,11 +5,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-import org.hibernate.annotations.JdbcTypeCode;
-import org.hibernate.type.SqlTypes;
-
-import java.util.Map;
-
 /**
  * LoL 매치 팀 정보 (1 매치 = 2 row)
  */
@@ -36,13 +31,11 @@ public class LolMatchTeam {
     @Column(nullable = false)
     private boolean win;
 
-    /** bans: [{championId, pickTurn}, ...] */
-    @JdbcTypeCode(SqlTypes.JSON)
+    /** bans: [{championId, pickTurn}, ...] JSON 문자열 */
     @Column(name = "bans", columnDefinition = "json")
-    private Object bans;
+    private String bans;
 
-    /** objectives: { "champion": {first, kills}, "tower": {...}, ... } */
-    @JdbcTypeCode(SqlTypes.JSON)
+    /** objectives: { "champion": {first, kills}, "tower": {...}, ... } JSON 문자열 */
     @Column(name = "objectives", columnDefinition = "json")
-    private Object objectives;
+    private String objectives;
 }
