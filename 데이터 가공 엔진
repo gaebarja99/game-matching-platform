@@ -14,12 +14,11 @@
 - Impact Score: 멀티킬, 첫 킬(FB), 클러치 성공 여부
 - ADR (Average Damage per Round): 라운드당 평균 대미지
 
-■ 교전 효율
-- Traded Ratio: 내가 죽었을 때 팀원이 적을 잡았는지(트레이드) 여부
+■ 주요 교전
 - First Blood/First Death Ratio: 사이트 진입 및 수비 성공률의 핵심
 
 ■ 경제 및 스킬
-- Econ Rating: 투자 비용 대비 성과
+- Eco Rating: 투자 비용 대비 성과
 
 2. 데이터 가공 엔진 설계 (Pipeline)
 - 데이터 가공 엔진은 **[추출 → 정제 → 수치화]**의 단계를 거칩니다.
