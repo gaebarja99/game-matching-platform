@@ -29,7 +29,7 @@ public class MatchRecordParticipant {
     private String role;
 
     @Lob
-    @Column(name = "raw_stats")
+    @Column(name = "raw_stats", columnDefinition = "TEXT")
     private String rawStats;
 
     public MatchRecordParticipant(MatchRecord matchRecord, User user, String role, String rawStats) {

@@ -15,18 +15,17 @@ import static org.assertj.core.api.Assertions.assertThat;
 @DisplayName("ScoreEngineRouter")
 class ScoreEngineRouterTest {
 
-    private final ValorantScoreEngine valorantEngine = new ValorantScoreEngine();
     private final LolScoreEngine lolEngine = new LolScoreEngine();
     private final GenericScoreEngine genericEngine = new GenericScoreEngine();
 
     /** GenericScoreEngine 빈이 있는 라우터 */
     private ScoreEngineRouter routerWithGeneric() {
-        return new ScoreEngineRouter(valorantEngine, lolEngine, Optional.of(genericEngine));
+        return new ScoreEngineRouter(lolEngine, Optional.of(genericEngine));
     }
 
     /** GenericScoreEngine 빈이 없는 라우터 */
     private ScoreEngineRouter routerWithoutGeneric() {
-        return new ScoreEngineRouter(valorantEngine, lolEngine, Optional.empty());
+        return new ScoreEngineRouter(lolEngine, Optional.empty());
     }
 
     private ValorantMatchStatsDTO sampleValorant() {
@@ -52,13 +51,12 @@ class ScoreEngineRouterTest {
     class ValorantRouting {
 
         @Test
-        @DisplayName("ValorantStatsDTO → 점수 반환")
-        void routesToValorantEngine() {
+        @DisplayName("VALORANT → empty (라운드 기반만 지원, ValorantScoreService 직접 사용)")
+        void valorantReturnsEmpty() {
             ScoreEngineRouter router = routerWithGeneric();
             Optional<Integer> result = router.calculate("VALORANT", sampleValorant());
 
-            assertThat(result).isPresent();
-            assertThat(result.get()).isEqualTo(valorantEngine.calculate(sampleValorant()));
+            assertThat(result).isEmpty();
         }
 
         @Test

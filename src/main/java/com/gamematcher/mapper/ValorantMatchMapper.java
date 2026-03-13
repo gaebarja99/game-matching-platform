@@ -277,6 +277,24 @@ public class ValorantMatchMapper {
         entity.setDamageWeaponName(ke.getDamageWeaponName());
         entity.setSecondaryFireMode(ke.isSecondaryFireMode());
 
+        // player_locations_on_kill 전체 저장 (킬 직후 생존 플레이어 위치·팀 등)
+        if (ke.getPlayerLocationsOnKill() != null && !ke.getPlayerLocationsOnKill().isEmpty()) {
+            for (ValorantMatchDetailDto.PlayerLocation pl : ke.getPlayerLocationsOnKill()) {
+                if (pl.getPlayerPuuid() == null || pl.getPlayerPuuid().isBlank()) continue;
+                ValorantKillEventPlayerLocation loc = new ValorantKillEventPlayerLocation();
+                loc.setKillEvent(entity);
+                loc.setPlayerPuuid(pl.getPlayerPuuid());
+                loc.setPlayerDisplayName(pl.getPlayerDisplayName());
+                loc.setPlayerTeam(pl.getPlayerTeam());
+                if (pl.getLocation() != null) {
+                    loc.setLocationX(pl.getLocation().getX());
+                    loc.setLocationY(pl.getLocation().getY());
+                }
+                loc.setViewRadians(pl.getViewRadians());
+                entity.getPlayerLocations().add(loc);
+            }
+        }
+
         if (ke.getAssistants() != null) {
             for (ValorantMatchDetailDto.Assistant a : ke.getAssistants()) {
                 ValorantKillAssistant ass = new ValorantKillAssistant();
@@ -628,6 +646,13 @@ public class ValorantMatchMapper {
         event.setDamageWeaponName(ke.getDamageWeaponName());
         event.setSecondaryFireMode(Boolean.TRUE.equals(ke.getSecondaryFireMode()));
 
+        // player_locations_on_kill 복원 (DB에서 로드 시)
+        if (ke.getPlayerLocations() != null && !ke.getPlayerLocations().isEmpty()) {
+            event.setPlayerLocationsOnKill(ke.getPlayerLocations().stream()
+                    .map(this::toKillPlayerLocationDto)
+                    .collect(Collectors.toList()));
+        }
+
         if (ke.getAssistants() != null && !ke.getAssistants().isEmpty()) {
             event.setAssistants(ke.getAssistants().stream()
                     .map(a -> {
@@ -641,5 +666,20 @@ public class ValorantMatchMapper {
         }
 
         return event;
+    }
+
+    private ValorantMatchDetailDto.PlayerLocation toKillPlayerLocationDto(ValorantKillEventPlayerLocation pl) {
+        ValorantMatchDetailDto.PlayerLocation loc = new ValorantMatchDetailDto.PlayerLocation();
+        loc.setPlayerPuuid(pl.getPlayerPuuid());
+        loc.setPlayerDisplayName(pl.getPlayerDisplayName());
+        loc.setPlayerTeam(pl.getPlayerTeam());
+        if (pl.getLocationX() != null || pl.getLocationY() != null) {
+            ValorantMatchDetailDto.Location location = new ValorantMatchDetailDto.Location();
+            location.setX(pl.getLocationX() != null ? pl.getLocationX() : 0);
+            location.setY(pl.getLocationY() != null ? pl.getLocationY() : 0);
+            loc.setLocation(location);
+        }
+        loc.setViewRadians(pl.getViewRadians() != null ? pl.getViewRadians() : 0.0);
+        return loc;
     }
 }

@@ -76,6 +76,10 @@ public class ValorantKillEvent {
     @Column(name = "secondary_fire_mode")
     private Boolean secondaryFireMode;
 
+    /** 킬 직후 생존한 플레이어 위치 정보 (player_locations_on_kill 전체) */
+    @OneToMany(mappedBy = "killEvent", cascade = CascadeType.ALL, orphanRemoval = true)
+    private List<ValorantKillEventPlayerLocation> playerLocations = new ArrayList<>();
+
     @OneToMany(mappedBy = "killEvent", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ValorantKillAssistant> assistants = new ArrayList<>();
 }

@@ -1,9 +1,8 @@
 package com.gamematcher.mapper;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.gamematcher.dto.valorant.ValorantMatchApiResponse;
 import com.gamematcher.dto.valorant.ValorantMatchDetailDto;
 import com.gamematcher.entity.match.valorant.ValorantMatch;
+import com.gamematcher.service.valorant.ValorantMatchJsonService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -25,8 +24,7 @@ class ValorantMatchMapperTest {
         mapper = new ValorantMatchMapper();
         String jsonPath = "src/test/resources/samples/valorant/valorant_match_sample.json";
         String json = Files.readString(Paths.get(jsonPath));
-        ValorantMatchApiResponse response = new ObjectMapper().readValue(json, ValorantMatchApiResponse.class);
-        sourceDto = response.getData().get(0);
+        sourceDto = new ValorantMatchJsonService().parseFirstMatch(json);
     }
 
     @Nested
@@ -89,6 +87,26 @@ class ValorantMatchMapperTest {
             assertThat(firstKill.getKillerPuuid()).isNotNull();
             assertThat(firstKill.getVictimPuuid()).isNotNull();
             assertThat(firstKill.getRoundNumber()).isNotNull();
+        }
+
+        @Test
+        @DisplayName("발로란트 API round는 0-based이며, rounds 배열 인덱스와 kill.round가 일치한다")
+        void toEntity_roundIs0BasedAndMatchesRoundsIndex() {
+            ValorantMatch entity = mapper.toEntity(sourceDto);
+
+            // rounds: roundIndex 0, 1, 2, ...
+            for (int i = 0; i < entity.getRounds().size(); i++) {
+                assertThat(entity.getRounds().get(i).getRoundIndex()).isEqualTo(i);
+            }
+
+            // kills: DTO의 round 값이 그대로 roundNumber로 매핑됨. API round = 0-based
+            for (int i = 0; i < sourceDto.getKills().size(); i++) {
+                var dtoKill = sourceDto.getKills().get(i);
+                var entityKill = entity.getKillEvents().get(i);
+                assertThat(entityKill.getRoundNumber()).isEqualTo(dtoKill.getRound());
+                assertThat(dtoKill.getRound()).isGreaterThanOrEqualTo(0);
+                assertThat(dtoKill.getRound()).isLessThan(entity.getRounds().size());
+            }
         }
     }
 

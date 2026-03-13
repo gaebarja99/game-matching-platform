@@ -1,6 +1,5 @@
 package com.gamematcher.dto.ai.evaluation;
 
-import com.gamematcher.constant.ai.evaluation.MatchResult;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
@@ -20,8 +19,6 @@ public class ValorantMatchStatsDTO extends BaseStatsDTO {
     private int kills;           // 킬 수
     private int deaths;          // 데스 수
     private int assists;         // 어시스트 수
-    private int damagedAssists;  // 피해 어시스트 수
-    private int noDamageAssists; // 피해 없는 어시스트 수
 
     /** 타격 (샷 수) */
     private int totalShots;  // 총 피격 수 (head+body+leg)
@@ -41,6 +38,9 @@ public class ValorantMatchStatsDTO extends BaseStatsDTO {
     private double kast;                // KAST: 킬/어시/생존/트레이드 라운드 비율(0~100%)
     private double adr;                 // ADR: 라운드당 평균 데미지
     private double avgDamageDifference; // DDΔ: 평균 피해량 격차 (가한-받은)/라운드
+
+    /** 매치 평균 기여도 점수 (라운드별 roundContributionScore의 평균, 100 기준) */
+    private int matchAverageContributionScore;
 
     /** 엔트리 지표 */
     private int firstBloods;  // 첫 킬을 올린 라운드 수

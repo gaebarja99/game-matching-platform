@@ -47,8 +47,7 @@ class ValorantMatchServiceTest {
     void setUp() throws Exception {
         String jsonPath = "src/test/resources/samples/valorant/valorant_match_sample.json";
         String json = Files.readString(Paths.get(jsonPath));
-        ValorantMatchApiResponse response = new ObjectMapper().readValue(json, ValorantMatchApiResponse.class);
-        validDto = response.getData().get(0);
+        validDto = new ValorantMatchJsonService().parseFirstMatch(json);
 
         savedEntity = new ValorantMatch();
         savedEntity.setId(1L);
