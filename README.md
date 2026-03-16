@@ -4,7 +4,7 @@ Spring Boot 기반 Maven 프로젝트입니다.
 
 # Project Version
 
-11
+12
 
 ## 프로젝트 구조
 
@@ -35,4 +35,6 @@ mvnw.cmd spring-boot:run
 ./mvnw clean package
 ```
 
-전적 확인 페이지 생성
+api 명세 정리
+
+service/search 폴더 분리 

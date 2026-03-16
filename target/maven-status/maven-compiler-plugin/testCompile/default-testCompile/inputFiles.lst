@@ -5,6 +5,7 @@ D:\GameMatcher\src\test\java\com\gamematcher\dto\SplitValorantJsonTest.java
 D:\GameMatcher\src\test\java\com\gamematcher\dto\valorant\ValorantDtoDeserializeTest.java
 D:\GameMatcher\src\test\java\com\gamematcher\service\valorant\ValorantMatchStatsFlowTest.java
 D:\GameMatcher\src\test\java\com\gamematcher\service\ai\score\LolScoreEngineTest.java
+D:\GameMatcher\src\test\java\com\gamematcher\service\PlayerSearchServiceTest.java
 D:\GameMatcher\src\test\java\com\gamematcher\service\valorant\ValorantLifetimeFlowTest.java
 D:\GameMatcher\src\test\java\com\gamematcher\dto\lol\LolMatchDetailDtoTest.java
 D:\GameMatcher\src\test\java\com\gamematcher\GameMatcherApplicationTests.java

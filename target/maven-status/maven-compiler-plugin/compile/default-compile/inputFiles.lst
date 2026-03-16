@@ -23,8 +23,8 @@ D:\GameMatcher\src\main\java\com\gamematcher\entity\match\lol\LolMatchParticipan
 D:\GameMatcher\src\main\java\com\gamematcher\repository\common\BlockedUserRepository.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\valorant\ValorantPlayerDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\report\BlockService.java
-D:\GameMatcher\src\main\java\com\gamematcher\service\riot\LolApiService.java
 D:\GameMatcher\src\main\java\com\gamematcher\constant\community\NotificationType.java
+D:\GameMatcher\src\main\java\com\gamematcher\service\tft\TftApiService.java
 D:\GameMatcher\src\main\java\com\gamematcher\config\GameDataLoader.java
 D:\GameMatcher\src\main\java\com\gamematcher\mapper\ValorantLifetimeMapper.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\account\BlizzardAccountService.java
@@ -33,7 +33,6 @@ D:\GameMatcher\src\main\java\com\gamematcher\service\ai\LlmEvaluationServiceImpl
 D:\GameMatcher\src\main\java\com\gamematcher\dto\riot\RiotStatsResponseDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\config\auth\FilterConfig.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\lol\LolMatchService.java
-D:\GameMatcher\src\main\java\com\gamematcher\service\search\BlizzardSearchService.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\ai\evaluation\MatchRecordEvaluationRepository.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\community\PostRecommendRepository.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\riot\RiotRecentMatchesResponseDto.java
@@ -41,6 +40,7 @@ D:\GameMatcher\src\main\java\com\gamematcher\repository\community\CommentReposit
 D:\GameMatcher\src\main\java\com\gamematcher\service\report\ReportService.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\valorant\ValorantKillContext.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\match\valorant\ValorantMatchRoundPlayer.java
+D:\GameMatcher\src\main\java\com\gamematcher\service\steam\SteamApiService.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\valorant\ValorantAccountService.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\match\LolMatchRepository.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\account\RiotAccountLinkResponseDto.java
@@ -61,7 +61,6 @@ D:\GameMatcher\src\main\java\com\gamematcher\entity\match\lol\LolMatch.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\Report.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\valorant\ValorantMatchService.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\ai\score\LolScoreEngine.java
-D:\GameMatcher\src\main\java\com\gamematcher\service\search\OverwatchSearchService.java
 D:\GameMatcher\src\main\java\com\gamematcher\controller\account\DiscordController.java
 D:\GameMatcher\src\main\java\com\gamematcher\mapper\ValorantRoundStatsMapper.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\ai\evaluation\ValorantPlayerMatchStatsDTO.java
@@ -84,9 +83,9 @@ D:\GameMatcher\src\main\java\com\gamematcher\entity\match\valorant\ValorantKillE
 D:\GameMatcher\src\main\java\com\gamematcher\service\valorant\ValorantMmrHistoryService.java
 D:\GameMatcher\src\main\java\com\gamematcher\constant\ai\evaluation\ValorantRoundScoreConstants.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\match\valorant\ValorantMmrHistoryRecord.java
+D:\GameMatcher\src\main\java\com\gamematcher\service\cs2\Cs2ApiService.java
 D:\GameMatcher\src\main\java\com\gamematcher\constant\ai\evaluation\MatchResult.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\riot\RiotMatchDetailResponseDto.java
-D:\GameMatcher\src\main\java\com\gamematcher\service\search\TftSearchService.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\community\CommunityService.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\SocialLogin.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\account\DiscordAccountRepository.java
@@ -98,8 +97,10 @@ D:\GameMatcher\src\main\java\com\gamematcher\service\account\DiscordAccountServi
 D:\GameMatcher\src\main\java\com\gamematcher\dto\ai\evaluation\LlmEvaluationResponseDTO.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\ai\evaluation\ValorantStatsDTO.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\valorant\ValorantLifetimeDataItem.java
+D:\GameMatcher\src\main\java\com\gamematcher\service\apex\ApexApiService.java
 D:\GameMatcher\src\main\java\com\gamematcher\constant\community\RecommendType.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\community\PostAttachmentRepository.java
+D:\GameMatcher\src\main\java\com\gamematcher\service\lol\LolApiService.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\valorant\ValorantApiService.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\report\BlockRequestDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\valorant\ValorantMmrService.java
@@ -112,7 +113,6 @@ D:\GameMatcher\src\main\java\com\gamematcher\controller\account\BlizzardControll
 D:\GameMatcher\src\main\java\com\gamematcher\service\valorant\ValorantMatchJsonService.java
 D:\GameMatcher\src\main\java\com\gamematcher\exception\GlobalExceptionHandler.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\lol\LolMatchDetailDto.java
-D:\GameMatcher\src\main\java\com\gamematcher\service\riot\TftApiService.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\account\BlizzardAccountLinkRequestDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\valorant\ValorantRoundScoreInput.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\match\lol\LolMatchSummary.java
@@ -123,7 +123,6 @@ D:\GameMatcher\src\main\java\com\gamematcher\entity\community\CommunityReport.ja
 D:\GameMatcher\src\main\java\com\gamematcher\entity\match\valorant\ValorantLifetimeRecord.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\community\PostHashtag.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\match\ValorantMatchDetailRepository.java
-D:\GameMatcher\src\main\java\com\gamematcher\service\search\ValorantSearchService.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\ai\evaluation\MatchRecordParticipant.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\match\ValorantMmrHistoryRecordRepository.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\ai\RuleBasedScoreService.java
@@ -135,7 +134,6 @@ D:\GameMatcher\src\main\java\com\gamematcher\controller\report\ReportAdminContro
 D:\GameMatcher\src\main\java\com\gamematcher\constant\Role.java
 D:\GameMatcher\src\main\java\com\gamematcher\controller\PlayerSearchController.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\ai\evaluation\Game.java
-D:\GameMatcher\src\main\java\com\gamematcher\service\search\SteamSearchService.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\match\apex\ApexMatch.java
 D:\GameMatcher\src\main\java\com\gamematcher\controller\community\CommunityAdminController.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\community\PostCreateRequestDto.java
@@ -147,13 +145,13 @@ D:\GameMatcher\src\main\java\com\gamematcher\controller\community\CommunityPubli
 D:\GameMatcher\src\main\java\com\gamematcher\controller\report\ReportBlockController.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\account\SteamAccount.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\match\SteamOwnedGameRepository.java
-D:\GameMatcher\src\main\java\com\gamematcher\service\search\PubgSearchService.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\riot\RiotLeagueEntryResponseDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\community\FileStorageService.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\ai\evaluation\BaseStatsDTO.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\community\NotificationRepository.java
 D:\GameMatcher\src\main\java\com\gamematcher\config\api\RiotApiProperties.java
 D:\GameMatcher\src\main\java\com\gamematcher\constant\ReportReason.java
+D:\GameMatcher\src\main\java\com\gamematcher\service\pubg\PubgApiService.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\ai\score\GenericScoreEngine.java
 D:\GameMatcher\src\main\java\com\gamematcher\config\CorsConfig.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\account\SteamAccountRepository.java
@@ -161,7 +159,6 @@ D:\GameMatcher\src\main\java\com\gamematcher\constant\community\BoardCategory.ja
 D:\GameMatcher\src\main\java\com\gamematcher\repository\ai\evaluation\GameRepository.java
 D:\GameMatcher\src\main\java\com\gamematcher\config\SampleDataLoader.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\valorant\ValorantStatsToPromptFormatter.java
-D:\GameMatcher\src\main\java\com\gamematcher\service\search\Cs2SearchService.java
 D:\GameMatcher\src\main\java\com\gamematcher\constant\ReportStatus.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\ai\evaluation\MatchRecordRepository.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\PlayerSearchService.java
@@ -169,7 +166,6 @@ D:\GameMatcher\src\main\java\com\gamematcher\entity\community\PostLike.java
 D:\GameMatcher\src\main\java\com\gamematcher\mapper\ValorantMmrHistoryMapper.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\match\valorant\ValorantMatchRound.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\lol\LolMatchTimelineApiResponse.java
-D:\GameMatcher\src\main\java\com\gamematcher\service\search\ApexSearchService.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\match\TftMatchRepository.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\community\PostListResponseDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\community\CommunityReportRequestDto.java
@@ -188,7 +184,6 @@ D:\GameMatcher\src\main\java\com\gamematcher\repository\common\UserRepository.ja
 D:\GameMatcher\src\main\java\com\gamematcher\controller\account\SteamController.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\valorant\ValorantAssistContext.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\account\BlizzardAccountRepository.java
-D:\GameMatcher\src\main\java\com\gamematcher\service\search\LolSearchService.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\ai\evaluation\StatsConverter.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\community\PostLikeRepository.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\ai\evaluation\GenericStatsDTO.java
@@ -202,6 +197,7 @@ D:\GameMatcher\src\main\java\com\gamematcher\repository\community\PostBookmarkRe
 D:\GameMatcher\src\main\java\com\gamematcher\dto\community\PostDetailResponseDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\search\PlayerSearchRequest.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\ai\ValorantEvaluationPromptBuilder.java
+D:\GameMatcher\src\main\java\com\gamematcher\service\blizzard\BlizzardApiService.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\valorant\ValorantLifetimeJsonService.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\valorant\ValorantMmrApiResponse.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\match\lol\LolMatchTimeline.java
@@ -225,6 +221,7 @@ D:\GameMatcher\src\main\java\com\gamematcher\repository\ai\evaluation\MatchRecor
 D:\GameMatcher\src\main\java\com\gamematcher\entity\account\BlizzardAccount.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\ai\ValorantLlmEvaluationService.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\ai\score\KillContextExtractor.java
+D:\GameMatcher\src\main\java\com\gamematcher\service\overwatch\OverwatchApiService.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\valorant\ValorantMatchApiResponse.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\valorant\ValorantMatchInfoDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\mapper\ValorantMatchStatsMapper.java

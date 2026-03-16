@@ -8,7 +8,7 @@ import com.gamematcher.entity.account.RiotAccount;
 import com.gamematcher.exception.GameApiException;
 import com.gamematcher.repository.account.RiotAccountRepository;
 import com.gamematcher.repository.common.UserRepository;
-import com.gamematcher.service.riot.LolApiService;
+import com.gamematcher.service.lol.LolApiService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;

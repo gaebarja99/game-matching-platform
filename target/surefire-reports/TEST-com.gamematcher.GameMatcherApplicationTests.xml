@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.gamematcher.GameMatcherApplicationTests" time="33.677" tests="1" errors="0" skipped="0" failures="0">
+<testsuite xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="https://maven.apache.org/surefire/maven-surefire-plugin/xsd/surefire-test-report-3.0.xsd" version="3.0" name="com.gamematcher.GameMatcherApplicationTests" time="29.11" tests="1" errors="0" skipped="0" failures="0">
   <properties>
     <property name="java.specification.version" value="21"/>
     <property name="sun.cpu.isalist" value="amd64"/>
@@ -16,8 +16,9 @@
     <property name="sun.java.launcher" value="SUN_STANDARD"/>
     <property name="user.country" value="KR"/>
     <property name="sun.boot.library.path" value="D:\jdk-21.0.9+10\bin"/>
-    <property name="sun.java.command" value="C:\Users\TJ-BU-702-P23\AppData\Local\Temp\surefire717206564010325567\surefirebooter-20260316112203836_3.jar C:\Users\TJ-BU-702-P23\AppData\Local\Temp\surefire717206564010325567 2026-03-16T11-22-03_577-jvmRun1 surefire-20260316112203836_1tmp surefire_0-20260316112203836_2tmp"/>
+    <property name="sun.java.command" value="C:\Users\TJ-BU-702-P23\AppData\Local\Temp\surefire4173858306832778797\surefirebooter-20260316132130761_3.jar C:\Users\TJ-BU-702-P23\AppData\Local\Temp\surefire4173858306832778797 2026-03-16T13-21-30_367-jvmRun1 surefire-20260316132130761_1tmp surefire_0-20260316132130761_2tmp"/>
     <property name="jdk.debug" value="release"/>
+    <property name="test" value="GameMatcherApplicationTests"/>
     <property name="surefire.test.class.path" value="D:\GameMatcher\target\test-classes;D:\GameMatcher\target\classes;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\boot\spring-boot-starter-web\3.2.0\spring-boot-starter-web-3.2.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\boot\spring-boot-starter\3.2.0\spring-boot-starter-3.2.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\boot\spring-boot-starter-logging\3.2.0\spring-boot-starter-logging-3.2.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\ch\qos\logback\logback-classic\1.4.11\logback-classic-1.4.11.jar;C:\Users\TJ-BU-702-P23\.m2\repository\ch\qos\logback\logback-core\1.4.11\logback-core-1.4.11.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\apache\logging\log4j\log4j-to-slf4j\2.21.1\log4j-to-slf4j-2.21.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\apache\logging\log4j\log4j-api\2.21.1\log4j-api-2.21.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\slf4j\jul-to-slf4j\2.0.9\jul-to-slf4j-2.0.9.jar;C:\Users\TJ-BU-702-P23\.m2\repository\jakarta\annotation\jakarta.annotation-api\2.1.1\jakarta.annotation-api-2.1.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\yaml\snakeyaml\2.2\snakeyaml-2.2.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\boot\spring-boot-starter-json\3.2.0\spring-boot-starter-json-3.2.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\fasterxml\jackson\core\jackson-databind\2.15.3\jackson-databind-2.15.3.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\fasterxml\jackson\core\jackson-annotations\2.15.3\jackson-annotations-2.15.3.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\fasterxml\jackson\core\jackson-core\2.15.3\jackson-core-2.15.3.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jdk8\2.15.3\jackson-datatype-jdk8-2.15.3.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\fasterxml\jackson\datatype\jackson-datatype-jsr310\2.15.3\jackson-datatype-jsr310-2.15.3.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\fasterxml\jackson\module\jackson-module-parameter-names\2.15.3\jackson-module-parameter-names-2.15.3.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\boot\spring-boot-starter-tomcat\3.2.0\spring-boot-starter-tomcat-3.2.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\apache\tomcat\embed\tomcat-embed-core\10.1.16\tomcat-embed-core-10.1.16.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\apache\tomcat\embed\tomcat-embed-websocket\10.1.16\tomcat-embed-websocket-10.1.16.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\spring-web\6.1.1\spring-web-6.1.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\spring-beans\6.1.1\spring-beans-6.1.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\io\micrometer\micrometer-observation\1.12.0\micrometer-observation-1.12.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\io\micrometer\micrometer-commons\1.12.0\micrometer-commons-1.12.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\spring-webmvc\6.1.1\spring-webmvc-6.1.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\spring-aop\6.1.1\spring-aop-6.1.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\spring-context\6.1.1\spring-context-6.1.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\spring-expression\6.1.1\spring-expression-6.1.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\boot\spring-boot-starter-data-jpa\3.2.0\spring-boot-starter-data-jpa-3.2.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\boot\spring-boot-starter-aop\3.2.0\spring-boot-starter-aop-3.2.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\aspectj\aspectjweaver\1.9.20.1\aspectjweaver-1.9.20.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\boot\spring-boot-starter-jdbc\3.2.0\spring-boot-starter-jdbc-3.2.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\zaxxer\HikariCP\5.0.1\HikariCP-5.0.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\spring-jdbc\6.1.1\spring-jdbc-6.1.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\hibernate\orm\hibernate-core\6.3.1.Final\hibernate-core-6.3.1.Final.jar;C:\Users\TJ-BU-702-P23\.m2\repository\jakarta\persistence\jakarta.persistence-api\3.1.0\jakarta.persistence-api-3.1.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\jakarta\transaction\jakarta.transaction-api\2.0.1\jakarta.transaction-api-2.0.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\jboss\logging\jboss-logging\3.5.3.Final\jboss-logging-3.5.3.Final.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\hibernate\common\hibernate-commons-annotations\6.0.6.Final\hibernate-commons-annotations-6.0.6.Final.jar;C:\Users\TJ-BU-702-P23\.m2\repository\io\smallrye\jandex\3.1.2\jandex-3.1.2.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\fasterxml\classmate\1.6.0\classmate-1.6.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\net\bytebuddy\byte-buddy\1.14.10\byte-buddy-1.14.10.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\glassfish\jaxb\jaxb-runtime\4.0.4\jaxb-runtime-4.0.4.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\glassfish\jaxb\jaxb-core\4.0.4\jaxb-core-4.0.4.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\eclipse\angus\angus-activation\2.0.1\angus-activation-2.0.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\glassfish\jaxb\txw2\4.0.4\txw2-4.0.4.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\sun\istack\istack-commons-runtime\4.1.2\istack-commons-runtime-4.1.2.jar;C:\Users\TJ-BU-702-P23\.m2\repository\jakarta\inject\jakarta.inject-api\2.0.1\jakarta.inject-api-2.0.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\antlr\antlr4-runtime\4.10.1\antlr4-runtime-4.10.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\data\spring-data-jpa\3.2.0\spring-data-jpa-3.2.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\data\spring-data-commons\3.2.0\spring-data-commons-3.2.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\spring-orm\6.1.1\spring-orm-6.1.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\spring-tx\6.1.1\spring-tx-6.1.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\slf4j\slf4j-api\2.0.9\slf4j-api-2.0.9.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\spring-aspects\6.1.1\spring-aspects-6.1.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\boot\spring-boot-starter-validation\3.2.0\spring-boot-starter-validation-3.2.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\apache\tomcat\embed\tomcat-embed-el\10.1.16\tomcat-embed-el-10.1.16.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\hibernate\validator\hibernate-validator\8.0.1.Final\hibernate-validator-8.0.1.Final.jar;C:\Users\TJ-BU-702-P23\.m2\repository\jakarta\validation\jakarta.validation-api\3.0.2\jakarta.validation-api-3.0.2.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\projectlombok\lombok\1.18.42\lombok-1.18.42.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\boot\spring-boot-devtools\3.2.0\spring-boot-devtools-3.2.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\boot\spring-boot\3.2.0\spring-boot-3.2.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\boot\spring-boot-autoconfigure\3.2.0\spring-boot-autoconfigure-3.2.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\h2database\h2\2.2.224\h2-2.2.224.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\mysql\mysql-connector-j\8.1.0\mysql-connector-j-8.1.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\boot\spring-boot-starter-test\3.2.0\spring-boot-starter-test-3.2.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\boot\spring-boot-test\3.2.0\spring-boot-test-3.2.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\boot\spring-boot-test-autoconfigure\3.2.0\spring-boot-test-autoconfigure-3.2.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\jayway\jsonpath\json-path\2.8.0\json-path-2.8.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\jakarta\xml\bind\jakarta.xml.bind-api\4.0.1\jakarta.xml.bind-api-4.0.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\jakarta\activation\jakarta.activation-api\2.1.2\jakarta.activation-api-2.1.2.jar;C:\Users\TJ-BU-702-P23\.m2\repository\net\minidev\json-smart\2.5.0\json-smart-2.5.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\net\minidev\accessors-smart\2.5.0\accessors-smart-2.5.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\ow2\asm\asm\9.3\asm-9.3.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\assertj\assertj-core\3.24.2\assertj-core-3.24.2.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\awaitility\awaitility\4.2.0\awaitility-4.2.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\hamcrest\hamcrest\2.2\hamcrest-2.2.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\junit\jupiter\junit-jupiter\5.10.1\junit-jupiter-5.10.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\junit\jupiter\junit-jupiter-api\5.10.1\junit-jupiter-api-5.10.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\opentest4j\opentest4j\1.3.0\opentest4j-1.3.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\junit\platform\junit-platform-commons\1.10.1\junit-platform-commons-1.10.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\apiguardian\apiguardian-api\1.1.2\apiguardian-api-1.1.2.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\junit\jupiter\junit-jupiter-params\5.10.1\junit-jupiter-params-5.10.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\junit\jupiter\junit-jupiter-engine\5.10.1\junit-jupiter-engine-5.10.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\junit\platform\junit-platform-engine\1.10.1\junit-platform-engine-1.10.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\mockito\mockito-core\5.7.0\mockito-core-5.7.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\net\bytebuddy\byte-buddy-agent\1.14.10\byte-buddy-agent-1.14.10.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\objenesis\objenesis\3.3\objenesis-3.3.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\mockito\mockito-junit-jupiter\5.7.0\mockito-junit-jupiter-5.7.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\skyscreamer\jsonassert\1.5.1\jsonassert-1.5.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\vaadin\external\google\android-json\0.0.20131108.vaadin1\android-json-0.0.20131108.vaadin1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\spring-core\6.1.1\spring-core-6.1.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\spring-jcl\6.1.1\spring-jcl-6.1.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\springframework\spring-test\6.1.1\spring-test-6.1.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\xmlunit\xmlunit-core\2.9.1\xmlunit-core-2.9.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\theokanning\openai-gpt3-java\service\0.18.2\service-0.18.2.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\theokanning\openai-gpt3-java\client\0.18.2\client-0.18.2.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\theokanning\openai-gpt3-java\api\0.18.2\api-0.18.2.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\knuddels\jtokkit\0.5.1\jtokkit-0.5.1.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\squareup\retrofit2\retrofit\2.9.0\retrofit-2.9.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\squareup\okhttp3\okhttp\4.12.0\okhttp-4.12.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\squareup\okio\okio\3.6.0\okio-3.6.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\squareup\okio\okio-jvm\3.6.0\okio-jvm-3.6.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\jetbrains\kotlin\kotlin-stdlib-common\1.9.20\kotlin-stdlib-common-1.9.20.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\jetbrains\kotlin\kotlin-stdlib-jdk8\1.9.20\kotlin-stdlib-jdk8-1.9.20.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\jetbrains\kotlin\kotlin-stdlib\1.9.20\kotlin-stdlib-1.9.20.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\jetbrains\annotations\13.0\annotations-13.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\jetbrains\kotlin\kotlin-stdlib-jdk7\1.9.20\kotlin-stdlib-jdk7-1.9.20.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\squareup\retrofit2\adapter-rxjava2\2.9.0\adapter-rxjava2-2.9.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\io\reactivex\rxjava2\rxjava\2.0.0\rxjava-2.0.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\reactivestreams\reactive-streams\1.0.4\reactive-streams-1.0.4.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\squareup\retrofit2\converter-jackson\2.9.0\converter-jackson-2.9.0.jar;C:\Users\TJ-BU-702-P23\.m2\repository\com\kjetland\mbknor-jackson-jsonschema_2.12\1.0.34\mbknor-jackson-jsonschema_2.12-1.0.34.jar;C:\Users\TJ-BU-702-P23\.m2\repository\org\scala-lang\scala-library\2.12.8\scala-library-2.12.8.jar;C:\Users\TJ-BU-702-P23\.m2\repository\javax\validation\validation-api\2.0.1.Final\validation-api-2.0.1.Final.jar;C:\Users\TJ-BU-702-P23\.m2\repository\io\github\classgraph\classgraph\4.8.21\classgraph-4.8.21.jar;"/>
     <property name="sun.cpu.endian" value="little"/>
     <property name="user.home" value="C:\Users\TJ-BU-702-P23"/>
@@ -33,7 +34,7 @@
     <property name="java.specification.name" value="Java Platform API Specification"/>
     <property name="FILE_LOG_CHARSET" value="UTF-8"/>
     <property name="java.awt.headless" value="true"/>
-    <property name="surefire.real.class.path" value="C:\Users\TJ-BU-702-P23\AppData\Local\Temp\surefire717206564010325567\surefirebooter-20260316112203836_3.jar"/>
+    <property name="surefire.real.class.path" value="C:\Users\TJ-BU-702-P23\AppData\Local\Temp\surefire4173858306832778797\surefirebooter-20260316132130761_3.jar"/>
     <property name="user.script" value=""/>
     <property name="sun.management.compiler" value="HotSpot 64-Bit Tiered Compilers"/>
     <property name="java.runtime.version" value="21.0.9+10-LTS"/>
@@ -53,7 +54,7 @@
     <property name="user.dir" value="D:\GameMatcher"/>
     <property name="os.arch" value="amd64"/>
     <property name="java.vm.specification.name" value="Java Virtual Machine Specification"/>
-    <property name="PID" value="3008"/>
+    <property name="PID" value="15172"/>
     <property name="sun.os.patch.level" value=""/>
     <property name="CONSOLE_LOG_CHARSET" value="UTF-8"/>
     <property name="native.encoding" value="MS949"/>
@@ -66,10 +67,10 @@
     <property name="java.class.version" value="65.0"/>
     <property name="LOGGED_APPLICATION_NAME" value="[gamematcher] "/>
   </properties>
-  <testcase name="contextLoads" classname="com.gamematcher.GameMatcherApplicationTests" time="1.058">
-    <system-out><![CDATA[11:22:08.080 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.gamematcher.GameMatcherApplicationTests]: GameMatcherApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
-11:22:08.293 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.gamematcher.GameMatcherApplication for test class com.gamematcher.GameMatcherApplicationTests
-11:22:08.536 [main] INFO org.springframework.boot.devtools.restart.RestartApplicationListener -- Restart disabled due to context in which it is running
+  <testcase name="contextLoads" classname="com.gamematcher.GameMatcherApplicationTests" time="2.496">
+    <system-out><![CDATA[13:21:34.646 [main] INFO org.springframework.test.context.support.AnnotationConfigContextLoaderUtils -- Could not detect default configuration classes for test class [com.gamematcher.GameMatcherApplicationTests]: GameMatcherApplicationTests does not declare any static, non-private, non-final, nested classes annotated with @Configuration.
+13:21:35.007 [main] INFO org.springframework.boot.test.context.SpringBootTestContextBootstrapper -- Found @SpringBootConfiguration com.gamematcher.GameMatcherApplication for test class com.gamematcher.GameMatcherApplicationTests
+13:21:35.257 [main] INFO org.springframework.boot.devtools.restart.RestartApplicationListener -- Restart disabled due to context in which it is running
 
   .   ____          _            __ _ _
  /\\ / ___'_ __ _ _(_)_ __  __ _ \ \ \ \
@@ -79,19 +80,19 @@
  =========|_|==============|___/=/_/_/_/
  :: Spring Boot ::                (v3.2.0)
 
-2026-03-16T11:22:08.981+09:00  INFO 3008 --- [gamematcher] [           main] c.g.GameMatcherApplicationTests          : Starting GameMatcherApplicationTests using Java 21.0.9 with PID 3008 (started by TJ-BU-702-P23 in D:\GameMatcher)
-2026-03-16T11:22:08.988+09:00  INFO 3008 --- [gamematcher] [           main] c.g.GameMatcherApplicationTests          : The following 1 profile is active: "test"
-2026-03-16T11:22:12.695+09:00  INFO 3008 --- [gamematcher] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
-2026-03-16T11:22:13.031+09:00  INFO 3008 --- [gamematcher] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 313 ms. Found 32 JPA repository interfaces.
-2026-03-16T11:22:14.613+09:00  INFO 3008 --- [gamematcher] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
-2026-03-16T11:22:14.777+09:00  INFO 3008 --- [gamematcher] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.3.1.Final
-2026-03-16T11:22:14.881+09:00  INFO 3008 --- [gamematcher] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
-2026-03-16T11:22:15.568+09:00  INFO 3008 --- [gamematcher] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
-2026-03-16T11:22:15.641+09:00  INFO 3008 --- [gamematcher] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
-2026-03-16T11:22:16.434+09:00  INFO 3008 --- [gamematcher] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@7bb25046
-2026-03-16T11:22:16.438+09:00  INFO 3008 --- [gamematcher] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
-2026-03-16T11:22:20.350+09:00  INFO 3008 --- [gamematcher] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
-2026-03-16T11:22:20.444+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:35.742+09:00  INFO 15172 --- [gamematcher] [           main] c.g.GameMatcherApplicationTests          : Starting GameMatcherApplicationTests using Java 21.0.9 with PID 15172 (started by TJ-BU-702-P23 in D:\GameMatcher)
+2026-03-16T13:21:35.744+09:00  INFO 15172 --- [gamematcher] [           main] c.g.GameMatcherApplicationTests          : The following 1 profile is active: "test"
+2026-03-16T13:21:37.574+09:00  INFO 15172 --- [gamematcher] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Bootstrapping Spring Data JPA repositories in DEFAULT mode.
+2026-03-16T13:21:38.003+09:00  INFO 15172 --- [gamematcher] [           main] .s.d.r.c.RepositoryConfigurationDelegate : Finished Spring Data repository scanning in 417 ms. Found 32 JPA repository interfaces.
+2026-03-16T13:21:39.071+09:00  INFO 15172 --- [gamematcher] [           main] o.hibernate.jpa.internal.util.LogHelper  : HHH000204: Processing PersistenceUnitInfo [name: default]
+2026-03-16T13:21:39.193+09:00  INFO 15172 --- [gamematcher] [           main] org.hibernate.Version                    : HHH000412: Hibernate ORM core version 6.3.1.Final
+2026-03-16T13:21:39.308+09:00  INFO 15172 --- [gamematcher] [           main] o.h.c.internal.RegionFactoryInitiator    : HHH000026: Second-level cache disabled
+2026-03-16T13:21:39.854+09:00  INFO 15172 --- [gamematcher] [           main] o.s.o.j.p.SpringPersistenceUnitInfo      : No LoadTimeWeaver setup: ignoring JPA class transformer
+2026-03-16T13:21:39.933+09:00  INFO 15172 --- [gamematcher] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Starting...
+2026-03-16T13:21:40.647+09:00  INFO 15172 --- [gamematcher] [           main] com.zaxxer.hikari.pool.HikariPool        : HikariPool-1 - Added connection com.mysql.cj.jdbc.ConnectionImpl@26865b57
+2026-03-16T13:21:40.650+09:00  INFO 15172 --- [gamematcher] [           main] com.zaxxer.hikari.HikariDataSource       : HikariPool-1 - Start completed.
+2026-03-16T13:21:43.936+09:00  INFO 15172 --- [gamematcher] [           main] o.h.e.t.j.p.i.JtaPlatformInitiator       : HHH000489: No JTA platform available (set 'hibernate.transaction.jta.platform' to enable JTA platform integration)
+2026-03-16T13:21:43.992+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table blizzard_accounts 
        drop 
        foreign key FK4hwy7k364aejxxlqw5dwp5sg" via JDBC [Table 'gamematcher_test.blizzard_accounts' doesn't exist]
@@ -229,7 +230,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.blizzard_ac
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.456+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.000+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table blocked_users 
        drop 
        foreign key FKoxugq424f357lv1tbdi8cu2no" via JDBC [Table 'gamematcher_test.blocked_users' doesn't exist]
@@ -367,7 +368,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.blocked_use
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.460+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.006+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table blocked_users 
        drop 
        foreign key FKp9eolqohxq2guwfaw720qsfwc" via JDBC [Table 'gamematcher_test.blocked_users' doesn't exist]
@@ -505,7 +506,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.blocked_use
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.465+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.011+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table community_comments 
        drop 
        foreign key FKfktbqr72q7mu118iab24aukj7" via JDBC [Table 'gamematcher_test.community_comments' doesn't exist]
@@ -643,7 +644,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.community_c
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.471+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.017+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table community_comments 
        drop 
        foreign key FKbikb008ijdru8lg7ys5xih6qf" via JDBC [Table 'gamematcher_test.community_comments' doesn't exist]
@@ -781,7 +782,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.community_c
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.477+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.021+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table community_comments 
        drop 
        foreign key FKlrj6e98eodhkxqxolyyqowvbc" via JDBC [Table 'gamematcher_test.community_comments' doesn't exist]
@@ -919,7 +920,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.community_c
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.482+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.026+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table community_notifications 
        drop 
        foreign key FK9ombqiei7i3k8abqopne5qm9x" via JDBC [Table 'gamematcher_test.community_notifications' doesn't exist]
@@ -1057,7 +1058,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.community_n
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.487+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.030+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table community_post_attachments 
        drop 
        foreign key FKd5v9dnhy890ojn2nlo4xlvkgf" via JDBC [Table 'gamematcher_test.community_post_attachments' doesn't exist]
@@ -1195,7 +1196,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.community_p
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.492+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.034+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table community_post_bookmarks 
        drop 
        foreign key FKnbok700w17v1s2277nsxdcuhm" via JDBC [Table 'gamematcher_test.community_post_bookmarks' doesn't exist]
@@ -1333,7 +1334,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.community_p
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.496+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.037+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table community_post_bookmarks 
        drop 
        foreign key FK2ajqfbbvaktacy9vkv4k2fdbt" via JDBC [Table 'gamematcher_test.community_post_bookmarks' doesn't exist]
@@ -1471,7 +1472,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.community_p
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.501+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.040+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table community_post_hashtags 
        drop 
        foreign key FKe9v9gaynili2r5a4oyyau3xy8" via JDBC [Table 'gamematcher_test.community_post_hashtags' doesn't exist]
@@ -1609,7 +1610,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.community_p
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.506+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.044+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table community_post_hashtags 
        drop 
        foreign key FKk8wtp858cnu8bt5wlh0fddk6d" via JDBC [Table 'gamematcher_test.community_post_hashtags' doesn't exist]
@@ -1747,7 +1748,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.community_p
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.510+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.047+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table community_post_likes 
        drop 
        foreign key FKs98gntvorodjgg3tc6h3etwr" via JDBC [Table 'gamematcher_test.community_post_likes' doesn't exist]
@@ -1885,7 +1886,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.community_p
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.515+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.051+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table community_post_likes 
        drop 
        foreign key FK3aog7m083nbagp2k359qnxhyp" via JDBC [Table 'gamematcher_test.community_post_likes' doesn't exist]
@@ -2023,7 +2024,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.community_p
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.521+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.056+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table community_post_recommends 
        drop 
        foreign key FKmsxlcwqbov8aegx0te2alns9s" via JDBC [Table 'gamematcher_test.community_post_recommends' doesn't exist]
@@ -2161,7 +2162,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.community_p
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.526+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.059+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table community_post_recommends 
        drop 
        foreign key FKh62dpr1ylh70a2afkwgqo0vrp" via JDBC [Table 'gamematcher_test.community_post_recommends' doesn't exist]
@@ -2299,7 +2300,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.community_p
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.530+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.063+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table community_posts 
        drop 
        foreign key FKeu4flvshxstxajldqps82cqeh" via JDBC [Table 'gamematcher_test.community_posts' doesn't exist]
@@ -2437,7 +2438,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.community_p
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.534+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.068+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table community_reports 
        drop 
        foreign key FKe1j3y3b5po2rsqw1f4ukjcc0h" via JDBC [Table 'gamematcher_test.community_reports' doesn't exist]
@@ -2575,7 +2576,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.community_r
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.541+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.072+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table discord_accounts 
        drop 
        foreign key FKpe7ylt6wtpwnb0hwbb7cijr9d" via JDBC [Table 'gamematcher_test.discord_accounts' doesn't exist]
@@ -2713,7 +2714,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.discord_acc
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.546+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.076+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table lol_match_participant 
        drop 
        foreign key FK6fnr0rs09l22yb89idnl9aghj" via JDBC [Table 'gamematcher_test.lol_match_participant' doesn't exist]
@@ -2851,7 +2852,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.lol_match_p
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.551+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.080+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table lol_match_team 
        drop 
        foreign key FKbkhvoiu0st4u7rv3p77aa2gas" via JDBC [Table 'gamematcher_test.lol_match_team' doesn't exist]
@@ -2989,7 +2990,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.lol_match_t
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.558+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.086+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table lol_match_timeline 
        drop 
        foreign key FKpk1lq9qm8m6ua9phniko5yaf9" via JDBC [Table 'gamematcher_test.lol_match_timeline' doesn't exist]
@@ -3127,7 +3128,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.lol_match_t
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.563+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.090+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table match_record_evaluations 
        drop 
        foreign key FK5oumyaal29ppg9i3xv3hx0oxb" via JDBC [Table 'gamematcher_test.match_record_evaluations' doesn't exist]
@@ -3265,7 +3266,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.match_recor
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.566+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.095+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table match_record_participants 
        drop 
        foreign key FKxs4slpioc8oer42btesb1gxo" via JDBC [Table 'gamematcher_test.match_record_participants' doesn't exist]
@@ -3403,7 +3404,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.match_recor
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.581+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.099+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table match_record_participants 
        drop 
        foreign key FKl98tqwgavxqvsd0wgj21g1qm0" via JDBC [Table 'gamematcher_test.match_record_participants' doesn't exist]
@@ -3541,7 +3542,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.match_recor
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.593+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.113+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table match_records 
        drop 
        foreign key FKjdkt2n5ovk7wk3ygvtwij2i9c" via JDBC [Table 'gamematcher_test.match_records' doesn't exist]
@@ -3679,7 +3680,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.match_recor
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.598+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.117+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table reports 
        drop 
        foreign key FKb3bqi44mjskbnwupr31nfq5ui" via JDBC [Table 'gamematcher_test.reports' doesn't exist]
@@ -3817,7 +3818,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.reports' do
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.603+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.121+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table reports 
        drop 
        foreign key FKd3qiw2om5d2oh5xb7fbdcq225" via JDBC [Table 'gamematcher_test.reports' doesn't exist]
@@ -3955,7 +3956,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.reports' do
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.609+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.124+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table riot_accounts 
        drop 
        foreign key FKgjqs1vrpwxu09bmtpc8nw8b66" via JDBC [Table 'gamematcher_test.riot_accounts' doesn't exist]
@@ -4093,7 +4094,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.riot_accoun
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.613+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.127+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table social_logins 
        drop 
        foreign key FKprbcw4bqig06q50b62b3vo26o" via JDBC [Table 'gamematcher_test.social_logins' doesn't exist]
@@ -4231,7 +4232,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.social_logi
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.617+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.135+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table steam_accounts 
        drop 
        foreign key FK8ytr6hcnaxy00dvu7qt8q94yp" via JDBC [Table 'gamematcher_test.steam_accounts' doesn't exist]
@@ -4369,7 +4370,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.steam_accou
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.621+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.143+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table valorant_kill_assistant 
        drop 
        foreign key FKj0vnggpjplauqry0vletqkgq9" via JDBC [Table 'gamematcher_test.valorant_kill_assistant' doesn't exist]
@@ -4507,7 +4508,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.valorant_ki
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.625+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.145+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table valorant_kill_event 
        drop 
        foreign key FKtk9ju1eofx2kiujvlcbhxk3p2" via JDBC [Table 'gamematcher_test.valorant_kill_event' doesn't exist]
@@ -4645,7 +4646,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.valorant_ki
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.629+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.154+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table valorant_kill_event_player_location 
        drop 
        foreign key FKl6f3lptfcl451d6cxddiqfii" via JDBC [Table 'gamematcher_test.valorant_kill_event_player_location' doesn't exist]
@@ -4783,7 +4784,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.valorant_ki
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.632+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.159+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table valorant_match_player 
        drop 
        foreign key FKjufur3r1q9ch96pkucns1yp9k" via JDBC [Table 'gamematcher_test.valorant_match_player' doesn't exist]
@@ -4921,7 +4922,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.valorant_ma
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.637+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.162+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table valorant_match_round 
        drop 
        foreign key FK4x6uegi4vuktq7a3hx4swki7a" via JDBC [Table 'gamematcher_test.valorant_match_round' doesn't exist]
@@ -5059,7 +5060,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.valorant_ma
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.643+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.166+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table valorant_match_round_player 
        drop 
        foreign key FK6kyin4rri4ibp4f5yu35mj8fa" via JDBC [Table 'gamematcher_test.valorant_match_round_player' doesn't exist]
@@ -5197,7 +5198,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.valorant_ma
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.648+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.169+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table valorant_round_player_damage_event 
        drop 
        foreign key FKpq2vnvgvkw8ka7g04lwug5k2k" via JDBC [Table 'gamematcher_test.valorant_round_player_damage_event' doesn't exist]
@@ -5335,7 +5336,7 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.valorant_ro
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:20.653+09:00  WARN 3008 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
+2026-03-16T13:21:44.171+09:00  WARN 15172 --- [gamematcher] [           main] o.h.t.s.i.ExceptionHandlerLoggedImpl     : GenerationTarget encountered exception accepting command : Error executing DDL "
     alter table valorant_round_player_location 
        drop 
        foreign key FK76o2tsow2oyk8rp2a8k5994g0" via JDBC [Table 'gamematcher_test.valorant_round_player_location' doesn't exist]
@@ -5473,12 +5474,12 @@ Caused by: java.sql.SQLSyntaxErrorException: Table 'gamematcher_test.valorant_ro
 	at org.hibernate.tool.schema.internal.exec.GenerationTargetToDatabase.accept(GenerationTargetToDatabase.java:80) ~[hibernate-core-6.3.1.Final.jar:6.3.1.Final]
 	... 118 common frames omitted
 
-2026-03-16T11:22:32.992+09:00  INFO 3008 --- [gamematcher] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
-2026-03-16T11:22:35.596+09:00  INFO 3008 --- [gamematcher] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
-2026-03-16T11:22:39.066+09:00  WARN 3008 --- [gamematcher] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
-2026-03-16T11:22:39.135+09:00  INFO 3008 --- [gamematcher] [           main] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
-2026-03-16T11:22:40.169+09:00  INFO 3008 --- [gamematcher] [           main] o.s.b.a.h2.H2ConsoleAutoConfiguration    : H2 console available at '/h2-console'. Database available at 'jdbc:mysql://localhost:3306/gamematcher_test?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&createDatabaseIfNotExist=true'
-2026-03-16T11:22:40.348+09:00  INFO 3008 --- [gamematcher] [           main] c.g.GameMatcherApplicationTests          : Started GameMatcherApplicationTests in 31.826 seconds (process running for 36.048)
+2026-03-16T13:21:54.902+09:00  INFO 15172 --- [gamematcher] [           main] j.LocalContainerEntityManagerFactoryBean : Initialized JPA EntityManagerFactory for persistence unit 'default'
+2026-03-16T13:21:56.710+09:00  INFO 15172 --- [gamematcher] [           main] o.s.d.j.r.query.QueryEnhancerFactory     : Hibernate is in classpath; If applicable, HQL parser will be used.
+2026-03-16T13:21:59.758+09:00  WARN 15172 --- [gamematcher] [           main] JpaBaseConfiguration$JpaWebConfiguration : spring.jpa.open-in-view is enabled by default. Therefore, database queries may be performed during view rendering. Explicitly configure spring.jpa.open-in-view to disable this warning
+2026-03-16T13:21:59.788+09:00  INFO 15172 --- [gamematcher] [           main] o.s.b.a.w.s.WelcomePageHandlerMapping    : Adding welcome page: class path resource [static/index.html]
+2026-03-16T13:22:00.522+09:00  INFO 15172 --- [gamematcher] [           main] o.s.b.a.h2.H2ConsoleAutoConfiguration    : H2 console available at '/h2-console'. Database available at 'jdbc:mysql://localhost:3306/gamematcher_test?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&createDatabaseIfNotExist=true'
+2026-03-16T13:22:00.668+09:00  INFO 15172 --- [gamematcher] [           main] c.g.GameMatcherApplicationTests          : Started GameMatcherApplicationTests in 25.436 seconds (process running for 29.139)
 ]]></system-out>
     <system-err><![CDATA[WARNING: A Java agent has been loaded dynamically (C:\Users\TJ-BU-702-P23\.m2\repository\net\bytebuddy\byte-buddy-agent\1.14.10\byte-buddy-agent-1.14.10.jar)
 WARNING: If a serviceability tool is in use, please run with -XX:+EnableDynamicAgentLoading to hide this warning

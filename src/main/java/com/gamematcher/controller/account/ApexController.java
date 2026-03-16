@@ -2,7 +2,7 @@ package com.gamematcher.controller.account;
 
 import com.gamematcher.dto.search.PlayerSearchRequest;
 import com.gamematcher.dto.search.PlayerSearchResponse;
-import com.gamematcher.service.search.ApexSearchService;
+import com.gamematcher.service.apex.ApexApiService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin(origins = "*")
 public class ApexController {
 
-    private final ApexSearchService apexSearchService;
+    private final ApexApiService apexApiService;
 
     /**
      * Apex Legends 전적 검색
@@ -32,6 +32,6 @@ public class ApexController {
     public ResponseEntity<PlayerSearchResponse> searchApex(
             @RequestBody PlayerSearchRequest request) {
         request.setGame("apex");
-        return ResponseEntity.ok(apexSearchService.search(request));
+        return ResponseEntity.ok(apexApiService.search(request));
     }
 }

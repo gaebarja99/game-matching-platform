@@ -1,8 +1,8 @@
 -------------------------------------------------------------------------------
 Test set: com.gamematcher.service.valorant.ValorantStatsToPromptFormatterTest$FormatSummaryTest
 -------------------------------------------------------------------------------
-Tests run: 5, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.019 s <<< FAILURE! -- in com.gamematcher.service.valorant.ValorantStatsToPromptFormatterTest$FormatSummaryTest
-com.gamematcher.service.valorant.ValorantStatsToPromptFormatterTest$FormatSummaryTest.formatSummary_withRoundStats_outputsRoundLines -- Time elapsed: 0.009 s <<< FAILURE!
+Tests run: 5, Failures: 2, Errors: 0, Skipped: 0, Time elapsed: 0.020 s <<< FAILURE! -- in com.gamematcher.service.valorant.ValorantStatsToPromptFormatterTest$FormatSummaryTest
+com.gamematcher.service.valorant.ValorantStatsToPromptFormatterTest$FormatSummaryTest.formatSummary_withRoundStats_outputsRoundLines -- Time elapsed: 0.010 s <<< FAILURE!
 java.lang.AssertionError: 
 
 Expecting actual:
@@ -28,7 +28,7 @@ to contain:
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-com.gamematcher.service.valorant.ValorantStatsToPromptFormatterTest$FormatSummaryTest.formatSummary_matchStatsOnly_outputsMatchBlock -- Time elapsed: 0.002 s <<< FAILURE!
+com.gamematcher.service.valorant.ValorantStatsToPromptFormatterTest$FormatSummaryTest.formatSummary_matchStatsOnly_outputsMatchBlock -- Time elapsed: 0.001 s <<< FAILURE!
 java.lang.AssertionError: 
 
 Expecting actual:

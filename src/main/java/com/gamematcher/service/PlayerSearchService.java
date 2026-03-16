@@ -4,7 +4,15 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamematcher.dto.search.PlayerSearchRequest;
 import com.gamematcher.dto.search.PlayerSearchResponse;
-import com.gamematcher.service.search.*;
+import com.gamematcher.service.apex.ApexApiService;
+import com.gamematcher.service.blizzard.BlizzardApiService;
+import com.gamematcher.service.cs2.Cs2ApiService;
+import com.gamematcher.service.lol.LolApiService;
+import com.gamematcher.service.overwatch.OverwatchApiService;
+import com.gamematcher.service.pubg.PubgApiService;
+import com.gamematcher.service.steam.SteamApiService;
+import com.gamematcher.service.tft.TftApiService;
+import com.gamematcher.service.valorant.ValorantApiService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,15 +31,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PlayerSearchService {
 
-    private final LolSearchService        lolSearchService;
-    private final TftSearchService        tftSearchService;
-    private final ValorantSearchService   valorantSearchService;
-    private final SteamSearchService      steamSearchService;
-    private final BlizzardSearchService   blizzardSearchService;
-    private final PubgSearchService       pubgSearchService;
-    private final OverwatchSearchService  overwatchSearchService;
-    private final Cs2SearchService        cs2SearchService;
-    private final ApexSearchService       apexSearchService;
+    private final LolApiService        lolApiService;
+    private final TftApiService        tftApiService;
+    private final ValorantApiService   valorantApiService;
+    private final SteamApiService      steamApiService;
+    private final BlizzardApiService   blizzardApiService;
+    private final PubgApiService       pubgApiService;
+    private final OverwatchApiService  overwatchApiService;
+    private final Cs2ApiService        cs2ApiService;
+    private final ApexApiService       apexApiService;
     private final ObjectMapper            objectMapper;
 
     /**
@@ -44,15 +52,15 @@ public class PlayerSearchService {
 
         try {
             return switch (request.getGame()) {
-                case "lol"        -> lolSearchService.search(request);
-                case "tft"        -> tftSearchService.search(request);
-                case "valorant"   -> valorantSearchService.search(request);
-                case "steam"      -> steamSearchService.search(request);
-                case "blizzard"   -> blizzardSearchService.search(request);
-                case "pubg"       -> pubgSearchService.search(request);
-                case "overwatch"  -> overwatchSearchService.search(request);
-                case "cs2"        -> cs2SearchService.search(request);
-                case "apex"       -> apexSearchService.search(request);
+                case "lol"        -> lolApiService.search(request);
+                case "tft"        -> tftApiService.search(request);
+                case "valorant"   -> valorantApiService.search(request);
+                case "steam"      -> steamApiService.search(request);
+                case "blizzard"   -> blizzardApiService.search(request);
+                case "pubg"       -> pubgApiService.search(request);
+                case "overwatch"  -> overwatchApiService.search(request);
+                case "cs2"        -> cs2ApiService.search(request);
+                case "apex"       -> apexApiService.search(request);
                 default           -> PlayerSearchResponse.error(
                         request.getGame(), nickname,
                         "지원하지 않는 게임입니다: " + request.getGame()
