@@ -1,4 +1,4 @@
 -------------------------------------------------------------------------------
 Test set: com.gamematcher.service.valorant.ValorantMatchServiceTest
 -------------------------------------------------------------------------------
-Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.918 s -- in com.gamematcher.service.valorant.ValorantMatchServiceTest
+Tests run: 0, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 1.790 s -- in com.gamematcher.service.valorant.ValorantMatchServiceTest

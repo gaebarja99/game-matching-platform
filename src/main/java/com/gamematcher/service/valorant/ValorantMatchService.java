@@ -3,7 +3,7 @@ package com.gamematcher.service.valorant;
 import com.gamematcher.dto.valorant.ValorantMatchDetailDto;
 import com.gamematcher.entity.match.valorant.ValorantMatch;
 import com.gamematcher.mapper.ValorantMatchMapper;
-import com.gamematcher.repository.match.ValorantMatchRepository;
+import com.gamematcher.repository.match.ValorantMatchDetailRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,12 +15,12 @@ import java.util.List;
 @Service
 public class ValorantMatchService {
 
-    private final ValorantMatchRepository valorantMatchRepository;
+    private final ValorantMatchDetailRepository valorantMatchDetailRepository;
     private final ValorantMatchMapper valorantMatchMapper;
 
-    public ValorantMatchService(ValorantMatchRepository valorantMatchRepository,
+    public ValorantMatchService(ValorantMatchDetailRepository valorantMatchDetailRepository,
                                ValorantMatchMapper valorantMatchMapper) {
-        this.valorantMatchRepository = valorantMatchRepository;
+        this.valorantMatchDetailRepository = valorantMatchDetailRepository;
         this.valorantMatchMapper = valorantMatchMapper;
     }
 
@@ -36,12 +36,12 @@ public class ValorantMatchService {
             return null;
         }
         String matchId = dto.getMetadata().getMatchId();
-        if (valorantMatchRepository.existsByMatchId(matchId)) {
+        if (valorantMatchDetailRepository.existsByMatchId(matchId)) {
             return null;
         }
 
         ValorantMatch match = valorantMatchMapper.toEntity(dto);
-        return valorantMatchRepository.save(match);
+        return valorantMatchDetailRepository.save(match);
     }
 
     /**

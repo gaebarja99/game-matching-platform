@@ -5,7 +5,7 @@ import com.gamematcher.dto.account.RiotAccountLinkResponseDto;
 import com.gamematcher.dto.riot.*;
 import com.gamematcher.exception.GameApiException;
 import com.gamematcher.service.account.RiotAccountService;
-import com.gamematcher.service.riot.RiotApiService;
+import com.gamematcher.service.riot.LolApiService;
 import com.gamematcher.service.riot.TftApiService;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
@@ -21,12 +21,12 @@ public class RiotController {
 
     private static final Logger log = LoggerFactory.getLogger(RiotController.class);
 
-    private final RiotApiService riotApiService;
+    private final LolApiService lolApiService;
     private final RiotAccountService riotAccountService;
     private final TftApiService tftApiService;
 
-    public RiotController(RiotApiService riotApiService, RiotAccountService riotAccountService, TftApiService tftApiService) {
-        this.riotApiService = riotApiService;
+    public RiotController(LolApiService lolApiService, RiotAccountService riotAccountService, TftApiService tftApiService) {
+        this.lolApiService = lolApiService;
         this.riotAccountService = riotAccountService;
         this.tftApiService = tftApiService;
     }
@@ -34,7 +34,7 @@ public class RiotController {
     /** Riot 계정 조회 (gameName + tagLine → puuid) */
     @PostMapping("/account")
     public RiotAccountResponseDto getAccount(@RequestBody RiotAccountRequestDto request) {
-        return riotApiService.getAccountByRiotId(
+        return lolApiService.getAccountByRiotId(
                 request.getGameName(),
                 request.getTagLine()
         );
@@ -48,20 +48,20 @@ public class RiotController {
 
     @PostMapping("/summoner")
     public RiotSummonerResponseDto getSummoner(@RequestBody RiotAccountRequestDto request) {
-        RiotAccountResponseDto account = riotApiService.getAccountByRiotId(
+        RiotAccountResponseDto account = lolApiService.getAccountByRiotId(
                 request.getGameName(),
                 request.getTagLine()
         );
-        return riotApiService.getSummonerByPuuid(account.getPuuid());
+        return lolApiService.getSummonerByPuuid(account.getPuuid());
     }
 
     @PostMapping("/summoner/raw")
     public RiotSummonerResponseDto getSummonerRaw(@RequestBody RiotAccountRequestDto request) {
-        RiotAccountResponseDto account = riotApiService.getAccountByRiotId(
+        RiotAccountResponseDto account = lolApiService.getAccountByRiotId(
                 request.getGameName(),
                 request.getTagLine()
         );
-        RiotSummonerResponseDto summoner = riotApiService.getSummonerByPuuid(account.getPuuid());
+        RiotSummonerResponseDto summoner = lolApiService.getSummonerByPuuid(account.getPuuid());
         log.debug("summoner id={}, accountId={}, puuid={}, level={}",
                 summoner.getId(), summoner.getAccountId(), summoner.getPuuid(), summoner.getSummonerLevel());
         return summoner;
@@ -69,20 +69,20 @@ public class RiotController {
 
     @PostMapping("/summoner/raw-json")
     public String getSummonerRawJson(@RequestBody RiotAccountRequestDto request) {
-        RiotAccountResponseDto account = riotApiService.getAccountByRiotId(
+        RiotAccountResponseDto account = lolApiService.getAccountByRiotId(
                 request.getGameName(),
                 request.getTagLine()
         );
-        return riotApiService.getSummonerRawByPuuid(account.getPuuid());
+        return lolApiService.getSummonerRawByPuuid(account.getPuuid());
     }
 
     @PostMapping("/profile")
     public RiotProfileResponseDto getProfile(@RequestBody RiotAccountRequestDto request) {
-        RiotAccountResponseDto account = riotApiService.getAccountByRiotId(
+        RiotAccountResponseDto account = lolApiService.getAccountByRiotId(
                 request.getGameName(),
                 request.getTagLine()
         );
-        RiotSummonerResponseDto summoner = riotApiService.getSummonerByPuuid(account.getPuuid());
+        RiotSummonerResponseDto summoner = lolApiService.getSummonerByPuuid(account.getPuuid());
         RiotProfileResponseDto response = new RiotProfileResponseDto();
         response.setPuuid(account.getPuuid());
         response.setGameName(account.getGameName());
@@ -94,46 +94,46 @@ public class RiotController {
 
     @PostMapping("/matches")
     public List<String> getMatches(@RequestBody RiotAccountRequestDto request) {
-        RiotAccountResponseDto account = riotApiService.getAccountByRiotId(
+        RiotAccountResponseDto account = lolApiService.getAccountByRiotId(
                 request.getGameName(),
                 request.getTagLine()
         );
-        return riotApiService.getMatchIdsByPuuid(account.getPuuid(), 0, 5);
+        return lolApiService.getMatchIdsByPuuid(account.getPuuid(), 0, 5);
     }
 
     @PostMapping("/match/raw")
     public String getMatchRaw(@RequestBody RiotAccountRequestDto request) {
-        RiotAccountResponseDto account = riotApiService.getAccountByRiotId(
+        RiotAccountResponseDto account = lolApiService.getAccountByRiotId(
                 request.getGameName(),
                 request.getTagLine()
         );
-        List<String> matchIds = riotApiService.getMatchIdsByPuuid(account.getPuuid(), 0, 1);
+        List<String> matchIds = lolApiService.getMatchIdsByPuuid(account.getPuuid(), 0, 1);
         if (matchIds == null || matchIds.isEmpty()) {
             throw new GameApiException(HttpStatus.NOT_FOUND, "최근 매치가 없습니다.");
         }
-        return riotApiService.getMatchRawByMatchId(matchIds.get(0));
+        return lolApiService.getMatchRawByMatchId(matchIds.get(0));
     }
 
     @PostMapping("/match/detail")
     public RiotMatchDetailResponseDto getMatchDetail(@RequestBody RiotAccountRequestDto request) {
-        RiotAccountResponseDto account = riotApiService.getAccountByRiotId(
+        RiotAccountResponseDto account = lolApiService.getAccountByRiotId(
                 request.getGameName(),
                 request.getTagLine()
         );
-        List<String> matchIds = riotApiService.getMatchIdsByPuuid(account.getPuuid(), 0, 1);
+        List<String> matchIds = lolApiService.getMatchIdsByPuuid(account.getPuuid(), 0, 1);
         if (matchIds == null || matchIds.isEmpty()) {
             throw new GameApiException(HttpStatus.NOT_FOUND, "최근 매치가 없습니다.");
         }
-        return riotApiService.getMatchDetailByMatchId(matchIds.get(0), account.getPuuid());
+        return lolApiService.getMatchDetailByMatchId(matchIds.get(0), account.getPuuid());
     }
 
     @PostMapping("/matches/detail")
     public RiotRecentMatchesResponseDto getRecentMatchDetails(@RequestBody RiotAccountRequestDto request) {
-        RiotAccountResponseDto account = riotApiService.getAccountByRiotId(
+        RiotAccountResponseDto account = lolApiService.getAccountByRiotId(
                 request.getGameName(),
                 request.getTagLine()
         );
-        List<RiotMatchDetailResponseDto> matches = riotApiService.getRecentMatchDetailsByPuuid(account.getPuuid(), 5);
+        List<RiotMatchDetailResponseDto> matches = lolApiService.getRecentMatchDetailsByPuuid(account.getPuuid(), 5);
         RiotRecentMatchesResponseDto response = new RiotRecentMatchesResponseDto();
         response.setPuuid(account.getPuuid());
         response.setGameName(account.getGameName());
@@ -144,11 +144,11 @@ public class RiotController {
 
     @PostMapping("/stats")
     public RiotStatsResponseDto getStats(@RequestBody RiotAccountRequestDto request) {
-        RiotAccountResponseDto account = riotApiService.getAccountByRiotId(
+        RiotAccountResponseDto account = lolApiService.getAccountByRiotId(
                 request.getGameName(),
                 request.getTagLine()
         );
-        return riotApiService.getRecentStats(
+        return lolApiService.getRecentStats(
                 account.getPuuid(),
                 account.getGameName(),
                 account.getTagLine()
@@ -158,18 +158,18 @@ public class RiotController {
     /** LoL 최근 5경기 DB 동기화 */
     @PostMapping("/sync")
     public String syncRecentMatches(@RequestBody RiotAccountRequestDto request) {
-        RiotAccountResponseDto account = riotApiService.getAccountByRiotId(
+        RiotAccountResponseDto account = lolApiService.getAccountByRiotId(
                 request.getGameName(),
                 request.getTagLine()
         );
-        riotApiService.syncRecentMatches(account.getPuuid());
+        lolApiService.syncRecentMatches(account.getPuuid());
         return "LoL 최근 경기 DB 저장 완료";
     }
 
     /** TFT 최근 5경기 DB 동기화 */
     @PostMapping("/tft/sync")
     public String syncTftRecentMatches(@RequestBody RiotAccountRequestDto request) {
-        RiotAccountResponseDto account = riotApiService.getAccountByRiotId(
+        RiotAccountResponseDto account = lolApiService.getAccountByRiotId(
                 request.getGameName(),
                 request.getTagLine()
         );

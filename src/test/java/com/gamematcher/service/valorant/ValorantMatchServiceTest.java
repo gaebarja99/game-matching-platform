@@ -5,7 +5,7 @@ import com.gamematcher.dto.valorant.ValorantMatchApiResponse;
 import com.gamematcher.dto.valorant.ValorantMatchDetailDto;
 import com.gamematcher.entity.match.valorant.ValorantMatch;
 import com.gamematcher.mapper.ValorantMatchMapper;
-import com.gamematcher.repository.match.ValorantMatchRepository;
+import com.gamematcher.repository.match.ValorantMatchDetailRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -32,7 +32,7 @@ import static org.mockito.Mockito.when;
 class ValorantMatchServiceTest {
 
     @Mock
-    private ValorantMatchRepository valorantMatchRepository;
+    private ValorantMatchDetailRepository valorantMatchDetailRepository;
 
     @Mock
     private ValorantMatchMapper valorantMatchMapper;
@@ -64,9 +64,9 @@ class ValorantMatchServiceTest {
             ValorantMatch result = valorantMatchService.saveMatch(null);
 
             assertThat(result).isNull();
-            verify(valorantMatchRepository, never()).existsByMatchId(any());
+            verify(valorantMatchDetailRepository, never()).existsByMatchId(any());
             verify(valorantMatchMapper, never()).toEntity(any());
-            verify(valorantMatchRepository, never()).save(any());
+            verify(valorantMatchDetailRepository, never()).save(any());
         }
 
         @Test
@@ -78,9 +78,9 @@ class ValorantMatchServiceTest {
             ValorantMatch result = valorantMatchService.saveMatch(dto);
 
             assertThat(result).isNull();
-            verify(valorantMatchRepository, never()).existsByMatchId(any());
+            verify(valorantMatchDetailRepository, never()).existsByMatchId(any());
             verify(valorantMatchMapper, never()).toEntity(any());
-            verify(valorantMatchRepository, never()).save(any());
+            verify(valorantMatchDetailRepository, never()).save(any());
         }
 
         @Test
@@ -94,40 +94,40 @@ class ValorantMatchServiceTest {
             ValorantMatch result = valorantMatchService.saveMatch(dto);
 
             assertThat(result).isNull();
-            verify(valorantMatchRepository, never()).existsByMatchId(any());
+            verify(valorantMatchDetailRepository, never()).existsByMatchId(any());
             verify(valorantMatchMapper, never()).toEntity(any());
-            verify(valorantMatchRepository, never()).save(any());
+            verify(valorantMatchDetailRepository, never()).save(any());
         }
 
         @Test
         @DisplayName("이미 존재하는 matchId면 null을 반환하고 저장하지 않는다")
         void saveMatch_duplicateMatchId_returnsNullAndDoesNotSave() {
             String matchId = validDto.getMetadata().getMatchId();
-            when(valorantMatchRepository.existsByMatchId(matchId)).thenReturn(true);
+            when(valorantMatchDetailRepository.existsByMatchId(matchId)).thenReturn(true);
 
             ValorantMatch result = valorantMatchService.saveMatch(validDto);
 
             assertThat(result).isNull();
-            verify(valorantMatchRepository).existsByMatchId(matchId);
+            verify(valorantMatchDetailRepository).existsByMatchId(matchId);
             verify(valorantMatchMapper, never()).toEntity(any());
-            verify(valorantMatchRepository, never()).save(any());
+            verify(valorantMatchDetailRepository, never()).save(any());
         }
 
         @Test
         @DisplayName("유효한 DTO가 주어지면 저장하고 엔티티를 반환한다")
         void saveMatch_validDto_savesAndReturnsEntity() {
             String matchId = validDto.getMetadata().getMatchId();
-            when(valorantMatchRepository.existsByMatchId(matchId)).thenReturn(false);
+            when(valorantMatchDetailRepository.existsByMatchId(matchId)).thenReturn(false);
             when(valorantMatchMapper.toEntity(validDto)).thenReturn(savedEntity);
-            when(valorantMatchRepository.save(any(ValorantMatch.class))).thenReturn(savedEntity);
+            when(valorantMatchDetailRepository.save(any(ValorantMatch.class))).thenReturn(savedEntity);
 
             ValorantMatch result = valorantMatchService.saveMatch(validDto);
 
             assertThat(result).isNotNull();
             assertThat(result.getMatchId()).isEqualTo(matchId);
-            verify(valorantMatchRepository).existsByMatchId(matchId);
+            verify(valorantMatchDetailRepository).existsByMatchId(matchId);
             verify(valorantMatchMapper).toEntity(validDto);
-            verify(valorantMatchRepository).save(any(ValorantMatch.class));
+            verify(valorantMatchDetailRepository).save(any(ValorantMatch.class));
         }
     }
 
@@ -141,8 +141,8 @@ class ValorantMatchServiceTest {
             int result = valorantMatchService.saveMatches(null, 5);
 
             assertThat(result).isZero();
-            verify(valorantMatchRepository, never()).existsByMatchId(any());
-            verify(valorantMatchRepository, never()).save(any());
+            verify(valorantMatchDetailRepository, never()).existsByMatchId(any());
+            verify(valorantMatchDetailRepository, never()).save(any());
         }
 
         @Test
@@ -151,22 +151,22 @@ class ValorantMatchServiceTest {
             int result = valorantMatchService.saveMatches(Collections.emptyList(), 5);
 
             assertThat(result).isZero();
-            verify(valorantMatchRepository, never()).existsByMatchId(any());
-            verify(valorantMatchRepository, never()).save(any());
+            verify(valorantMatchDetailRepository, never()).existsByMatchId(any());
+            verify(valorantMatchDetailRepository, never()).save(any());
         }
 
         @Test
         @DisplayName("limit가 0이면 전체 목록을 저장한다")
         void saveMatches_limitZero_savesAll() {
             List<ValorantMatchDetailDto> dtos = List.of(validDto);
-            when(valorantMatchRepository.existsByMatchId(validDto.getMetadata().getMatchId())).thenReturn(false);
+            when(valorantMatchDetailRepository.existsByMatchId(validDto.getMetadata().getMatchId())).thenReturn(false);
             when(valorantMatchMapper.toEntity(validDto)).thenReturn(savedEntity);
-            when(valorantMatchRepository.save(any(ValorantMatch.class))).thenReturn(savedEntity);
+            when(valorantMatchDetailRepository.save(any(ValorantMatch.class))).thenReturn(savedEntity);
 
             int result = valorantMatchService.saveMatches(dtos, 0);
 
             assertThat(result).isEqualTo(1);
-            verify(valorantMatchRepository).save(any(ValorantMatch.class));
+            verify(valorantMatchDetailRepository).save(any(ValorantMatch.class));
         }
 
         @Test
@@ -178,14 +178,14 @@ class ValorantMatchServiceTest {
             dto2.setMetadata(meta2);
 
             List<ValorantMatchDetailDto> dtos = List.of(validDto, dto2);
-            when(valorantMatchRepository.existsByMatchId(any())).thenReturn(false);
+            when(valorantMatchDetailRepository.existsByMatchId(any())).thenReturn(false);
             when(valorantMatchMapper.toEntity(any())).thenReturn(savedEntity);
-            when(valorantMatchRepository.save(any(ValorantMatch.class))).thenReturn(savedEntity);
+            when(valorantMatchDetailRepository.save(any(ValorantMatch.class))).thenReturn(savedEntity);
 
             int result = valorantMatchService.saveMatches(dtos, 1);
 
             assertThat(result).isEqualTo(1);
-            verify(valorantMatchRepository, org.mockito.Mockito.times(1)).save(any(ValorantMatch.class));
+            verify(valorantMatchDetailRepository, org.mockito.Mockito.times(1)).save(any(ValorantMatch.class));
         }
 
         @Test
@@ -198,10 +198,10 @@ class ValorantMatchServiceTest {
 
             List<ValorantMatchDetailDto> dtos = List.of(validDto, dto2);
 
-            when(valorantMatchRepository.existsByMatchId(validDto.getMetadata().getMatchId())).thenReturn(true);
-            when(valorantMatchRepository.existsByMatchId("match-id-2")).thenReturn(false);
+            when(valorantMatchDetailRepository.existsByMatchId(validDto.getMetadata().getMatchId())).thenReturn(true);
+            when(valorantMatchDetailRepository.existsByMatchId("match-id-2")).thenReturn(false);
             when(valorantMatchMapper.toEntity(dto2)).thenReturn(savedEntity);
-            when(valorantMatchRepository.save(any(ValorantMatch.class))).thenReturn(savedEntity);
+            when(valorantMatchDetailRepository.save(any(ValorantMatch.class))).thenReturn(savedEntity);
 
             int result = valorantMatchService.saveMatches(dtos, 5);
 

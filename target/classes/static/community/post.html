@@ -211,15 +211,10 @@
         const res = await fetch(`/api/community/posts/${postId}/comments`);
         if (!res.ok) return;
         const comments = await res.json();
-        const topLevel = comments.filter(c => !c.parentId);
-        const withReplies = topLevel.map(c => ({
-          ...c,
-          replies: comments.filter(r => r.parentId === c.id)
-        }));
 
-        document.getElementById('comment-list').innerHTML = withReplies.length === 0
+        document.getElementById('comment-list').innerHTML = comments.length === 0
           ? '<div style="padding:24px;color:#71717a;text-align:center">댓글이 없습니다.</div>'
-          : withReplies.map(c => `
+          : comments.map(c => `
               <div class="comment-item">
                 <div class="comment-header">
                   <span class="comment-author">${escapeHtml(c.authorUsername)}</span>

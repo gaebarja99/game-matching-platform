@@ -7,7 +7,7 @@ import com.gamematcher.dto.riot.RiotAccountResponseDto;
 import com.gamematcher.dto.riot.RiotMatchDetailResponseDto;
 import com.gamematcher.dto.riot.RiotStatsResponseDto;
 import com.gamematcher.dto.riot.RiotSummonerResponseDto;
-import com.gamematcher.entity.match.MatchSummary;
+import com.gamematcher.entity.match.lol.LolMatchSummary;
 import com.gamematcher.repository.match.MatchSummaryRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.ParameterizedTypeReference;
@@ -315,7 +315,7 @@ public class RiotApiService {
             return;
         }
 
-        MatchSummary match = new MatchSummary();
+        LolMatchSummary match = new LolMatchSummary();
         match.setPuuid(puuid);
         match.setMatchId(matchId);
         match.setChampionName(championName);

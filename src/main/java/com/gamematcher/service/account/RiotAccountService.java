@@ -8,7 +8,7 @@ import com.gamematcher.entity.account.RiotAccount;
 import com.gamematcher.exception.GameApiException;
 import com.gamematcher.repository.account.RiotAccountRepository;
 import com.gamematcher.repository.common.UserRepository;
-import com.gamematcher.service.riot.RiotApiService;
+import com.gamematcher.service.riot.LolApiService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 @RequiredArgsConstructor
 public class RiotAccountService {
 
-    private final RiotApiService riotApiService;
+    private final LolApiService lolApiService;
     private final RiotAccountRepository riotAccountRepository;
     private final UserRepository userRepository;
 
@@ -27,7 +27,7 @@ public class RiotAccountService {
         User user = userRepository.findById(request.getUserId())
                 .orElseThrow(() -> new GameApiException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다: " + request.getUserId()));
 
-        RiotAccountResponseDto riotAccount = riotApiService.getAccountByRiotId(
+        RiotAccountResponseDto riotAccount = lolApiService.getAccountByRiotId(
                 request.getGameName(),
                 request.getTagLine()
         );

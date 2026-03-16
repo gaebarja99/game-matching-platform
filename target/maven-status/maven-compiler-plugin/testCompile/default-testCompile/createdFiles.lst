@@ -20,7 +20,6 @@ com\gamematcher\service\ai\score\LolScoreEngineTest$VisionTest.class
 com\gamematcher\service\lol\LolMatchJsonServiceTest$ParseMatchDetailTest.class
 com\gamematcher\service\ai\score\LolScoreEngineTest$KdaTest.class
 com\gamematcher\dto\lol\LolMatchDetailDtoTest.class
-com\gamematcher\Phase2DomainCrudTest.class
 com\gamematcher\service\ai\score\ScoreEngineRouterTest$LolRouting.class
 com\gamematcher\dto\lol\LolMatchTimelineDetailDtoTest.class
 com\gamematcher\service\ai\score\LolScoreEngineTest$EdgeCaseTest.class

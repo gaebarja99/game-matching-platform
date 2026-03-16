@@ -1,24 +1,28 @@
-package com.gamematcher.entity.match;
+package com.gamematcher.entity.match.lol;
 
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-@Entity
+/**
+ * LoL 매치 요약 (match_summary 테이블, Riot API 요약용)
+ * 상세 매치 데이터는 {@link LolMatch} 사용
+ */
+@Entity(name = "MatchSummary")
 @Table(name = "match_summary", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"puuid", "match_id"})
 })
 @Getter
 @Setter
 @NoArgsConstructor
-public class MatchSummary {
+public class LolMatchSummary {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 36)
+    @Column(nullable = false, length = 100)
     private String puuid;
 
     @Column(name = "match_id", nullable = false, length = 50)

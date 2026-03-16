@@ -12,6 +12,8 @@
     "result" : "DEFEAT",
     "roundsPlayed" : 23,
     "roundsWon" : 10,
+    "damagedAssists" : 0,
+    "noDamageAssists" : 0,
     "totalShots" : 18,
     "headShots" : 4,
     "bodyShots" : 14,
@@ -20,10 +22,9 @@
     "headShotRate" : 22.22222222222222,
     "bodyShotRate" : 77.77777777777777,
     "legShotRate" : 0.0,
-    "kast" : 69.56521739130434,
+    "kast" : 65.21739130434783,
     "adr" : 81.0,
     "avgDamageDifference" : -45.869565217391305,
-    "matchAverageContributionScore" : 102,
     "firstBloods" : 1,
     "firstDeaths" : 4,
     "multiKill" : 1,
@@ -31,7 +32,8 @@
     "tripleKill" : 0,
     "quadraKill" : 0,
     "pentaKill" : 0,
-    "overKill" : 0
+    "overKill" : 0,
+    "matchAverageContributionScore" : 102
   },
   "roundStats" : [ {
     "roundIndex" : 0,
@@ -53,6 +55,7 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : {
       "bf4e8c68-67b5-51c0-b713-117213fa123f" : 159
     },
@@ -60,9 +63,9 @@
       "bf4e8c68-67b5-51c0-b713-117213fa123f" : 159
     },
     "afk" : false,
-    "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : false
   }, {
     "roundIndex" : 1,
     "roundWon" : false,
@@ -83,12 +86,13 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
     "afk" : false,
-    "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : false
   }, {
     "roundIndex" : 2,
     "roundWon" : false,
@@ -109,12 +113,13 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
     "afk" : false,
-    "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : false
   }, {
     "roundIndex" : 3,
     "roundWon" : true,
@@ -135,14 +140,15 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : {
       "bf4e8c68-67b5-51c0-b713-117213fa123f" : 108
     },
     "myDamagePerKill" : { },
     "afk" : false,
-    "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : false
   }, {
     "roundIndex" : 4,
     "roundWon" : false,
@@ -163,14 +169,15 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : true,
     "damageToEliminated" : {
       "e0a1f22e-e910-5b58-84c7-f857939c74ab" : 55
     },
     "myDamagePerKill" : { },
     "afk" : false,
-    "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : false
   }, {
     "roundIndex" : 5,
     "roundWon" : true,
@@ -191,12 +198,13 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : true,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
     "afk" : false,
-    "firstDeath" : true,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : true
   }, {
     "roundIndex" : 6,
     "roundWon" : false,
@@ -217,12 +225,13 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
     "afk" : false,
-    "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : false
   }, {
     "roundIndex" : 7,
     "roundWon" : true,
@@ -243,6 +252,7 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : {
       "bf4e8c68-67b5-51c0-b713-117213fa123f" : 150
     },
@@ -250,9 +260,9 @@
       "bf4e8c68-67b5-51c0-b713-117213fa123f" : 150
     },
     "afk" : false,
-    "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : false
   }, {
     "roundIndex" : 8,
     "roundWon" : false,
@@ -273,6 +283,7 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : {
       "bf4e8c68-67b5-51c0-b713-117213fa123f" : 140
     },
@@ -280,9 +291,9 @@
       "bf4e8c68-67b5-51c0-b713-117213fa123f" : 140
     },
     "afk" : false,
-    "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : false
   }, {
     "roundIndex" : 9,
     "roundWon" : false,
@@ -303,6 +314,7 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : {
       "e0a1f22e-e910-5b58-84c7-f857939c74ab" : 160,
       "163593cc-6931-5f72-b839-00af68b9ce6e" : 260
@@ -312,9 +324,9 @@
       "163593cc-6931-5f72-b839-00af68b9ce6e" : 260
     },
     "afk" : false,
-    "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : true
+    "firstKill" : true,
+    "firstDeath" : false
   }, {
     "roundIndex" : 10,
     "roundWon" : true,
@@ -335,14 +347,15 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : {
       "a43bf7f7-c60a-54b6-99fc-60517d1e13e8" : 65
     },
     "myDamagePerKill" : { },
     "afk" : false,
-    "firstDeath" : true,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : true
   }, {
     "roundIndex" : 11,
     "roundWon" : true,
@@ -363,6 +376,7 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : {
       "a43bf7f7-c60a-54b6-99fc-60517d1e13e8" : 195,
       "664336af-3abc-5252-b295-c9e4d125ee96" : 55
@@ -371,9 +385,9 @@
       "a43bf7f7-c60a-54b6-99fc-60517d1e13e8" : 195
     },
     "afk" : false,
-    "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : false
   }, {
     "roundIndex" : 12,
     "roundWon" : true,
@@ -394,12 +408,13 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
     "afk" : false,
-    "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : false
   }, {
     "roundIndex" : 13,
     "roundWon" : false,
@@ -420,12 +435,13 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
     "afk" : false,
-    "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : false
   }, {
     "roundIndex" : 14,
     "roundWon" : false,
@@ -446,12 +462,13 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : true,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
     "afk" : false,
-    "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : false
   }, {
     "roundIndex" : 15,
     "roundWon" : false,
@@ -472,12 +489,13 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
     "afk" : false,
-    "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : false
   }, {
     "roundIndex" : 16,
     "roundWon" : false,
@@ -498,12 +516,13 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
     "afk" : false,
-    "firstDeath" : true,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : true
   }, {
     "roundIndex" : 17,
     "roundWon" : true,
@@ -524,6 +543,7 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : {
       "a43bf7f7-c60a-54b6-99fc-60517d1e13e8" : 150
     },
@@ -531,9 +551,9 @@
       "a43bf7f7-c60a-54b6-99fc-60517d1e13e8" : 150
     },
     "afk" : false,
-    "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : false
   }, {
     "roundIndex" : 18,
     "roundWon" : true,
@@ -554,6 +574,7 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : {
       "664336af-3abc-5252-b295-c9e4d125ee96" : 150
     },
@@ -561,9 +582,9 @@
       "664336af-3abc-5252-b295-c9e4d125ee96" : 150
     },
     "afk" : false,
-    "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : false
   }, {
     "roundIndex" : 19,
     "roundWon" : true,
@@ -584,12 +605,13 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
     "afk" : false,
-    "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : false
   }, {
     "roundIndex" : 20,
     "roundWon" : true,
@@ -610,12 +632,13 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
     "afk" : false,
-    "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : false
   }, {
     "roundIndex" : 21,
     "roundWon" : false,
@@ -636,12 +659,13 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
     "afk" : false,
-    "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : false
   }, {
     "roundIndex" : 22,
     "roundWon" : false,
@@ -662,11 +686,12 @@
     "skillQCasts" : 0,
     "skillCCasts" : 0,
     "stayedInSpawn" : false,
+    "traded" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
     "afk" : false,
-    "firstDeath" : true,
     "penalized" : false,
-    "firstKill" : false
+    "firstKill" : false,
+    "firstDeath" : true
   } ]
 }
