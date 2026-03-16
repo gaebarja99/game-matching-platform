@@ -4,7 +4,7 @@ Spring Boot 기반 Maven 프로젝트입니다.
 
 # Project Version
 
-10
+11
 
 ## 프로젝트 구조
 
@@ -35,4 +35,4 @@ mvnw.cmd spring-boot:run
 ./mvnw clean package
 ```
 
-버전 9에 발로란트 분석 기능 병합
+전적 확인 페이지 생성
