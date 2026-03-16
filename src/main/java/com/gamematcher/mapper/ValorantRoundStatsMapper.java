@@ -137,6 +137,7 @@ public class ValorantRoundStatsMapper {
                 ? !survived.get()
                 : roundKills.stream().anyMatch(k -> rp.getPlayerPuuid() != null && rp.getPlayerPuuid().equals(k.getVictimPuuid()));
         dto.setDied(died);
+        dto.setTraded(isTradedInRound(rp.getPlayerPuuid(), rp.getPlayerTeam(), roundKills));
 
         // damageToEliminated, myDamagePerKill (라운드 점수 계산용)
         Set<String> victims = roundKills.stream()
@@ -202,6 +203,40 @@ public class ValorantRoundStatsMapper {
                         nullToMax(a.getKillTimeInRound()),
                         nullToMax(b.getKillTimeInRound())
                 ));
+    }
+
+    private static final int TRADED_WINDOW_MS = 4000;
+
+    /**
+     * Traded: 해당 라운드에서 플레이어가 죽은 적이 있고,
+     * 팀원이 5초 이내에 킬러를 제거한 경우.
+     * 세이지 부활로 한 라운드에 여러 번 죽을 수 있으므로, 모든 데스를 검사하여
+     * 하나라도 traded면 해당 라운드는 traded로 판정.
+     */
+    private boolean isTradedInRound(String playerPuuid, String playerTeam,
+                                          List<ValorantKillEvent> roundKills) {
+        if (playerPuuid == null || playerTeam == null || roundKills == null) return false;
+
+        List<ValorantKillEvent> myDeaths = roundKills.stream()
+                .filter(ke -> playerPuuid.equals(ke.getVictimPuuid()))
+                .toList();
+        if (myDeaths.isEmpty()) return false;
+
+        for (ValorantKillEvent myDeath : myDeaths) {
+            String killerPuuid = myDeath.getKillerPuuid();
+            Integer myDeathTime = myDeath.getKillTimeInRound();
+            if (killerPuuid == null || myDeathTime == null) continue;
+
+            boolean traded = roundKills.stream()
+                    .filter(ke -> killerPuuid.equals(ke.getVictimPuuid()) && playerTeam.equals(ke.getKillerTeam()))
+                    .anyMatch(avenge -> {
+                        Integer avengeTime = avenge.getKillTimeInRound();
+                        return avengeTime != null && avengeTime >= myDeathTime
+                                && (avengeTime - myDeathTime) <= TRADED_WINDOW_MS;
+                    });
+            if (traded) return true;
+        }
+        return false;
     }
 
     private int nullToZero(Integer v) {

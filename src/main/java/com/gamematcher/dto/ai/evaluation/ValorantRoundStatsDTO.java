@@ -55,6 +55,9 @@ public class ValorantRoundStatsDTO {
     private boolean FirstKill;
     private boolean FirstDeath;
 
+    /** 트레이드: 사망 후 4초 내 팀원이 킬러를 제거한 경우 */
+    private boolean traded;
+
     /** 제거된 적(victim)별 이 플레이어가 가한 데미지. 킬/어시스트 데미지 기여 점수용 */
     private java.util.Map<String, Integer> damageToEliminated;
 

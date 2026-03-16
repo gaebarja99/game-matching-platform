@@ -59,10 +59,10 @@
     "myDamagePerKill" : {
       "bf4e8c68-67b5-51c0-b713-117213fa123f" : 159
     },
+    "afk" : false,
     "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 1,
     "roundWon" : false,
@@ -85,10 +85,10 @@
     "stayedInSpawn" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
+    "afk" : false,
     "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 2,
     "roundWon" : false,
@@ -111,10 +111,10 @@
     "stayedInSpawn" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
+    "afk" : false,
     "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 3,
     "roundWon" : true,
@@ -139,10 +139,10 @@
       "bf4e8c68-67b5-51c0-b713-117213fa123f" : 108
     },
     "myDamagePerKill" : { },
+    "afk" : false,
     "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 4,
     "roundWon" : false,
@@ -167,10 +167,10 @@
       "e0a1f22e-e910-5b58-84c7-f857939c74ab" : 55
     },
     "myDamagePerKill" : { },
+    "afk" : false,
     "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 5,
     "roundWon" : true,
@@ -193,10 +193,10 @@
     "stayedInSpawn" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
+    "afk" : false,
     "firstDeath" : true,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 6,
     "roundWon" : false,
@@ -219,10 +219,10 @@
     "stayedInSpawn" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
+    "afk" : false,
     "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 7,
     "roundWon" : true,
@@ -249,10 +249,10 @@
     "myDamagePerKill" : {
       "bf4e8c68-67b5-51c0-b713-117213fa123f" : 150
     },
+    "afk" : false,
     "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 8,
     "roundWon" : false,
@@ -279,10 +279,10 @@
     "myDamagePerKill" : {
       "bf4e8c68-67b5-51c0-b713-117213fa123f" : 140
     },
+    "afk" : false,
     "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 9,
     "roundWon" : false,
@@ -311,10 +311,10 @@
       "e0a1f22e-e910-5b58-84c7-f857939c74ab" : 160,
       "163593cc-6931-5f72-b839-00af68b9ce6e" : 260
     },
+    "afk" : false,
     "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : true,
-    "afk" : false
+    "firstKill" : true
   }, {
     "roundIndex" : 10,
     "roundWon" : true,
@@ -339,10 +339,10 @@
       "a43bf7f7-c60a-54b6-99fc-60517d1e13e8" : 65
     },
     "myDamagePerKill" : { },
+    "afk" : false,
     "firstDeath" : true,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 11,
     "roundWon" : true,
@@ -370,10 +370,10 @@
     "myDamagePerKill" : {
       "a43bf7f7-c60a-54b6-99fc-60517d1e13e8" : 195
     },
+    "afk" : false,
     "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 12,
     "roundWon" : true,
@@ -396,10 +396,10 @@
     "stayedInSpawn" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
+    "afk" : false,
     "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 13,
     "roundWon" : false,
@@ -422,10 +422,10 @@
     "stayedInSpawn" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
+    "afk" : false,
     "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 14,
     "roundWon" : false,
@@ -448,10 +448,10 @@
     "stayedInSpawn" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
+    "afk" : false,
     "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 15,
     "roundWon" : false,
@@ -474,10 +474,10 @@
     "stayedInSpawn" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
+    "afk" : false,
     "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 16,
     "roundWon" : false,
@@ -500,10 +500,10 @@
     "stayedInSpawn" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
+    "afk" : false,
     "firstDeath" : true,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 17,
     "roundWon" : true,
@@ -530,10 +530,10 @@
     "myDamagePerKill" : {
       "a43bf7f7-c60a-54b6-99fc-60517d1e13e8" : 150
     },
+    "afk" : false,
     "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 18,
     "roundWon" : true,
@@ -560,10 +560,10 @@
     "myDamagePerKill" : {
       "664336af-3abc-5252-b295-c9e4d125ee96" : 150
     },
+    "afk" : false,
     "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 19,
     "roundWon" : true,
@@ -586,10 +586,10 @@
     "stayedInSpawn" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
+    "afk" : false,
     "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 20,
     "roundWon" : true,
@@ -612,10 +612,10 @@
     "stayedInSpawn" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
+    "afk" : false,
     "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 21,
     "roundWon" : false,
@@ -638,10 +638,10 @@
     "stayedInSpawn" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
+    "afk" : false,
     "firstDeath" : false,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   }, {
     "roundIndex" : 22,
     "roundWon" : false,
@@ -664,9 +664,9 @@
     "stayedInSpawn" : false,
     "damageToEliminated" : { },
     "myDamagePerKill" : { },
+    "afk" : false,
     "firstDeath" : true,
     "penalized" : false,
-    "firstKill" : false,
-    "afk" : false
+    "firstKill" : false
   } ]
 }

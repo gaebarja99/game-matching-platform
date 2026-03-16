@@ -202,7 +202,7 @@ public class ValorantMatchStatsMapper {
         return dto;
     }
 
-    private static final int TRADED_WINDOW_MS = 5000;
+    private static final int TRADED_WINDOW_MS = 4000;
 
     /** API round는 0-based. roundIndex와 동일한 킬만 포함 */
     private List<ValorantKillEvent> getKillsInRound(int roundIndex, List<ValorantKillEvent> allKills) {

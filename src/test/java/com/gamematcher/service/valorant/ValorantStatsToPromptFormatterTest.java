@@ -226,6 +226,156 @@ class ValorantStatsToPromptFormatterTest {
     }
 
     @Nested
+    @DisplayName("formatSummary - LLM용 압축 요약")
+    class FormatSummaryTest {
+
+        @Test
+        @DisplayName("null이 주어지면 빈 문자열 반환")
+        void formatSummary_null_returnsEmpty() {
+            assertThat(formatter.formatSummary(null)).isEmpty();
+        }
+
+        @Test
+        @DisplayName("matchStats만 있으면 [매치 요약] 블록 출력")
+        void formatSummary_matchStatsOnly_outputsMatchBlock() {
+            var matchStats = ValorantMatchStatsDTO.builder()
+                    .game("VALORANT")
+                    .kills(8)
+                    .deaths(17)
+                    .assists(4)
+                    .result(MatchResult.DEFEAT)
+                    .roundsPlayed(23)
+                    .roundsWon(10)
+                    .kd(0.47)
+                    .adr(81.0)
+                    .kast(69.6)
+                    .headShotRate(22.2)
+                    .avgDamageDifference(-45.9)
+                    .matchAverageContributionScore(102)
+                    .firstBloods(1)
+                    .firstDeaths(4)
+                    .multiKill(1)
+                    .doubleKill(1)
+                    .build();
+
+            var dto = ValorantPlayerMatchStatsDTO.builder()
+                    .playerDisplayName("theDoctorr#0000")
+                    .playerTeam("Red")
+                    .agent("Chamber")
+                    .matchStats(matchStats)
+                    .roundStats(new ArrayList<>())
+                    .build();
+
+            String result = formatter.formatSummary(dto);
+
+            assertThat(result).contains("[매치 요약]");
+            assertThat(result).contains("플레이어: theDoctorr#0000 | 팀: Red | 에이전트: Chamber");
+            assertThat(result).contains("결과: 패배");
+            assertThat(result).contains("스코어: 10-13 (23라운드)");
+            assertThat(result).contains("승리기여도 점수: 102");
+            assertThat(result).contains("KDA: 8/17/4");
+            assertThat(result).contains("KD 0.47");
+            assertThat(result).contains("KAST: 70%");
+            assertThat(result).contains("ADR: 81");
+            assertThat(result).contains("평균피해격차: -46");
+            assertThat(result).contains("헤드샷율: 22%");
+            assertThat(result).contains("First Blood: 1회");
+            assertThat(result).contains("First Death: 4회");
+            assertThat(result).contains("멀티킬: 1 (더블킬 1회)");
+            assertThat(result).doesNotContain("[라운드별]");
+        }
+
+        @Test
+        @DisplayName("라운드 스탯 있으면 [라운드별] 블록에 라운드당 한 줄 출력")
+        void formatSummary_withRoundStats_outputsRoundLines() {
+            var round1 = ValorantRoundStatsDTO.builder()
+                    .roundIndex(0)
+                    .roundWon(false)
+                    .died(true)
+                    .kills(1)
+                    .damage(159)
+                    .roundContributionScore(97)
+                    .FirstKill(false)
+                    .FirstDeath(false)
+                    .build();
+            var round2 = ValorantRoundStatsDTO.builder()
+                    .roundIndex(1)
+                    .roundWon(false)
+                    .died(true)
+                    .kills(0)
+                    .damage(0)
+                    .roundContributionScore(90)
+                    .FirstKill(false)
+                    .FirstDeath(false)
+                    .build();
+
+            var dto = ValorantPlayerMatchStatsDTO.builder()
+                    .playerDisplayName("P#t")
+                    .matchStats(ValorantMatchStatsDTO.builder()
+                            .game("VALORANT")
+                            .kills(1)
+                            .deaths(1)
+                            .assists(0)
+                            .result(MatchResult.DEFEAT)
+                            .roundsPlayed(2)
+                            .roundsWon(0)
+                            .matchAverageContributionScore(93)
+                            .build())
+                    .roundStats(List.of(round1, round2))
+                    .build();
+
+            String result = formatter.formatSummary(dto);
+
+            assertThat(result).contains("[라운드별]");
+            assertThat(result).contains("R0: 패배 킬1 데스1 딜159 기여도97");
+            assertThat(result).contains("R1: 패배 킬0 데스1 딜0 기여도90");
+        }
+
+        @Test
+        @DisplayName("maxRoundLines=0이면 라운드 블록 제외")
+        void formatSummary_maxRoundLinesZero_excludesRounds() {
+            var round = ValorantRoundStatsDTO.builder()
+                    .roundIndex(0)
+                    .roundWon(true)
+                    .roundContributionScore(110)
+                    .build();
+            var dto = ValorantPlayerMatchStatsDTO.builder()
+                    .playerDisplayName("P#t")
+                    .matchStats(ValorantMatchStatsDTO.builder()
+                            .game("VALORANT")
+                            .roundsPlayed(1)
+                            .roundsWon(1)
+                            .matchAverageContributionScore(110)
+                            .build())
+                    .roundStats(List.of(round))
+                    .build();
+
+            String result = formatter.formatSummary(dto, 0);
+
+            assertThat(result).contains("[매치 요약]");
+            assertThat(result).doesNotContain("[라운드별]");
+            assertThat(result).doesNotContain("R0:");
+        }
+
+        @Test
+        @DisplayName("maxRoundLines=1이면 첫 라운드만 출력")
+        void formatSummary_maxRoundLinesOne_outputsFirstRoundOnly() {
+            var r0 = ValorantRoundStatsDTO.builder().roundIndex(0).roundContributionScore(100).build();
+            var r1 = ValorantRoundStatsDTO.builder().roundIndex(1).roundContributionScore(90).build();
+            var dto = ValorantPlayerMatchStatsDTO.builder()
+                    .playerDisplayName("P#t")
+                    .matchStats(ValorantMatchStatsDTO.builder().game("VALORANT").roundsPlayed(2).build())
+                    .roundStats(List.of(r0, r1))
+                    .build();
+
+            String result = formatter.formatSummary(dto, 1);
+
+            assertThat(result).contains("R0:");
+            assertThat(result).doesNotContain("R1:");
+        }
+    }
+
+    @Nested
     @DisplayName("통합 - 샘플 데이터")
     class IntegrationTest {
 

@@ -9,6 +9,11 @@ import com.gamematcher.mapper.ValorantMatchStatsMapper;
 import com.gamematcher.mapper.ValorantRoundStatsMapper;
 import com.gamematcher.service.ai.score.KillContextExtractor;
 import com.gamematcher.service.ai.score.RoundScoreInputBuilder;
+import com.gamematcher.dto.ai.evaluation.LlmEvaluationResponseDTO;
+import com.gamematcher.service.ai.LlmEvaluationService;
+import com.gamematcher.service.ai.LlmEvaluationServiceImpl;
+import com.gamematcher.service.ai.ValorantEvaluationPromptBuilder;
+import com.gamematcher.service.ai.ValorantLlmEvaluationService;
 import com.gamematcher.service.ai.score.ValorantRoundScoreEngine;
 import com.gamematcher.service.ai.score.ValorantScoreService;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +24,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -41,6 +47,7 @@ class ValorantPlayerMatchStatsOutputTest {
     private ValorantMatchMapper matchMapper;
     private ValorantMatchStatsMapper statsMapper;
     private ValorantStatsToPromptFormatter promptFormatter;
+    private ValorantEvaluationPromptBuilder promptBuilder;
 
     @BeforeEach
     void setUp() {
@@ -54,6 +61,7 @@ class ValorantPlayerMatchStatsOutputTest {
         );
         statsMapper = new ValorantMatchStatsMapper(roundStatsMapper, scoreService);
         promptFormatter = new ValorantStatsToPromptFormatter();
+        promptBuilder = new ValorantEvaluationPromptBuilder(promptFormatter);
     }
 
     @Test
@@ -120,6 +128,200 @@ class ValorantPlayerMatchStatsOutputTest {
         Path txtPath = outDir.resolve("valorant_single_player_match_stats.txt");
         Files.writeString(txtPath, textContent);
         System.out.println("텍스트 출력 (1인): " + txtPath.toAbsolutePath());
+    }
+
+    @Test
+    @DisplayName("한 명 플레이어 스탯 LLM용 요약 출력")
+    void outputSinglePlayerMatchStatsSummary() throws Exception {
+        Path outDir = Paths.get(OUTPUT_DIR);
+        Files.createDirectories(outDir);
+
+        String json = Files.readString(Paths.get(SAMPLE_PATH));
+        var matchDto = jsonService.parseFirstMatch(json);
+        assertThat(matchDto).isNotNull();
+
+        var entity = matchMapper.toEntity(matchDto);
+        assertThat(entity).isNotNull();
+
+        List<ValorantPlayerMatchStatsDTO> playerStats = statsMapper.toPlayerMatchStatsDtos(entity);
+        assertThat(playerStats).isNotEmpty();
+
+        int idx = Math.min(SINGLE_PLAYER_INDEX, playerStats.size() - 1);
+        ValorantPlayerMatchStatsDTO single = playerStats.get(idx);
+
+        String summary = promptFormatter.formatSummary(single);
+        String textContent = "=== LLM용 요약 (formatSummary) ===\n\n" + summary;
+
+        Path txtPath = outDir.resolve("valorant_single_player_match_stats_summary.txt");
+        Files.writeString(txtPath, textContent);
+        System.out.println("요약 출력: " + txtPath.toAbsolutePath());
+
+        assertThat(summary).contains("[매치 요약]");
+        assertThat(summary).contains("[라운드별]");
+    }
+
+    @Test
+    @DisplayName("한 명 플레이어 LLM용 전체 프롬프트 출력 (역할+데이터+출력형식)")
+    void outputSinglePlayerFullPrompt() throws Exception {
+        Path outDir = Paths.get(OUTPUT_DIR);
+        Files.createDirectories(outDir);
+
+        String json = Files.readString(Paths.get(SAMPLE_PATH));
+        var matchDto = jsonService.parseFirstMatch(json);
+        assertThat(matchDto).isNotNull();
+
+        var entity = matchMapper.toEntity(matchDto);
+        assertThat(entity).isNotNull();
+
+        List<ValorantPlayerMatchStatsDTO> playerStats = statsMapper.toPlayerMatchStatsDtos(entity);
+        assertThat(playerStats).isNotEmpty();
+
+        int idx = Math.min(SINGLE_PLAYER_INDEX, playerStats.size() - 1);
+        ValorantPlayerMatchStatsDTO single = playerStats.get(idx);
+
+        String fullPrompt = promptBuilder.build(single);
+        String textContent = "=== LLM 전송용 전체 프롬프트 ===\n\n" + fullPrompt;
+
+        Path txtPath = outDir.resolve("valorant_single_player_full_prompt.txt");
+        Files.writeString(txtPath, textContent);
+        System.out.println("전체 프롬프트 출력: " + txtPath.toAbsolutePath());
+
+        assertThat(fullPrompt).contains("당신은 발로란트 전문");
+        assertThat(fullPrompt).contains("[매치 요약]");
+        assertThat(fullPrompt).contains("{\"summary\":");
+        assertThat(fullPrompt).contains("한국어로 작성하십시오");
+    }
+
+    @Test
+    @DisplayName("LLM API 응답을 텍스트 파일로 저장 (AI_API_KEY 환경변수 필요)")
+    void outputLlmApiResponse() throws Exception {
+        Path outDir = Paths.get(OUTPUT_DIR);
+        Files.createDirectories(outDir);
+
+        // API 키: 환경변수 우선, 없으면 application.properties 기본값 사용
+        String apiKey = resolveApiKeyForTest();
+        ObjectMapper om = new ObjectMapper();
+        LlmEvaluationService llmService = new LlmEvaluationServiceImpl(
+                om,
+                apiKey != null ? apiKey : "",
+                "gpt-4o-mini",
+                30,
+                2
+        );
+        ValorantLlmEvaluationService valorantLlmService = new ValorantLlmEvaluationService(
+                promptBuilder,
+                llmService
+        );
+
+        // 샘플 데이터 로드
+        String json = Files.readString(Paths.get(SAMPLE_PATH));
+        var matchDto = jsonService.parseFirstMatch(json);
+        assertThat(matchDto).isNotNull();
+
+        var entity = matchMapper.toEntity(matchDto);
+        assertThat(entity).isNotNull();
+
+        List<ValorantPlayerMatchStatsDTO> playerStats = statsMapper.toPlayerMatchStatsDtos(entity);
+        assertThat(playerStats).isNotEmpty();
+
+        int idx = Math.min(SINGLE_PLAYER_INDEX, playerStats.size() - 1);
+        ValorantPlayerMatchStatsDTO single = playerStats.get(idx);
+
+        // LLM 평가 호출
+        var result = valorantLlmService.evaluate(single);
+
+        // 결과를 텍스트 파일로 저장
+        StringBuilder content = new StringBuilder();
+        content.append("=== LLM API 평가 결과 ===\n");
+        content.append("플레이어: ").append(single.getPlayerDisplayName()).append(" | 에이전트: ").append(single.getAgent()).append("\n\n");
+
+        if (result.isPresent()) {
+            LlmEvaluationResponseDTO dto = result.get();
+            content.append("[요약]\n").append(dto.getSummary()).append("\n\n");
+            content.append("[상세 코멘트]\n").append(dto.getDetailedComment() != null ? dto.getDetailedComment() : "").append("\n");
+        } else {
+            content.append("AI_API_KEY가 설정되지 않았거나 API 호출에 실패했습니다.\n");
+            content.append("환경변수 AI_API_KEY를 설정하고 테스트를 다시 실행하세요.\n");
+        }
+
+        Path txtPath = outDir.resolve("valorant_llm_api_response.txt");
+        Files.writeString(txtPath, content);
+        System.out.println("LLM API 응답 출력: " + txtPath.toAbsolutePath());
+    }
+
+    @Test
+    @DisplayName("LLM API 응답 (gpt-4o 고급 모델)을 텍스트 파일로 저장 (AI_API_KEY 환경변수 필요)")
+    void outputLlmApiResponseWithAdvancedModel() throws Exception {
+        Path outDir = Paths.get(OUTPUT_DIR);
+        Files.createDirectories(outDir);
+
+        String apiKey = resolveApiKeyForTest();
+        ObjectMapper om = new ObjectMapper();
+        LlmEvaluationService llmService = new LlmEvaluationServiceImpl(
+                om,
+                apiKey != null ? apiKey : "",
+                "gpt-4o",
+                45,
+                2
+        );
+        ValorantLlmEvaluationService valorantLlmService = new ValorantLlmEvaluationService(
+                promptBuilder,
+                llmService
+        );
+
+        String json = Files.readString(Paths.get(SAMPLE_PATH));
+        var matchDto = jsonService.parseFirstMatch(json);
+        assertThat(matchDto).isNotNull();
+
+        var entity = matchMapper.toEntity(matchDto);
+        assertThat(entity).isNotNull();
+
+        List<ValorantPlayerMatchStatsDTO> playerStats = statsMapper.toPlayerMatchStatsDtos(entity);
+        assertThat(playerStats).isNotEmpty();
+
+        int idx = Math.min(SINGLE_PLAYER_INDEX, playerStats.size() - 1);
+        ValorantPlayerMatchStatsDTO single = playerStats.get(idx);
+
+        var result = valorantLlmService.evaluate(single);
+
+        StringBuilder content = new StringBuilder();
+        content.append("=== LLM API 평가 결과 (gpt-4o) ===\n");
+        content.append("플레이어: ").append(single.getPlayerDisplayName()).append(" | 에이전트: ").append(single.getAgent()).append("\n\n");
+
+        if (result.isPresent()) {
+            LlmEvaluationResponseDTO dto = result.get();
+            content.append("[요약]\n").append(dto.getSummary()).append("\n\n");
+            content.append("[상세 코멘트]\n").append(dto.getDetailedComment() != null ? dto.getDetailedComment() : "").append("\n");
+        } else {
+            content.append("AI_API_KEY가 설정되지 않았거나 API 호출에 실패했습니다.\n");
+            content.append("환경변수 AI_API_KEY를 설정하고 테스트를 다시 실행하세요.\n");
+        }
+
+        Path txtPath = outDir.resolve("valorant_llm_api_response_gpt4o.txt");
+        Files.writeString(txtPath, content);
+        System.out.println("LLM API 응답 출력 (gpt-4o): " + txtPath.toAbsolutePath());
+    }
+
+    /**
+     * 테스트용 API 키: 환경변수 AI_API_KEY 우선, 없으면 application.properties 기본값 사용.
+     */
+    private static String resolveApiKeyForTest() {
+        String key = System.getenv("AI_API_KEY");
+        if (key != null && !key.isBlank()) {
+            return key;
+        }
+        try {
+            Path propsPath = Paths.get("src/main/resources/application.properties");
+            if (Files.exists(propsPath)) {
+                String content = Files.readString(propsPath);
+                var m = Pattern.compile("ai\\.llm\\.api-key=\\$\\{AI_API_KEY:([^}]+)\\}").matcher(content);
+                if (m.find() && m.group(1) != null && !m.group(1).isBlank()) {
+                    return m.group(1).trim();
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return "";
     }
 
     private static ObjectMapper createOutputObjectMapper() {
