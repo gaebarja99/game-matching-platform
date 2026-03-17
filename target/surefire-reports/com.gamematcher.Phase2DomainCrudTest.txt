@@ -1,8 +1,8 @@
 -------------------------------------------------------------------------------
 Test set: com.gamematcher.Phase2DomainCrudTest
 -------------------------------------------------------------------------------
-Tests run: 7, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.921 s <<< FAILURE! -- in com.gamematcher.Phase2DomainCrudTest
-com.gamematcher.Phase2DomainCrudTest.participantWithRawStatsAndConverter -- Time elapsed: 0.150 s <<< ERROR!
+Tests run: 7, Failures: 0, Errors: 1, Skipped: 0, Time elapsed: 0.684 s <<< FAILURE! -- in com.gamematcher.Phase2DomainCrudTest
+com.gamematcher.Phase2DomainCrudTest.participantWithRawStatsAndConverter -- Time elapsed: 0.097 s <<< ERROR!
 java.lang.IllegalArgumentException: rawStats JSON 파싱 실패: {"game":"VALORANT","kills":20,"deaths":5,"assists":10,"result":"VICTORY","roundsWon":13,"roundsPlayed":24,"headshots":8,"totalShots":40}
 	at com.gamematcher.dto.ai.evaluation.StatsConverter.toDto(StatsConverter.java:43)
 	at com.gamematcher.Phase2DomainCrudTest.participantWithRawStatsAndConverter(Phase2DomainCrudTest.java:98)

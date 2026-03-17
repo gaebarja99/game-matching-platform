@@ -204,7 +204,7 @@ class ValorantPlayerMatchStatsOutputTest {
         LlmEvaluationService llmService = new LlmEvaluationServiceImpl(
                 om,
                 apiKey != null ? apiKey : "",
-                "gpt-4o-mini",
+                "gpt-5-mini",
                 30,
                 2
         );
@@ -238,10 +238,11 @@ class ValorantPlayerMatchStatsOutputTest {
         if (result.isPresent()) {
             LlmEvaluationResponseDTO dto = result.get();
             content.append("[요약]\n").append(dto.getSummary()).append("\n\n");
-            content.append("[상세 코멘트]\n").append(dto.getDetailedComment() != null ? dto.getDetailedComment() : "").append("\n");
+            String comment = dto.getDetailedComment();
+            content.append("[상세 코멘트]\n").append(comment != null ? comment.replace("\\n", "\n") : "").append("\n");
         } else {
-            content.append("AI_API_KEY가 설정되지 않았거나 API 호출에 실패했습니다.\n");
-            content.append("환경변수 AI_API_KEY를 설정하고 테스트를 다시 실행하세요.\n");
+            content.append("AI_API_KEY 또는 OPENAI_API_KEY가 설정되지 않았거나 API 호출에 실패했습니다.\n");
+            content.append("환경변수를 설정하고 테스트를 다시 실행하세요.\n");
         }
 
         Path txtPath = outDir.resolve("valorant_llm_api_response.txt");
@@ -250,7 +251,7 @@ class ValorantPlayerMatchStatsOutputTest {
     }
 
     @Test
-    @DisplayName("LLM API 응답 (gpt-4o 고급 모델)을 텍스트 파일로 저장 (AI_API_KEY 환경변수 필요)")
+    @DisplayName("LLM API 응답 (gpt-5.2 고급 모델)을 텍스트 파일로 저장 (AI_API_KEY 또는 OPENAI_API_KEY 환경변수 필요)")
     void outputLlmApiResponseWithAdvancedModel() throws Exception {
         Path outDir = Paths.get(OUTPUT_DIR);
         Files.createDirectories(outDir);
@@ -260,7 +261,7 @@ class ValorantPlayerMatchStatsOutputTest {
         LlmEvaluationService llmService = new LlmEvaluationServiceImpl(
                 om,
                 apiKey != null ? apiKey : "",
-                "gpt-4o",
+                "gpt-5.2",
                 45,
                 2
         );
@@ -285,36 +286,37 @@ class ValorantPlayerMatchStatsOutputTest {
         var result = valorantLlmService.evaluate(single);
 
         StringBuilder content = new StringBuilder();
-        content.append("=== LLM API 평가 결과 (gpt-4o) ===\n");
+        content.append("=== LLM API 평가 결과 (gpt-5.2) ===\n");
         content.append("플레이어: ").append(single.getPlayerDisplayName()).append(" | 에이전트: ").append(single.getAgent()).append("\n\n");
 
         if (result.isPresent()) {
             LlmEvaluationResponseDTO dto = result.get();
             content.append("[요약]\n").append(dto.getSummary()).append("\n\n");
-            content.append("[상세 코멘트]\n").append(dto.getDetailedComment() != null ? dto.getDetailedComment() : "").append("\n");
+            String comment = dto.getDetailedComment();
+            content.append("[상세 코멘트]\n").append(comment != null ? comment.replace("\\n", "\n") : "").append("\n");
         } else {
-            content.append("AI_API_KEY가 설정되지 않았거나 API 호출에 실패했습니다.\n");
-            content.append("환경변수 AI_API_KEY를 설정하고 테스트를 다시 실행하세요.\n");
+            content.append("AI_API_KEY 또는 OPENAI_API_KEY가 설정되지 않았거나 API 호출에 실패했습니다.\n");
+            content.append("환경변수를 설정하고 테스트를 다시 실행하세요.\n");
         }
 
-        Path txtPath = outDir.resolve("valorant_llm_api_response_gpt4o.txt");
+        Path txtPath = outDir.resolve("valorant_llm_api_response_gpt52.txt");
         Files.writeString(txtPath, content);
-        System.out.println("LLM API 응답 출력 (gpt-4o): " + txtPath.toAbsolutePath());
+        System.out.println("LLM API 응답 출력 (gpt-5.2): " + txtPath.toAbsolutePath());
     }
 
     /**
-     * 테스트용 API 키: 환경변수 AI_API_KEY 우선, 없으면 application.properties 기본값 사용.
+     * 테스트용 API 키: 환경변수 AI_API_KEY, OPENAI_API_KEY 순으로 확인.
      */
     private static String resolveApiKeyForTest() {
         String key = System.getenv("AI_API_KEY");
-        if (key != null && !key.isBlank()) {
-            return key;
-        }
+        if (key != null && !key.isBlank()) return key;
+        key = System.getenv("OPENAI_API_KEY");
+        if (key != null && !key.isBlank()) return key;
         try {
             Path propsPath = Paths.get("src/main/resources/application.properties");
             if (Files.exists(propsPath)) {
                 String content = Files.readString(propsPath);
-                var m = Pattern.compile("ai\\.llm\\.api-key=\\$\\{AI_API_KEY:([^}]+)\\}").matcher(content);
+                var m = Pattern.compile("ai\\.llm\\.api-key=\\$\\{.*?:([^}]*)\\}").matcher(content);
                 if (m.find() && m.group(1) != null && !m.group(1).isBlank()) {
                     return m.group(1).trim();
                 }

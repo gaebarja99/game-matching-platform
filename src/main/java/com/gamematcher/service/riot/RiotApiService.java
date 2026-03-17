@@ -165,6 +165,36 @@ public class RiotApiService {
         }
     }
 
+    /**
+     * 매치 타임라인 조회 (분 단위 프레임, 골드·CS·레벨 변화 등).
+     * 형식: {regional_base_url}/lol/match/v5/matches/{matchId}/timeline
+     */
+    public String getMatchTimelineRawByMatchId(String matchId) {
+        String url = UriComponentsBuilder
+                .fromHttpUrl(riotApiProperties.getRegionalBaseUrl())
+                .path("/lol/match/v5/matches/{matchId}/timeline")
+                .buildAndExpand(matchId)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Riot-Token", riotApiProperties.getApiKey());
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    String.class
+            );
+            return response.getBody();
+        } catch (HttpStatusCodeException e) {
+            throw new RuntimeException("Riot Match Timeline API 호출 실패: " + e.getStatusCode() + " / " + e.getResponseBodyAsString());
+        } catch (Exception e) {
+            throw new RuntimeException("Riot Match Timeline API 호출 중 오류 발생: " + e.getMessage(), e);
+        }
+    }
+
     public RiotMatchDetailResponseDto getMatchDetailByMatchId(String matchId, String puuid) {
         String url = UriComponentsBuilder
                 .fromHttpUrl(riotApiProperties.getRegionalBaseUrl())

@@ -1,0 +1,148 @@
+{
+  "data": {
+    "type": "match",
+    "id": "04192032-7e46-4d3a-a430-28817c8c5bcc",
+    "attributes": {
+      "gameMode": "tdm",
+      "titleId": "bluehole-pubg",
+      "shardId": "steam",
+      "tags": null,
+      "mapName": "Tiger_Main",
+      "isCustomMatch": true,
+      "seasonState": "progress",
+      "createdAt": "2026-03-16T15:42:19Z",
+      "duration": 303,
+      "matchType": "custom",
+      "stats": null
+    },
+    "relationships": {
+      "rosters": {
+        "data": [
+          {"type": "roster", "id": "345ddd65-cb73-4d2f-bbaa-f771add4da57"},
+          {"type": "roster", "id": "8ae608b1-cd02-4376-83b7-56151b3dc6d6"}
+        ]
+      },
+      "assets": {
+        "data": [
+          {"type": "asset", "id": "8aeb4da4-214f-11f1-8811-4ab34ea320e6"}
+        ]
+      }
+    },
+    "links": {
+      "self": "https://api.pubg.com/shards/steam/matches/04192032-7e46-4d3a-a430-28817c8c5bcc",
+      "schema": ""
+    }
+  },
+  "included": [
+    {
+      "type": "asset",
+      "id": "8aeb4da4-214f-11f1-8811-4ab34ea320e6",
+      "attributes": {
+        "name": "telemetry",
+        "description": "",
+        "createdAt": "2026-03-16T15:48:14Z",
+        "URL": "https://telemetry-cdn.pubg.com/bluehole-pubg/steam/2026/03/16/15/48/8aeb4da4-214f-11f1-8811-4ab34ea320e6-telemetry.json"
+      }
+    },
+    {
+      "type": "participant",
+      "id": "a563605e-f390-40a7-aeea-d7cb1445fa2e",
+      "attributes": {
+        "stats": {
+          "DBNOs": 0,
+          "assists": 0,
+          "boosts": 0,
+          "damageDealt": 1223.7267,
+          "deathType": "byplayer",
+          "headshotKills": 10,
+          "heals": 0,
+          "killPlace": 1,
+          "killStreaks": 2,
+          "kills": 11,
+          "longestKill": 68.376755,
+          "name": "HeZ1HeZ1_-",
+          "playerId": "account.a87ceb7c124d486a95375069d712f7b8",
+          "revives": 0,
+          "rideDistance": 0,
+          "roadKills": 0,
+          "swimDistance": 0,
+          "teamKills": 0,
+          "timeSurvived": 303,
+          "vehicleDestroys": 0,
+          "walkDistance": 1539.2612,
+          "weaponsAcquired": 0,
+          "winPlace": 1
+        },
+        "actor": "",
+        "shardId": "steam"
+      }
+    },
+    {
+      "type": "participant",
+      "id": "c4e2d19e-5f52-40ab-bbdb-65e66d47bf65",
+      "attributes": {
+        "actor": "",
+        "shardId": "steam",
+        "stats": {
+          "DBNOs": 0,
+          "assists": 0,
+          "boosts": 0,
+          "damageDealt": 695.6375,
+          "deathType": "byplayer",
+          "headshotKills": 1,
+          "heals": 0,
+          "killPlace": 2,
+          "killStreaks": 2,
+          "kills": 4,
+          "longestKill": 78.81706,
+          "name": "8ink-",
+          "playerId": "account.fe1027e418594343bafd39e9685239e2",
+          "revives": 0,
+          "rideDistance": 0,
+          "roadKills": 0,
+          "swimDistance": 0,
+          "teamKills": 0,
+          "timeSurvived": 299,
+          "vehicleDestroys": 0,
+          "walkDistance": 1923.63,
+          "weaponsAcquired": 1,
+          "winPlace": 2
+        }
+      }
+    },
+    {
+      "type": "roster",
+      "id": "345ddd65-cb73-4d2f-bbaa-f771add4da57",
+      "attributes": {
+        "stats": {"rank": 1, "teamId": 1},
+        "won": "true",
+        "shardId": "steam"
+      },
+      "relationships": {
+        "participants": {
+          "data": [{"type": "participant", "id": "a563605e-f390-40a7-aeea-d7cb1445fa2e"}]
+        },
+        "team": {"data": null}
+      }
+    },
+    {
+      "type": "roster",
+      "id": "8ae608b1-cd02-4376-83b7-56151b3dc6d6",
+      "attributes": {
+        "won": "false",
+        "shardId": "steam",
+        "stats": {"rank": 2, "teamId": 2}
+      },
+      "relationships": {
+        "team": {"data": null},
+        "participants": {
+          "data": [{"type": "participant", "id": "c4e2d19e-5f52-40ab-bbdb-65e66d47bf65"}]
+        }
+      }
+    }
+  ],
+  "links": {
+    "self": "https://api-origin.pubg-odapi.pubg.io/shards/steam/matches/04192032-7e46-4d3a-a430-28817c8c5bcc"
+  },
+  "meta": {}
+}

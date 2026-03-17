@@ -47,6 +47,7 @@ public class ValorantApiService {
     private final ValorantApiProperties valorantApiProperties;
     private final ValorantMatchService valorantMatchService;
     private final ValorantMatchJsonService valorantMatchJsonService;
+    private final ValorantMatchResultService valorantMatchResultService;
     private final RestTemplate restTemplate = new RestTemplate();
     private final ObjectMapper objectMapper = new ObjectMapper();
 
@@ -148,6 +149,7 @@ public class ValorantApiService {
                 ValorantMatchDetailDto detail = getMatchDetail(matchId);
                 if (detail != null) {
                     valorantMatchService.saveMatch(detail);
+                    valorantMatchResultService.saveMatchResult(matchId);
                 }
             }
         } catch (HttpStatusCodeException e) {

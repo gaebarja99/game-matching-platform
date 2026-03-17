@@ -1,2 +1,4 @@
 com\gamematcher\service\ai\score\ScoreEngineRouter$1.class
 com\gamematcher\service\valorant\ValorantStatsToPromptFormatter$1.class
+com\gamematcher\service\lol\LolStatsToPromptFormatter$1.class
+com\gamematcher\dto\pubg\PubgMatchApiResponse.class

@@ -29,11 +29,15 @@ Henrik Dev API (https://api.henrikdev.xyz)
 
 형식: `https://api.henrikdev.xyz/valorant/v1/account/{name}/{tag}?api_key={key}`
 
+예시: `https://api.henrikdev.xyz/valorant/v1/account/TenZ/NA1?api_key=abc123`
+
 ## 1.2 간략 전적 리스트 (최근 매치 목록)
 
 유저의 최근 전적 요약본을 가져오며, 상세 페이지 이동을 위한 match_id를 확보하는 용도입니다.
 
 형식: `https://api.henrikdev.xyz/valorant/v1/lifetime/matches/{region}/by-puuid/{puuid}?api_key={key}`
+
+예시: `https://api.henrikdev.xyz/valorant/v1/lifetime/matches/na/by-puuid/abc123-def456-789?api_key=abc123&size=20&mode=competitive`
 
 주요 옵션:
 - `&size={count}`: 불러올 개수 (최대 100)
@@ -45,6 +49,8 @@ Henrik Dev API (https://api.henrikdev.xyz)
 
 형식: `https://api.henrikdev.xyz/valorant/v2/match/{match_id}?api_key={key}`
 
+예시: `https://api.henrikdev.xyz/valorant/v2/match/abc123-match-id-xyz?api_key=abc123`
+
 참고: match_id는 1.2에서 얻은 매치 고유 ID를 사용합니다.
 
 ## 1.4 실시간 MMR 및 티어 정보
@@ -53,11 +59,15 @@ Henrik Dev API (https://api.henrikdev.xyz)
 
 형식: `https://api.henrikdev.xyz/valorant/v2/by-puuid/mmr/{region}/{puuid}?api_key={key}`
 
+예시: `https://api.henrikdev.xyz/valorant/v2/by-puuid/mmr/na/abc123-def456-789?api_key=abc123`
+
 ## 1.5 MMR 변동 이력
 
 최근 치른 랭크 게임들의 점수 변화 기록을 리스트 형식으로 가져옵니다.
 
 형식: `https://api.henrikdev.xyz/valorant/v1/by-puuid/mmr-history/{region}/{puuid}?api_key={key}`
+
+예시: `https://api.henrikdev.xyz/valorant/v1/by-puuid/mmr-history/na/abc123-def456-789?api_key=abc123`
 
 ## application.properties
 
@@ -84,7 +94,7 @@ Riot ID(닉네임 + 태그)로 PUUID 및 기본 정보를 조회합니다.
 
 형식: `{regional_base_url}/riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}`
 
-예시: `https://asia.api.riotgames.com/riot/account/v1/accounts/by-riot-id/닉네임/KR1`
+예시: `https://asia.api.riotgames.com/riot/account/v1/accounts/by-riot-id/Hide on bush/KR1`
 
 ## 2.2 소환사 정보 조회 (레벨, 프로필아이콘)
 
@@ -92,7 +102,7 @@ PUUID로 소환사 상세 정보를 조회합니다.
 
 형식: `{platform_base_url}/lol/summoner/v4/summoners/by-puuid/{puuid}`
 
-예시: `https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuid}`
+예시: `https://kr.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/ggrdvya4vWUKvZHsaUbvX9B80tSUH6jLAwjuSxxM0AbrhIciAFne_emQXGppZ7I6mJaYAb_JKZYAFA`
 
 응답: summonerLevel, profileIconId, id(summonerId) 등
 
@@ -101,6 +111,8 @@ PUUID로 소환사 상세 정보를 조회합니다.
 PUUID로 최근 매치 ID 목록을 가져옵니다.
 
 형식: `{regional_base_url}/lol/match/v5/matches/by-puuid/{puuid}/ids?start={start}&count={count}`
+
+예시: `https://asia.api.riotgames.com/lol/match/v5/matches/by-puuid/ggrdvya4vWUKvZHsaUbvX9B80tSUH6jLAwjuSxxM0AbrhIciAFne_emQXGppZ7I6mJaYAb_JKZYAFA/ids?count=5`
 
 주요 옵션:
 - `start`: 시작 인덱스
@@ -112,11 +124,31 @@ PUUID로 최근 매치 ID 목록을 가져옵니다.
 
 형식: `{regional_base_url}/lol/match/v5/matches/{matchId}`
 
-## 2.5 랭크 정보 조회 (솔로/자유 랭크)
+예시: `https://asia.api.riotgames.com/lol/match/v5/matches/KR_8136533346`
+
+## 2.5 매치 타임라인 조회
+
+매치 ID로 분 단위 프레임 데이터를 조회합니다. 프레임별 골드·CS·레벨 변화, 참가자별 타임라인 등이 포함됩니다.
+
+형식: `{regional_base_url}/lol/match/v5/matches/{matchId}/timeline`
+
+예시: `https://asia.api.riotgames.com/lol/match/v5/matches/KR_8136533346/timeline`
+
+주요 응답 필드:
+- `metadata`: matchId 등 메타 정보
+- `info.frames[]`: 분 단위 프레임 배열
+  - `participantFrames`: 참가자별 골드, CS, 레벨, 위치 등
+  - `events`: 킬, 타워 파괴, 드래곤 획득 등 이벤트 목록
+
+참고: matchId는 2.3 매치 ID 목록 또는 2.4 매치 상세에서 얻은 값을 사용합니다.
+
+## 2.6 랭크 정보 조회 (솔로/자유 랭크)
 
 소환사 ID로 랭크 정보를 조회합니다.
 
 형식: `{platform_base_url}/lol/league/v4/entries/by-summoner/{summonerId}`
+
+예시: `https://kr.api.riotgames.com/lol/league/v4/entries/by-summoner/abc123xyz`
 
 응답: queueType, tier, rank, leaguePoints, wins, losses 등
 
@@ -141,6 +173,8 @@ Riot ID로 PUUID 조회. LoL과 동일 엔드포인트 사용.
 
 형식: `{regional_base_url}/riot/account/v1/accounts/by-riot-id/{gameName}/{tagLine}`
 
+예시: `https://asia.api.riotgames.com/riot/account/v1/accounts/by-riot-id/Hide on bush/KR1`
+
 ## 3.2 TFT 소환사 조회 (닉네임)
 
 닉네임으로 TFT 소환사 정보를 조회합니다.
@@ -155,11 +189,15 @@ PUUID로 TFT 소환사 정보를 조회합니다.
 
 형식: `https://{platform}.api.riotgames.com/tft/summoner/v1/summoners/by-puuid/{puuid}`
 
+예시: `https://kr.api.riotgames.com/tft/summoner/v1/summoners/by-puuid/ggrdvya4vWUKvZHsaUbvX9B80tSUH6jLAwjuSxxM0AbrhIciAFne_emQXGppZ7I6mJaYAb_JKZYAFA`
+
 ## 3.4 TFT 매치 ID 목록 조회
 
 PUUID로 TFT 최근 매치 ID 목록을 가져옵니다.
 
 형식: `{regional_base_url}/tft/match/v1/matches/by-puuid/{puuid}/ids?start={start}&count={count}`
+
+예시: `https://asia.api.riotgames.com/tft/match/v1/matches/by-puuid/ggrdvya4vWUKvZHsaUbvX9B80tSUH6jLAwjuSxxM0AbrhIciAFne_emQXGppZ7I6mJaYAb_JKZYAFA/ids?count=5`
 
 주요 옵션:
 - `start`: 시작 인덱스
@@ -171,6 +209,8 @@ PUUID로 TFT 최근 매치 ID 목록을 가져옵니다.
 
 형식: `{regional_base_url}/tft/match/v1/matches/{matchId}`
 
+예시: `https://asia.api.riotgames.com/tft/match/v1/matches/KR_7551308036`
+
 응답: metadata.match_id, info.participants (placement, level, traits, units) 등
 
 ## 3.6 TFT 랭크 정보 조회
@@ -178,6 +218,8 @@ PUUID로 TFT 최근 매치 ID 목록을 가져옵니다.
 소환사 ID로 TFT 랭크를 조회합니다.
 
 형식: `https://{platform}.api.riotgames.com/tft/league/v1/entries/by-summoner/{summonerId}`
+
+예시: `https://kr.api.riotgames.com/tft/league/v1/entries/by-summoner/Hide on bush`
 
 ## application.properties
 
@@ -203,6 +245,8 @@ Steam64 ID로 프로필 정보(닉네임, 아바타 등)를 조회합니다.
 
 형식: `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key={key}&steamids={steamids}`
 
+예시: `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=abc123&steamids=76561198012345678`
+
 주요 옵션:
 - `steamids`: Steam64 ID (콤마로 여러 개 가능)
 
@@ -212,6 +256,8 @@ Steam64 ID로 프로필 정보(닉네임, 아바타 등)를 조회합니다.
 
 형식: `https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/?key={key}&vanityurl={vanityurl}`
 
+예시: `https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/?key=abc123&vanityurl=gabelogan`
+
 응답: `response.success == 1` 이면 `response.steamid` 에 Steam64 ID
 
 ## 4.3 최근 플레이 게임 목록
@@ -219,6 +265,8 @@ Steam64 ID로 프로필 정보(닉네임, 아바타 등)를 조회합니다.
 최근 플레이한 게임 목록을 조회합니다.
 
 형식: `https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key={key}&steamid={steamid}&count={count}`
+
+예시: `https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key=abc123&steamid=76561198012345678&count=10`
 
 주요 옵션:
 - `count`: 불러올 개수
@@ -230,6 +278,8 @@ Steam64 ID로 프로필 정보(닉네임, 아바타 등)를 조회합니다.
 계정이 소유한 게임 목록과 플레이 타임을 조회합니다.
 
 형식: `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key={key}&steamid={steamid}&include_appinfo={0|1}`
+
+예시: `https://api.steampowered.com/IPlayerService/GetOwnedGames/v1/?key=abc123&steamid=76561198012345678&include_appinfo=1`
 
 주요 옵션:
 - `include_appinfo`: 1이면 게임 이름 등 메타데이터 포함
@@ -286,7 +336,7 @@ Base URL: `https://api.pubg.com/shards`
 
 형식: `https://api.pubg.com/shards/{platform}/players?filter[playerNames]={nickname}`
 
-예시: `https://api.pubg.com/shards/steam/players?filter[playerNames]=PlayerNickname`
+예시: `https://api.pubg.com/shards/steam/players?filter[playerNames]=8ink-`
 
 주요 파라미터:
 - `platform`: steam | kakao | psn | xbox | stadia
@@ -305,6 +355,8 @@ Base URL: `https://api.pubg.com/shards`
 
 형식: `https://api.pubg.com/shards/{platform}/matches/{matchId}`
 
+예시: `https://api.pubg.com/shards/steam/matches/04192032-7e46-4d3a-a430-28817c8c5bcc`
+
 응답: data.attributes (gameMode, mapName, createdAt), included (participant stats: kills, winPlace, damageDealt 등)
 
 ## 6.4 시즌 목록 조회
@@ -313,6 +365,8 @@ Base URL: `https://api.pubg.com/shards`
 
 형식: `https://api.pubg.com/shards/{platform}/seasons`
 
+예시: `https://api.pubg.com/shards/steam/seasons`
+
 응답: data[].attributes.isCurrentSeason 이 true 인 시즌 ID 사용
 
 ## 6.5 시즌별 랭크 통계
@@ -320,6 +374,8 @@ Base URL: `https://api.pubg.com/shards`
 플레이어의 시즌별 랭크(티어)를 조회합니다.
 
 형식: `https://api.pubg.com/shards/{platform}/players/{accountId}/seasons/{seasonId}/ranked`
+
+예시: `https://api.pubg.com/shards/steam/players/account.abc123/seasons/division.bro.official.2024-01/ranked`
 
 응답: rankedGameModeStats (squad-fpp, squad 등) → currentTier
 
@@ -385,17 +441,23 @@ Steam64 ID로 프로필 정보를 조회합니다.
 
 형식: `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key={key}&steamids={steamids}`
 
+예시: `https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key=abc123&steamids=76561198012345678`
+
 ## 8.2 Vanity URL → Steam64 ID 변환
 
 커스텀 URL을 Steam64 ID로 변환합니다.
 
 형식: `https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/?key={key}&vanityurl={vanityurl}`
 
+예시: `https://api.steampowered.com/ISteamUser/ResolveVanityURL/v1/?key=abc123&vanityurl=s1mple`
+
 ## 8.3 CS2 게임 통계 조회
 
 Steam64 ID로 CS2 누적 통계를 조회합니다.
 
 형식: `https://api.steampowered.com/ISteamUserStats/GetUserStatsForGame/v2/?key={key}&steamid={steamid}&appid=730`
+
+예시: `https://api.steampowered.com/ISteamUserStats/GetUserStatsForGame/v2/?key=abc123&steamid=76561198012345678&appid=730`
 
 응답: playerstats.stats[] 배열 (name, value)
 - total_kills, total_deaths, total_assists
@@ -434,6 +496,8 @@ Client Credentials 방식으로 Access Token을 발급합니다.
 
 Body: `grant_type=client_credentials` (application/x-www-form-urlencoded)  
 헤더: `Authorization: Basic {base64(client_id:client_secret)}`
+
+예시: `POST https://kr.battle.net/oauth/token`
 
 ## 9.2 오버워치 2 플레이어 프로필
 

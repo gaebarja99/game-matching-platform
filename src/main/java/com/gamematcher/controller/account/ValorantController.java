@@ -1,9 +1,11 @@
 package com.gamematcher.controller.account;
 
 import com.gamematcher.dto.account.ValorantSyncRequestDto;
+import com.gamematcher.dto.valorant.ValorantAiEvaluationResponseDto;
 import com.gamematcher.dto.valorant.ValorantMatchApiResponse;
 import com.gamematcher.dto.valorant.ValorantMatchDetailDto;
 import com.gamematcher.entity.match.valorant.ValorantMatch;
+import com.gamematcher.service.valorant.ValorantAiEvaluationService;
 import com.gamematcher.service.valorant.ValorantApiService;
 import com.gamematcher.service.valorant.ValorantMatchJsonService;
 import com.gamematcher.service.valorant.ValorantMatchService;
@@ -19,13 +21,16 @@ public class ValorantController {
     private final ValorantApiService valorantApiService;
     private final ValorantMatchJsonService valorantMatchJsonService;
     private final ValorantMatchService valorantMatchService;
+    private final ValorantAiEvaluationService valorantAiEvaluationService;
 
     public ValorantController(ValorantApiService valorantApiService,
                              ValorantMatchJsonService valorantMatchJsonService,
-                             ValorantMatchService valorantMatchService) {
+                             ValorantMatchService valorantMatchService,
+                             ValorantAiEvaluationService valorantAiEvaluationService) {
         this.valorantApiService = valorantApiService;
         this.valorantMatchJsonService = valorantMatchJsonService;
         this.valorantMatchService = valorantMatchService;
+        this.valorantAiEvaluationService = valorantAiEvaluationService;
     }
 
     /** Valorant 최근 5경기 DB 동기화 (Henrik API로 gameName+tagLine → puuid 조회 후 매치 저장) */
@@ -83,5 +88,40 @@ public class ValorantController {
         } catch (ValorantMatchJsonParseException | IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }
+    }
+
+    /**
+     * 발로란트 매치 AI 평가 실행 및 저장
+     * - matchId로 매치 전체 플레이어 평가
+     */
+    @PostMapping("/evaluations/match/{matchId}")
+    public ResponseEntity<java.util.List<ValorantAiEvaluationResponseDto>> evaluateMatch(
+            @PathVariable String matchId) {
+        var results = valorantAiEvaluationService.evaluateAndSaveByMatchId(matchId);
+        return ResponseEntity.ok(results);
+    }
+
+    /**
+     * 발로란트 매치 플레이어 단일 AI 평가 실행 및 저장
+     * - valorantMatchPlayerId: valorant_match_player 테이블의 id
+     */
+    @PostMapping("/evaluations/player/{valorantMatchPlayerId}")
+    public ResponseEntity<ValorantAiEvaluationResponseDto> evaluatePlayer(
+            @PathVariable Long valorantMatchPlayerId) {
+        return valorantAiEvaluationService.evaluateAndSaveByPlayerId(valorantMatchPlayerId)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
+    /**
+     * 발로란트 AI 평가 결과 DTO를 DB에 저장
+     * - matchId, playerPuuid로 ValorantMatchPlayer 조회 후 저장 (기존 있으면 업데이트)
+     */
+    @PostMapping("/evaluations/save")
+    public ResponseEntity<ValorantAiEvaluationResponseDto> saveEvaluation(
+            @Valid @RequestBody ValorantAiEvaluationResponseDto dto) {
+        return valorantAiEvaluationService.saveFromDto(dto)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.badRequest().build());
     }
 }

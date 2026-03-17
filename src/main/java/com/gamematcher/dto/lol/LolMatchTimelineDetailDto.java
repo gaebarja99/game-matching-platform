@@ -98,6 +98,57 @@ public class LolMatchTimelineDetailDto {
 
             @JsonProperty("wardType")
             private String wardType;
+
+            /** CHAMPION_KILL: 킬한 플레이어 participantId */
+            @JsonProperty("killerId")
+            private Integer killerId;
+
+            /** CHAMPION_KILL: 죽은 플레이어 participantId */
+            @JsonProperty("victimId")
+            private Integer victimId;
+
+            /** CHAMPION_KILL: 어시스트한 플레이어 participantId 목록 */
+            @JsonProperty("assistingParticipantIds")
+            private List<Integer> assistingParticipantIds;
+
+            /** 이벤트 발생 위치 (동선 분석용) */
+            @JsonProperty("position")
+            private ParticipantFrame.Position position;
+
+            /** TURRET_PLATE_DESTROYED, BUILDING_KILL: killer 팀 또는 라인 */
+            @JsonProperty("teamId")
+            private Integer teamId;
+
+            @JsonProperty("laneType")
+            private String laneType;
+
+            /** ELITE_MONSTER_KILL: DRAGON, BARON_NASHOR, RIFTHERALD, HORDE */
+            @JsonProperty("monsterType")
+            private String monsterType;
+
+            /** ELITE_MONSTER_KILL (DRAGON): FIRE_DRAGON, WATER_DRAGON, EARTH_DRAGON, AIR_DRAGON 등 */
+            @JsonProperty("monsterSubType")
+            private String monsterSubType;
+
+            /** BUILDING_KILL: TOWER_BUILDING, INHIBITOR_BUILDING */
+            @JsonProperty("buildingType")
+            private String buildingType;
+
+            /** BUILDING_KILL (TOWER): OUTER_TURRET, INNER_TURRET, BASE_TURRET, NEXUS_TURRET */
+            @JsonProperty("towerType")
+            private String towerType;
+
+            /** DRAGON_SOUL_GIVEN: 영혼 종류 (Mountain, Infernal 등) */
+            @JsonProperty("name")
+            private String name;
+
+            /** GAME_END: 승리 팀 (100 or 200) */
+            @JsonProperty("winningTeam")
+            private Integer winningTeam;
+
+            /** LEVEL_UP: 달성 레벨 */
+            @JsonProperty("level")
+            private Integer level;
         }
 
         @Getter

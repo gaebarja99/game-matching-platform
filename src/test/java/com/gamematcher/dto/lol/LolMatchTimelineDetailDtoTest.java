@@ -22,11 +22,11 @@ class LolMatchTimelineDetailDtoTest {
         LolMatchTimelineDetailDto dto = objectMapper.readValue(timelineJson, LolMatchTimelineDetailDto.class);
 
         assertThat(dto.getMetadata()).isNotNull();
-        assertThat(dto.getMetadata().getMatchId()).isEqualTo("KR_8121193767");
+        assertThat(dto.getMetadata().getMatchId()).isEqualTo("KR_8136533346");
 
         assertThat(dto.getInfo()).isNotNull();
         assertThat(dto.getInfo().getFrameInterval()).isEqualTo(60000);
-        assertThat(dto.getInfo().getGameId()).isEqualTo(8121193767L);
+        assertThat(dto.getInfo().getGameId()).isEqualTo(8136533346L);
         assertThat(dto.getInfo().getFrames()).isNotEmpty();
         assertThat(dto.getInfo().getParticipants()).hasSize(10);
 
