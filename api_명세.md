@@ -355,7 +355,7 @@ Base URL: `https://api.pubg.com/shards`
 
 형식: `https://api.pubg.com/shards/{platform}/matches/{matchId}`
 
-예시: `https://api.pubg.com/shards/steam/matches/04192032-7e46-4d3a-a430-28817c8c5bcc`
+예시: `https://api.pubg.com/shards/steam/matches/a9b6c96f-eea9-4b9e-9195-39272dae2314`
 
 응답: data.attributes (gameMode, mapName, createdAt), included (participant stats: kills, winPlace, damageDealt 등)
 
@@ -375,7 +375,7 @@ Base URL: `https://api.pubg.com/shards`
 
 형식: `https://api.pubg.com/shards/{platform}/players/{accountId}/seasons/{seasonId}/ranked`
 
-예시: `https://api.pubg.com/shards/steam/players/account.abc123/seasons/division.bro.official.2024-01/ranked`
+예시: `https://api.pubg.com/shards/steam/players/account.fe1027e418594343bafd39e9685239e2/seasons/division.bro.official.2024-01/ranked`
 
 응답: rankedGameModeStats (squad-fpp, squad 등) → currentTier
 

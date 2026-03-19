@@ -7,6 +7,8 @@ D:\GameMatcher\src\main\java\com\gamematcher\repository\community\CommunityRepor
 D:\GameMatcher\src\main\java\com\gamematcher\controller\account\RiotController.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\community\NotificationResponseDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgAssetIncludedDto.java
+D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgSeasonsApiResponse.java
+D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgSeasonDataDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\ai\score\ValorantRoundScoreEngine.java
 D:\GameMatcher\src\main\java\com\gamematcher\constant\ai\evaluation\EvaluationStatus.java
 D:\GameMatcher\src\main\java\com\gamematcher\mapper\ValorantAccountMapper.java
@@ -59,6 +61,7 @@ D:\GameMatcher\src\main\java\com\gamematcher\dto\account\RiotAccountLinkResponse
 D:\GameMatcher\src\main\java\com\gamematcher\entity\match\valorant\ValorantMatch.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\community\HashtagRepository.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\community\PostRecommend.java
+D:\GameMatcher\src\main\java\com\gamematcher\mapper\PubgSeasonMapper.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\community\CommentCreateRequestDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\match\valorant\ValorantKillAssistant.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\match\valorant\ValorantMatchPlayer.java
@@ -111,6 +114,7 @@ D:\GameMatcher\src\main\java\com\gamematcher\entity\match\valorant\ValorantMmrHi
 D:\GameMatcher\src\main\java\com\gamematcher\service\cs2\Cs2ApiService.java
 D:\GameMatcher\src\main\java\com\gamematcher\constant\ai\evaluation\MatchResult.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgMatchRelationshipsDto.java
+D:\GameMatcher\src\main\java\com\gamematcher\entity\match\pubg\PubgSeason.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\riot\RiotMatchDetailResponseDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\community\CommunityService.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\SocialLogin.java
@@ -135,6 +139,7 @@ D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgLinksDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\report\BlockRequestDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\valorant\ValorantMmrService.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\community\PageResponseDto.java
+D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgSeasonAttributesDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\account\RiotAccountService.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\account\ValorantAccount.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\report\BlockedUserResponseDto.java

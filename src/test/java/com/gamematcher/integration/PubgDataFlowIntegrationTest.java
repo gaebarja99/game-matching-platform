@@ -3,7 +3,9 @@ package com.gamematcher.integration;
 import com.gamematcher.dto.pubg.*;
 import com.gamematcher.entity.match.pubg.PubgMatch;
 import com.gamematcher.entity.match.pubg.PubgMatchParticipant;
+import com.gamematcher.entity.match.pubg.PubgSeason;
 import com.gamematcher.mapper.PubgMatchMapper;
+import com.gamematcher.mapper.PubgSeasonMapper;
 import com.gamematcher.service.pubg.PubgJsonService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -25,6 +27,7 @@ class PubgDataFlowIntegrationTest {
 
     private final PubgJsonService jsonService = new PubgJsonService();
     private final PubgMatchMapper mapper = new PubgMatchMapper();
+    private final PubgSeasonMapper seasonMapper = new PubgSeasonMapper();
 
     @Nested
     @DisplayName("매치 API: JSON → DTO → Entity")
@@ -119,6 +122,69 @@ class PubgDataFlowIntegrationTest {
             assertThat(dto.getData().get(0).getRelationships().getMatchIds()).hasSize(10);
             assertThat(dto.getData().get(0).getRelationships().getMatchIds().get(0).getId())
                     .isEqualTo("04192032-7e46-4d3a-a430-28817c8c5bcc");
+        }
+    }
+
+    @Nested
+    @DisplayName("시즌 API: JSON → DTO → Entity")
+    class SeasonsApiFlow {
+
+        @Test
+        @DisplayName("전체 흐름: pubg_seasons_sample.json → PubgSeasonsApiResponse → List<PubgSeason>")
+        void json_to_dto_to_entity_전체흐름_검증() throws Exception {
+            // 1) JSON 로드
+            String json = Files.readString(Paths.get("src/test/resources/samples/pubg/pubg_seasons_sample.json"));
+            assertThat(json).isNotBlank();
+
+            // 2) JSON → DTO (PubgJsonService)
+            PubgSeasonsApiResponse dto = jsonService.parseSeasonsResponse(json);
+            assertThat(dto).isNotNull();
+            assertThat(dto.getData()).isNotEmpty();
+
+            PubgSeasonDataDto firstDto = dto.getData().get(0);
+            assertThat(firstDto.getType()).isEqualTo("season");
+            assertThat(firstDto.getId()).isEqualTo("division.bro.official.pc-2018-41");
+            assertThat(firstDto.getAttributes().getIsCurrentSeason()).isFalse();
+            assertThat(firstDto.getAttributes().getIsOffseason()).isFalse();
+
+            PubgSeasonDataDto currentSeasonDto = dto.getData().stream()
+                    .filter(s -> Boolean.TRUE.equals(s.getAttributes().getIsCurrentSeason()))
+                    .findFirst()
+                    .orElseThrow();
+            assertThat(currentSeasonDto.getId()).isEqualTo("division.bro.official.pc-2018-40");
+
+            // 3) DTO → Entity (PubgSeasonMapper)
+            List<PubgSeason> entities = seasonMapper.toEntities(dto, "steam");
+            assertThat(entities).isNotEmpty();
+            assertThat(entities).hasSize(dto.getData().size());
+
+            // 4) 첫 번째 시즌 엔티티 검증
+            PubgSeason firstEntity = entities.get(0);
+            assertThat(firstEntity.getPlatform()).isEqualTo("steam");
+            assertThat(firstEntity.getSeasonId()).isEqualTo("division.bro.official.pc-2018-41");
+            assertThat(firstEntity.getIsCurrentSeason()).isFalse();
+            assertThat(firstEntity.getIsOffseason()).isFalse();
+
+            // 5) 현재 시즌 엔티티 검증
+            PubgSeason currentSeasonEntity = entities.stream()
+                    .filter(e -> Boolean.TRUE.equals(e.getIsCurrentSeason()))
+                    .findFirst()
+                    .orElseThrow();
+            assertThat(currentSeasonEntity.getPlatform()).isEqualTo("steam");
+            assertThat(currentSeasonEntity.getSeasonId()).isEqualTo("division.bro.official.pc-2018-40");
+            assertThat(currentSeasonEntity.getIsCurrentSeason()).isTrue();
+            assertThat(currentSeasonEntity.getIsOffseason()).isFalse();
+        }
+
+        @Test
+        @DisplayName("시즌 JSON → DTO 단계 검증")
+        void seasons_json_to_dto_검증() throws Exception {
+            String json = Files.readString(Paths.get("src/test/resources/samples/pubg/pubg_seasons_sample.json"));
+            PubgSeasonsApiResponse dto = jsonService.parseSeasonsResponse(json);
+
+            assertThat(dto.getData()).isNotEmpty();
+            assertThat(dto.getLinks()).isNotNull();
+            assertThat(dto.getLinks().getSelf()).contains("seasons");
         }
     }
 

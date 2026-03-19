@@ -88,4 +88,30 @@ class PubgDtoDeserializeTest {
         assertThat(matchIds).isNotEmpty();
         assertThat(matchIds.get(0).getId()).isEqualTo("04192032-7e46-4d3a-a430-28817c8c5bcc");
     }
+
+    @Test
+    @DisplayName("시즌 목록 JSON을 PubgSeasonsApiResponse로 파싱한다")
+    void pubgSeasonsJson_역직렬화_성공() throws Exception {
+        String json = Files.readString(Paths.get("src/test/resources/samples/pubg/pubg_seasons_sample.json"));
+        PubgSeasonsApiResponse response = objectMapper.readValue(json, PubgSeasonsApiResponse.class);
+
+        assertThat(response).isNotNull();
+        assertThat(response.getData()).isNotEmpty();
+
+        PubgSeasonDataDto firstSeason = response.getData().get(0);
+        assertThat(firstSeason.getType()).isEqualTo("season");
+        assertThat(firstSeason.getId()).isEqualTo("division.bro.official.pc-2018-41");
+        assertThat(firstSeason.getAttributes().getIsCurrentSeason()).isFalse();
+        assertThat(firstSeason.getAttributes().getIsOffseason()).isFalse();
+
+        PubgSeasonDataDto currentSeason = response.getData().stream()
+                .filter(s -> Boolean.TRUE.equals(s.getAttributes().getIsCurrentSeason()))
+                .findFirst()
+                .orElseThrow();
+        assertThat(currentSeason.getId()).isEqualTo("division.bro.official.pc-2018-40");
+        assertThat(currentSeason.getAttributes().getIsOffseason()).isFalse();
+
+        assertThat(response.getLinks()).isNotNull();
+        assertThat(response.getLinks().getSelf()).contains("seasons");
+    }
 }

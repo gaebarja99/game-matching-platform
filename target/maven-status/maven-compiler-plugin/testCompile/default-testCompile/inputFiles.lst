@@ -15,6 +15,7 @@ D:\GameMatcher\src\test\java\com\gamematcher\service\valorant\ValorantMatchStats
 D:\GameMatcher\src\test\java\com\gamematcher\service\ai\score\LolScoreEngineTest.java
 D:\GameMatcher\src\test\java\com\gamematcher\service\lol\LolPlayerMatchStatsOutputTest.java
 D:\GameMatcher\src\test\java\com\gamematcher\service\PlayerSearchServiceTest.java
+D:\GameMatcher\src\test\java\com\gamematcher\util\JsonPrettyPrintTest.java
 D:\GameMatcher\src\test\java\com\gamematcher\GameMatcherApplicationTests.java
 D:\GameMatcher\src\test\java\com\gamematcher\service\lol\LolMatchJsonServiceTest.java
 D:\GameMatcher\src\test\java\com\gamematcher\integration\PubgDataFlowIntegrationTest.java
