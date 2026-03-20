@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamematcher.dto.pubg.PubgMatchApiResponse;
 import com.gamematcher.dto.pubg.PubgPlayerApiResponse;
+import com.gamematcher.dto.pubg.PubgRankedPlayerStatsApiResponse;
 import com.gamematcher.dto.pubg.PubgSeasonsApiResponse;
 import com.gamematcher.dto.pubg.PubgTelemetryEventDto;
 import org.springframework.stereotype.Service;
@@ -86,6 +87,25 @@ public class PubgJsonService {
             return objectMapper.readValue(json, PubgSeasonsApiResponse.class);
         } catch (IOException e) {
             throw new PubgJsonParseException("PUBG 시즌 목록 API 응답 JSON 파싱 실패", e);
+        }
+    }
+
+    /**
+     * 랭크 API 응답 JSON 파싱
+     * GET /shards/{platform}/players/{accountId}/seasons/{seasonId}/ranked
+     * 형식: { "data": {...}, "links": {...}, "meta": {} }
+     *
+     * @param json 랭크 API 응답 JSON 문자열
+     * @return PubgRankedPlayerStatsApiResponse
+     */
+    public PubgRankedPlayerStatsApiResponse parseRankedPlayerStatsResponse(String json) {
+        if (json == null || json.isBlank()) {
+            throw new IllegalArgumentException("JSON이 비어있습니다.");
+        }
+        try {
+            return objectMapper.readValue(json, PubgRankedPlayerStatsApiResponse.class);
+        } catch (IOException e) {
+            throw new PubgJsonParseException("PUBG 랭크 API 응답 JSON 파싱 실패", e);
         }
     }
 

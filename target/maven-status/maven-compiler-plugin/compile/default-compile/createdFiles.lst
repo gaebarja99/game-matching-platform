@@ -1,3 +1,4 @@
+com\gamematcher\dto\pubg\PubgRankedPlayerStatsAttributesDto.class
 com\gamematcher\dto\pubg\PubgSeasonsApiResponse.class
 com\gamematcher\service\ai\score\ScoreEngineRouter$1.class
 com\gamematcher\service\valorant\ValorantStatsToPromptFormatter$1.class

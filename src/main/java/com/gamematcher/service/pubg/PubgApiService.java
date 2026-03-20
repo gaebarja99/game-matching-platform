@@ -1,8 +1,10 @@
 package com.gamematcher.service.pubg;
 
+import com.gamematcher.dto.pubg.PubgRankedPlayerStatsApiResponse;
 import com.gamematcher.dto.search.PlayerSearchRequest;
 import com.gamematcher.dto.search.PlayerSearchResponse;
 import com.gamematcher.dto.search.PlayerSearchResponse.*;
+import com.gamematcher.mapper.PubgRankMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,6 +38,8 @@ import java.util.stream.Collectors;
 public class PubgApiService {
 
     private final RestTemplate restTemplate;
+    private final PubgJsonService jsonService;
+    private final PubgRankMapper rankMapper;
 
     @Value("${pubg.api.key:}")
     private String pubgApiKey;
@@ -246,35 +250,19 @@ public class PubgApiService {
                 .findFirst().orElse(null);
         if (currentSeasonId == null) return "N/A";
 
-        // 랭크 통계
+        // 랭크 통계 (DTO 파싱)
         String rankUrl = String.format(
                 "%s/%s/players/%s/seasons/%s/ranked",
                 BASE, platform, accountId, currentSeasonId
         );
-        Map<String, Object> rankResp = restTemplate
-                .exchange(rankUrl, HttpMethod.GET, entity, Map.class).getBody();
-        Map<String, Object> rankData = rankResp != null
-                ? (Map<String, Object>) rankResp.get("data") : null;
-        if (rankData == null) return "UNRANKED";
-
-        Map<String, Object> rankAttrs = (Map<String, Object>) rankData.get("attributes");
-        if (rankAttrs == null) return "UNRANKED";
-
-        Map<String, Object> modeStats =
-                (Map<String, Object>) rankAttrs.get("rankedGameModeStats");
-        if (modeStats == null) return "UNRANKED";
-
-        // squad-fpp 우선, 없으면 squad
-        Map<String, Object> mode = (Map<String, Object>) modeStats.get("squad-fpp");
-        if (mode == null) mode = (Map<String, Object>) modeStats.get("squad");
-        if (mode == null) return "UNRANKED";
-
-        Map<String, Object> currentTier = (Map<String, Object>) mode.get("currentTier");
-        if (currentTier == null) return "UNRANKED";
-
-        String tier    = (String) currentTier.getOrDefault("tier",    "UNRANKED");
-        String subTier = (String) currentTier.getOrDefault("subTier", "");
-        return tier + (subTier.isEmpty() ? "" : " " + subTier);
+        try {
+            String rankJson = restTemplate
+                    .exchange(rankUrl, HttpMethod.GET, entity, String.class).getBody();
+            PubgRankedPlayerStatsApiResponse response = jsonService.parseRankedPlayerStatsResponse(rankJson);
+            return rankMapper.toTierDisplayString(response);
+        } catch (org.springframework.web.client.HttpClientErrorException e) {
+            return "UNRANKED";
+        }
     }
 
     // ── 유틸 ──────────────────────────────────────────────────────────────────

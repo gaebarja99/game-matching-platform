@@ -44,6 +44,7 @@ D:\GameMatcher\src\main\java\com\gamematcher\service\ai\LlmEvaluationServiceImpl
 D:\GameMatcher\src\main\java\com\gamematcher\dto\riot\RiotStatsResponseDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\config\auth\FilterConfig.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\lol\LolMatchService.java
+D:\GameMatcher\src\main\java\com\gamematcher\mapper\PubgRankMapper.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\ai\evaluation\MatchRecordEvaluationRepository.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\community\PostRecommendRepository.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\riot\RiotRecentMatchesResponseDto.java
@@ -98,9 +99,11 @@ D:\GameMatcher\src\main\java\com\gamematcher\repository\account\ValorantAccountR
 D:\GameMatcher\src\main\java\com\gamematcher\dto\lol\LolSummonerProfileDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\valorant\ValorantPuuidApiResponse.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\account\ValorantSyncRequestDto.java
+D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\map\PubgPoiConfig.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\User.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\match\valorant\ValorantRoundPlayerDamageEvent.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgPlayerDataDto.java
+D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgRankedPlayerStatsDataDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\riot\RiotAccountResponseDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgRosterRelationshipsDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\account\DiscordAccountLinkRequestDto.java
@@ -116,6 +119,7 @@ D:\GameMatcher\src\main\java\com\gamematcher\constant\ai\evaluation\MatchResult.
 D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgMatchRelationshipsDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\match\pubg\PubgSeason.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\riot\RiotMatchDetailResponseDto.java
+D:\GameMatcher\src\main\java\com\gamematcher\entity\match\pubg\PubgPlayerRank.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\community\CommunityService.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\SocialLogin.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\account\DiscordAccountRepository.java
@@ -129,6 +133,7 @@ D:\GameMatcher\src\main\java\com\gamematcher\dto\ai\evaluation\LlmEvaluationResp
 D:\GameMatcher\src\main\java\com\gamematcher\dto\ai\evaluation\ValorantStatsDTO.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\valorant\ValorantLifetimeDataItem.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\apex\ApexApiService.java
+D:\GameMatcher\src\main\java\com\gamematcher\service\pubg\PubgMapConfigLoader.java
 D:\GameMatcher\src\main\java\com\gamematcher\constant\community\RecommendType.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgRelationshipDataDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\community\PostAttachmentRepository.java
@@ -150,6 +155,8 @@ D:\GameMatcher\src\main\java\com\gamematcher\service\valorant\ValorantMatchJsonS
 D:\GameMatcher\src\main\java\com\gamematcher\exception\GlobalExceptionHandler.java
 D:\GameMatcher\src\main\java\com\gamematcher\mapper\ValorantAiEvaluationMapper.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\lol\LolMatchDetailDto.java
+D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgTierDto.java
+D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgRelationshipSingleDataDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\account\BlizzardAccountLinkRequestDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\valorant\ValorantRoundScoreInput.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\match\lol\LolMatchSummary.java
@@ -221,6 +228,7 @@ D:\GameMatcher\src\main\java\com\gamematcher\constant\GameType.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\community\CommunityReportResponseDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgMatchDataDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\match\TftMatch.java
+D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgRankedPlayerStatsApiResponse.java
 D:\GameMatcher\src\main\java\com\gamematcher\config\api\ValorantApiProperties.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgIncludedItemDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\match\cs2\Cs2Match.java
@@ -240,6 +248,7 @@ D:\GameMatcher\src\main\java\com\gamematcher\repository\community\PostLikeReposi
 D:\GameMatcher\src\main\java\com\gamematcher\dto\ai\evaluation\GenericStatsDTO.java
 D:\GameMatcher\src\main\java\com\gamematcher\mapper\ValorantMmrMapper.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\account\LolAccountRepository.java
+D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\map\PubgMapRegionConfig.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\account\SteamAccountLinkRequestDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\ai\score\ValorantScoreService.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgPlayerAttributesDto.java
@@ -257,6 +266,7 @@ D:\GameMatcher\src\main\java\com\gamematcher\entity\match\lol\LolMatchTimeline.j
 D:\GameMatcher\src\main\java\com\gamematcher\config\RestTemplateConfig.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\community\CommentResponseDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\repository\community\PostHashtagRepository.java
+D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgRankedPlayerStatsRelationshipsDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\ai\evaluation\MatchRecord.java
 D:\GameMatcher\src\main\java\com\gamematcher\entity\match\valorant\ValorantRoundPlayerLocation.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\riot\RiotProfileResponseDto.java
@@ -286,6 +296,8 @@ D:\GameMatcher\src\main\java\com\gamematcher\dto\valorant\ValorantMatchApiRespon
 D:\GameMatcher\src\main\java\com\gamematcher\service\lol\LolStatsToPromptFormatter.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\valorant\ValorantAiEvaluationService.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgTelemetryEventDto.java
+D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgRankedGameModeStatsDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\dto\valorant\ValorantMatchInfoDto.java
 D:\GameMatcher\src\main\java\com\gamematcher\mapper\ValorantMatchStatsMapper.java
 D:\GameMatcher\src\main\java\com\gamematcher\service\ai\LlmEvaluationService.java
+D:\GameMatcher\src\main\java\com\gamematcher\dto\pubg\PubgRankedPlayerStatsAttributesDto.java
