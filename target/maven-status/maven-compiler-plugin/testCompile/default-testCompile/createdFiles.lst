@@ -36,3 +36,4 @@ com\gamematcher\service\lol\LolMatchJsonServiceTest$ParseMatchesFromApiResponseT
 com\gamematcher\service\valorant\ValorantMmrHistoryFlowTest.class
 com\gamematcher\GameMatcherApplicationTests.class
 com\gamematcher\service\valorant\ValorantMatchJsonServiceTest$ParseFirstMatchTest.class
+com\gamematcher\service\pubg\PubgTelemetrySaveServiceTest.class

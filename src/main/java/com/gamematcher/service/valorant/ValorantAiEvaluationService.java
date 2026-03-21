@@ -1,7 +1,6 @@
 package com.gamematcher.service.valorant;
 
 import com.gamematcher.constant.ai.evaluation.EvaluationStatus;
-import com.gamematcher.constant.ai.evaluation.Grade;
 import com.gamematcher.dto.ai.evaluation.LlmEvaluationResponseDTO;
 import com.gamematcher.dto.ai.evaluation.ValorantPlayerMatchStatsDTO;
 import com.gamematcher.dto.valorant.ValorantAiEvaluationResponseDto;
@@ -19,8 +18,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * 발로란트 AI 평가 실행 및 ValorantMatchAiEvaluation 저장.
@@ -46,12 +48,31 @@ public class ValorantAiEvaluationService {
      */
     @Transactional
     public List<ValorantAiEvaluationResponseDto> evaluateAndSaveByMatchId(String matchId) {
+        return evaluateAndSaveByMatchId(matchId, null, null, null);
+    }
+
+    /**
+     * 매치 ID로 지정한 플레이어만 AI 평가하고 저장한다.
+     *
+     * <p>우선순위: {@code puuid} &gt; ({@code gameName} + {@code tagLine}). 파라미터가 모두 비어 있으면 전원.</p>
+     *
+     * @param puuid Riot PUUID (정확 일치)
+     * @param gameName Riot 게임 닉 (태그와 함께 쓰면 정확 일치, 태그 없으면 닉만 대소문자 무시 일치 — 동명이인 시 첫 명만)
+     * @param tagLine Riot 태그 (# 제외)
+     */
+    @Transactional
+    public List<ValorantAiEvaluationResponseDto> evaluateAndSaveByMatchId(
+            String matchId,
+            String puuid,
+            String gameName,
+            String tagLine
+    ) {
         ValorantMatch match = valorantMatchDetailRepository.findByMatchId(matchId).orElse(null);
         if (match == null) {
             log.debug("Valorant 매치 없음, AI 평가 스킵: {}", matchId);
             return List.of();
         }
-        return evaluateAndSave(match);
+        return evaluateAndSaveInternal(match, puuid, gameName, tagLine);
     }
 
     /**
@@ -62,14 +83,30 @@ public class ValorantAiEvaluationService {
      */
     @Transactional
     public List<ValorantAiEvaluationResponseDto> evaluateAndSave(ValorantMatch match) {
+        return evaluateAndSaveInternal(match, null, null, null);
+    }
+
+    private List<ValorantAiEvaluationResponseDto> evaluateAndSaveInternal(
+            ValorantMatch match,
+            String filterPuuid,
+            String filterGameName,
+            String filterTagLine
+    ) {
         if (match == null || match.getPlayers() == null || match.getPlayers().isEmpty()) {
             return List.of();
         }
 
-        List<ValorantPlayerMatchStatsDTO> playerStatsList = valorantMatchStatsMapper.toPlayerMatchStatsDtos(match);
-        List<ValorantAiEvaluationResponseDto> results = new java.util.ArrayList<>();
+        List<ValorantMatchPlayer> targets = filterValorantPlayers(match.getPlayers(), filterPuuid, filterGameName, filterTagLine);
+        if (targets.isEmpty()) {
+            log.debug("발로란트 AI 평가 대상 없음: matchId={}, puuid={}, gameName={}, tagLine={}",
+                    match.getMatchId(), filterPuuid, filterGameName, filterTagLine);
+            return List.of();
+        }
 
-        for (ValorantMatchPlayer player : match.getPlayers()) {
+        List<ValorantPlayerMatchStatsDTO> playerStatsList = valorantMatchStatsMapper.toPlayerMatchStatsDtos(match);
+        List<ValorantAiEvaluationResponseDto> results = new ArrayList<>();
+
+        for (ValorantMatchPlayer player : targets) {
             ValorantPlayerMatchStatsDTO playerStats = playerStatsList.stream()
                     .filter(ps -> player.getPuuid() != null && player.getPuuid().equals(ps.getPlayerPuuid()))
                     .findFirst()
@@ -86,6 +123,41 @@ public class ValorantAiEvaluationService {
 
         log.info("발로란트 AI 평가 완료: matchId={}, 저장된 평가={}", match.getMatchId(), results.size());
         return results;
+    }
+
+    private static List<ValorantMatchPlayer> filterValorantPlayers(
+            List<ValorantMatchPlayer> all,
+            String filterPuuid,
+            String filterGameName,
+            String filterTagLine
+    ) {
+        if (all == null || all.isEmpty()) {
+            return List.of();
+        }
+        if (filterPuuid != null && !filterPuuid.isBlank()) {
+            String id = filterPuuid.trim();
+            return all.stream()
+                    .filter(p -> p != null && id.equals(p.getPuuid()))
+                    .collect(Collectors.toList());
+        }
+        if (filterGameName != null && !filterGameName.isBlank()
+                && filterTagLine != null && !filterTagLine.isBlank()) {
+            String gn = filterGameName.trim().toLowerCase(Locale.ROOT);
+            String tg = filterTagLine.trim().toLowerCase(Locale.ROOT);
+            return all.stream()
+                    .filter(p -> p != null
+                            && p.getName() != null && gn.equals(p.getName().trim().toLowerCase(Locale.ROOT))
+                            && p.getTag() != null && tg.equals(p.getTag().trim().toLowerCase(Locale.ROOT)))
+                    .collect(Collectors.toList());
+        }
+        if (filterGameName != null && !filterGameName.isBlank()) {
+            String gn = filterGameName.trim().toLowerCase(Locale.ROOT);
+            return all.stream()
+                    .filter(p -> p != null && p.getName() != null
+                            && gn.equals(p.getName().trim().toLowerCase(Locale.ROOT)))
+                    .collect(Collectors.toList());
+        }
+        return new ArrayList<>(all);
     }
 
     /**

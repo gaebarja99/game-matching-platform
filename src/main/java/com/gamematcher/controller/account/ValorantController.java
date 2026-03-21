@@ -91,13 +91,32 @@ public class ValorantController {
     }
 
     /**
-     * 발로란트 매치 AI 평가 실행 및 저장
-     * - matchId로 매치 전체 플레이어 평가
+     * 발로란트 매치 AI 평가 실행 및 저장.
+     * {@code puuid} 또는 {@code gameName}/{@code tagLine}, 또는 {@code riotId}({@code 닉#태그})로 한 명만 평가 가능.
+     * 필터가 없으면 매치 전원.
      */
     @PostMapping("/evaluations/match/{matchId}")
     public ResponseEntity<java.util.List<ValorantAiEvaluationResponseDto>> evaluateMatch(
-            @PathVariable String matchId) {
-        var results = valorantAiEvaluationService.evaluateAndSaveByMatchId(matchId);
+            @PathVariable String matchId,
+            @RequestParam(required = false) String puuid,
+            @RequestParam(required = false) String gameName,
+            @RequestParam(required = false) String tagLine,
+            @RequestParam(required = false) String riotId
+    ) {
+        String gn = gameName;
+        String tg = tagLine;
+        if (riotId != null && !riotId.isBlank()) {
+            String t = riotId.trim();
+            int hash = t.lastIndexOf('#');
+            if (hash > 0 && hash < t.length() - 1) {
+                gn = t.substring(0, hash).trim();
+                tg = t.substring(hash + 1).trim();
+            } else {
+                gn = t;
+                tg = null;
+            }
+        }
+        var results = valorantAiEvaluationService.evaluateAndSaveByMatchId(matchId, puuid, gn, tg);
         return ResponseEntity.ok(results);
     }
 

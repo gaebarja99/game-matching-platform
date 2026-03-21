@@ -79,9 +79,9 @@ public class LolController {
 
     /**
      * LoL 플레이어 매치 AI 평가
-     * - matchJson + timelineJson(선택) + playerIndex로 LLM에 전달하여 평가 결과 반환
+     * - matchJson + timelineJson(선택) + 대상 지정({@code playerPuuid} &gt; {@code playerDisplayName} &gt; {@code playerIndex})
      *
-     * @param request matchJson, timelineJson, playerIndex
+     * @param request matchJson, timelineJson, 대상 필드 중 하나
      * @return summary, detailedComment (API 키 없음·실패 시 200 + summary/detailedComment null)
      */
     @PostMapping("/evaluations/evaluate")
@@ -104,8 +104,46 @@ public class LolController {
             List<LolPlayerMatchStatsDTO> playerStatsList = lolMatchStatsMapper.toPlayerMatchStatsDtos(
                     matchDto, timelineDto);
 
-            int idx = Math.min(Math.max(0, request.getPlayerIndex()), playerStatsList.size() - 1);
-            LolPlayerMatchStatsDTO playerStats = playerStatsList.get(idx);
+            boolean hasPuuid = request.getPlayerPuuid() != null && !request.getPlayerPuuid().isBlank();
+            boolean hasDisplay = request.getPlayerDisplayName() != null && !request.getPlayerDisplayName().isBlank();
+            boolean hasIndex = request.getPlayerIndex() != null;
+
+            if (!hasPuuid && !hasDisplay && !hasIndex) {
+                return ResponseEntity.badRequest().body(
+                        "playerPuuid, playerDisplayName, playerIndex 중 하나는 필수입니다.");
+            }
+
+            LolPlayerMatchStatsDTO playerStats;
+            if (hasPuuid) {
+                String puuid = request.getPlayerPuuid().trim();
+                playerStats = playerStatsList.stream()
+                        .filter(s -> puuid.equals(s.getPlayerPuuid()))
+                        .findFirst()
+                        .orElse(null);
+                if (playerStats == null) {
+                    return ResponseEntity.badRequest().body("매치에 해당 playerPuuid 참가자가 없습니다: " + puuid);
+                }
+            } else if (hasDisplay) {
+                String display = request.getPlayerDisplayName().trim();
+                playerStats = playerStatsList.stream()
+                        .filter(s -> s.getPlayerDisplayName() != null
+                                && display.equalsIgnoreCase(s.getPlayerDisplayName().trim()))
+                        .findFirst()
+                        .orElse(null);
+                if (playerStats == null) {
+                    return ResponseEntity.badRequest().body("매치에 해당 playerDisplayName 참가자가 없습니다: " + display);
+                }
+            } else {
+                int rawIdx = request.getPlayerIndex();
+                if (rawIdx < 0 || rawIdx > 9) {
+                    return ResponseEntity.badRequest().body("playerIndex는 0~9여야 합니다.");
+                }
+                if (rawIdx >= playerStatsList.size()) {
+                    return ResponseEntity.badRequest().body(
+                            "playerIndex가 참가자 수를 벗어났습니다. size=" + playerStatsList.size());
+                }
+                playerStats = playerStatsList.get(rawIdx);
+            }
 
             Optional<LlmEvaluationResponseDTO> result = lolLlmEvaluationService.evaluate(playerStats);
 
