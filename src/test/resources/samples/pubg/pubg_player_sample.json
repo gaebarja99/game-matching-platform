@@ -1,0 +1,44 @@
+{
+  "data": [
+    {
+      "type": "player",
+      "id": "account.fe1027e418594343bafd39e9685239e2",
+      "attributes": {
+        "patchVersion": "",
+        "banType": "Innocent",
+        "clanId": "clan.0604bcf7a6b44d7fa0fa296a83bb37fc",
+        "name": "8ink-",
+        "stats": null,
+        "titleId": "pubg",
+        "shardId": "steam"
+      },
+      "relationships": {
+        "assets": {
+          "data": []
+        },
+        "matches": {
+          "data": [
+            {"type": "match", "id": "04192032-7e46-4d3a-a430-28817c8c5bcc"},
+            {"type": "match", "id": "a9b6c96f-eea9-4b9e-9195-39272dae2314"},
+            {"type": "match", "id": "9aa97d16-05c0-40a6-ac8c-c91935fec2c7"},
+            {"type": "match", "id": "ba7b4c73-462a-408b-a6b3-319406c48100"},
+            {"type": "match", "id": "ef04653c-3de0-4f1d-8b98-2bb1219f49f1"},
+            {"type": "match", "id": "0409304f-3e64-4622-9766-1a7d54f3a059"},
+            {"type": "match", "id": "cc21c229-e032-4074-b694-1ab2dc0386cd"},
+            {"type": "match", "id": "ab477949-593a-4c93-89b7-211c64d8c8c1"},
+            {"type": "match", "id": "0ea581f0-33a3-4a86-9c29-d6cc76b6c99c"},
+            {"type": "match", "id": "7a4e4e7e-1120-4671-a9b7-9148628fcb0a"}
+          ]
+        }
+      },
+      "links": {
+        "self": "https://api.pubg.com/shards/steam/players/account.fe1027e418594343bafd39e9685239e2",
+        "schema": ""
+      }
+    }
+  ],
+  "links": {
+    "self": "https://api.pubg.com/shards/steam/players?filter[playerNames]=8ink-"
+  },
+  "meta": {}
+}

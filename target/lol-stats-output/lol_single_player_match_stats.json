@@ -1,0 +1,24 @@
+{
+  "matchId" : "KR_8136533346",
+  "playerPuuid" : "6MCTphq1T6-uaP4hV5qLXGlnKh_jB2611mUz85FMHN54WXvr-F2-MYe0LMrkh8QPbvCSg89xbGdYWg",
+  "playerDisplayName" : "비요른#방 패",
+  "champion" : "Ambessa",
+  "teamPosition" : "TOP",
+  "matchStats" : {
+    "game" : "LEAGUE_OF_LEGENDS",
+    "kills" : 2,
+    "deaths" : 4,
+    "assists" : 5,
+    "result" : "DEFEAT",
+    "gold" : 11834,
+    "minionsKilled" : 236,
+    "damageDealt" : 20584,
+    "visionScore" : 23,
+    "gameDurationMinutes" : 26
+  },
+  "timelineEvents" : [ ],
+  "laneComparison" : {
+    "maxCsAdvantageOnLaneOpponent" : 12.0,
+    "laningPhaseGoldExpAdvantage" : 0.0
+  }
+}

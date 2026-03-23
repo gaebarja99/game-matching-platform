@@ -1,0 +1,115 @@
+{
+    "kill_time_in_round": 4270,
+    "kill_time_in_match": 59341,
+    "round": 0,
+    "killer_puuid": "57101dd8-4766-52e9-b560-c024de07ee43",
+    "killer_display_name": "COACH X#MEGGG",
+    "killer_team": "Red",
+    "victim_puuid": "e0a1f22e-e910-5b58-84c7-f857939c74ab",
+    "victim_display_name": "moefcute#VNE",
+    "victim_team": "Blue",
+    "victim_death_location": {
+        "x": 929,
+        "y": -356
+    },
+    "damage_weapon_id": "1baa85b4-4c70-1284-64bb-6481dfc3bb4e",
+    "damage_weapon_name": "Ghost",
+    "damage_weapon_assets": {
+        "display_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/displayicon.png",
+        "killfeed_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/killstreamicon.png"
+    },
+    "secondary_fire_mode": false,
+    "player_locations_on_kill": [
+        {
+            "player_puuid": "57101dd8-4766-52e9-b560-c024de07ee43",
+            "player_display_name": "COACH X#MEGGG",
+            "player_team": "Red",
+            "location": {
+                "x": -351,
+                "y": 1165
+            },
+            "view_radians": 5.4177327
+        },
+        {
+            "player_puuid": "d3f9e5b1-be48-5ee3-a682-fb04223772f1",
+            "player_display_name": "Horhe#2000",
+            "player_team": "Red",
+            "location": {
+                "x": 3087,
+                "y": 1045
+            },
+            "view_radians": 0.7171053
+        },
+        {
+            "player_puuid": "78745e7f-4b89-5dfb-8303-e8bf9f0af68d",
+            "player_display_name": "05 egg#xixi",
+            "player_team": "Red",
+            "location": {
+                "x": 361,
+                "y": 1628
+            },
+            "view_radians": 4.8067455
+        },
+        {
+            "player_puuid": "6397ce2f-d932-5966-958b-16ead596b902",
+            "player_display_name": "Lunex#2116",
+            "player_team": "Red",
+            "location": {
+                "x": -2442,
+                "y": 252
+            },
+            "view_radians": 3.2085125
+        },
+        {
+            "player_puuid": "a43bf7f7-c60a-54b6-99fc-60517d1e13e8",
+            "player_display_name": "WelcometotheShow#1111",
+            "player_team": "Blue",
+            "location": {
+                "x": 5512,
+                "y": -1724
+            },
+            "view_radians": 4.7177577
+        },
+        {
+            "player_puuid": "163593cc-6931-5f72-b839-00af68b9ce6e",
+            "player_display_name": "殲 saucee#ovv",
+            "player_team": "Blue",
+            "location": {
+                "x": 3785,
+                "y": 850
+            },
+            "view_radians": 2.4556146
+        },
+        {
+            "player_puuid": "bf4e8c68-67b5-51c0-b713-117213fa123f",
+            "player_display_name": "OG deecee#moe",
+            "player_team": "Blue",
+            "location": {
+                "x": -337,
+                "y": -2018
+            },
+            "view_radians": 1.3841956
+        },
+        {
+            "player_puuid": "664336af-3abc-5252-b295-c9e4d125ee96",
+            "player_display_name": "VLT Lightningf#0007",
+            "player_team": "Blue",
+            "location": {
+                "x": -4940,
+                "y": -2127
+            },
+            "view_radians": 0.65750253
+        },
+        {
+            "player_puuid": "2e391b6a-4ed2-53f1-9763-97c701f687fa",
+            "player_display_name": "theDoctorr#0000",
+            "player_team": "Red",
+            "location": {
+                "x": 636,
+                "y": 2890
+            },
+            "view_radians": 4.540434
+        }
+    ],
+    "assistants": []
+}

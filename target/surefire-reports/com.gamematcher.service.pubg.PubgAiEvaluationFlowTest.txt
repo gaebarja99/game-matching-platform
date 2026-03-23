@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.gamematcher.service.pubg.PubgAiEvaluationFlowTest
+-------------------------------------------------------------------------------
+Tests run: 2, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 16.65 s -- in com.gamematcher.service.pubg.PubgAiEvaluationFlowTest
