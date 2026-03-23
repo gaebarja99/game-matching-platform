@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>방송하기 - GameMatcher 스튜디오</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/typography-glitch.css">
+    <script src="/js/alert-popup.js"></script>
+    <script src="/js/error-messages-ko.js"></script>
+    <style>
+        :root {
+            --studio-bg: #0e0e10;
+            --studio-bg-elevated: #18181b;
+            --studio-bg-hover: #1f1f23;
+            --studio-bg-card: #26262c;
+            --studio-border: #26262c;
+            --studio-border-strong: #3a3a3d;
+            --studio-border-hover: #53535a;
+            --studio-text: #efeff1;
+            --studio-text-muted: #adadb8;
+            --studio-text-dim: #6b6b70;
+            --studio-text-heading: #fff;
+            --studio-accent: #a970ff;
+            --studio-accent-hover: #bf94ff;
+            --studio-accent-bg: rgba(169,112,255,0.15);
+            --studio-highlight-from: #1a1a2e;
+            --studio-highlight-to: #252538;
+        }
+        body.theme-light {
+            --studio-bg: #f7f7f8;
+            --studio-bg-elevated: #fff;
+            --studio-bg-hover: #e5e5e7;
+            --studio-bg-card: #efeff1;
+            --studio-border: #d0d0d2;
+            --studio-border-strong: #adadb8;
+            --studio-border-hover: #53535a;
+            --studio-text: #1a1a1d;
+            --studio-text-muted: #53535a;
+            --studio-text-dim: #6b6b70;
+            --studio-text-heading: #0e0e10;
+            --studio-accent: #9147ff;
+            --studio-accent-hover: #772ce8;
+            --studio-accent-bg: rgba(145,71,255,0.12);
+            --studio-highlight-from: #f0edff;
+            --studio-highlight-to: #e8e3ff;
+        }
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; min-height: 100vh; background: var(--studio-bg); color: var(--studio-text); display: flex; flex-direction: column; transition: background 0.2s, color 0.2s; }
+        a { color: inherit; text-decoration: none; }
+        a:hover { color: var(--studio-accent); }
+
+        .studio-header { height: 56px; border-bottom: 1px solid var(--studio-border); display: flex; align-items: center; padding: 0 20px; background: var(--studio-bg); }
+        .studio-header .menu-btn { width: 40px; height: 40px; border: none; background: none; color: var(--studio-text-muted); cursor: pointer; font-size: 1.25rem; display: flex; align-items: center; justify-content: center; border-radius: 6px; }
+        .studio-header .menu-btn:hover { color: var(--studio-text-heading); background: var(--studio-bg-hover); }
+        .studio-header .logo { font-weight: 700; font-size: 1.2rem; margin-left: 12px; color: var(--studio-text-heading); }
+        .studio-header .logo span { color: var(--studio-accent); }
+        .studio-header .header-right { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+        .studio-header .btn-create { display: inline-flex; align-items: center; gap: 8px; padding: 8px 16px; background: var(--studio-accent); color: #fff; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+        .studio-header .btn-create:hover { background: var(--studio-accent-hover); }
+        .studio-header .icon-btn, .studio-header .theme-toggle { width: 40px; height: 40px; border: none; background: none; color: var(--studio-text-muted); cursor: pointer; border-radius: 6px; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+        .studio-header .icon-btn:hover, .studio-header .theme-toggle:hover { color: var(--studio-text-heading); background: var(--studio-bg-hover); }
+        .studio-header .theme-toggle .icon-sun { display: none; }
+        .studio-header .theme-toggle .icon-moon { display: inline; }
+        body.theme-light .studio-header .theme-toggle .icon-sun { display: inline; }
+        body.theme-light .studio-header .theme-toggle .icon-moon { display: none; }
+        .studio-header .profile-btn { width: 36px; height: 36px; border-radius: 50%; background: var(--studio-bg-card); border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--studio-text-dim); }
+
+        .studio-body { display: flex; flex: 1; min-height: 0; }
+        .studio-sidebar { width: 240px; min-width: 240px; flex-shrink: 0; padding: 16px 0; border-right: 1px solid var(--studio-border); background: var(--studio-bg); overflow-y: auto; }
+        .studio-sidebar .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 20px; font-size: 0.9rem; color: var(--studio-text-muted); cursor: pointer; border: none; background: none; width: 100%; text-align: left; font-family: inherit; border-radius: 0 6px 6px 0; margin: 0 12px 0 0; }
+        .studio-sidebar .nav-item:hover { color: var(--studio-text-heading); background: var(--studio-bg-hover); }
+        .studio-sidebar .nav-item.active { color: var(--studio-accent); background: var(--studio-accent-bg); font-weight: 600; }
+        .studio-sidebar .nav-item .nav-icon { width: 22px; height: 22px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 1.1rem; line-height: 1; }
+        .studio-sidebar .nav-item .nav-arrow { margin-left: auto; font-size: 0.7rem; transition: transform 0.2s; }
+        .studio-sidebar .nav-group.open .nav-item .nav-arrow { transform: rotate(180deg); }
+        .studio-sidebar .nav-sub { display: none; list-style: none; margin: 0; padding: 0 0 4px 0; }
+        .studio-sidebar .nav-group.open .nav-sub { display: block; }
+        .studio-sidebar .nav-sub a { display: flex; align-items: center; gap: 12px; padding: 8px 20px 8px 48px; font-size: 0.85rem; color: var(--studio-text-muted); border-radius: 0 6px 6px 0; margin: 0 12px 0 0; }
+        .studio-sidebar .nav-sub a:hover { color: var(--studio-text-heading); background: var(--studio-bg-hover); }
+        .studio-sidebar .nav-sub a.ext::after { content: ''; margin-left: auto; width: 14px; height: 14px; background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2'%3E%3Cpath d='M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6'/%3E%3Cpolyline points='15 3 21 3 21 9'/%3E%3Cline x1='10' y1='14' x2='21' y2='3'/%3E%3C/svg%3E") no-repeat center; opacity: 0.6; }
+        .studio-sidebar .nav-divider { height: 1px; background: var(--studio-border); margin: 12px 20px; }
+        .studio-sidebar .nav-section-label { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em; color: var(--studio-text-dim); padding: 16px 20px 6px; }
+        .studio-sidebar .nav-item-hint { font-size: 0.75rem; color: var(--studio-text-dim); margin-left: auto; }
+
+        .studio-main { flex: 1; display: flex; min-height: 0; overflow: hidden; background: var(--studio-bg); }
+        .live-content { flex: 1; display: flex; min-width: 0; overflow: hidden; }
+        .live-left { flex: 1; min-width: 0; overflow-y: auto; padding: 24px; }
+        .live-right { width: 320px; min-width: 320px; flex-shrink: 0; border-left: 1px solid var(--studio-border); display: flex; flex-direction: column; background: var(--studio-bg-elevated); }
+
+        .preview-box { aspect-ratio: 16/9; max-height: 340px; background: #000; border-radius: 12px; border: 1px solid var(--studio-border); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; margin-bottom: 24px; }
+        .preview-box .preview-msg { font-size: 0.95rem; color: var(--studio-text-muted); text-align: center; margin-bottom: 8px; }
+        .preview-box .preview-msg-sub { font-size: 0.85rem; color: var(--studio-text-dim); margin-bottom: 16px; }
+        .preview-box .btn-guide { padding: 10px 20px; background: var(--studio-bg-card); color: var(--studio-text); border: 1px solid var(--studio-border-strong); border-radius: 8px; font-size: 0.9rem; cursor: pointer; }
+        .preview-box .btn-guide:hover { background: var(--studio-bg-hover); }
+        .preview-box .status { display: flex; align-items: center; gap: 8px; margin-top: auto; font-size: 0.85rem; color: var(--studio-text-dim); }
+        .preview-box .status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--studio-text-dim); }
+        .preview-box .status-dot.live { background: #00e676; box-shadow: 0 0 8px rgba(0,230,118,0.6); }
+        .preview-box .btn-end-stream:hover { background: var(--studio-bg-hover); color: var(--studio-text); }
+
+        .form-block { margin-bottom: 20px; }
+        .form-block .label { font-size: 0.9rem; font-weight: 600; color: var(--studio-text-heading); margin-bottom: 8px; display: block; }
+        .form-block .label .required { color: #eb0400; }
+        .form-block .hint { font-size: 0.8rem; color: var(--studio-text-dim); margin-top: 6px; }
+        .form-block input[type="text"], .form-block input[type="search"], .form-block select { width: 100%; padding: 10px 14px; border-radius: 8px; border: 1px solid var(--studio-border-strong); background: var(--studio-bg-card); color: var(--studio-text); font-size: 0.9rem; font-family: inherit; }
+        .form-block input:focus, .form-block select:focus { outline: none; border-color: var(--studio-accent); }
+        .form-block input::placeholder { color: var(--studio-text-dim); }
+        .form-block .link-next { font-size: 0.9rem; color: var(--studio-accent); }
+        .form-block .link-next:hover { text-decoration: underline; }
+        .category-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+        .category-chip { display: inline-flex; align-items: center; padding: 6px 12px; background: var(--studio-accent-bg); color: var(--studio-accent); border-radius: 6px; font-size: 0.85rem; }
+        .toggle-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 8px; }
+        .toggle-row .toggle-desc { font-size: 0.85rem; color: var(--studio-text-muted); }
+        .toggle-switch { width: 44px; height: 24px; border-radius: 12px; background: var(--studio-bg-card); border: 1px solid var(--studio-border-strong); position: relative; cursor: pointer; flex-shrink: 0; transition: background 0.2s; }
+        .toggle-switch.on { background: var(--studio-accent); border-color: var(--studio-accent); }
+        .toggle-switch .knob { width: 18px; height: 18px; border-radius: 50%; background: #fff; position: absolute; top: 2px; left: 2px; transition: transform 0.2s; }
+        .toggle-switch.on .knob { transform: translateX(20px); }
+        .radio-group { display: flex; gap: 16px; flex-wrap: wrap; }
+        .radio-group label { display: flex; align-items: center; gap: 8px; font-size: 0.9rem; color: var(--studio-text); cursor: pointer; }
+        .radio-group input { width: 18px; height: 18px; accent-color: var(--studio-accent); }
+        .upload-area { aspect-ratio: 16/9; max-width: 320px; border: 2px dashed var(--studio-border-strong); border-radius: 12px; display: flex; flex-direction: column; align-items: center; justify-content: center; cursor: pointer; color: var(--studio-text-muted); font-size: 0.9rem; transition: border-color 0.2s, background 0.2s; }
+        .upload-area:hover { border-color: var(--studio-accent); background: var(--studio-accent-bg); }
+        .upload-area .upload-icon { font-size: 2rem; margin-bottom: 8px; }
+        .section-title { font-size: 1rem; font-weight: 700; color: var(--studio-text-heading); margin: 24px 0 12px 0; padding-bottom: 8px; border-bottom: 1px solid var(--studio-border); }
+        .section-title:first-of-type { margin-top: 0; }
+        .stats-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 12px; }
+        .stats-row .stat-item { padding: 10px; background: var(--studio-bg-card); border-radius: 8px; font-size: 0.85rem; color: var(--studio-text-muted); }
+        .stat-item .stat-label { color: var(--studio-text-dim); }
+        .tag-input-row { display: flex; gap: 8px; margin-bottom: 8px; }
+        .tag-input-row input { flex: 1; }
+        .tag-input-row .btn-add { padding: 10px 16px; background: var(--studio-accent); color: #fff; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+        .tag-input-row .btn-add:hover { background: var(--studio-accent-hover); }
+        .tag-chips-wrap { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; min-height: 0; }
+        .tag-chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px 6px 12px; background: var(--studio-accent-bg); color: var(--studio-accent); border-radius: 6px; font-size: 0.85rem; }
+        .tag-chip .tag-remove { width: 18px; height: 18px; border: none; background: none; color: inherit; cursor: pointer; padding: 0; display: flex; align-items: center; justify-content: center; border-radius: 4px; font-size: 1rem; line-height: 1; opacity: 0.8; }
+        .tag-chip .tag-remove:hover { opacity: 1; background: rgba(0,0,0,0.1); }
+        .btn-update { padding: 12px 32px; background: var(--studio-accent); color: #fff; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+        .btn-update:hover { background: var(--studio-accent-hover); }
+        .btn-stream-start { padding: 12px 32px; background: #00e676; color: #0d0d0f; border: none; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; }
+        .btn-stream-start:hover { background: #33eb91; }
+        .register-tabs { display: flex; gap: 8px; margin-bottom: 16px; }
+        .register-tabs button { padding: 8px 16px; font-size: 0.9rem; font-weight: 600; border-radius: 8px; border: 2px solid transparent; cursor: pointer; font-family: inherit; background: var(--studio-bg-card); color: var(--studio-text-muted); border-color: var(--studio-border-strong); }
+        .register-tabs button:hover { color: var(--studio-text); background: var(--studio-bg-hover); }
+        .register-tabs button.active { background: var(--studio-accent-bg); color: var(--studio-accent); border-color: var(--studio-accent); }
+        .register-panel { display: none; }
+        .register-panel.show { display: block; }
+        .register-result a { color: var(--studio-accent); }
+        .checkbox-row { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 8px; }
+        .checkbox-row input[type="checkbox"] { width: 18px; height: 18px; margin-top: 2px; accent-color: var(--studio-accent); }
+        .checkbox-row .text { font-size: 0.9rem; color: var(--studio-text); }
+        .checkbox-row .text a { color: var(--studio-accent); }
+
+        .live-right .tabs { display: flex; border-bottom: 1px solid var(--studio-border); }
+        .live-right .tabs button { flex: 1; padding: 12px 16px; border: none; background: none; color: var(--studio-text-muted); font-size: 0.9rem; font-weight: 600; cursor: pointer; border-bottom: 2px solid transparent; margin-bottom: -1px; }
+        .live-right .tabs button:hover { color: var(--studio-text-heading); }
+        .live-right .tabs button.active { color: var(--studio-accent); border-bottom-color: var(--studio-accent); }
+        .chat-panel { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; min-height: 200px; color: var(--studio-text-muted); font-size: 0.9rem; text-align: center; }
+        .chat-panel .chat-icon { font-size: 2rem; margin-bottom: 12px; opacity: 0.6; }
+        .chat-widget-block { padding: 16px 20px; border-bottom: 1px solid var(--studio-border); }
+        .chat-widget-block .qs-title { font-size: 0.9rem; font-weight: 700; color: var(--studio-text-heading); margin-bottom: 8px; }
+        .chat-widget-block .hint { font-size: 0.82rem; color: var(--studio-text-muted); margin-bottom: 12px; line-height: 1.4; }
+        .chat-widget-actions { display: flex; flex-direction: column; gap: 10px; }
+        .chat-widget-actions .btn-open-chat { padding: 10px 16px; background: var(--studio-accent); color: #fff; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+        .chat-widget-actions .btn-open-chat:hover { opacity: 0.9; }
+        .chat-widget-url-row { display: flex; gap: 8px; flex-wrap: wrap; }
+        .chat-widget-url-row input { flex: 1; min-width: 0; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--studio-border-strong); background: var(--studio-bg-card); color: var(--studio-text); font-size: 0.85rem; }
+        .chat-widget-url-row .btn-widget-eye { width: 36px; height: 36px; border: none; border-radius: 6px; background: var(--studio-bg-card); border: 1px solid var(--studio-border-strong); color: var(--studio-text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+        .chat-widget-url-row .btn-widget-eye:hover { background: var(--studio-bg-hover); color: var(--studio-text-heading); }
+        .chat-widget-url-row .btn-copy-url { padding: 8px 14px; border-radius: 6px; border: 1px solid var(--studio-border-strong); background: var(--studio-bg-card); color: var(--studio-text); font-size: 0.85rem; cursor: pointer; }
+        .chat-widget-url-row .btn-copy-url:hover { background: var(--studio-bg-hover); }
+        .chat-widget-hints { font-size: 0.8rem; color: var(--studio-text-muted); line-height: 1.6; margin: 12px 0 0; padding-left: 1.2em; }
+        .chat-widget-hints li { margin-bottom: 4px; }
+        .quick-settings { padding: 16px 20px; border-top: 1px solid var(--studio-border); }
+        .quick-settings .qs-title { font-size: 0.9rem; font-weight: 700; color: var(--studio-text-heading); margin-bottom: 14px; }
+        .quick-settings .qs-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .quick-settings .qs-row:last-child { margin-bottom: 0; }
+        .quick-settings .qs-label { font-size: 0.85rem; color: var(--studio-text); }
+        .quick-settings select { padding: 6px 10px; border-radius: 6px; border: 1px solid var(--studio-border-strong); background: var(--studio-bg-card); color: var(--studio-text); font-size: 0.85rem; }
+        .quick-settings .qs-link { font-size: 0.85rem; color: var(--studio-accent); margin-top: 8px; display: inline-block; }
+        .quick-settings .qs-link:hover { text-decoration: underline; }
+        @media (max-width: 1024px) { .live-right { width: 280px; min-width: 280px; } }
+        @media (max-width: 768px) { .studio-sidebar { display: none; } .live-content { flex-direction: column; } .live-right { width: 100%; min-width: 0; } }
+        .donation-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: none; align-items: center; justify-content: center; }
+        .donation-modal-backdrop.show { display: flex; }
+        .donation-modal-box { background: var(--studio-bg-elevated); border: 1px solid var(--studio-border-strong); border-radius: 12px; padding: 24px; max-width: 420px; width: 90%; }
+        .donation-modal-box h2 { margin: 0 0 12px 0; font-size: 1.1rem; }
+        .donation-modal-box .hint { font-size: 0.85rem; color: var(--studio-text-dim); margin-bottom: 16px; }
+        .donation-modal-box label { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .donation-modal-box label span { min-width: 120px; }
+        .donation-modal-box input[type="number"] { width: 80px; padding: 6px 8px; border-radius: 6px; border: 1px solid var(--studio-border-strong); background: var(--studio-bg-card); color: var(--studio-text); }
+        .donation-modal-box .modal-actions { display: flex; gap: 8px; margin-top: 20px; }
+        .donation-modal-box .btn-save { padding: 8px 16px; background: #00e676; color: #0d0d0f; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .donation-modal-box .btn-close { padding: 8px 16px; background: var(--studio-bg-card); color: var(--studio-text-muted); border: 1px solid var(--studio-border-strong); border-radius: 8px; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <header class="studio-header">
+        <button type="button" class="menu-btn" id="menu-btn" aria-label="메뉴"><svg class="icon-menu" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg></button>
+        <a href="/streams.html" class="logo">GameMatcher <span>스튜디오</span></a>
+        <div class="header-right">
+            <a href="/studio-live.html" class="btn-create">+ 만들기</a>
+            <button type="button" class="icon-btn" title="도움말" onclick="alert('도움말은 준비 중입니다.');"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></button>
+            <span class="studio-alert-wrap" style="position:relative;display:inline-flex;">
+                <a href="/studio-alerts.html" class="icon-btn" title="알림" id="studio-alert-link"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg></a>
+                <span id="studio-notification-badge" style="display:none;position:absolute;top:2px;right:2px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#e91916;color:#fff;font-size:0.7rem;font-weight:700;align-items:center;justify-content:center;pointer-events:none;">0</span>
+            </span>
+            <button type="button" class="theme-toggle" id="theme-toggle" title="다크/라이트 모드 전환" aria-label="테마 전환">
+                <svg class="icon-sun" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
+                <svg class="icon-moon" viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            </button>
+            <a href="/profile.html" class="profile-btn" title="프로필"><svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg></a>
+        </div>
+    </header>
+    <div class="studio-body">
+        <aside class="studio-sidebar">
+            <a href="/studio.html" class="nav-item"><span class="nav-icon">▣</span>대시보드</a>
+            <div class="nav-group open" data-group="broadcast">
+                <button type="button" class="nav-item nav-trigger"><span class="nav-icon">📹</span>방송 관리<span class="nav-arrow">▼</span></button>
+                <ul class="nav-sub">
+                    <li><a href="/studio-live.html" class="active">방송하기</a></li>
+                    <li><a href="/studio-settings.html">설정</a></li>
+                    <li><a href="/studio-alerts.html">알림</a></li>
+                    <li><a href="/studio-chat-settings.html">채팅 설정</a></li>
+                </ul>
+            </div>
+            <div class="nav-group" data-group="analysis">
+                <button type="button" class="nav-item nav-trigger"><span class="nav-icon">📊</span>분석<span class="nav-arrow">▼</span></button>
+                <ul class="nav-sub">
+                    <li><a href="/studio-analysis-live.html">라이브 분석</a></li>
+                    <li><a href="/studio-analysis-video.html">동영상 분석</a></li>
+                </ul>
+            </div>
+            <div class="nav-group" data-group="viewers">
+                <button type="button" class="nav-item nav-trigger"><span class="nav-icon">👥</span>시청자 관리<span class="nav-arrow">▼</span></button>
+                <ul class="nav-sub">
+                    <li><a href="/studio-viewers-followers.html">팔로워</a></li>
+                    <li><a href="/studio-viewers-subscribers.html">구독자</a></li>
+                    <li><a href="/studio-viewers-blocklist.html">활동 제한</a></li>
+                </ul>
+            </div>
+            <div class="nav-group" data-group="content">
+                <button type="button" class="nav-item nav-trigger"><span class="nav-icon">📄</span>콘텐츠 관리<span class="nav-arrow">▼</span></button>
+                <ul class="nav-sub">
+                    <li><a href="/streams.html">라이브 스트리밍</a></li>
+                    <li><a href="#" onclick="alert('준비 중입니다.'); return false;">동영상</a></li>
+                    <li><a href="#" onclick="alert('준비 중입니다.'); return false;">내가 만든 클립</a></li>
+                    <li><a href="#" onclick="alert('준비 중입니다.'); return false;">내 채널의 클립</a></li>
+                </ul>
+            </div>
+            <div class="nav-group" data-group="revenue">
+                <button type="button" class="nav-item nav-trigger"><span class="nav-icon">💰</span>수익 관리<span class="nav-arrow">▼</span></button>
+                <ul class="nav-sub">
+                    <li><a href="/studio-revenue.html">수익 창출</a></li>
+                </ul>
+            </div>
+            <div class="nav-group" data-group="channel">
+                <button type="button" class="nav-item nav-trigger"><span class="nav-icon">🔗</span>채널/권한 관리<span class="nav-arrow">▼</span></button>
+                <ul class="nav-sub">
+                    <li><a href="#" class="ext" onclick="alert('준비 중입니다.'); return false;">채널 관리</a></li>
+                    <li><a href="#" onclick="alert('준비 중입니다.'); return false;">권한 관리</a></li>
+                </ul>
+            </div>
+            <div class="nav-divider"></div>
+            <a href="/profile.html" class="nav-item"><span class="nav-icon">👤</span>내 정보</a>
+            <a href="#" class="nav-item" onclick="alert('공지사항은 준비 중입니다.'); return false;"><span class="nav-icon">📢</span>공지사항</a>
+        </aside>
+        <main class="studio-main">
+            <div class="live-content">
+                <div class="live-left">
+                    <div class="preview-box">
+                        <p class="preview-msg">라이브 스트리밍을 시작하려면 스트리밍 소프트웨어를 연결하세요.</p>
+                        <p class="preview-msg-sub">방송 시작 및 종료는 스트리밍 소프트웨어에서 가능합니다.</p>
+                        <button type="button" class="btn-guide" onclick="alert('OBS 등 스트리밍 소프트웨어 설정 안내는 준비 중입니다.');">스트리밍 설정 안내</button>
+                        <div class="status" id="stream-status-wrap"><span class="status-dot" id="stream-status-dot"></span><span id="stream-status-text">오프라인</span></div>
+                        <button type="button" class="btn-end-stream" id="btn-end-stream" style="display:none; margin-top:12px; padding:8px 16px; font-size:0.85rem; background:var(--studio-bg-card); border:1px solid var(--studio-border-strong); border-radius:8px; color:var(--studio-text-muted); cursor:pointer;">방송 종료 처리</button>
+                    </div>
+
+                    <div class="form-block">
+                        <span class="label">광고 타임라인</span>
+                        <a href="/studio-settings.html" class="link-next">중간 광고 설정 &gt;</a>
+                    </div>
+                    <div class="form-block" id="stream-no-data" style="display:none;">
+                        <p class="hint">등록된 방송이 없습니다. 아래 <strong>방송 등록</strong>에서 방송 시작 후 이 페이지에서 설정을 수정할 수 있습니다.</p>
+                    </div>
+                    <div class="form-block">
+                        <label class="label">방송 제목 <span class="required">*</span></label>
+                        <input type="text" id="stream-title" placeholder="예: 배고픈 쪼렙 7928의 라이브 방송" value="">
+                    </div>
+                    <div class="form-block">
+                        <label class="label">카테고리</label>
+                        <select id="stream-game">
+                            <option value="LEAGUE_OF_LEGENDS">리그 오브 레전드</option>
+                            <option value="VALORANT">발로란트</option>
+                            <option value="OVERWATCH">오버워치</option>
+                            <option value="PUBG">PUBG</option>
+                            <option value="COUNTER_STRIKE_2">카운터 스트라이크 2</option>
+                            <option value="APEX_LEGENDS">에이펙스 레전드</option>
+                            <option value="OTHERS">기타</option>
+                        </select>
+                    </div>
+                    <div class="form-block toggle-row">
+                        <div>
+                            <span class="label">같이보기 방송</span>
+                            <p class="toggle-desc">같이보기 방송을 진행할 경우, 설정을 켜고 캠페인을 주기하세요.</p>
+                        </div>
+                        <div class="toggle-switch" id="toggle-watch" role="button" tabindex="0" aria-pressed="false"><span class="knob"></span></div>
+                    </div>
+                    <div class="form-block">
+                        <span class="label">스트림 상태</span>
+                        <a href="#" class="link-next" onclick="alert('내 방송 보기는 준비 중입니다.'); return false;">내 방송 보기 &gt;</a>
+                    </div>
+
+                    <div class="section-title">스트림 상태</div>
+                    <div class="form-block">
+                        <p class="hint">오프라인 · 방송 시간 - · 해상도 - · 비트레이트 - · FPS -</p>
+                        <a href="#" class="link-next" onclick="return false;">내 방송 보기 &gt;</a>
+                    </div>
+
+                    <div class="form-block toggle-row">
+                        <span class="label">정보 보기</span>
+                        <div class="toggle-switch on" id="toggle-stats" role="button" tabindex="0" aria-pressed="true"><span class="knob"></span></div>
+                    </div>
+                    <div class="stats-row">
+                        <div class="stat-item"><span class="stat-label">동시 시청자</span> -</div>
+                        <div class="stat-item"><span class="stat-label">최고 동시 시청자</span> -</div>
+                        <div class="stat-item"><span class="stat-label">평균 동시 시청자</span> -</div>
+                        <div class="stat-item"><span class="stat-label">채팅 참여자</span> -</div>
+                        <div class="stat-item"><span class="stat-label">팔로워 수</span> -</div>
+                        <div class="stat-item"><span class="stat-label">구독 수</span> -</div>
+                    </div>
+
+                    <div class="section-title">태그 (최대 5개)</div>
+                    <div class="form-block">
+                        <div class="tag-input-row">
+                            <input type="text" placeholder="태그 입력 후 Enter 또는 추가 버튼 클릭" id="tag-input" maxlength="15" autocomplete="off">
+                            <button type="button" class="btn-add" id="tag-add-btn">추가</button>
+                        </div>
+                        <div class="tag-chips-wrap" id="tag-chips-wrap"></div>
+                        <p class="hint">공백 및 특수 문자 없이 15자까지. 등록 순서대로 방송 정보에 노출됩니다.</p>
+                    </div>
+
+                    <div class="section-title">미리보기 이미지</div>
+                    <div class="form-block">
+                        <div class="upload-area" onclick="alert('이미지 업로드는 준비 중입니다.');">
+                            <span class="upload-icon">+</span>
+                            <span>업로드 (1280x720)</span>
+                        </div>
+                        <p class="hint">등록하지 않으면 방송 시작 화면이 썸네일로 노출됩니다.</p>
+                    </div>
+
+                    <div class="section-title">연령 제한</div>
+                    <div class="form-block checkbox-row">
+                        <input type="checkbox" id="age-restrict">
+                        <label for="age-restrict" class="text">시청자를 19세로 제한하겠습니다. <a href="#" onclick="alert('자세히 보기'); return false;">자세히 보기</a></label>
+                    </div>
+                    <p class="hint">부적합 콘텐츠 설정 및 미성년자 방송 제한 관련 안내입니다.</p>
+
+                    <div class="section-title">시청 국가 설정</div>
+                    <div class="form-block radio-group">
+                        <label><input type="radio" name="country" value="all" checked> 모든 국가 허용</label>
+                        <label><input type="radio" name="country" value="kr"> 한국만 허용</label>
+                    </div>
+
+                    <div class="section-title">유료 프로모션</div>
+                    <div class="form-block checkbox-row">
+                        <input type="checkbox" id="paid-promo">
+                        <label for="paid-promo" class="text">간접 광고, 협찬 등 제3자로부터 대가를 받은 유료 프로모션을 포함합니다.</label>
+                    </div>
+                    <div class="form-block radio-group">
+                        <label><input type="radio" name="promo" value="yes"> 허용</label>
+                        <label><input type="radio" name="promo" value="no" checked> 허용하지 않음</label>
+                    </div>
+
+                    <div class="section-title">다시보기 설정</div>
+                    <div class="form-block radio-group">
+                        <label><input type="radio" name="replay" value="confirm" checked> 확인 후 게시</label>
+                        <label><input type="radio" name="replay" value="auto"> 자동 게시</label>
+                        <label><input type="radio" name="replay" value="none"> 다시 보기 안 함</label>
+                    </div>
+                    <p class="hint">다시보기 영상 생성 후 게시 여부를 선택할 수 있습니다. 게시되지 않은 영상은 2일간 보관 후 삭제됩니다.</p>
+
+                    <div class="section-title">방송 등록</div>
+                    <p class="hint" style="margin-bottom:12px;">간편 모드(트위치/유튜브) 또는 우리 서버로 OBS 방송을 등록하세요.</p>
+                    <div class="register-tabs">
+                        <button type="button" id="register-tab-easy" class="active">간편 (트위치/유튜브)</button>
+                        <button type="button" id="register-tab-obs">OBS → 우리 서버</button>
+                    </div>
+                    <form id="form-register-stream">
+                        <div id="register-panel-easy" class="register-panel show">
+                            <div class="form-block">
+                                <label class="label">방송 제목 <span class="required">*</span></label>
+                                <input type="text" id="register-title" placeholder="예: 롤 솔랭" value="">
+                            </div>
+                            <div class="form-block">
+                                <label class="label">게임</label>
+                                <select id="register-game">
+                                    <option value="LEAGUE_OF_LEGENDS">리그 오브 레전드</option>
+                                    <option value="VALORANT">발로란트</option>
+                                    <option value="OVERWATCH">오버워치</option>
+                                    <option value="PUBG">PUBG</option>
+                                    <option value="COUNTER_STRIKE_2">카운터 스트라이크 2</option>
+                                    <option value="APEX_LEGENDS">에이펙스 레전드</option>
+                                    <option value="OTHERS">기타</option>
+                                </select>
+                            </div>
+                            <div class="form-block">
+                                <label class="label">트위치 또는 유튜브 방송 주소</label>
+                                <input type="url" id="register-externalUrl" placeholder="https://www.twitch.tv/내채널 또는 https://youtube.com/live/...">
+                            </div>
+                        </div>
+                        <div id="register-panel-obs" class="register-panel">
+                            <div class="form-block">
+                                <label class="label">방송 제목 <span class="required">*</span></label>
+                                <input type="text" id="register-title2" placeholder="예: 롤 솔랭" value="">
+                            </div>
+                            <div class="form-block">
+                                <label class="label">게임</label>
+                                <select id="register-game2">
+                                    <option value="LEAGUE_OF_LEGENDS">리그 오브 레전드</option>
+                                    <option value="VALORANT">발로란트</option>
+                                    <option value="OVERWATCH">오버워치</option>
+                                    <option value="PUBG">PUBG</option>
+                                    <option value="COUNTER_STRIKE_2">카운터 스트라이크 2</option>
+                                    <option value="APEX_LEGENDS">에이펙스 레전드</option>
+                                    <option value="OTHERS">기타</option>
+                                </select>
+                            </div>
+                            <p class="hint">등록 후 아래에 나오는 <strong>서버</strong>와 <strong>스트림 키</strong>를 OBS 방송 설정에 넣으세요. (nginx-rtmp 등 RTMP 서버가 떠 있어야 합니다.)</p>
+                        </div>
+                        <div id="register-result" class="register-result" style="display:none; margin-top:16px; padding:14px; border-radius:8px; background:var(--studio-bg-card); border:1px solid var(--studio-border-strong); font-size:0.9rem;"></div>
+                    </form>
+                    <div class="form-block" style="display:flex; gap:12px; margin-top:20px; align-items:center;">
+                        <button type="button" class="btn-stream-start" id="btn-stream-start">방송 등록</button>
+                        <button type="button" class="btn-update" id="btn-stream-update">업데이트</button>
+                    </div>
+                </div>
+                <div class="live-right">
+                    <div class="chat-panel">
+                        <div class="chat-icon">❗</div>
+                        <p>채팅을 사용할 수 없습니다.</p>
+                        <p style="font-size:0.85rem; margin-top:8px;">아직은 고요합니다.</p>
+                    </div>
+                    <div class="chat-widget-block" id="chat-widget-block" style="display:none;">
+                        <div class="qs-title">채팅창 URL</div>
+                        <p id="chat-widget-stream-hint" class="hint" style="font-size:0.8rem; margin-bottom:10px;"></p>
+                        <p class="hint">방송 시 시청자와 소통하려면 채팅창 URL을 OBS 브라우저 소스에 넣거나 새 창으로 열어두세요.</p>
+                        <div class="chat-widget-url-row" style="align-items:center;">
+                            <input type="password" id="chat-widget-url" readonly placeholder="채팅창 URL" style="flex:1; min-width:0;">
+                            <button type="button" class="btn-widget-eye" id="btn-chat-widget-eye" title="표시/숨기기">👁</button>
+                            <button type="button" class="btn-copy-url" id="btn-copy-widget-url">복사</button>
+                            <button type="button" class="btn-open-chat" id="btn-open-chat-widget" style="padding:8px 12px; font-size:0.85rem;">스트리머 전용 채팅창 열기</button>
+                        </div>
+                        <p class="hint" style="margin-top:12px; margin-bottom:6px;">방송 화면에 채팅만 깔끔하게 보이게 하려면 아래 <strong>오버레이용 URL</strong>을 OBS 브라우저 소스에 넣으세요. (제목·로그인 문구·입력창 숨김, 밝은 화면에서도 잘 보이게 표시)</p>
+                        <div class="chat-widget-url-row" style="align-items:center;">
+                            <input type="text" id="chat-widget-url-overlay" readonly placeholder="오버레이용 URL" style="flex:1; min-width:0; font-size:0.8rem;">
+                            <button type="button" class="btn-copy-url" id="btn-copy-widget-url-overlay">오버레이 URL 복사</button>
+                        </div>
+                        <ul class="chat-widget-hints">
+                            <li>채팅창 URL을 추가하시면 패널 내부에 방송 채팅창이 보일 수 있습니다.</li>
+                            <li>방송 중일 때는 반드시 지금 방송 중인 URL을 사용하세요.</li>
+                            <li>방송 소프트웨어에 브라우저 소스를 미리 URL로 추가해 주세요.</li>
+                            <li>너비(가로)는 520px에 최적화되어 있습니다.</li>
+                            <li>브라우저 소스에 [장면이 활성화되면 브라우저를 새로고침] 옵션을 체크해 주세요.</li>
+                        </ul>
+                        <button type="button" class="btn-copy-url" id="btn-open-donation-limits" style="margin-top:12px; padding:8px 14px;">후원 팡 제한</button>
+                    </div>
+                    <div class="quick-settings">
+                        <div class="qs-title">빠른 설정</div>
+                        <div class="qs-row">
+                            <span class="qs-label">채팅 이용 권한</span>
+                            <select><option>모두</option><option>팔로워만</option><option>구독자만</option><option>비활성화</option></select>
+                        </div>
+                        <div class="qs-row">
+                            <span class="qs-label">이모티콘 모드</span>
+                            <div class="toggle-switch" id="qs-emoticon" role="button" tabindex="0"><span class="knob"></span></div>
+                        </div>
+                        <div class="qs-row">
+                            <span class="qs-label">저속 모드</span>
+                            <div class="toggle-switch" id="qs-slow" role="button" tabindex="0"><span class="knob"></span></div>
+                        </div>
+                        <a href="/studio-chat-settings.html" class="qs-link">알림 설정</a>
+                        <a href="/studio-chat-settings.html" class="qs-link">채팅/금칙어 설정</a>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+    <div id="modal-donation-limits" class="donation-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="donation-modal-title">
+        <div class="donation-modal-box" onclick="event.stopPropagation()">
+            <h2 id="donation-modal-title">후원 팡 제한</h2>
+            <p class="hint">영상 후원 / TTS(후원 메시지)는 설정한 팡 이상일 때만 가능합니다. 0이면 제한 없음.</p>
+            <label><span>영상 후원 최소</span><input type="number" id="donation-limit-video" min="0" value="0"> 팡</label>
+            <label><span>TTS 최소</span><input type="number" id="donation-limit-tts" min="0" value="0"> 팡</label>
+            <div class="modal-actions">
+                <button type="button" class="btn-save" id="btn-save-donation-limits">저장</button>
+                <button type="button" class="btn-close" id="btn-close-donation-limits">닫기</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        fetch('/api/auth/ping', { credentials: 'include' }).catch(function () {});
+        (function () {
+            var badge = document.getElementById('studio-notification-badge');
+            function updateNotificationBadge() {
+                fetch('/api/notifications/count', { credentials: 'include' }).then(function (r) { return r.ok ? r.json() : { count: 0 }; }).then(function (d) {
+                    var c = (d && d.count != null) ? Number(d.count) : 0;
+                    if (badge) { badge.textContent = c > 99 ? '99+' : String(c); badge.style.display = c > 0 ? 'inline-flex' : 'none'; }
+                }).catch(function () {});
+            }
+            updateNotificationBadge();
+            setInterval(updateNotificationBadge, 30000);
+        })();
+        (function () {
+            var THEME_KEY = 'studio-theme';
+            function getStoredTheme() { return localStorage.getItem(THEME_KEY); }
+            function setStoredTheme(v) { if (v) localStorage.setItem(THEME_KEY, v); else localStorage.removeItem(THEME_KEY); }
+            function applyTheme(light) { document.body.classList.toggle('theme-light', !!light); setStoredTheme(light ? 'light' : null); }
+            var stored = getStoredTheme();
+            applyTheme(stored === 'light');
+            document.getElementById('theme-toggle').addEventListener('click', function () { applyTheme(!document.body.classList.contains('theme-light')); });
+
+            document.querySelectorAll('.nav-group .nav-trigger').forEach(function (btn) {
+                btn.addEventListener('click', function () { this.closest('.nav-group').classList.toggle('open'); });
+            });
+            document.getElementById('menu-btn').addEventListener('click', function () {
+                var sidebar = document.querySelector('.studio-sidebar');
+                sidebar.style.display = sidebar.style.display === 'none' ? 'block' : 'none';
+            });
+
+            function initToggle(el) {
+                if (!el) return;
+                el.addEventListener('click', function () {
+                    this.classList.toggle('on');
+                    this.setAttribute('aria-pressed', this.classList.contains('on'));
+                });
+                el.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); this.click(); } });
+            }
+            document.querySelectorAll('.toggle-switch').forEach(initToggle);
+
+            (function initTagAdd() {
+                var MAX_TAGS = 5;
+                var TAG_MAX_LEN = 15;
+                var tagInput = document.getElementById('tag-input');
+                var tagAddBtn = document.getElementById('tag-add-btn');
+                var tagChipsWrap = document.getElementById('tag-chips-wrap');
+                if (!tagInput || !tagAddBtn || !tagChipsWrap) return;
+                var tagList = [];
+                function isValidTag(s) {
+                    if (!s || s.length > TAG_MAX_LEN) return false;
+                    return /^[a-zA-Z0-9가-힣]+$/.test(s);
+                }
+                function renderTags() {
+                    tagChipsWrap.innerHTML = '';
+                    tagList.forEach(function (text, i) {
+                        var chip = document.createElement('span');
+                        chip.className = 'tag-chip';
+                        chip.appendChild(document.createTextNode(text));
+                        var btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.className = 'tag-remove';
+                        btn.setAttribute('aria-label', '태그 제거');
+                        btn.textContent = '×';
+                        (function (idx) {
+                            btn.addEventListener('click', function () {
+                                tagList.splice(idx, 1);
+                                renderTags();
+                            });
+                        })(i);
+                        chip.appendChild(btn);
+                        tagChipsWrap.appendChild(chip);
+                    });
+                }
+                function addTag() {
+                    var raw = (tagInput.value || '').trim();
+                    if (!raw) return;
+                    if (tagList.length >= MAX_TAGS) {
+                        alert('태그는 최대 ' + MAX_TAGS + '개까지 추가할 수 있습니다.');
+                        return;
+                    }
+                    if (!isValidTag(raw)) {
+                        alert('공백 및 특수 문자 없이 15자 이내로 입력해 주세요.');
+                        return;
+                    }
+                    if (tagList.indexOf(raw) !== -1) {
+                        alert('이미 추가된 태그입니다.');
+                        return;
+                    }
+                    tagList.push(raw);
+                    tagInput.value = '';
+                    renderTags();
+                }
+                tagAddBtn.addEventListener('click', addTag);
+                tagInput.addEventListener('keydown', function (e) {
+                    if (e.key === 'Enter') {
+                        e.preventDefault();
+                        addTag();
+                    }
+                });
+            })();
+
+            var currentStreamId = null;
+            (function loadMyStream() {
+                var titleEl = document.getElementById('stream-title');
+                var gameEl = document.getElementById('stream-game');
+                var noDataEl = document.getElementById('stream-no-data');
+                var btnUpdate = document.getElementById('btn-stream-update');
+                if (!titleEl || !gameEl) return;
+                fetch('/api/streams/my', { credentials: 'include' })
+                    .then(function (r) {
+                        if (r.status === 401) { window.location.href = '/streams.html'; return []; }
+                        return r.ok ? r.json() : [];
+                    })
+                    .then(function (list) {
+                        var stream = Array.isArray(list) && list.length > 0
+                            ? (list.find(function (s) { return s.status === 'LIVE'; }) || list[0])
+                            : null;
+                        if (!stream || !stream.id) {
+                            noDataEl.style.display = 'block';
+                            updateStreamStatusUI(null);
+                            return;
+                        }
+                        noDataEl.style.display = 'none';
+                        currentStreamId = stream.id;
+                        titleEl.value = stream.title || '';
+                        if (stream.game && gameEl) {
+                            gameEl.value = stream.game;
+                        }
+                        updateStreamStatusUI(stream.status);
+                    });
+                function updateStreamStatusUI(status) {
+                    var dotEl = document.getElementById('stream-status-dot');
+                    var textEl = document.getElementById('stream-status-text');
+                    var btnEnd = document.getElementById('btn-end-stream');
+                    if (!dotEl || !textEl) return;
+                    if (status === 'LIVE') {
+                        dotEl.classList.add('live');
+                        textEl.textContent = 'LIVE';
+                        if (btnEnd) { btnEnd.style.display = 'block'; btnEnd.onclick = function () {
+                            if (!currentStreamId) return;
+                            if (!confirm('OBS에서 이미 방송을 종료했는데도 LIVE로 보이시나요? 방송 종료 처리하면 시청 화면에서 방송 중이 아님으로 표시됩니다.')) return;
+                            btnEnd.disabled = true;
+                            fetch('/api/streams/' + currentStreamId + '/end', { method: 'PUT', credentials: 'include' })
+                                .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+                                .then(function (res) {
+                                    if (res.ok) {
+                                        alert('방송이 종료 처리되었습니다.');
+                                        dotEl.classList.remove('live');
+                                        textEl.textContent = '오프라인';
+                                        btnEnd.style.display = 'none';
+                                        refetchStream();
+                                    } else { alert(window.toKoreanErrorMessage(res.data && res.data.message) || '처리 실패'); }
+                                })
+                                .catch(function () { alert('요청에 실패했습니다.'); })
+                                .finally(function () { btnEnd.disabled = false; });
+                        }; }
+                    } else {
+                        dotEl.classList.remove('live');
+                        textEl.textContent = '오프라인';
+                        if (btnEnd) btnEnd.style.display = 'none';
+                    }
+                }
+                function refetchStream() {
+                    if (!titleEl || !gameEl) return;
+                    fetch('/api/streams/my', { credentials: 'include' })
+                        .then(function (r) {
+                            if (r.status === 401) { window.location.href = '/streams.html'; return []; }
+                            return r.ok ? r.json() : [];
+                        })
+                        .then(function (list) {
+                            var stream = Array.isArray(list) && list.length > 0
+                                ? (list.find(function (s) { return s.status === 'LIVE'; }) || list[0])
+                                : null;
+                            if (!stream || !stream.id) {
+                                noDataEl.style.display = 'block';
+                                updateStreamStatusUI(null);
+                                return;
+                            }
+                            noDataEl.style.display = 'none';
+                            currentStreamId = stream.id;
+                            titleEl.value = stream.title || '';
+                            if (stream.game && gameEl) gameEl.value = stream.game;
+                            updateStreamStatusUI(stream.status);
+                        });
+                }
+                if (btnUpdate) {
+                    btnUpdate.addEventListener('click', function () {
+                        if (!currentStreamId) {
+                            alert('등록된 방송이 없습니다. 아래 방송 등록에서 방송 시작을 눌러 주세요.');
+                            return;
+                        }
+                        var title = (titleEl && titleEl.value) ? titleEl.value.trim() : '';
+                        if (!title) {
+                            alert('방송 제목을 입력해 주세요.');
+                            if (titleEl) titleEl.focus();
+                            return;
+                        }
+                        var game = gameEl && gameEl.value ? gameEl.value : 'OTHERS';
+                        btnUpdate.disabled = true;
+                        btnUpdate.textContent = '저장 중...';
+                        fetch('/api/streams/' + currentStreamId, {
+                            method: 'PATCH',
+                            credentials: 'include',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ title: title, game: game })
+                        })
+                            .then(function (r) {
+                                return r.json().then(function (data) { return { ok: r.ok, data: data }; });
+                            })
+                            .then(function (res) {
+                                if (res.ok) {
+                                    alert('설정이 저장되었습니다.');
+                                } else {
+                                    alert(window.toKoreanErrorMessage(res.data && res.data.message) || '저장에 실패했습니다.');
+                                }
+                            })
+                            .catch(function () { alert('저장 요청이 실패했습니다.'); })
+                            .finally(function () {
+                                btnUpdate.disabled = false;
+                                btnUpdate.textContent = '업데이트';
+                            });
+                    });
+                }
+            })();
+
+            (function initRegisterStream() {
+                var tabEasy = document.getElementById('register-tab-easy');
+                var tabObs = document.getElementById('register-tab-obs');
+                var panelEasy = document.getElementById('register-panel-easy');
+                var panelObs = document.getElementById('register-panel-obs');
+                var resultEl = document.getElementById('register-result');
+                var btnStart = document.getElementById('btn-stream-start');
+                var streamJustRegisteredId = null;
+                if (!tabEasy || !tabObs || !panelEasy || !panelObs || !btnStart) return;
+                tabEasy.addEventListener('click', function () {
+                    tabEasy.classList.add('active'); tabObs.classList.remove('active');
+                    panelEasy.classList.add('show'); panelObs.classList.remove('show');
+                });
+                tabObs.addEventListener('click', function () {
+                    tabObs.classList.add('active'); tabEasy.classList.remove('active');
+                    panelObs.classList.add('show'); panelEasy.classList.remove('show');
+                });
+                btnStart.addEventListener('click', function () {
+                    if (streamJustRegisteredId != null) {
+                        alert('방송이 시작되었습니다.');
+                        return;
+                    }
+                    var isEasy = panelEasy.classList.contains('show');
+                    var title = (isEasy ? document.getElementById('register-title') : document.getElementById('register-title2')).value.trim();
+                    var game = (isEasy ? document.getElementById('register-game') : document.getElementById('register-game2')).value;
+                    var externalUrl = isEasy ? (document.getElementById('register-externalUrl').value || '').trim() : '';
+                    if (!title) {
+                        alert('방송 제목을 입력하세요.');
+                        return;
+                    }
+                    resultEl.style.display = 'none';
+                    resultEl.innerHTML = '';
+                    btnStart.disabled = true;
+                    btnStart.textContent = '등록 중...';
+                    var body = { title: title, game: game };
+                    if (externalUrl) body.externalUrl = externalUrl;
+                    fetch('/api/streams', {
+                        method: 'POST',
+                        credentials: 'include',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(body)
+                    })
+                        .then(function (r) {
+                            if (!r.ok) return r.text().then(function (t) { throw new Error(t || r.status); });
+                            return r.json();
+                        })
+                        .then(function (data) {
+                            resultEl.style.display = 'block';
+                            if (externalUrl) {
+                                resultEl.innerHTML = '등록되었습니다. 사이트에서 방송이 보입니다.<br><br>' +
+                                    '<a href="/watch.html?streamId=' + (data.id || '') + '">시청 페이지로 가기</a> · ' +
+                                    '<a href="/streams.html">스트리밍 목록</a>';
+                            } else {
+                                resultEl.innerHTML = '방송이 등록되었습니다. OBS 설정 정보 불러오는 중...';
+                                fetch('/api/streams/' + (data.id || '') + '/obs-setup', { credentials: 'include' })
+                                    .then(function (r) {
+                                        if (!r.ok) return r.text().then(function (t) { throw new Error(t || r.status); });
+                                        return r.json();
+                                    })
+                                    .then(function (obs) {
+                                        resultEl.innerHTML = '아래 값을 OBS <strong>설정 → 방송</strong>에 넣으세요.<br><br>' +
+                                            '<strong>서버:</strong><br><pre style="margin:6px 0;">' + (obs.serverUrl || '') + '</pre>' +
+                                            '<strong>스트림 키:</strong><br><pre style="margin:6px 0;">' + (obs.streamKey || '') + '</pre>' +
+                                            '<br><a href="/watch.html?streamId=' + (data.id || '') + '">방송 시작 후 시청 페이지</a>';
+                                        streamJustRegisteredId = data.id;
+                                        btnStart.textContent = '방송 시작';
+                                    })
+                                    .catch(function () {
+                                        resultEl.innerHTML = 'OBS 설정 조회 실패. <a href="/watch.html?streamId=' + (data.id || '') + '">시청 페이지로 가기</a>';
+                                    });
+                            }
+                        })
+                        .catch(function (err) {
+                            resultEl.style.display = 'block';
+                            resultEl.innerHTML = '등록 실패: ' + (window.toKoreanErrorMessage(err && err.message) || '알 수 없는 오류');
+                        })
+                        .finally(function () {
+                            btnStart.disabled = false;
+                            if (streamJustRegisteredId == null) btnStart.textContent = '방송 등록';
+                        });
+                });
+            })();
+
+            (function initChatWidgetBlock() {
+                var block = document.getElementById('chat-widget-block');
+                var urlInput = document.getElementById('chat-widget-url');
+                var btnOpen = document.getElementById('btn-open-chat-widget');
+                var btnCopy = document.getElementById('btn-copy-widget-url');
+                var btnEye = document.getElementById('btn-chat-widget-eye');
+                var hintEl = document.getElementById('chat-widget-stream-hint');
+                if (!block || !urlInput || !btnOpen || !btnCopy) return;
+                var currentWidgetUrl = '';
+                var urlVisible = false;
+                function updateUrlDisplay() {
+                    urlInput.value = urlVisible ? currentWidgetUrl : (currentWidgetUrl ? '••••••••••••••••••••••••••••••••' : '');
+                    urlInput.type = urlVisible ? 'text' : 'password';
+                    if (btnEye) btnEye.textContent = urlVisible ? '🙈' : '👁';
+                }
+                fetch('/api/streams/my', { credentials: 'include' })
+                    .then(function (r) { return r.ok ? r.json() : []; })
+                    .then(function (list) {
+                        var stream = Array.isArray(list) && list.length > 0
+                            ? (list.find(function (s) { return s.status === 'LIVE'; }) || list[0])
+                            : null;
+                        if (!stream || !stream.id) return;
+                        var base = window.location.origin;
+                        currentWidgetUrl = base + '/chat-widget.html?streamId=' + stream.id;
+                        var overlayUrl = base + '/chat-widget.html?streamId=' + stream.id + '&overlay=1';
+                        block.style.display = 'block';
+                        if (hintEl) hintEl.textContent = '연동된 방송: ' + (stream.title || ('방송 ' + stream.id)) + ' (ID: ' + stream.id + ')' + (stream.status === 'LIVE' ? ' — 방송 중' : '');
+                        updateUrlDisplay();
+                        var overlayInput = document.getElementById('chat-widget-url-overlay');
+                        var btnCopyOverlay = document.getElementById('btn-copy-widget-url-overlay');
+                        if (overlayInput) overlayInput.value = overlayUrl;
+                        if (btnEye) btnEye.addEventListener('click', function () { urlVisible = !urlVisible; updateUrlDisplay(); });
+                        btnOpen.addEventListener('click', function () { window.open(currentWidgetUrl, 'chat-' + stream.id, 'width=420,height=640'); });
+                        btnCopy.addEventListener('click', function () {
+                            if (!currentWidgetUrl) return;
+                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                                navigator.clipboard.writeText(currentWidgetUrl).then(function () { alert('채팅창 URL이 복사되었습니다.'); });
+                            } else {
+                                urlInput.type = 'text';
+                                urlInput.value = currentWidgetUrl;
+                                urlInput.select();
+                                document.execCommand('copy');
+                                urlInput.type = urlVisible ? 'text' : 'password';
+                                updateUrlDisplay();
+                                alert('채팅창 URL이 복사되었습니다.');
+                            }
+                        });
+                        if (btnCopyOverlay) btnCopyOverlay.addEventListener('click', function () {
+                            if (!overlayUrl) return;
+                            if (navigator.clipboard && navigator.clipboard.writeText) {
+                                navigator.clipboard.writeText(overlayUrl).then(function () { alert('오버레이용 채팅창 URL이 복사되었습니다.'); });
+                            } else {
+                                if (overlayInput) { overlayInput.select(); document.execCommand('copy'); }
+                                alert('오버레이용 채팅창 URL이 복사되었습니다.');
+                            }
+                        });
+                        var modalDonation = document.getElementById('modal-donation-limits');
+                        var videoLimitInput = document.getElementById('donation-limit-video');
+                        var ttsLimitInput = document.getElementById('donation-limit-tts');
+                        var btnOpenLimits = document.getElementById('btn-open-donation-limits');
+                        var btnSaveLimits = document.getElementById('btn-save-donation-limits');
+                        var btnCloseLimits = document.getElementById('btn-close-donation-limits');
+                        function openDonationModal() {
+                            if (!modalDonation || !videoLimitInput || !ttsLimitInput) return;
+                            fetch('/api/streams/' + stream.id + '/chat-settings', { credentials: 'include' })
+                                .then(function (r) { return r.ok ? r.json() : {}; })
+                                .then(function (d) {
+                                    videoLimitInput.value = (d.minVideoPang != null ? d.minVideoPang : 0);
+                                    ttsLimitInput.value = (d.minTtsPang != null ? d.minTtsPang : 0);
+                                })
+                                .catch(function () {});
+                            modalDonation.classList.add('show');
+                        }
+                        function closeDonationModal() { if (modalDonation) modalDonation.classList.remove('show'); }
+                        if (btnOpenLimits) btnOpenLimits.addEventListener('click', openDonationModal);
+                        if (btnCloseLimits) btnCloseLimits.addEventListener('click', closeDonationModal);
+                        if (modalDonation) modalDonation.addEventListener('click', function (e) { if (e.target === modalDonation) closeDonationModal(); });
+                        if (btnSaveLimits && videoLimitInput && ttsLimitInput) {
+                            btnSaveLimits.addEventListener('click', function () {
+                                var minVideo = parseInt(videoLimitInput.value, 10);
+                                var minTts = parseInt(ttsLimitInput.value, 10);
+                                if (isNaN(minVideo) || minVideo < 0) minVideo = 0;
+                                if (isNaN(minTts) || minTts < 0) minTts = 0;
+                                fetch('/api/streams/' + stream.id + '/chat-settings/donation-limits', {
+                                    method: 'PUT',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    credentials: 'include',
+                                    body: JSON.stringify({ minVideoPang: minVideo, minTtsPang: minTts })
+                                })
+                                    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+                                    .then(function (res) {
+                                        if (res.ok) { closeDonationModal(); alert('저장되었습니다.'); }
+                                        else alert(window.toKoreanErrorMessage(res.data && res.data.message) || '저장에 실패했습니다.');
+                                    })
+                                    .catch(function () { alert('저장에 실패했습니다.'); });
+                            });
+                        }
+                    });
+            })();
+        })();
+    </script>
+</body>
+</html>

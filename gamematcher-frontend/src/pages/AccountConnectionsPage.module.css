@@ -1,0 +1,243 @@
+.page {
+  display: grid;
+  gap: 24px;
+}
+
+.hero {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 32px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(233, 102, 74, 0.24), transparent 34%),
+    radial-gradient(circle at bottom right, rgba(88, 101, 242, 0.18), transparent 26%),
+    linear-gradient(135deg, #11161f, #1e2733);
+  color: #f5f7fb;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 12px;
+  opacity: 0.7;
+}
+
+.title {
+  margin: 0 0 10px;
+  font-size: clamp(28px, 4vw, 42px);
+}
+
+.description {
+  margin: 0;
+  max-width: 720px;
+  line-height: 1.6;
+  color: rgba(245, 247, 251, 0.84);
+}
+
+.heroBadge {
+  min-width: 150px;
+  padding: 18px 20px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(12px);
+  display: grid;
+  align-content: start;
+  gap: 4px;
+}
+
+.heroBadge span,
+.heroBadge small {
+  opacity: 0.75;
+}
+
+.heroBadge strong {
+  font-size: 32px;
+}
+
+.flash,
+.errorBox,
+.loading {
+  padding: 16px 18px;
+  border-radius: 18px;
+}
+
+.flash {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.flashSuccess {
+  background: #edf8f1;
+  border: 1px solid #acd8b6;
+  color: #215632;
+}
+
+.flashError,
+.errorBox {
+  background: #fff1f1;
+  border: 1px solid #f0b9b9;
+  color: #8a2323;
+}
+
+.flash p,
+.errorBox {
+  margin: 0;
+}
+
+.flash button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
+}
+
+.card {
+  padding: 22px;
+  border-radius: 24px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), #ffffff),
+    linear-gradient(135deg, color-mix(in srgb, var(--tone) 18%, white), white);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.08);
+  display: grid;
+  gap: 18px;
+}
+
+.cardTop {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 14px;
+  align-items: start;
+}
+
+.cardTop h2 {
+  margin: 0 0 6px;
+}
+
+.iconBubble {
+  width: 48px;
+  height: 48px;
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--tone) 20%, white);
+  color: var(--tone);
+  display: grid;
+  place-items: center;
+  font-weight: 800;
+}
+
+.note {
+  margin: 0;
+  font-size: 13px;
+  color: #5f6776;
+  line-height: 1.5;
+}
+
+.status {
+  padding: 8px 10px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.statusOn {
+  background: #ecf8f0;
+  color: #1d6c37;
+}
+
+.statusOff {
+  background: #f1f3f7;
+  color: #60687a;
+}
+
+.cardBody {
+  display: grid;
+  gap: 14px;
+}
+
+.identityRow {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: center;
+}
+
+.identityRow strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.identityRow p {
+  margin: 0;
+  color: #657085;
+  word-break: break-all;
+}
+
+.verifyBadge {
+  padding: 8px 10px;
+  border-radius: 14px;
+  background: #11161f;
+  color: #f5f7fb;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.primaryBtn,
+.secondaryBtn,
+.riotForm button {
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primaryBtn {
+  background: var(--tone);
+  color: #fff;
+}
+
+.secondaryBtn {
+  background: #eef1f6;
+  color: #192030;
+}
+
+.primaryBtn:disabled,
+.secondaryBtn:disabled,
+.riotForm button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.riotForm {
+  display: grid;
+  gap: 10px;
+}
+
+.riotForm input {
+  border: 1px solid #dbe0ea;
+  background: #f8fafc;
+  border-radius: 14px;
+  padding: 13px 14px;
+}
+
+@media (max-width: 900px) {
+  .hero {
+    flex-direction: column;
+  }
+
+  .cardTop,
+  .identityRow {
+    grid-template-columns: 1fr;
+    display: grid;
+  }
+}
