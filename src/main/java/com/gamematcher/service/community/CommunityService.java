@@ -7,7 +7,10 @@ import com.gamematcher.dto.community.*;
 import com.gamematcher.entity.User;
 import com.gamematcher.entity.community.*;
 import com.gamematcher.exception.GameApiException;
+import com.gamematcher.constant.profile.ProfileImageConstants;
+import com.gamematcher.entity.profile.UserProfile;
 import com.gamematcher.repository.common.UserRepository;
+import com.gamematcher.repository.profile.UserProfileRepository;
 import com.gamematcher.repository.community.*;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -39,6 +42,7 @@ public class CommunityService {
     private final CommunityReportRepository communityReportRepository;
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final UserProfileRepository userProfileRepository;
     private final FileStorageService fileStorageService;
 
     public CommunityService(PostRepository postRepository, CommentRepository commentRepository,
@@ -48,7 +52,9 @@ public class CommunityService {
                             HashtagRepository hashtagRepository, PostHashtagRepository postHashtagRepository,
                             CommunityReportRepository communityReportRepository,
                             NotificationRepository notificationRepository,
-                            UserRepository userRepository, FileStorageService fileStorageService) {
+                            UserRepository userRepository,
+                            UserProfileRepository userProfileRepository,
+                            FileStorageService fileStorageService) {
         this.postRepository = postRepository;
         this.commentRepository = commentRepository;
         this.postLikeRepository = postLikeRepository;
@@ -60,6 +66,7 @@ public class CommunityService {
         this.communityReportRepository = communityReportRepository;
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.userProfileRepository = userProfileRepository;
         this.fileStorageService = fileStorageService;
     }
 
@@ -157,7 +164,11 @@ public class CommunityService {
             myRecommend = rec.map(r -> r.getRecommendType() == RecommendType.RECOMMEND ? 1 : -1).orElse(null);
         }
 
-        return PostDetailResponseDto.from(post, liked, bookmarked, myRecommend);
+        String storedAvatar = userProfileRepository.findById(post.getAuthor().getId())
+                .map(UserProfile::getProfileImageUrl)
+                .orElse(null);
+        String authorProfileImageUrl = ProfileImageConstants.resolveProfileImageUrl(storedAvatar);
+        return PostDetailResponseDto.from(post, liked, bookmarked, myRecommend, authorProfileImageUrl);
     }
 
     @Transactional

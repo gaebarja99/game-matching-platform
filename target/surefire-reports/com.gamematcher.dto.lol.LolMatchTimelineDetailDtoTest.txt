@@ -1,4 +1,0 @@
--------------------------------------------------------------------------------
-Test set: com.gamematcher.dto.lol.LolMatchTimelineDetailDtoTest
--------------------------------------------------------------------------------
-Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.134 s -- in com.gamematcher.dto.lol.LolMatchTimelineDetailDtoTest

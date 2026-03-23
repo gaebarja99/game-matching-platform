@@ -1,5 +1,6 @@
 com\gamematcher\dto\pubg\PubgRankedPlayerStatsAttributesDto.class
 com\gamematcher\dto\ai\evaluation\PubgPlayerMatchStatsDTO$PubgPlayerMatchStatsDTOBuilder.class
+com\gamematcher\controller\profile\ProfileLookupController.class
 com\gamematcher\service\pubg\PubgStatsToPromptFormatter.class
 com\gamematcher\repository\match\PubgTelemetryEventRepository.class
 com\gamematcher\service\pubg\PubgTelemetryStreamExtractor$Location.class
