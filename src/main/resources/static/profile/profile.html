@@ -1,0 +1,609 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>프로필 - GameMatcher</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+      background: #0f0f12;
+      color: #e4e4e7;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    a { color: #60a5fa; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .nav {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 16px 24px;
+      font-size: 0.9rem;
+      color: #71717a;
+    }
+    .nav a { margin-right: 16px; }
+    .wrap {
+      max-width: 720px;
+      margin: 0 auto;
+      padding: 0 24px 48px;
+    }
+    .banner {
+      height: 160px;
+      border-radius: 12px 12px 0 0;
+      background: linear-gradient(135deg, #4c1d95 0%, #1e3a5f 50%, #0f766e 100%);
+      background-size: cover;
+      background-position: center;
+      border: 1px solid #27272a;
+      border-bottom: none;
+    }
+    .banner.has-image { background-color: #18181b; }
+    .card {
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-top: none;
+      border-radius: 0 0 12px 12px;
+      padding: 0 24px 28px;
+      position: relative;
+    }
+    .avatar-wrap {
+      margin-top: -56px;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: flex-end;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .avatar {
+      width: 112px;
+      height: 112px;
+      border-radius: 50%;
+      border: 4px solid #18181b;
+      background: linear-gradient(145deg, #6366f1, #8b5cf6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2.5rem;
+      font-weight: 600;
+      color: white;
+      flex-shrink: 0;
+      overflow: hidden;
+    }
+    .avatar img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+    .headline {
+      padding-bottom: 8px;
+    }
+    .username {
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #fafafa;
+    }
+    .userid {
+      font-size: 0.85rem;
+      color: #71717a;
+      margin-top: 4px;
+    }
+    .section {
+      margin-top: 20px;
+      padding-top: 20px;
+      border-top: 1px solid #27272a;
+    }
+    .section h3 {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #71717a;
+      margin-bottom: 8px;
+    }
+    .bio-text {
+      color: #d4d4d8;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .bio-empty { color: #52525b; font-style: italic; }
+    .games-text { color: #a1a1aa; font-size: 0.95rem; }
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+    .btn {
+      padding: 10px 18px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+    .btn-primary { background: #6366f1; color: white; }
+    .btn-primary:hover { background: #4f46e5; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-secondary { background: #27272a; color: #e4e4e7; }
+    .btn-secondary:hover { background: #3f3f46; }
+    .edit-panel {
+      display: none;
+      margin-top: 20px;
+      padding: 20px;
+      background: #27272a;
+      border-radius: 10px;
+      border: 1px solid #3f3f46;
+    }
+    .edit-panel.visible { display: block; }
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block;
+      font-size: 0.85rem;
+      color: #a1a1aa;
+      margin-bottom: 6px;
+    }
+    .field input, .field textarea {
+      width: 100%;
+      padding: 10px 12px;
+      background: #18181b;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      color: #e4e4e7;
+      font-size: 0.95rem;
+    }
+    .field textarea { min-height: 100px; resize: vertical; }
+    .field .hint { font-size: 0.75rem; color: #52525b; margin-top: 4px; }
+    .loading, .error {
+      text-align: center;
+      padding: 48px 24px;
+    }
+    .error {
+      background: #7f1d1d;
+      color: #fca5a5;
+      border-radius: 10px;
+      margin-bottom: 16px;
+    }
+    .user-picker {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      padding: 12px 16px;
+      background: #18181b;
+      border-radius: 8px;
+      border: 1px solid #27272a;
+      font-size: 0.9rem;
+    }
+    .user-picker label { color: #a1a1aa; }
+    .user-picker input {
+      width: 88px;
+      padding: 8px 10px;
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      border-radius: 6px;
+      color: #e4e4e7;
+    }
+    .user-picker input[type="text"] { width: 200px; max-width: 100%; min-width: 120px; }
+    .match-list-wrap {
+      margin-bottom: 20px;
+      padding: 14px 16px;
+      background: #18181b;
+      border: 1px solid #27272a;
+      border-radius: 8px;
+    }
+    .match-list-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      color: #71717a;
+      margin: 0 0 12px;
+      text-transform: uppercase;
+    }
+    .match-list { list-style: none; padding: 0; margin: 0; }
+    .match-list li { margin-bottom: 8px; }
+    .match-row-btn {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      width: 100%;
+      padding: 10px 12px;
+      text-align: left;
+      border: 1px solid #27272a;
+      border-radius: 8px;
+      background: #27272a;
+      color: #fafafa;
+      cursor: pointer;
+      font-size: inherit;
+      font-family: inherit;
+    }
+    .match-row-btn:hover { background: #3f3f46; border-color: #52525b; }
+    .match-row-btn img {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+    .match-row-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+    .match-row-name { font-weight: 600; word-break: break-word; }
+    .game-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      margin-top: 8px;
+    }
+    .game-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      background: #18181b;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      cursor: pointer;
+      user-select: none;
+    }
+    .game-option:hover { border-color: #52525b; background: #1f1f23; }
+    .game-option input {
+      width: 18px;
+      height: 18px;
+      accent-color: #6366f1;
+      cursor: pointer;
+    }
+    .game-option span { font-size: 0.95rem; color: #e4e4e7; }
+  </style>
+</head>
+<body>
+  <div class="nav">
+    <a href="/">홈</a>
+    <a href="/community/index.html">커뮤니티</a>
+  </div>
+
+  <div class="wrap">
+    <div id="error" class="error" style="display:none"></div>
+
+    <div class="user-picker" id="profileUserPicker">
+      <label for="profileSearchInput">닉네임</label>
+      <input type="text" id="profileSearchInput" placeholder="예: 데모유저1" style="width:200px;max-width:100%">
+      <button type="button" class="btn btn-secondary" id="btnLoad">검색</button>
+      <span style="color:#52525b;font-size:0.8rem">목록에서 선택 → 프로필 · 닉네임 부분 일치 · 숫자만 입력 시 ID로 바로 조회 · URL <code>?username=</code> / <code>?userId=</code></span>
+    </div>
+
+    <div id="main">
+      <div class="loading">닉네임을 입력한 뒤 검색을 누르세요.</div>
+    </div>
+  </div>
+
+  <script>
+    var DEFAULT_PROFILE_IMG = '/img/profile/default_img.png';
+
+    function escapeHtml(s) {
+      if (s == null || s === '') return '';
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function profileUrlForForm(url) {
+      if (!url || url === DEFAULT_PROFILE_IMG) return '';
+      return url;
+    }
+
+    var GAME_OPTIONS = [
+      '리그 오브 레전드', '발로란트', '오버워치', 'PUBG',
+      '카운터 스트라이크 2', '에이펙스 레전드'
+    ];
+
+    function parseGameSet(str) {
+      var valid = new Set(GAME_OPTIONS);
+      var out = new Set();
+      if (!str || !str.trim()) return out;
+      str.split(',').forEach(function (t) {
+        t = t.trim();
+        if (valid.has(t)) out.add(t);
+      });
+      return out;
+    }
+
+    function buildGameCheckboxes(preferredGamesStr) {
+      var selected = parseGameSet(preferredGamesStr);
+      var grid = document.getElementById('fGamesGrid');
+      if (!grid) return;
+      grid.innerHTML = GAME_OPTIONS.map(function (val) {
+        var chk = selected.has(val) ? ' checked' : '';
+        return '<label class="game-option"><input type="checkbox" value="' + val + '"' + chk + '><span>' + escapeHtml(val) + '</span></label>';
+      }).join('');
+    }
+
+    function collectGamesSerialized() {
+      var boxes = document.querySelectorAll('#fGamesGrid input[type=checkbox]:checked');
+      var vals = Array.prototype.map.call(boxes, function (b) { return b.value; });
+      var chosen = [];
+      GAME_OPTIONS.forEach(function (v) {
+        if (vals.indexOf(v) >= 0) chosen.push(v);
+      });
+      return chosen.length ? chosen.join(', ') : '';
+    }
+
+    function getInitialSearchQuery() {
+      const params = new URLSearchParams(location.search);
+      var u = params.get('username');
+      if (u && u.trim()) return u.trim();
+      var id = params.get('userId');
+      if (id && id.trim()) return id.trim();
+      var sn = localStorage.getItem('communityUsername');
+      if (sn && sn.trim()) return sn.trim();
+      var sid = localStorage.getItem('communityUserId');
+      if (sid && sid.trim()) return sid.trim();
+      return '';
+    }
+
+    let currentProfile = null;
+    let currentUserId = null;
+
+    function showProfileSearchBar() {
+      var el = document.getElementById('profileUserPicker');
+      if (el) el.style.display = '';
+    }
+    function hideProfileSearchBar() {
+      var el = document.getElementById('profileUserPicker');
+      if (el) el.style.display = 'none';
+    }
+
+    function renderMatchList(items) {
+      var cap = items.length >= 50 ? ' <span style="color:#52525b;font-weight:400;text-transform:none">(최대 50명)</span>' : '';
+      var html = '<div class="match-list-wrap"><div class="match-list-title">검색 결과 ' + items.length + '명' + cap + '</div><ul class="match-list">';
+      items.forEach(function (m) {
+        html += '<li><button type="button" class="match-row-btn" data-uid="' + m.userId + '">';
+        html += '<img src=' + JSON.stringify(m.profileImageUrl) + ' alt="">';
+        html += '<span class="match-row-meta"><span class="match-row-name">' + escapeHtml(m.username) + '</span></span></button></li>';
+      });
+      html += '</ul></div>';
+      document.getElementById('main').innerHTML = html;
+      document.querySelectorAll('.match-row-btn').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var uid = parseInt(btn.getAttribute('data-uid'), 10);
+          loadProfileByUserId(uid);
+        });
+      });
+    }
+
+    async function searchMatches(q) {
+      showProfileSearchBar();
+      history.replaceState(null, '', '/profile/profile.html?username=' + encodeURIComponent(q));
+      document.getElementById('error').style.display = 'none';
+      document.getElementById('main').innerHTML = '<div class="loading">검색 중…</div>';
+      try {
+        const res = await fetch('/api/profiles/matches?username=' + encodeURIComponent(q));
+        if (res.status === 400) {
+          document.getElementById('main').innerHTML = '<div class="loading">닉네임을 입력하세요.</div>';
+          return;
+        }
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        var items = await res.json();
+        if (!items.length) {
+          document.getElementById('main').innerHTML = '<div class="loading">사용자를 찾을 수 없습니다.</div>';
+          return;
+        }
+        renderMatchList(items);
+      } catch (e) {
+        showError(e.message || '검색 실패');
+        document.getElementById('main').innerHTML = '<div class="loading">오류가 발생했습니다.</div>';
+      }
+    }
+
+    async function loadProfileByUserId(uid) {
+      history.replaceState(null, '', '/profile/profile.html?userId=' + encodeURIComponent(String(uid)));
+      document.getElementById('error').style.display = 'none';
+      hideProfileSearchBar();
+      document.getElementById('main').innerHTML = '<div class="loading">프로필을 불러오는 중…</div>';
+      try {
+        const res = await fetch('/api/users/' + uid + '/profile');
+        if (res.status === 404) {
+          showProfileSearchBar();
+          document.getElementById('main').innerHTML = '<div class="loading">사용자를 찾을 수 없습니다.</div>';
+          return;
+        }
+        if (!res.ok) throw new Error('HTTP ' + res.status);
+        currentProfile = await res.json();
+        currentUserId = currentProfile.userId;
+        document.getElementById('profileSearchInput').value = currentProfile.username;
+        localStorage.setItem('communityUserId', String(currentUserId));
+        localStorage.setItem('communityUsername', currentProfile.username);
+        renderProfile();
+      } catch (e) {
+        showProfileSearchBar();
+        showError(e.message || '불러오기 실패');
+        document.getElementById('main').innerHTML = '<div class="loading">오류가 발생했습니다.</div>';
+      }
+    }
+
+    async function loadProfile() {
+      var q = document.getElementById('profileSearchInput').value.trim();
+      if (!q) {
+        showProfileSearchBar();
+        document.getElementById('error').style.display = 'none';
+        document.getElementById('main').innerHTML = '<div class="loading">닉네임을 입력한 뒤 검색을 누르세요.</div>';
+        return;
+      }
+      var isNumericId = /^\d+$/.test(q) && parseInt(q, 10) >= 1;
+      if (isNumericId) {
+        await loadProfileByUserId(parseInt(q, 10));
+      } else {
+        await searchMatches(q);
+      }
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function renderProfile() {
+      hideProfileSearchBar();
+      const p = currentProfile;
+      const bannerUrl = p.bannerImageUrl;
+      const profileUrl = p.profileImageUrl || DEFAULT_PROFILE_IMG;
+      const bannerClass = 'banner' + (bannerUrl ? ' has-image' : '');
+
+      const avatarHtml = '<img src=' + JSON.stringify(profileUrl) + ' alt="">';
+
+      document.getElementById('main').innerHTML = `
+        <div class="${bannerClass}" id="profileBanner"></div>
+        <div class="card">
+          <div class="avatar-wrap">
+            <div class="avatar" id="avatarBox">${avatarHtml}</div>
+            <div class="headline">
+              <div class="username">${escapeHtml(p.username)}</div>
+              <div class="userid">ID · ${p.userId}</div>
+            </div>
+          </div>
+
+          <div class="section">
+            <h3>소개</h3>
+            <div class="bio-text ${p.bio ? '' : 'bio-empty'}" id="bioDisplay">${p.bio ? escapeHtml(p.bio) : '소개가 없습니다.'}</div>
+          </div>
+
+          <div class="section">
+            <h3>선호 게임</h3>
+            <div class="games-text" id="gamesDisplay">${p.preferredGames ? escapeHtml(p.preferredGames) : '—'}</div>
+          </div>
+
+          <div class="toolbar">
+            <button type="button" class="btn btn-primary" id="btnToggleEdit">프로필 수정</button>
+          </div>
+
+          <div class="edit-panel" id="editPanel">
+            <div class="field">
+              <label for="fUsername">닉네임 (최대 50자)</label>
+              <input type="text" id="fUsername" maxlength="50" autocomplete="nickname">
+            </div>
+            <div class="field">
+              <label for="fBio">소개 (최대 500자)</label>
+              <textarea id="fBio" maxlength="500"></textarea>
+            </div>
+            <div class="field">
+              <label for="fProfileUrl">프로필 이미지 URL</label>
+              <input type="url" id="fProfileUrl" placeholder="https://... (비우면 기본 이미지)">
+              <div class="hint">비우고 저장하면 기본 아바타로 돌아갑니다.</div>
+            </div>
+            <div class="field">
+              <label for="fBannerUrl">배너 이미지 URL</label>
+              <input type="url" id="fBannerUrl" placeholder="https://... (비우면 기본 배너)">
+            </div>
+            <div class="field">
+              <span style="display:block;font-size:0.85rem;color:#a1a1aa;margin-bottom:6px">선호 게임</span>
+              <div class="game-grid" id="fGamesGrid"></div>
+            </div>
+            <div class="toolbar" style="margin-top:0">
+              <button type="button" class="btn btn-primary" id="btnSave">저장</button>
+              <button type="button" class="btn btn-secondary" id="btnCancelEdit">취소</button>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.getElementById('fUsername').value = p.username || '';
+      document.getElementById('fBio').value = p.bio || '';
+      document.getElementById('fProfileUrl').value = profileUrlForForm(p.profileImageUrl);
+      document.getElementById('fBannerUrl').value = p.bannerImageUrl || '';
+      buildGameCheckboxes(p.preferredGames || '');
+
+      document.getElementById('btnToggleEdit').addEventListener('click', toggleEdit);
+      document.getElementById('btnCancelEdit').addEventListener('click', () => closeEdit(true));
+      document.getElementById('btnSave').addEventListener('click', saveProfile);
+
+      const bannerEl = document.getElementById('profileBanner');
+      if (bannerUrl && bannerEl) {
+        bannerEl.style.backgroundImage = 'url(' + JSON.stringify(String(bannerUrl)) + ')';
+      }
+    }
+
+    function toggleEdit() {
+      const panel = document.getElementById('editPanel');
+      const open = panel.classList.toggle('visible');
+      document.getElementById('btnToggleEdit').textContent = open ? '수정 닫기' : '프로필 수정';
+      if (open) {
+        const p = currentProfile;
+        document.getElementById('fUsername').value = p.username || '';
+        document.getElementById('fBio').value = p.bio || '';
+        document.getElementById('fProfileUrl').value = profileUrlForForm(p.profileImageUrl);
+        document.getElementById('fBannerUrl').value = p.bannerImageUrl || '';
+        buildGameCheckboxes(p.preferredGames || '');
+      }
+    }
+
+    function closeEdit(reloadValues) {
+      document.getElementById('editPanel').classList.remove('visible');
+      document.getElementById('btnToggleEdit').textContent = '프로필 수정';
+      if (reloadValues && currentProfile) {
+        document.getElementById('fUsername').value = currentProfile.username || '';
+        document.getElementById('fBio').value = currentProfile.bio || '';
+        document.getElementById('fProfileUrl').value = profileUrlForForm(currentProfile.profileImageUrl);
+        document.getElementById('fBannerUrl').value = currentProfile.bannerImageUrl || '';
+        buildGameCheckboxes(currentProfile.preferredGames || '');
+      }
+    }
+
+    async function saveProfile() {
+      const btn = document.getElementById('btnSave');
+      btn.disabled = true;
+      document.getElementById('error').style.display = 'none';
+
+      const username = document.getElementById('fUsername').value.trim();
+      if (!username) {
+        showError('닉네임을 입력하세요.');
+        btn.disabled = false;
+        return;
+      }
+      const bio = document.getElementById('fBio').value.trim();
+      const profileUrl = document.getElementById('fProfileUrl').value.trim();
+      const bannerUrl = document.getElementById('fBannerUrl').value.trim();
+      const games = collectGamesSerialized();
+
+      const body = {
+        username: username,
+        bio: bio === '' ? null : bio,
+        profileImageUrl: profileUrl === '' ? null : profileUrl,
+        bannerImageUrl: bannerUrl === '' ? null : bannerUrl,
+        preferredGames: games === '' ? null : games
+      };
+
+      try {
+        const res = await fetch('/api/users/' + currentUserId + '/profile', {
+          method: 'PATCH',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        if (!res.ok) {
+          const text = await res.text();
+          throw new Error(text || 'HTTP ' + res.status);
+        }
+        currentProfile = await res.json();
+        renderProfile();
+      } catch (e) {
+        showError(e.message || '저장 실패');
+      } finally {
+        btn.disabled = false;
+      }
+    }
+
+    document.getElementById('btnLoad').addEventListener('click', loadProfile);
+    document.getElementById('profileSearchInput').addEventListener('keypress', function (e) {
+      if (e.key === 'Enter') loadProfile();
+    });
+
+    var initialQ = getInitialSearchQuery();
+    document.getElementById('profileSearchInput').value = initialQ;
+    if (initialQ) {
+      if (/^\d+$/.test(initialQ) && parseInt(initialQ, 10) >= 1) {
+        loadProfileByUserId(parseInt(initialQ, 10));
+      } else {
+        searchMatches(initialQ);
+      }
+    }
+  </script>
+</body>
+</html>
