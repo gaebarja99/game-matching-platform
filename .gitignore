@@ -53,3 +53,10 @@ ffmpeg-*/
 
 # Logs
 *.log
+
+# Environment files (do not commit secrets)
+.env
+.env.*
+**/.env
+**/.env.*
+frontend/.env
