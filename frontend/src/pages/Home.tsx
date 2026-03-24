@@ -22,14 +22,12 @@ import {
   PUBG_TIER_OPTIONS,
   VALORANT_TIER_OPTIONS,
   VALORANT_MODE_OPTIONS,
-  OVERWATCH_MODE_OPTIONS,
   PUBG_MODE_OPTIONS,
   PUBG_PLATFORM_OPTIONS,
   PUBG_PLATFORM_RADIO,
   PUBG_RANDOM_MAP_CHIPS,
   PUBG_PERSPECTIVE_OPTIONS,
   VALORANT_PARTY_OPTIONS,
-  OVERWATCH_PARTY_OPTIONS,
   PUBG_PARTY_OPTIONS,
   CS2_PARTY_OPTIONS,
   RANDOM_MATCH_AND_ROOM_GAME_OPTIONS,
@@ -137,6 +135,20 @@ function extraColumnValue(op: ReturnType<typeof parseGameOptions>, roomGame: str
 }
 
 type SidebarTab = 'random' | 'create';
+const OVERWATCH_CREATE_MODE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'ROLE_QUEUE_COMP', label: '역할 고정 - 경쟁전' },
+  { value: 'OPEN_QUEUE', label: '자유 - 경쟁전' },
+  { value: 'QUICK_PLAY', label: '빠른 대전' },
+];
+const OVERWATCH_CREATE_TIER_OPTIONS: { value: string; label: string }[] = [
+  { value: '', label: '선택 안 함' },
+  { value: 'BRONZE', label: '브론즈' },
+  { value: 'SILVER', label: '실버' },
+  { value: 'GOLD', label: '골드' },
+  { value: 'PLATINUM', label: '플래티넘' },
+  { value: 'DIAMOND', label: '다이아' },
+  { value: 'MASTER', label: '마스터' },
+];
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
@@ -203,6 +215,13 @@ export default function Home() {
     if (createGame !== 'LEAGUE_OF_LEGENDS') return;
     setCreatePartySize((prev) => normalizeLolCreatePartySizeForQueue(createRank, prev));
   }, [createGame, createRank]);
+
+  useEffect(() => {
+    if (createGame !== 'OVERWATCH') return;
+    if (!createMode || !OVERWATCH_CREATE_MODE_OPTIONS.some((o) => o.value === createMode)) {
+      setCreateMode('ROLE_QUEUE_COMP');
+    }
+  }, [createGame, createMode]);
 
   useEffect(() => {
     if (createGame !== 'LEAGUE_OF_LEGENDS') return;
@@ -1145,27 +1164,28 @@ export default function Home() {
           {createGame === 'OVERWATCH' && (
             <>
               <label className="sidebar-form-label">모드</label>
-              <select className="sidebar-form-input" value={createMode} onChange={(e) => setCreateMode(e.target.value)}>
-                {OVERWATCH_MODE_OPTIONS.map((o) => (
+              <select
+                className="sidebar-form-input"
+                value={createMode}
+                onChange={(e) => {
+                  setCreateMode(e.target.value);
+                  setCreateTier('');
+                }}
+              >
+                {OVERWATCH_CREATE_MODE_OPTIONS.map((o) => (
                   <option key={o.value || '_'} value={o.value}>{o.label}</option>
                 ))}
               </select>
-              {createFormShowTier('OVERWATCH', createMode) && (
+              {createMode === 'OPEN_QUEUE' && (
                 <>
                   <label className="sidebar-form-label">티어</label>
                   <select className="sidebar-form-input" value={createTier} onChange={(e) => setCreateTier(e.target.value)}>
-                    {TIER_OPTIONS.map((o) => (
+                    {OVERWATCH_CREATE_TIER_OPTIONS.map((o) => (
                       <option key={o.value || '_'} value={o.value}>{o.label}</option>
                     ))}
                   </select>
                 </>
               )}
-              <label className="sidebar-form-label">인원</label>
-              <select className="sidebar-form-input" value={createPartySize} onChange={(e) => setCreatePartySize(e.target.value)}>
-                {OVERWATCH_PARTY_OPTIONS.map((o) => (
-                  <option key={o.value || '_'} value={o.value}>{o.label}</option>
-                ))}
-              </select>
               <label className="sidebar-form-label">역할</label>
               <PositionPicker value={createPosition} onChange={setCreatePosition} game={createGame} />
             </>
