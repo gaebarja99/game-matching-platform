@@ -34,6 +34,10 @@ public class Notification {
     @Column(name = "actor_user_id")
     private Long actorUserId;
 
+    /** 알림 문구 (운영자 안내·팡 지급 등) */
+    @Column(length = 500)
+    private String body;
+
     /** 읽음 여부 */
     @Column(name = "read_at")
     private LocalDateTime readAt;

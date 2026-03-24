@@ -82,6 +82,24 @@ public class LiveStream {
     @Column(name = "min_tts_pang")
     private Integer minTtsPang;
 
+    /** 최근 방송 목록 노출 여부 (운영자 숨김 시 false) */
+    @Column(name = "visible_in_recent", nullable = false)
+    private Boolean visibleInRecent = true;
+
+    /** 운영자 경고 누적 횟수 */
+    @Column(name = "admin_warning_count")
+    private Integer adminWarningCount;
+
+    @Column(name = "last_admin_warning_at")
+    private LocalDateTime lastAdminWarningAt;
+
+    @Column(name = "last_admin_warning_message", length = 500)
+    private String lastAdminWarningMessage;
+
+    /** 마지막 방송 관리 액션을 수행한 관리자 사용자 ID */
+    @Column(name = "last_admin_id")
+    private Long lastAdminId;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

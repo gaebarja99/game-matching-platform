@@ -101,6 +101,21 @@ public class User {
     @Column(name = "streamer_tier", length = 20)
     private StreamerTier streamerTier;
 
+    /** 욕설 필터 누적 횟수 (채팅 검열) */
+    @Column(name = "profanity_strike_count")
+    private Integer profanityStrikeCount;
+
+    /** 채팅 금지 해제 시각 (null 또는 과거이면 허용) */
+    @Column(name = "chat_muted_until")
+    private LocalDateTime chatMutedUntil;
+
+    /** 정지 해제 예정 시각 (영구 정지 등은 null) */
+    @Column(name = "suspended_until")
+    private LocalDateTime suspendedUntil;
+
+    @Column(name = "suspension_reason", length = 500)
+    private String suspensionReason;
+
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();

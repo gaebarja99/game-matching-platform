@@ -30,6 +30,7 @@ public class MatchService {
     private final MatchChatMessageRepository matchChatMessageRepository;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ProfanityFilterService profanityFilterService;
 
     private static boolean isSimpleFivePersonQueueGame(String game) {
         return game != null
@@ -279,6 +280,7 @@ public class MatchService {
         String trimmed = text != null ? text.trim() : "";
         if (trimmed.isEmpty()) throw new IllegalArgumentException("메시지를 입력해 주세요.");
         if (trimmed.length() > MAX_TEXT_LENGTH) trimmed = trimmed.substring(0, MAX_TEXT_LENGTH);
+        trimmed = profanityFilterService.moderateChat(userId, trimmed).getSanitizedText();
 
         MatchChatMessage msg = new MatchChatMessage();
         msg.setSessionId(sessionId);

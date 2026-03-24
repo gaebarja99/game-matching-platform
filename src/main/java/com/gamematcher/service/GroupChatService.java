@@ -26,6 +26,7 @@ public class GroupChatService {
     private final UserRepository userRepository;
     private final FriendRequestService friendRequestService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final ProfanityFilterService profanityFilterService;
 
     /** 방 생성 (생성자를 멤버로 추가) */
     @Transactional
@@ -178,6 +179,7 @@ public class GroupChatService {
         String trimmed = text != null ? text.trim() : "";
         if (trimmed.isEmpty()) throw new IllegalArgumentException("메시지를 입력해 주세요.");
         if (trimmed.length() > MAX_TEXT_LENGTH) trimmed = trimmed.substring(0, MAX_TEXT_LENGTH);
+        trimmed = profanityFilterService.moderateChat(userId, trimmed).getSanitizedText();
         GroupChatMessage msg = new GroupChatMessage();
         msg.setRoomId(roomId);
         msg.setFromUserId(userId);
