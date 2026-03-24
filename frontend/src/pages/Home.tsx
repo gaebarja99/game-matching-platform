@@ -9,6 +9,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { resolveProfileImageUrl } from '../api/client';
 import {
   createGameRoom,
+  deleteGameRoom,
   fetchGameRoomList,
   joinGameRoom,
   getGameRoomChatRoomId,
@@ -188,6 +189,7 @@ export default function Home() {
   const [roomList, setRoomList] = useState<GameRoomItem[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [joinRoomId, setJoinRoomId] = useState<number | null>(null);
+  const [deletingRoomId, setDeletingRoomId] = useState<number | null>(null);
 
   useEffect(() => {
     if (createGame !== 'LEAGUE_OF_LEGENDS') {
@@ -730,6 +732,25 @@ export default function Home() {
       }
       fetchRooms();
     }
+  };
+
+  const handleDeleteApiRoom = async (r: GameRoomItem) => {
+    if (!user || user.id !== r.hostUserId) return;
+    if (deletingRoomId != null) return;
+    const password = window.prompt('삭제 비밀번호를 입력하세요.');
+    if (password == null) return;
+    if (!password.trim()) {
+      window.alert('삭제 비밀번호를 입력해 주세요.');
+      return;
+    }
+    setDeletingRoomId(r.id);
+    const { ok, message } = await deleteGameRoom(r.id, password.trim());
+    setDeletingRoomId(null);
+    if (!ok) {
+      window.alert(message || '방 삭제에 실패했습니다.');
+      return;
+    }
+    fetchRooms();
   };
 
   /** Random-match sidebar panel (shared with fixed sidebar). */
@@ -1489,28 +1510,41 @@ export default function Home() {
                         <td>{r.hostNickname ?? '-'}</td>
                         <td>{formatDateForRoom(r.createdAt)}</td>
                         <td>
-                          {r.closed ? (
-                            <span className="home-demo-room-closed-label">마감</span>
-                          ) : r.isMember && r.groupChatRoomId ? (
-                            <button
-                              type="button"
-                              className="home-demo-room-join-btn home-demo-room-join-btn--live"
-                              title="방 채팅으로 이동"
-                              onClick={() => goGameRoomChat(r)}
-                            >
-                              입장
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              className="home-demo-room-join-btn home-demo-room-join-btn--live"
-                              title={user ? '참가' : '로그인 후 참가'}
-                              disabled={joinRoomId === r.id}
-                              onClick={() => handleApiRoomButton(r)}
-                            >
-                              {joinRoomId === r.id ? '참가 중…' : '참가'}
-                            </button>
-                          )}
+                          <div className="home-demo-room-action-wrap">
+                            {r.closed ? (
+                              <span className="home-demo-room-closed-label">마감</span>
+                            ) : r.isMember && r.groupChatRoomId ? (
+                              <button
+                                type="button"
+                                className="home-demo-room-join-btn home-demo-room-join-btn--live"
+                                title="방 채팅으로 이동"
+                                onClick={() => goGameRoomChat(r)}
+                              >
+                                입장
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="home-demo-room-join-btn home-demo-room-join-btn--live"
+                                title={user ? '참가' : '로그인 후 참가'}
+                                disabled={joinRoomId === r.id}
+                                onClick={() => handleApiRoomButton(r)}
+                              >
+                                {joinRoomId === r.id ? '참가 중…' : '참가'}
+                              </button>
+                            )}
+                            {user?.id === r.hostUserId ? (
+                              <button
+                                type="button"
+                                className="home-demo-room-delete-btn"
+                                title="방 삭제"
+                                disabled={deletingRoomId === r.id}
+                                onClick={() => void handleDeleteApiRoom(r)}
+                              >
+                                {deletingRoomId === r.id ? '삭제 중…' : '삭제'}
+                              </button>
+                            ) : null}
+                          </div>
                         </td>
                       </tr>
                     );

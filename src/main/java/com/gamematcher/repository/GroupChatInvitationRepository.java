@@ -13,4 +13,6 @@ public interface GroupChatInvitationRepository extends JpaRepository<GroupChatIn
     Optional<GroupChatInvitation> findByRoomIdAndToUserId(Long roomId, Long toUserId);
 
     boolean existsByRoomIdAndToUserIdAndStatus(Long roomId, Long toUserId, GroupChatInvitation.InvitationStatus status);
+
+    List<GroupChatInvitation> findByRoomId(Long roomId);
 }
