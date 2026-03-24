@@ -43,6 +43,11 @@
 .home-demo-room-join-btn--live:hover {
   filter: brightness(1.08);
 }
+.home-demo-room-join-btn--full {
+  background: #4b5563;
+  color: #e5e7eb;
+  cursor: not-allowed;
+}
 .home-demo-room-action-wrap {
   display: inline-flex;
   align-items: center;
@@ -66,6 +71,52 @@
 .home-demo-room-delete-btn:disabled {
   opacity: 0.7;
   cursor: not-allowed;
+}
+
+.home-room-full-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  background: rgba(0, 0, 0, 0.62);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+.home-room-full-modal {
+  width: min(92vw, 360px);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #1f222a;
+  color: #f3f4f6;
+  padding: 18px 16px 14px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.45);
+}
+.home-room-full-modal-title {
+  margin: 0 0 10px;
+  font-size: 1rem;
+  font-weight: 700;
+}
+.home-room-full-modal-message {
+  margin: 0 0 14px;
+  line-height: 1.45;
+  color: #d1d5db;
+  font-size: 0.9rem;
+}
+.home-room-full-modal-confirm {
+  width: 100%;
+  border: none;
+  border-radius: 8px;
+  background: #00e676;
+  color: #0d0d0f;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 10px 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+.home-room-full-modal-confirm:hover {
+  filter: brightness(1.06);
 }
 .home-demo-room-loading-cell {
   color: var(--text-muted);

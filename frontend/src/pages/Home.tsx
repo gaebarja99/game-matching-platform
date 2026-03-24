@@ -134,6 +134,16 @@ function extraColumnValue(op: ReturnType<typeof parseGameOptions>, roomGame: str
   return '-';
 }
 
+function maxParticipantsFromPartySize(partySize?: string): number | null {
+  if (!partySize) return null;
+  if (/^\d+$/.test(partySize)) return parseInt(partySize, 10);
+  if (partySize === 'DUO') return 2;
+  if (partySize === 'SOLO') return 1;
+  if (partySize === 'SQUAD') return 4;
+  if (partySize === 'ONE_MAN_SQUAD') return 1;
+  return null;
+}
+
 type SidebarTab = 'random' | 'create';
 const OVERWATCH_CREATE_MODE_OPTIONS: { value: string; label: string }[] = [
   { value: 'ROLE_QUEUE_COMP', label: '역할 고정 - 경쟁전' },
@@ -201,6 +211,7 @@ export default function Home() {
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [joinRoomId, setJoinRoomId] = useState<number | null>(null);
   const [deletingRoomId, setDeletingRoomId] = useState<number | null>(null);
+  const [showRoomFullModal, setShowRoomFullModal] = useState(false);
 
   useEffect(() => {
     if (createGame !== 'LEAGUE_OF_LEGENDS') {
@@ -721,19 +732,49 @@ export default function Home() {
     navigate(`/group-chat/room/${r.groupChatRoomId}`, { state: { fromGameRoom: true, gameRoomId: r.id } });
   };
 
-  const handleApiRoomButton = async (r: GameRoomItem) => {
+  const handleJoinRoom = async (r: GameRoomItem) => {
     if (!user) {
       navigate('/login');
       return;
     }
     if (r.closed) return;
+    const roomAny = r as GameRoomItem & { currentParticipants?: number; maxParticipants?: number };
+    const op = parseGameOptions(r.gameOptions);
+    const currentParticipants = roomAny.currentParticipants ?? r.memberCount ?? 0;
+    const maxParticipants = roomAny.maxParticipants ?? maxParticipantsFromPartySize(op.partySize);
+    if (maxParticipants != null && currentParticipants >= maxParticipants && !r.isMember) {
+      setShowRoomFullModal(true);
+      return;
+    }
     setJoinRoomId(r.id);
-    const ok = await joinGameRoom(r.id);
+    const joinRes = await joinGameRoom(r.id);
     setJoinRoomId(null);
-    if (ok) {
+    if (joinRes.ok) {
+      // join success: reflect participant count in UI immediately
+      setRoomList((prev) =>
+        prev.map((it) => {
+          if (it.id !== r.id) return it;
+          const itAny = it as GameRoomItem & { currentParticipants?: number; maxParticipants?: number };
+          const nextCurrent =
+            typeof itAny.currentParticipants === 'number'
+              ? itAny.currentParticipants + 1
+              : (typeof it.memberCount === 'number' ? it.memberCount + 1 : 1);
+          return {
+            ...it,
+            isMember: true,
+            memberCount: typeof it.memberCount === 'number' ? it.memberCount + 1 : it.memberCount,
+            currentParticipants: nextCurrent,
+          };
+        }),
+      );
       const chatRoomId = await getGameRoomChatRoomId(r.id);
       if (chatRoomId != null) {
         navigate(`/group-chat/room/${chatRoomId}`, { state: { fromGameRoom: true, gameRoomId: r.id } });
+      }
+      fetchRooms();
+    } else {
+      if (joinRes.message?.includes('인원이 모두 찼습니다')) {
+        setShowRoomFullModal(true);
       }
       fetchRooms();
     }
@@ -1408,6 +1449,9 @@ export default function Home() {
                   ) : null}
                   {visibleRoomList.map((r) => {
                     const op = parseGameOptions(r.gameOptions);
+                    const currentParticipants = r.currentParticipants ?? r.memberCount ?? 0;
+                    const maxParticipants = r.maxParticipants ?? maxParticipantsFromPartySize(op.partySize);
+                    const isRoomFull = !r.isMember && maxParticipants != null && currentParticipants >= maxParticipants;
                     const recruitingLanes = parseRecruitingLanes(op.rp);
                     const quickSeeking = op.mode === 'QUICK' ? parseQuickSeekingRq(op.rq) : [];
                     const hostPrimary = op.hp || op.position;
@@ -1515,13 +1559,22 @@ export default function Home() {
                               >
                                 입장
                               </button>
+                            ) : isRoomFull ? (
+                              <button
+                                type="button"
+                                className="home-demo-room-join-btn home-demo-room-join-btn--full"
+                                disabled
+                                title="정원이 가득 찼습니다."
+                              >
+                                마감
+                              </button>
                             ) : (
                               <button
                                 type="button"
                                 className="home-demo-room-join-btn home-demo-room-join-btn--live"
                                 title={user ? '참가' : '로그인 후 참가'}
                                 disabled={joinRoomId === r.id}
-                                onClick={() => handleApiRoomButton(r)}
+                                onClick={() => handleJoinRoom(r)}
                               >
                                 {joinRoomId === r.id ? '참가 중…' : '참가'}
                               </button>
@@ -1559,6 +1612,18 @@ export default function Home() {
               {sidebarTab === 'create' && createPanelContent}
             </div>
           </aside>
+        )}
+
+        {showRoomFullModal && (
+          <div className="home-room-full-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="home-room-full-modal-title">
+            <div className="home-room-full-modal">
+              <h3 id="home-room-full-modal-title" className="home-room-full-modal-title">입장 불가</h3>
+              <p className="home-room-full-modal-message">해당 방의 인원이 모두 찼습니다. 다른 방을 이용해 주세요.</p>
+              <button type="button" className="home-room-full-modal-confirm" onClick={() => setShowRoomFullModal(false)}>
+                확인
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </Layout>

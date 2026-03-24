@@ -16,6 +16,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -23,6 +25,7 @@ import java.util.stream.Collectors;
 public class GameRoomService {
 
     private static final DateTimeFormatter ISO = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
+    private static final Pattern PARTY_SIZE_PATTERN = Pattern.compile("\"partySize\"\\s*:\\s*\"([^\"]+)\"");
 
     private final GameRoomRepository roomRepository;
     private final GameRoomMemberRepository memberRepository;
@@ -93,7 +96,11 @@ public class GameRoomService {
         map.put("groupChatRoomId", r.getGroupChatRoomId());
         map.put("closed", r.isClosed());
         map.put("createdAt", r.getCreatedAt() != null ? r.getCreatedAt().format(ISO) : "");
-        map.put("memberCount", memberRepository.countByRoomId(r.getId()));
+        long currentParticipants = memberRepository.countByRoomId(r.getId());
+        Integer maxParticipants = resolveMaxParticipants(r.getGameOptions());
+        map.put("memberCount", currentParticipants);
+        map.put("currentParticipants", currentParticipants);
+        map.put("maxParticipants", maxParticipants);
         map.put("isMember", requestUserId != null && memberRepository.existsByRoomIdAndUserId(r.getId(), requestUserId));
         map.put("isHost", requestUserId != null && r.getHostUserId().equals(requestUserId));
         userRepository.findById(r.getHostUserId()).ifPresent(u ->
@@ -110,6 +117,9 @@ public class GameRoomService {
         GameRoom room = opt.get();
         if (room.isClosed()) return "closed";
         if (memberRepository.existsByRoomIdAndUserId(roomId, userId)) return "already_member";
+        Integer maxParticipants = resolveMaxParticipants(room.getGameOptions());
+        long currentParticipants = memberRepository.countByRoomId(roomId);
+        if (maxParticipants != null && currentParticipants >= maxParticipants) return "full";
 
         GameRoomMember member = new GameRoomMember();
         member.setRoomId(roomId);
@@ -157,6 +167,28 @@ public class GameRoomService {
         }
 
         return "ok";
+    }
+
+    private Integer resolveMaxParticipants(String gameOptions) {
+        if (gameOptions == null || gameOptions.isBlank()) return null;
+        Matcher matcher = PARTY_SIZE_PATTERN.matcher(gameOptions);
+        if (!matcher.find()) return null;
+        String partySize = matcher.group(1);
+        if (partySize == null || partySize.isBlank()) return null;
+        if (partySize.chars().allMatch(Character::isDigit)) {
+            try {
+                return Integer.parseInt(partySize);
+            } catch (NumberFormatException ignored) {
+                return null;
+            }
+        }
+        return switch (partySize) {
+            case "DUO" -> 2;
+            case "SOLO" -> 1;
+            case "SQUAD" -> 4;
+            case "ONE_MAN_SQUAD" -> 1;
+            default -> null;
+        };
     }
 
     /** 나가기 (방장은 나가기 불가) */

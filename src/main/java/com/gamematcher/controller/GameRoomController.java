@@ -63,6 +63,7 @@ public class GameRoomController {
             case "ok": return ResponseEntity.ok(Map.of("ok", true));
             case "not_found": return ResponseEntity.status(404).body(Map.of("message", "방을 찾을 수 없습니다."));
             case "closed": return ResponseEntity.badRequest().body(Map.of("message", "마감된 방입니다."));
+            case "full": return ResponseEntity.badRequest().body(Map.of("message", "해당 방의 인원이 모두 찼습니다. 다른 방을 이용해 주세요."));
             case "already_member": return ResponseEntity.badRequest().body(Map.of("message", "이미 참가 중입니다."));
             default: return ResponseEntity.badRequest().body(Map.of("message", "참가에 실패했습니다."));
         }
