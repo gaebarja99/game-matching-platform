@@ -16,10 +16,10 @@ const LOL_POSITIONS: PositionOption[] = [
 ];
 
 const VALORANT_POSITIONS: PositionOption[] = [
-  { key: 'DUELIST', icon: 'D', label: 'Duelist' },
-  { key: 'SCOUT', icon: 'I', label: 'Initiator' },
-  { key: 'STRATEGIST', icon: 'C', label: 'Controller' },
-  { key: 'WATCHER', icon: 'W', label: 'Sentinel' },
+  { key: 'DUELIST', icon: 'D', label: '타격대' },
+  { key: 'STRATEGIST', icon: 'C', label: '전략가' },
+  { key: 'WATCHER', icon: 'W', label: '감시자' },
+  { key: 'SCOUT', icon: 'I', label: '척후병' },
 ];
 
 const OVERWATCH_POSITIONS: PositionOption[] = [

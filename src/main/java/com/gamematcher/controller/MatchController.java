@@ -26,10 +26,27 @@ public class MatchController {
         if (userId == null) return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
         String game = body != null ? body.get("game") : null;
         if (game == null || game.isBlank()) game = "LEAGUE_OF_LEGENDS";
+        if ("PUBG".equalsIgnoreCase(game)) {
+            String platform = body != null ? body.get("platform") : null;
+            if (platform == null || platform.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("message", "플랫폼(스팀 또는 카카오)을 선택해 주세요."));
+            }
+            String preferredMap = body != null ? body.get("preferredMap") : null;
+            try {
+                Map<String, Object> result = matchService.joinPubgSimpleQueue(userId, platform, preferredMap);
+                return ResponseEntity.ok(result);
+            } catch (IllegalArgumentException e) {
+                return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+            }
+        }
+        String position = body != null ? body.get("position") : null;
+        if (position == null || position.isBlank()) position = body != null ? body.get("selectedPosition") : null;
+        if (position == null || position.isBlank()) position = body != null ? body.get("preferredRole") : null;
+        if (position == null || position.isBlank()) position = body != null ? body.get("preferredPosition") : null;
         try {
             Map<String, Object> result = matchService.joinQueue(userId, game,
                     body != null ? body.get("tier") : null,
-                    body != null ? body.get("position") : null);
+                    position);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -50,7 +67,7 @@ public class MatchController {
     public ResponseEntity<?> queueStatus(HttpSession session) {
         Long userId = (Long) session.getAttribute(SESSION_USER_ID);
         if (userId == null) return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
-        return ResponseEntity.ok(Map.of("inQueue", matchService.isInQueue(userId)));
+        return ResponseEntity.ok(matchService.getQueueStatus(userId));
     }
 
     /** 매칭 세션 조회 (매칭 완료 시 모달용) */

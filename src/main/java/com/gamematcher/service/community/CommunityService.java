@@ -60,6 +60,7 @@ public class CommunityService {
         this.communityReportRepository = communityReportRepository;
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.userProfileRepository = userProfileRepository;
         this.fileStorageService = fileStorageService;
     }
 
@@ -161,7 +162,11 @@ public class CommunityService {
             myRecommend = rec.map(r -> r.getRecommendType() == RecommendType.RECOMMEND ? 1 : -1).orElse(null);
         }
 
-        return PostDetailResponseDto.from(post, liked, bookmarked, myRecommend);
+        String storedAvatar = userProfileRepository.findById(post.getAuthor().getId())
+                .map(UserProfile::getProfileImageUrl)
+                .orElse(null);
+        String authorProfileImageUrl = ProfileImageConstants.resolveProfileImageUrl(storedAvatar);
+        return PostDetailResponseDto.from(post, liked, bookmarked, myRecommend, authorProfileImageUrl);
     }
 
     @Transactional

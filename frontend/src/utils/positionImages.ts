@@ -6,6 +6,7 @@ export const IMAGE_BASE = 'images';
 
 /** 게임별 포지션/역할 → 이미지 파일명 (폴더/파일) - leagueoflegends 폴더 이미지 사용 */
 const LEAGUE_POSITION_IMAGES: Record<string, string> = {
+  FILL: 'leagueoflegends/all.png',
   TOP: 'leagueoflegends/top.png',
   JUNGLE: 'leagueoflegends/jg.png',
   MID: 'leagueoflegends/mid.png',

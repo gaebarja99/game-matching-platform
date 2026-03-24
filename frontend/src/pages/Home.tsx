@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
+import type { ReactNode } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import LiveThumb from '../components/LiveThumb';
@@ -8,47 +9,59 @@ import { useAuth } from '../contexts/AuthContext';
 import { resolveProfileImageUrl } from '../api/client';
 import {
   createGameRoom,
+  deleteGameRoom,
   fetchGameRoomList,
   joinGameRoom,
   getGameRoomChatRoomId,
   type GameRoomItem,
 } from '../api/gameRooms';
 import { fetchLiveStreams, type StreamItem } from '../api/streams';
-import { joinMatchQueue, leaveMatchQueue, getMatchQueueStatus, getMyMatchSessions, deleteMatchSession, type MatchSessionListItem } from '../api/match';
+import { joinMatchQueue, leaveMatchQueue, getMatchQueueStatus } from '../api/match';
 import {
   TIER_OPTIONS,
   PUBG_TIER_OPTIONS,
   VALORANT_TIER_OPTIONS,
-  RANK_OPTIONS,
   VALORANT_MODE_OPTIONS,
-  OVERWATCH_MODE_OPTIONS,
   PUBG_MODE_OPTIONS,
   PUBG_PLATFORM_OPTIONS,
-  APEX_MODE_OPTIONS,
-  LEAGUE_PARTY_OPTIONS,
-  VALORANT_PARTY_OPTIONS,
-  OVERWATCH_PARTY_OPTIONS,
-  PUBG_PARTY_OPTIONS,
-  CS2_PARTY_OPTIONS,
-  APEX_PARTY_OPTIONS,
-  GAME_OPTIONS,
+  PUBG_PLATFORM_RADIO,
+  PUBG_RANDOM_MAP_CHIPS,
+  PUBG_PERSPECTIVE_OPTIONS,
+  RANDOM_MATCH_AND_ROOM_GAME_OPTIONS,
   getMatchModeOptions,
   getControlledPartyOptions,
   tierOptionsForGame,
   createFormShowTier,
-  MATCH_GAME_LABELS,
   tierLabel,
-  rankLabel,
   modeLabel,
   modeHasNoTier,
   showPositionForRoom,
-  partySizeLabel,
   isLolAram,
   isLolSoloRank,
   positionRequiredForRandomMatch,
+  getPubgRandomMatchRuleError,
+  isSimpleFivePersonRandomMatch,
+  isSimplePubgRandomMatch,
 } from '../utils/randomMatchHelpers';
 import { saveRandomMatchPending, clearRandomMatchPending } from '../utils/randomMatchPendingStorage';
 import { isHiddenGameRoomHost } from '../utils/gameRoomVisibility';
+import {
+  LOL_ROOM_QUEUE_OPTIONS,
+  LOL_LANES,
+  LOL_LANE_LABELS,
+  LOL_QUICK_ROLE_ORDER,
+  LOL_QUICK_ROLE_LABELS,
+  type LolLane,
+  validateLolRoomForm,
+  buildLolRoomGameOptions,
+  parseRecruitingLanes,
+  lolQueueLabel,
+  formatLolTierRangeCell,
+  formatRecruitingSummary,
+  parseQuickSeekingRq,
+  formatQuickSeekingSummary,
+  type LolQuickRole,
+} from '../utils/lolRoomCreateHelpers';
 import './Home.css';
 
 function parseGameOptions(s?: string | null): {
@@ -60,6 +73,13 @@ function parseGameOptions(s?: string | null): {
   preferredLegend?: string;
   platform?: string;
   partySize?: string;
+  hp?: string;
+  hs?: string;
+  rp?: string;
+  tm?: string;
+  tx?: string;
+  ar?: string;
+  rq?: string;
 } {
   if (!s || !s.trim()) return {};
   try {
@@ -73,6 +93,13 @@ function parseGameOptions(s?: string | null): {
       preferredLegend: o.preferredLegend,
       platform: o.platform,
       partySize: o.partySize,
+      hp: o.hp,
+      hs: o.hs,
+      rp: o.rp,
+      tm: o.tm,
+      tx: o.tx,
+      ar: o.ar,
+      rq: o.rq,
     };
   } catch {
     return {};
@@ -100,7 +127,35 @@ function extraColumnValue(op: ReturnType<typeof parseGameOptions>, roomGame: str
   return '-';
 }
 
-type SidebarTab = 'random' | 'history' | 'create';
+function maxParticipantsFromPartySize(game: string, partySize?: string): number | null {
+  if (!partySize) return game === 'PUBG' ? 4 : 5;
+  if (/^\d+$/.test(partySize)) return parseInt(partySize, 10);
+  if (partySize === 'DUO') return 2;
+  if (partySize === 'SOLO') return 1;
+  if (partySize === 'SQUAD') return 4;
+  if (partySize === 'ONE_MAN_SQUAD') return 1;
+  return game === 'PUBG' ? 4 : 5;
+}
+
+type SidebarTab = 'random' | 'create';
+const OVERWATCH_CREATE_MODE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'ROLE_QUEUE_COMP', label: '역할 고정 - 경쟁전' },
+  { value: 'OPEN_QUEUE', label: '자유 - 경쟁전' },
+  { value: 'QUICK_PLAY', label: '빠른 대전' },
+];
+const OVERWATCH_CREATE_TIER_OPTIONS: { value: string; label: string }[] = [
+  { value: '', label: '선택 안 함' },
+  { value: 'BRONZE', label: '브론즈' },
+  { value: 'SILVER', label: '실버' },
+  { value: 'GOLD', label: '골드' },
+  { value: 'PLATINUM', label: '플래티넘' },
+  { value: 'DIAMOND', label: '다이아' },
+  { value: 'MASTER', label: '마스터' },
+];
+const PUBG_CREATE_PARTY_OPTIONS: { value: string; label: string }[] = [
+  { value: 'DUO', label: '2인 (듀오)' },
+  { value: 'SQUAD', label: '4인 (스쿼드)' },
+];
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
@@ -110,21 +165,25 @@ export default function Home() {
   /** Random match / history / create-room panel (same toggle as former Team Searching header). */
   const [showMatchingSidebar, setShowMatchingSidebar] = useState(false);
   const [matchInQueue, setMatchInQueue] = useState(false);
+  const [matchLobbyCount, setMatchLobbyCount] = useState<number | null>(null);
+  const [matchTargetSize, setMatchTargetSize] = useState<number | null>(null);
   const [matchJoining, setMatchJoining] = useState(false);
   const [matchGame, setMatchGame] = useState('LEAGUE_OF_LEGENDS');
   const [matchMode, setMatchMode] = useState('');
   const [matchTier, setMatchTier] = useState('');
   const [matchPartySize, setMatchPartySize] = useState('');
   const [matchPosition, setMatchPosition] = useState<string | null>(null);
+  const [matchPlatform, setMatchPlatform] = useState<'STEAM' | 'KAKAO' | ''>('');
+  const [matchPerspective, setMatchPerspective] = useState<'TPP' | 'FPP' | ''>('');
+  const [pubgPreferredMap, setPubgPreferredMap] = useState('ALL');
   const [liveStreams, setLiveStreams] = useState<StreamItem[]>([]);
   const [loadingLive, setLoadingLive] = useState(false);
-  const [matchHistoryList, setMatchHistoryList] = useState<MatchSessionListItem[]>([]);
-  const [matchHistoryLoading, setMatchHistoryLoading] = useState(false);
-  const [matchHistoryDeletingId, setMatchHistoryDeletingId] = useState<number | null>(null);
-  const controlledPartyOptions = getControlledPartyOptions(matchGame, matchMode);
+  const controlledPartyOptions = getControlledPartyOptions(matchGame, matchMode, matchTier);
   const positionRequired = positionRequiredForRandomMatch(matchGame, matchMode);
-  const positionDisabled = isLolAram(matchGame, matchMode);
+  const positionDisabled =
+    isLolAram(matchGame, matchMode) || (matchGame === 'OVERWATCH' && matchMode === 'OPEN_QUEUE');
   const partySizeDisabled = isLolSoloRank(matchGame, matchMode);
+  const overwatchPositionRequired = matchGame === 'OVERWATCH' && (matchMode === 'ROLE_QUEUE_COMP' || matchMode === 'QUICK_PLAY');
 
   const [createGame, setCreateGame] = useState('LEAGUE_OF_LEGENDS');
   const [createTitle, setCreateTitle] = useState('');
@@ -137,6 +196,10 @@ export default function Home() {
   const [createPreferredLegend, setCreatePreferredLegend] = useState('');
   const [createPlatform, setCreatePlatform] = useState('');
   const [createPartySize, setCreatePartySize] = useState('');
+  const [createLolRecruiting, setCreateLolRecruiting] = useState<LolLane[]>([]);
+  const [createLolSecondary, setCreateLolSecondary] = useState<string | null>(null);
+  const [createLolQuickSeeking, setCreateLolQuickSeeking] = useState<LolQuickRole[]>([]);
+  const [createTierMin, setCreateTierMin] = useState('');
   const [createPassword, setCreatePassword] = useState('');
   const [createMemo, setCreateMemo] = useState('');
   const [creating, setCreating] = useState(false);
@@ -144,6 +207,111 @@ export default function Home() {
   const [roomList, setRoomList] = useState<GameRoomItem[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [joinRoomId, setJoinRoomId] = useState<number | null>(null);
+  const [deletingRoomId, setDeletingRoomId] = useState<number | null>(null);
+  const [showRoomFullModal, setShowRoomFullModal] = useState(false);
+  const lolCreateRecruitCap = 4;
+
+  useEffect(() => {
+    if (createGame !== 'LEAGUE_OF_LEGENDS') {
+      setCreateLolRecruiting([]);
+      setCreateLolSecondary(null);
+      setCreateLolQuickSeeking([]);
+      setCreateTierMin('');
+    }
+  }, [createGame]);
+
+  useEffect(() => {
+    if (createGame !== 'OVERWATCH') return;
+    if (!createMode || !OVERWATCH_CREATE_MODE_OPTIONS.some((o) => o.value === createMode)) {
+      setCreateMode('ROLE_QUEUE_COMP');
+    }
+  }, [createGame, createMode]);
+
+  useEffect(() => {
+    if (createGame !== 'PUBG') return;
+    if (createPartySize !== 'DUO' && createPartySize !== 'SQUAD') {
+      setCreatePartySize('SQUAD');
+    }
+  }, [createGame, createPartySize]);
+
+  useEffect(() => {
+    if (createGame !== 'LEAGUE_OF_LEGENDS') return;
+    if (createRank === 'ARAM') {
+      setCreateLolRecruiting([]);
+      setCreateLolSecondary(null);
+      setCreatePosition(null);
+      return;
+    }
+    if (createRank === 'QUICK') {
+      setCreateLolRecruiting([]);
+      return;
+    }
+    setCreateLolRecruiting((prev) => {
+      const filtered = prev.filter((l) => l !== createPosition);
+      const uniq = [...new Set(filtered)] as LolLane[];
+      let next = uniq;
+      if (createRank === 'SOLO') {
+        if (next.length > 1) next = [next[0]];
+      } else if (createRank === 'FLEX') {
+        if (next.length > lolCreateRecruitCap) next = next.slice(0, lolCreateRecruitCap);
+      }
+      if (next.length === prev.length && next.every((l, i) => l === prev[i])) return prev;
+      return next;
+    });
+  }, [createGame, createRank, createPosition, lolCreateRecruitCap]);
+
+  useEffect(() => {
+    if (createGame !== 'LEAGUE_OF_LEGENDS') return;
+    if (createRank !== 'QUICK') setCreateLolSecondary(null);
+  }, [createGame, createRank]);
+
+  useEffect(() => {
+    if (createGame !== 'LEAGUE_OF_LEGENDS') return;
+    if (createRank !== 'QUICK') setCreateLolQuickSeeking([]);
+  }, [createGame, createRank]);
+
+  useEffect(() => {
+    if (createGame !== 'LEAGUE_OF_LEGENDS') return;
+    if (createRank !== 'SOLO' && createRank !== 'FLEX') return;
+    if (createPosition && !(LOL_LANES as readonly string[]).includes(createPosition)) setCreatePosition(null);
+  }, [createGame, createRank, createPosition]);
+
+  useEffect(() => {
+    if (createGame !== 'LEAGUE_OF_LEGENDS' || createRank !== 'QUICK') return;
+    setCreateLolQuickSeeking((prev) => {
+      const next = [...new Set(prev)].filter((r) => {
+        if (r === 'FILL') return true;
+        return r !== createPosition && r !== createLolSecondary;
+      }) as LolQuickRole[];
+      const trimmed = next.slice(0, lolCreateRecruitCap);
+      if (trimmed.length === prev.length && trimmed.every((v, i) => v === prev[i])) return prev;
+      return trimmed;
+    });
+  }, [createGame, createRank, createPosition, createLolSecondary, lolCreateRecruitCap]);
+
+  const toggleLolQuickSeeking = (role: LolQuickRole) => {
+    if (createGame !== 'LEAGUE_OF_LEGENDS' || createRank !== 'QUICK') return;
+    setCreateLolQuickSeeking((prev) => {
+      if (prev.includes(role)) return prev.filter((r) => r !== role);
+      if (prev.length >= lolCreateRecruitCap) return prev;
+      if (role !== 'FILL' && (role === createPosition || role === createLolSecondary)) return prev;
+      return [...prev, role];
+    });
+  };
+
+  const toggleLolRecruitLane = (lane: LolLane) => {
+    if (createGame !== 'LEAGUE_OF_LEGENDS' || createRank === 'ARAM' || createRank === 'QUICK') return;
+    if (lane === createPosition) return;
+    setCreateLolRecruiting((prev) => {
+      if (prev.includes(lane)) return prev.filter((l) => l !== lane);
+      if (createRank === 'SOLO') return [lane];
+      if (createRank === 'FLEX') {
+        if (prev.length >= lolCreateRecruitCap) return prev;
+        return [...prev, lane];
+      }
+      return prev;
+    });
+  };
 
   const fetchRooms = useCallback(() => {
     setLoadingRooms(true);
@@ -158,8 +326,16 @@ export default function Home() {
   }, [authLoading, fetchRooms]);
 
   const visibleRoomList = useMemo(
-    () => roomList.filter((r) => !isHiddenGameRoomHost(r.hostNickname)),
-    [roomList],
+    () =>
+      roomList.filter((r) => {
+        if (isHiddenGameRoomHost(r.hostNickname)) return false;
+        if (matchGame !== 'PUBG' || !matchPlatform) return true;
+        if (r.game !== 'PUBG') return true;
+        const op = parseGameOptions(r.gameOptions);
+        if (op.platform && op.platform !== matchPlatform) return false;
+        return true;
+      }),
+    [roomList, matchGame, matchPlatform],
   );
 
   useEffect(() => {
@@ -169,35 +345,6 @@ export default function Home() {
     }
   }, [searchParams, setSearchParams, navigate]);
 
-  const fetchMatchHistory = useCallback(() => {
-    if (!user) return;
-    setMatchHistoryLoading(true);
-    getMyMatchSessions()
-      .then(setMatchHistoryList)
-      .finally(() => setMatchHistoryLoading(false));
-  }, [user]);
-
-  useEffect(() => {
-    const open = sidebarTab === 'history';
-    if (open && user) fetchMatchHistory();
-  }, [sidebarTab, user, fetchMatchHistory]);
-
-  const formatHistoryTime = (createdAt: string) => {
-    try {
-      return new Date(createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: true });
-    } catch {
-      return '';
-    }
-  };
-
-  const handleDeleteMatchHistory = async (sessionId: number) => {
-    if (matchHistoryDeletingId != null) return;
-    setMatchHistoryDeletingId(sessionId);
-    const ok = await deleteMatchSession(sessionId);
-    setMatchHistoryDeletingId(null);
-    if (ok) setMatchHistoryList((prev) => prev.filter((s) => s.id !== sessionId));
-  };
-
   useEffect(() => {
     if (authLoading) return;
     setLoadingLive(true);
@@ -206,10 +353,29 @@ export default function Home() {
     return () => clearInterval(t);
   }, [authLoading]);
 
+  const applyQueueStatus = useCallback((s: Awaited<ReturnType<typeof getMatchQueueStatus>>) => {
+    setMatchInQueue(s.inQueue);
+    if (s.inQueue && s.lobbyCount != null && s.targetSize != null) {
+      setMatchLobbyCount(s.lobbyCount);
+      setMatchTargetSize(s.targetSize);
+    } else {
+      setMatchLobbyCount(null);
+      setMatchTargetSize(null);
+    }
+  }, []);
+
   useEffect(() => {
     if (authLoading || !user) return;
-    getMatchQueueStatus().then(setMatchInQueue);
-  }, [authLoading, user]);
+    getMatchQueueStatus().then(applyQueueStatus);
+  }, [authLoading, user, applyQueueStatus]);
+
+  useEffect(() => {
+    if (authLoading || !user || !matchInQueue) return;
+    const t = setInterval(() => {
+      getMatchQueueStatus().then(applyQueueStatus);
+    }, 1500);
+    return () => clearInterval(t);
+  }, [authLoading, user, matchInQueue, applyQueueStatus]);
 
   useEffect(() => {
     const modeOptions = getMatchModeOptions(matchGame);
@@ -223,26 +389,191 @@ export default function Home() {
   }, [matchGame, matchMode]);
 
   useEffect(() => {
-    if (controlledPartyOptions.length === 0) {
+    const enabledOptions = controlledPartyOptions.filter((o) => !o.disabled);
+    if (enabledOptions.length === 0) {
       if (matchPartySize !== '') setMatchPartySize('');
       return;
     }
-    if (!controlledPartyOptions.some((o) => o.value === matchPartySize)) {
-      setMatchPartySize(controlledPartyOptions[0]?.value ?? '');
+    if (!enabledOptions.some((o) => o.value === matchPartySize)) {
+      // 오버워치는 규칙 위반 상태에서 안내 문구를 보여주기 위해, 현재 선택값이 disabled이면 자동 교정하지 않는다.
+      const current = controlledPartyOptions.find((o) => o.value === matchPartySize);
+      if (matchGame === 'OVERWATCH' && current?.disabled) return;
+      if (matchGame === 'PUBG' && current?.disabled) return;
+      if (matchGame === 'COUNTER_STRIKE_2' && current?.disabled) return;
+
+      setMatchPartySize(enabledOptions[0]?.value ?? '');
     }
   }, [controlledPartyOptions, matchPartySize]);
 
   useEffect(() => {
+    if (!createFormShowTier(matchGame, matchMode) && matchTier !== '') setMatchTier('');
+  }, [matchGame, matchMode, matchTier]);
+
+  useEffect(() => {
+    if (isSimpleFivePersonRandomMatch(matchGame)) {
+      if (matchGame === 'LEAGUE_OF_LEGENDS') {
+        const valid = ['TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'];
+        if (!matchPosition || !valid.includes(matchPosition)) setMatchPosition('TOP');
+        return;
+      }
+      if (matchGame === 'VALORANT') {
+        const valid = ['DUELIST', 'SCOUT', 'STRATEGIST', 'WATCHER'];
+        if (!matchPosition || !valid.includes(matchPosition)) setMatchPosition('DUELIST');
+        return;
+      }
+      if (matchGame === 'OVERWATCH') {
+        const valid = ['TANK', 'DAMAGE', 'SUPPORT'];
+        if (!matchPosition || !valid.includes(matchPosition)) setMatchPosition('TANK');
+        return;
+      }
+      if (matchGame === 'COUNTER_STRIKE_2') {
+        const valid = ['ENTRY', 'SUPPORT', 'IGL', 'AWPER', 'LURKER'];
+        if (!matchPosition || !valid.includes(matchPosition)) setMatchPosition('ENTRY');
+        return;
+      }
+    }
     if (positionRequired) {
-      if (!matchPosition) setMatchPosition('TOP');
+      if (!matchPosition && matchGame === 'LEAGUE_OF_LEGENDS') setMatchPosition('TOP');
       return;
     }
     if (matchPosition != null) setMatchPosition(null);
-  }, [positionRequired, matchPosition]);
+  }, [positionRequired, matchPosition, matchGame]);
+
+  // 오버워치: 6인(고정)은 자유 모드(오픈 큐)에서만 이용하도록 모드 자동 보정
+  useEffect(() => {
+    if (matchGame !== 'OVERWATCH') return;
+    if (matchPartySize !== '6') return;
+    if (matchMode !== 'OPEN_QUEUE') setMatchMode('OPEN_QUEUE');
+  }, [matchGame, matchPartySize, matchMode]);
+
+  useEffect(() => {
+    if (matchGame !== 'PUBG') return;
+    if (matchMode === 'RANKED') setMatchPerspective('');
+    if (matchMode === 'NORMAL' && !matchPerspective) setMatchPerspective('TPP');
+  }, [matchGame, matchMode, matchPerspective]);
+
+  useEffect(() => {
+    if (matchGame !== 'PUBG' || matchMode !== 'RANKED') return;
+    if (matchPartySize === 'DUO' || matchPartySize === 'ONE_MAN_SQUAD') setMatchPartySize('SOLO');
+  }, [matchGame, matchMode, matchPartySize]);
+
+  const valorantRuleWarning =
+    matchGame === 'VALORANT' && matchMode === 'COMPETITIVE' && (matchTier === 'IMMORTAL' || matchTier === 'RADIANT')
+      ? matchTier === 'RADIANT'
+        ? '레디언트는 2인 이하만 가능합니다.'
+        : '불멸 이상은 1~2인만 가능합니다.'
+      : '';
+
+  const valorantRuleError = (() => {
+    if (matchGame !== 'VALORANT' || matchMode !== 'COMPETITIVE') return '';
+    if (matchPartySize === '4') return '경쟁전은 4인 큐가 불가능합니다.';
+    const restricted = matchTier === 'IMMORTAL' || matchTier === 'RADIANT';
+    if (restricted && matchPartySize && !['1', '2'].includes(matchPartySize)) {
+      return matchTier === 'RADIANT' ? '레디언트는 2인 이하만 가능합니다.' : '불멸 이상은 1~2인만 가능합니다.';
+    }
+    return '';
+  })();
+
+  const overwatchRuleError = (() => {
+    if (matchGame !== 'OVERWATCH') return '';
+
+    if (overwatchPositionRequired && !matchPosition) {
+      return '역할 고정 모드에서는 탱커/딜러/힐러 중 1개를 선택해야 매칭할 수 있습니다.';
+    }
+
+    if (matchMode !== 'ROLE_QUEUE_COMP') return '';
+
+    const gmPlus = matchTier === 'GRANDMASTER' || matchTier === 'TOP500';
+    if (gmPlus && matchPartySize && !['', '1', '2'].includes(matchPartySize)) {
+      return '그랜드마스터 등급은 최대 2인까지만 그룹이 가능합니다.';
+    }
+
+    if (matchPartySize === '6' && matchMode !== 'OPEN_QUEUE') {
+      return '특수 인원(6인)은 자유 모드에서만 이용할 수 있습니다.';
+    }
+
+    return '';
+  })();
+
+  const pubgPartyOption = matchGame === 'PUBG' ? controlledPartyOptions.find((o) => o.value === matchPartySize) : undefined;
+  const pubgRuleError =
+    matchGame === 'PUBG'
+      ? getPubgRandomMatchRuleError({
+          mode: matchMode,
+          platform: matchPlatform,
+          perspective: matchPerspective,
+          partySize: matchPartySize,
+          partyOptionDisabled: !!pubgPartyOption?.disabled,
+        })
+      : '';
 
   const handleRandomMatch = async () => {
     if (!user) return;
-    if (positionRequired && !matchPosition) {
+
+    if (isSimpleFivePersonRandomMatch(matchGame)) {
+      if (!matchPosition) {
+        window.alert(matchGame === 'VALORANT' ? '역할군을 선택해 주세요' : '포지션을 선택해 주세요');
+        return;
+      }
+      setMatchJoining(true);
+      const res = await joinMatchQueue({
+        game: matchGame,
+        position: matchPosition,
+        preferredRole: matchGame === 'VALORANT' ? matchPosition : undefined,
+        preferredPosition: matchGame === 'OVERWATCH' ? matchPosition : undefined,
+        tierPolicy: 'ANY',
+      });
+      applyQueueStatus({
+        inQueue: res.inQueue,
+        lobbyCount: res.lobbyCount,
+        targetSize: res.targetSize,
+      });
+      if (res.inQueue) {
+        saveRandomMatchPending({
+          game: matchGame,
+          mode: '',
+          tier: '',
+          partySize: '',
+          position: matchPosition,
+        });
+      }
+      setMatchJoining(false);
+      return;
+    }
+
+    if (isSimplePubgRandomMatch(matchGame)) {
+      if (matchPlatform !== 'STEAM' && matchPlatform !== 'KAKAO') {
+        window.alert('플랫폼(스팀 또는 카카오)을 선택해 주세요');
+        return;
+      }
+      setMatchJoining(true);
+      const res = await joinMatchQueue({
+        game: 'PUBG',
+        pubgSimpleFourPerson: true,
+        pubgPlatform: matchPlatform,
+        pubgPreferredMap: pubgPreferredMap,
+      });
+      applyQueueStatus({
+        inQueue: res.inQueue,
+        lobbyCount: res.lobbyCount,
+        targetSize: res.targetSize,
+      });
+      if (res.inQueue) {
+        saveRandomMatchPending({
+          game: 'PUBG',
+          mode: '',
+          tier: '',
+          partySize: '',
+          position: pubgPreferredMap,
+          platform: matchPlatform,
+        });
+      }
+      setMatchJoining(false);
+      return;
+    }
+
+    if (valorantRuleError || overwatchRuleError || pubgRuleError) return;
+    if (overwatchPositionRequired && !matchPosition) {
       window.alert('포지션을 선택해 주세요');
       return;
     }
@@ -251,21 +582,34 @@ export default function Home() {
       game: matchGame,
       mode: matchMode || undefined,
       partySize: matchPartySize || undefined,
-      position: positionRequired ? (matchPosition ?? undefined) : undefined,
-      targetTier: createFormShowTier(matchGame, matchMode) ? (matchTier.trim() || undefined) : undefined,
+      position: matchGame === 'PUBG' ? undefined : positionRequired ? (matchPosition ?? undefined) : undefined,
+      targetTier:
+        matchGame === 'PUBG' && matchMode === 'RANKED'
+          ? (matchTier.trim() || undefined)
+          : createFormShowTier(matchGame, matchMode)
+            ? (matchTier.trim() || undefined)
+            : undefined,
       tierPolicy: 'ANY' as const,
+      pubgPlatform: matchGame === 'PUBG' ? matchPlatform : undefined,
+      pubgPerspective: matchGame === 'PUBG' ? matchPerspective : undefined,
     };
 
     setMatchJoining(true);
     const res = await joinMatchQueue(matchConfig);
-    setMatchInQueue(res.inQueue);
+    applyQueueStatus({
+      inQueue: res.inQueue,
+      lobbyCount: res.lobbyCount,
+      targetSize: res.targetSize,
+    });
     if (res.inQueue) {
       saveRandomMatchPending({
         game: matchConfig.game,
         mode: matchConfig.mode ?? '',
-        tier: matchConfig.targetTier ?? '',
+        tier: matchTier ?? '',
         partySize: matchConfig.partySize ?? '',
         position: matchConfig.position ?? null,
+        platform: matchGame === 'PUBG' ? matchPlatform : undefined,
+        perspective: matchGame === 'PUBG' && matchMode === 'NORMAL' ? matchPerspective : undefined,
       });
     }
     setMatchJoining(false);
@@ -275,6 +619,8 @@ export default function Home() {
     await leaveMatchQueue();
     clearRandomMatchPending();
     setMatchInQueue(false);
+    setMatchLobbyCount(null);
+    setMatchTargetSize(null);
   };
 
   const handleCreateRoom = async (e: React.FormEvent) => {
@@ -299,16 +645,48 @@ export default function Home() {
     const title = (platformPrefix + trimmedTitle).slice(0, 200);
     setCreating(true);
     setCreateError('');
-    const gameOptions = JSON.stringify({
-      tier: createTier || undefined,
-      mode: createRank || createMode || undefined,
-      position: createPosition || undefined,
-      preferredMap: createPreferredMap.trim() || undefined,
-      preferredMethod: createPreferredMethod.trim() || undefined,
-      preferredLegend: createPreferredLegend.trim() || undefined,
-      platform: createPlatform || undefined,
-      partySize: createPartySize || undefined,
-    });
+    let gameOptions: string;
+    if (createGame === 'LEAGUE_OF_LEGENDS') {
+      const lolErr = validateLolRoomForm({
+        queue: createRank,
+        hostPrimary: createPosition,
+        hostSecondary: createRank === 'QUICK' ? createLolSecondary : null,
+        recruiting: createLolRecruiting,
+        recruitingQuick: createRank === 'QUICK' ? createLolQuickSeeking : [],
+        partySize: '5',
+      });
+      if (lolErr) {
+        setCreateError(lolErr);
+        setCreating(false);
+        return;
+      }
+      gameOptions = JSON.stringify(
+        buildLolRoomGameOptions({
+          queue: createRank,
+          partySize: '5',
+          hostPrimary: createPosition,
+          hostSecondary: createRank === 'QUICK' ? createLolSecondary : null,
+          recruiting: createLolRecruiting,
+          recruitingQuick: createRank === 'QUICK' ? createLolQuickSeeking : [],
+          tierMin: createTierMin,
+        }),
+      );
+    } else {
+      const effectivePartySize =
+        createGame === 'PUBG'
+          ? (createPartySize === 'DUO' || createPartySize === 'SQUAD' ? createPartySize : 'SQUAD')
+          : '5';
+      gameOptions = JSON.stringify({
+        tier: createTier || undefined,
+        mode: createRank || createMode || undefined,
+        position: createPosition || undefined,
+        preferredMap: createPreferredMap.trim() || undefined,
+        preferredMethod: createPreferredMethod.trim() || undefined,
+        preferredLegend: createPreferredLegend.trim() || undefined,
+        platform: createPlatform || undefined,
+        partySize: effectivePartySize,
+      });
+    }
     const res = await createGameRoom({
       title,
       memo: createMemo.trim() || undefined,
@@ -328,6 +706,10 @@ export default function Home() {
       setCreatePreferredLegend('');
       setCreatePlatform('');
       setCreatePartySize('');
+      setCreateLolRecruiting([]);
+      setCreateLolSecondary(null);
+      setCreateLolQuickSeeking([]);
+      setCreateTierMin('');
       setShowMatchingSidebar(false);
       fetchRooms();
     } else {
@@ -340,22 +722,71 @@ export default function Home() {
     navigate(`/group-chat/room/${r.groupChatRoomId}`, { state: { fromGameRoom: true, gameRoomId: r.id } });
   };
 
-  const handleApiRoomButton = async (r: GameRoomItem) => {
+  const handleJoinRoom = async (r: GameRoomItem) => {
     if (!user) {
       navigate('/login');
       return;
     }
     if (r.closed) return;
+    const roomAny = r as GameRoomItem & { currentParticipants?: number; maxParticipants?: number };
+    const op = parseGameOptions(r.gameOptions);
+    const currentParticipants = roomAny.currentParticipants ?? r.memberCount ?? 0;
+    const maxParticipants = roomAny.maxParticipants ?? maxParticipantsFromPartySize(r.game, op.partySize);
+    if (maxParticipants != null && currentParticipants >= maxParticipants && !r.isMember) {
+      setShowRoomFullModal(true);
+      return;
+    }
     setJoinRoomId(r.id);
-    const ok = await joinGameRoom(r.id);
+    const joinRes = await joinGameRoom(r.id);
     setJoinRoomId(null);
-    if (ok) {
+    if (joinRes.ok) {
+      // join success: reflect participant count in UI immediately
+      setRoomList((prev) =>
+        prev.map((it) => {
+          if (it.id !== r.id) return it;
+          const itAny = it as GameRoomItem & { currentParticipants?: number; maxParticipants?: number };
+          const nextCurrent =
+            typeof itAny.currentParticipants === 'number'
+              ? itAny.currentParticipants + 1
+              : (typeof it.memberCount === 'number' ? it.memberCount + 1 : 1);
+          return {
+            ...it,
+            isMember: true,
+            memberCount: typeof it.memberCount === 'number' ? it.memberCount + 1 : it.memberCount,
+            currentParticipants: nextCurrent,
+          };
+        }),
+      );
       const chatRoomId = await getGameRoomChatRoomId(r.id);
       if (chatRoomId != null) {
         navigate(`/group-chat/room/${chatRoomId}`, { state: { fromGameRoom: true, gameRoomId: r.id } });
       }
       fetchRooms();
+    } else {
+      if (joinRes.message?.includes('인원이 모두 찼습니다')) {
+        setShowRoomFullModal(true);
+      }
+      fetchRooms();
     }
+  };
+
+  const handleDeleteApiRoom = async (r: GameRoomItem) => {
+    if (!user || user.id !== r.hostUserId) return;
+    if (deletingRoomId != null) return;
+    const password = window.prompt('삭제 비밀번호를 입력하세요.');
+    if (password == null) return;
+    if (!password.trim()) {
+      window.alert('삭제 비밀번호를 입력해 주세요.');
+      return;
+    }
+    setDeletingRoomId(r.id);
+    const { ok, message } = await deleteGameRoom(r.id, password.trim());
+    setDeletingRoomId(null);
+    if (!ok) {
+      window.alert(message || '방 삭제에 실패했습니다.');
+      return;
+    }
+    fetchRooms();
   };
 
   /** Random-match sidebar panel (shared with fixed sidebar). */
@@ -365,34 +796,140 @@ export default function Home() {
       {user ? (
         matchInQueue ? (
           <>
-            <p className="sidebar-panel-desc">매칭 참여 중입니다.</p>
-            <button type="button" className="sidebar-btn secondary" onClick={handleLeaveMatchQueue}>취소</button>
+            <p className="sidebar-panel-desc">
+              {matchLobbyCount != null && matchTargetSize != null
+                ? `매칭 중... (현재 ${matchLobbyCount} / ${matchTargetSize}명)`
+                : '매칭 참여 중입니다.'}
+            </p>
+            <button type="button" className="sidebar-btn secondary" onClick={handleLeaveMatchQueue}>
+              매칭 취소
+            </button>
           </>
         ) : (
           <>
-            <p className="sidebar-panel-desc">같은 조건의 유저와 매칭됩니다.</p>
+            <p className="sidebar-panel-desc">
+              {matchGame === 'LEAGUE_OF_LEGENDS'
+                ? '포지션을 하나 선택한 뒤 매칭을 시작하세요. 먼저 대기한 순서대로 5명이 모이면 매칭됩니다.'
+                : matchGame === 'VALORANT'
+                  ? '역할군을 하나 선택한 뒤 매칭을 시작하세요. 먼저 대기한 순서대로 5명이 모이면 매칭됩니다.'
+                  : matchGame === 'OVERWATCH'
+                    ? '포지션을 하나 선택한 뒤 매칭을 시작하세요. 역할이 겹쳐도 선착순 5명으로 바로 매칭됩니다.'
+                    : matchGame === 'COUNTER_STRIKE_2'
+                      ? '포지션을 하나 선택한 뒤 매칭을 시작하세요. 선착순 5명이 모이면 매칭됩니다.'
+                    : matchGame === 'PUBG'
+                      ? '플랫폼과 선호 맵을 선택한 뒤 매칭을 시작하세요. 같은 플랫폼에서 선착순 4명이 모이면 매칭됩니다.'
+                  : '같은 조건의 유저와 매칭됩니다.'}
+            </p>
             <div className="random-match-form">
               <label className="sidebar-form-label">게임</label>
-              <select className="sidebar-form-input" value={matchGame} onChange={(e) => { setMatchGame(e.target.value); setMatchMode(''); setMatchPartySize(''); }}>
-                {GAME_OPTIONS.map((o) => (
+              <select
+                className="sidebar-form-input"
+                value={matchGame}
+                onChange={(e) => {
+                  setMatchGame(e.target.value);
+                  setMatchMode('');
+                  setMatchPartySize('');
+                  setMatchPosition(null);
+                  setMatchPlatform('');
+                  setMatchPerspective('');
+                  setPubgPreferredMap('ALL');
+                }}
+              >
+                {RANDOM_MATCH_AND_ROOM_GAME_OPTIONS.map((o) => (
                   <option key={o.key} value={o.key}>{o.label}</option>
                 ))}
               </select>
+              {isSimpleFivePersonRandomMatch(matchGame) ? (
+                <>
+                  <div className="random-match-position-block">
+                    <label className="sidebar-form-label">{matchGame === 'VALORANT' ? '역할군' : '포지션'}</label>
+                    <PositionPicker
+                      value={matchPosition}
+                      onChange={setMatchPosition}
+                      game={matchGame}
+                      filterMode
+                      includeAllOption={false}
+                      className="random-match-position"
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    className="sidebar-btn primary"
+                    onClick={handleRandomMatch}
+                    disabled={matchJoining}
+                    style={{ marginTop: 16 }}
+                  >
+                    {matchJoining ? '참가 중...' : '매칭 시작'}
+                  </button>
+                </>
+              ) : isSimplePubgRandomMatch(matchGame) ? (
+                <>
+                  <label className="sidebar-form-label">플랫폼</label>
+                  <div className="pubg-radio-group" role="radiogroup" aria-label="PUBG 플랫폼">
+                    {PUBG_PLATFORM_RADIO.map((o) => (
+                      <label key={o.value} className={`pubg-radio-pill ${matchPlatform === o.value ? 'active' : ''}`}>
+                        <input
+                          type="radio"
+                          name="match-pubg-platform"
+                          value={o.value}
+                          checked={matchPlatform === o.value}
+                          onChange={() => setMatchPlatform(o.value)}
+                        />
+                        <span>{o.label}</span>
+                      </label>
+                    ))}
+                  </div>
+                  <p className="sidebar-form-hint">스팀과 카카오는 서로 다른 매칭 큐입니다. 플랫폼을 선택해 주세요.</p>
+                  <label className="sidebar-form-label">선호 맵</label>
+                  <div className="random-match-map-chips" role="group" aria-label="선호 맵">
+                    {PUBG_RANDOM_MAP_CHIPS.map((c) => (
+                      <button
+                        key={c.value}
+                        type="button"
+                        className={`map-chip ${pubgPreferredMap === c.value ? 'active' : ''}`}
+                        onClick={() => setPubgPreferredMap(c.value)}
+                      >
+                        {c.label}
+                      </button>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    className="sidebar-btn primary"
+                    onClick={handleRandomMatch}
+                    disabled={matchJoining}
+                    style={{ marginTop: 16 }}
+                  >
+                    {matchJoining ? '참가 중...' : '매칭 시작'}
+                  </button>
+                </>
+              ) : (
+                <>
               {getMatchModeOptions(matchGame).length > 0 && (
                 <>
                   <label className="sidebar-form-label">모드</label>
                   <select className="sidebar-form-input" value={matchMode} onChange={(e) => setMatchMode(e.target.value)}>
                     {getMatchModeOptions(matchGame).map((o) => (
-                      <option key={o.value || '_'} value={o.value}>{o.label}</option>
+                      <option
+                        key={o.value || '_'}
+                        value={o.value}
+                        disabled={
+                          matchGame === 'OVERWATCH' &&
+                          matchPartySize === '6' &&
+                          (o.value === 'ROLE_QUEUE_COMP' || o.value === 'QUICK_PLAY' || o.value === '')
+                        }
+                      >
+                        {o.label}
+                      </option>
                     ))}
                   </select>
                 </>
               )}
-              {createFormShowTier(matchGame, matchMode) && (
+              {matchGame !== 'PUBG' && createFormShowTier(matchGame, matchMode) && (
                 <>
                   <label className="sidebar-form-label">티어</label>
                   <select className="sidebar-form-input" value={matchTier} onChange={(e) => setMatchTier(e.target.value)}>
-                    {tierOptionsForGame(matchGame).map((o) => (
+                    {tierOptionsForGame(matchGame, matchMode).map((o) => (
                       <option key={o.value || '_'} value={o.value}>{o.label}</option>
                     ))}
                   </select>
@@ -408,7 +945,9 @@ export default function Home() {
                     disabled={partySizeDisabled}
                   >
                     {controlledPartyOptions.map((o) => (
-                      <option key={o.value || '_'} value={o.value}>{o.label}</option>
+                      <option key={o.value || '_'} value={o.value} disabled={o.disabled}>
+                        {o.label}
+                      </option>
                     ))}
                   </select>
                 </>
@@ -427,55 +966,38 @@ export default function Home() {
                   />
                 </div>
               )}
-              <button type="button" className="sidebar-btn primary" onClick={handleRandomMatch} disabled={matchJoining} style={{ marginTop: 16 }}>
+              <button
+                type="button"
+                className="sidebar-btn primary"
+                onClick={handleRandomMatch}
+                disabled={matchJoining || !!valorantRuleError || !!overwatchRuleError || !!pubgRuleError}
+                style={{ marginTop: 16 }}
+              >
                 {matchJoining ? '참가 중...' : '매칭 시작'}
               </button>
+
+              {overwatchRuleError ? (
+                <div className="sidebar-form-error" role="alert">
+                  {overwatchRuleError}
+                </div>
+              ) : valorantRuleError ? (
+                <div className="sidebar-form-error" role="alert">
+                  {valorantRuleError}
+                </div>
+              ) : pubgRuleError ? (
+                <div className="sidebar-form-error" role="alert">
+                  {pubgRuleError}
+                </div>
+              ) : valorantRuleWarning ? (
+                <div className="sidebar-form-warn">{valorantRuleWarning}</div>
+              ) : null}
+                </>
+              )}
             </div>
           </>
         )
       ) : (
         <Link to="/login" className="sidebar-btn primary">로그인하고 매칭</Link>
-      )}
-    </div>
-  );
-
-  const historyPanelContent = (
-    <div className="sidebar-panel history-panel">
-      <h3 className="sidebar-panel-title">랜덤 매칭 내역</h3>
-      <p className="sidebar-panel-desc">매칭 후 채팅방을 다시 볼 수 있습니다.</p>
-      {!user ? (
-        <Link to="/login" className="sidebar-btn primary">로그인하고 보기</Link>
-      ) : matchHistoryLoading ? (
-        <div className="duo-empty">로딩 중...</div>
-      ) : matchHistoryList.length === 0 ? (
-        <div className="duo-empty">아직 매칭 내역이 없습니다.</div>
-      ) : (
-        <ul className="match-history-list match-history-list-inline">
-          {matchHistoryList.map((s) => (
-            <li key={s.id} className="match-history-item">
-              <Link to={`/match-chat/${s.id}`} className="match-history-link" onClick={() => setShowMatchingSidebar(false)}>
-                <div className="match-history-avatar">
-                  <span className="match-history-avatar-initial">{(MATCH_GAME_LABELS[s.game] ?? s.game)[0]}</span>
-                </div>
-                <div className="match-history-content">
-                  <span className="match-history-name">{MATCH_GAME_LABELS[s.game] ?? s.game}</span>
-                  <span className="match-history-preview">채팅 보기</span>
-                </div>
-                <span className="match-history-time">{formatHistoryTime(s.createdAt)}</span>
-              </Link>
-              <button
-                type="button"
-                className="match-history-delete-btn"
-                onClick={(e) => { e.preventDefault(); handleDeleteMatchHistory(s.id); }}
-                disabled={matchHistoryDeletingId === s.id}
-                title="내역 삭제"
-                aria-label="내역 삭제"
-              >
-                {matchHistoryDeletingId === s.id ? '삭제 중...' : '삭제'}
-              </button>
-            </li>
-          ))}
-        </ul>
       )}
     </div>
   );
@@ -489,7 +1011,7 @@ export default function Home() {
 
           <label className="sidebar-form-label">게임</label>
           <select className="sidebar-form-input" value={createGame} onChange={(e) => setCreateGame(e.target.value)}>
-            {GAME_OPTIONS.map((o) => (
+            {RANDOM_MATCH_AND_ROOM_GAME_OPTIONS.map((o) => (
               <option key={o.key} value={o.key}>{o.label}</option>
             ))}
           </select>
@@ -506,32 +1028,122 @@ export default function Home() {
 
           {createGame === 'LEAGUE_OF_LEGENDS' && (
             <>
-              <label className="sidebar-form-label">랭크</label>
+              <label className="sidebar-form-label">큐 유형</label>
               <select className="sidebar-form-input" value={createRank} onChange={(e) => setCreateRank(e.target.value)}>
-                {RANK_OPTIONS.filter((o) => o.value).map((o) => (
+                {LOL_ROOM_QUEUE_OPTIONS.map((o) => (
                   <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
-              {createFormShowTier('LEAGUE_OF_LEGENDS', createRank) && (
-                <>
-                  <label className="sidebar-form-label">티어</label>
-                  <select className="sidebar-form-input" value={createTier} onChange={(e) => setCreateTier(e.target.value)}>
-                    {TIER_OPTIONS.map((o) => (
-                      <option key={o.value || '_'} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </>
-              )}
-              <label className="sidebar-form-label">인원</label>
-              <select className="sidebar-form-input" value={createPartySize} onChange={(e) => setCreatePartySize(e.target.value)}>
-                {LEAGUE_PARTY_OPTIONS.map((o) => (
-                  <option key={o.value || '_'} value={o.value}>{o.label}</option>
+              <label className="sidebar-form-label">최소 티어</label>
+              <select className="sidebar-form-input" value={createTierMin} onChange={(e) => setCreateTierMin(e.target.value)} aria-label="최소 티어">
+                {TIER_OPTIONS.map((o) => (
+                  <option key={`tier-${o.value || '_'}`} value={o.value}>{o.label}</option>
                 ))}
               </select>
-              {createRank !== 'ARAM' && (
+              <p className="sidebar-form-hint">비우면 티어 제한 없음으로 저장됩니다.</p>
+              {(createRank === 'SOLO' || createRank === 'FLEX') && (
                 <>
-                  <label className="sidebar-form-label">포지션</label>
-                  <PositionPicker value={createPosition} onChange={setCreatePosition} game={createGame} />
+                  <label className="sidebar-form-label">내 포지션</label>
+                  <div className="lol-lane-icon-row" role="group" aria-label="내 포지션">
+                    {LOL_LANES.map((lane) => (
+                      <button
+                        key={lane}
+                        type="button"
+                        className={`lol-lane-icon-btn lol-lane-icon-btn--${lane.toLowerCase()}${createPosition === lane ? ' active' : ''}`}
+                        title={LOL_LANE_LABELS[lane]}
+                        onClick={() => setCreatePosition(lane)}
+                      >
+                        <PositionIcon position={lane} game={createGame} showLabel={false} />
+                      </button>
+                    ))}
+                  </div>
+                  <label className="sidebar-form-label">구인 중인 포지션</label>
+                  <div className="lol-lane-icon-row lol-lane-icon-row--recruit" role="group" aria-label="구인 포지션">
+                    {LOL_LANES.map((lane) => {
+                      const active = createLolRecruiting.includes(lane);
+                      const blocked = lane === createPosition;
+                      const cap = createRank === 'SOLO' ? 1 : lolCreateRecruitCap;
+                      const flexBlocked = createRank === 'FLEX' && !active && (cap === 0 || createLolRecruiting.length >= cap);
+                      return (
+                        <button
+                          key={lane}
+                          type="button"
+                          className={`lol-lane-icon-btn lol-lane-icon-btn--${lane.toLowerCase()}${active ? ' active' : ''}`}
+                          title={LOL_LANE_LABELS[lane]}
+                          disabled={blocked || flexBlocked}
+                          onClick={() => toggleLolRecruitLane(lane)}
+                        >
+                          <PositionIcon position={lane} game={createGame} showLabel={false} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  {createRank === 'FLEX' && (
+                    <p className="sidebar-form-hint">
+                      자유 랭크는 최대 5인까지. 구인 슬롯은 최대 {lolCreateRecruitCap}개, 내 포지션과 중복 불가.
+                    </p>
+                  )}
+                  {createRank === 'SOLO' && (
+                    <p className="sidebar-form-hint">구인 포지션은 1개만, 내 포지션과 달라야 합니다.</p>
+                  )}
+                </>
+              )}
+              {createRank === 'QUICK' && (
+                <>
+                  <label className="sidebar-form-label">주 역할군</label>
+                  <div className="lol-lane-icon-row" role="group" aria-label="주 역할군">
+                    {LOL_QUICK_ROLE_ORDER.map((role) => (
+                      <button
+                        key={role}
+                        type="button"
+                        className={`lol-lane-icon-btn lol-lane-icon-btn--${role === 'ADC' ? 'adc' : role.toLowerCase()}${createPosition === role ? ' active' : ''}`}
+                        title={LOL_QUICK_ROLE_LABELS[role]}
+                        onClick={() => setCreatePosition(role)}
+                      >
+                        <PositionIcon position={role} game={createGame} showLabel={false} />
+                      </button>
+                    ))}
+                  </div>
+                  <label className="sidebar-form-label">부 역할군</label>
+                  <div className="lol-lane-icon-row" role="group" aria-label="부 역할군">
+                    {LOL_QUICK_ROLE_ORDER.map((role) => (
+                      <button
+                        key={`sec-${role}`}
+                        type="button"
+                        className={`lol-lane-icon-btn lol-lane-icon-btn--${role === 'ADC' ? 'adc' : role.toLowerCase()}${createLolSecondary === role ? ' active' : ''}`}
+                        title={LOL_QUICK_ROLE_LABELS[role]}
+                        onClick={() => setCreateLolSecondary(role)}
+                      >
+                        <PositionIcon position={role} game={createGame} showLabel={false} />
+                      </button>
+                    ))}
+                  </div>
+                  <p className="sidebar-form-hint">주·부 역할은 서로 달라야 합니다.</p>
+                  <label className="sidebar-form-label">찾는 포지션</label>
+                  <div className="lol-lane-icon-row lol-lane-icon-row--recruit" role="group" aria-label="찾는 포지션">
+                    {LOL_QUICK_ROLE_ORDER.map((role) => {
+                      const active = createLolQuickSeeking.includes(role);
+                      const cap = lolCreateRecruitCap;
+                      const conflicts =
+                        role !== 'FILL' && (role === createPosition || role === createLolSecondary);
+                      const seekBlocked = !active && (cap === 0 || createLolQuickSeeking.length >= cap || conflicts);
+                      return (
+                        <button
+                          key={`seek-${role}`}
+                          type="button"
+                          className={`lol-lane-icon-btn lol-lane-icon-btn--${role === 'ADC' ? 'adc' : role.toLowerCase()}${active ? ' active' : ''}`}
+                          title={LOL_QUICK_ROLE_LABELS[role]}
+                          disabled={seekBlocked}
+                          onClick={() => toggleLolQuickSeeking(role)}
+                        >
+                          <PositionIcon position={role} game={createGame} showLabel={false} />
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="sidebar-form-hint">
+                    팀에 필요한 역할을 고릅니다. 최대 {lolCreateRecruitCap}개, 주·부와 같은 라인(채우기 제외)은 선택할 수 없습니다.
+                  </p>
                 </>
               )}
             </>
@@ -555,12 +1167,6 @@ export default function Home() {
                   </select>
                 </>
               )}
-              <label className="sidebar-form-label">인원</label>
-              <select className="sidebar-form-input" value={createPartySize} onChange={(e) => setCreatePartySize(e.target.value)}>
-                {VALORANT_PARTY_OPTIONS.map((o) => (
-                  <option key={o.value || '_'} value={o.value}>{o.label}</option>
-                ))}
-              </select>
               <label className="sidebar-form-label">역할</label>
               <PositionPicker value={createPosition} onChange={setCreatePosition} game={createGame} />
             </>
@@ -569,27 +1175,28 @@ export default function Home() {
           {createGame === 'OVERWATCH' && (
             <>
               <label className="sidebar-form-label">모드</label>
-              <select className="sidebar-form-input" value={createMode} onChange={(e) => setCreateMode(e.target.value)}>
-                {OVERWATCH_MODE_OPTIONS.map((o) => (
+              <select
+                className="sidebar-form-input"
+                value={createMode}
+                onChange={(e) => {
+                  setCreateMode(e.target.value);
+                  setCreateTier('');
+                }}
+              >
+                {OVERWATCH_CREATE_MODE_OPTIONS.map((o) => (
                   <option key={o.value || '_'} value={o.value}>{o.label}</option>
                 ))}
               </select>
-              {createFormShowTier('OVERWATCH', createMode) && (
+              {createMode === 'OPEN_QUEUE' && (
                 <>
                   <label className="sidebar-form-label">티어</label>
                   <select className="sidebar-form-input" value={createTier} onChange={(e) => setCreateTier(e.target.value)}>
-                    {TIER_OPTIONS.map((o) => (
+                    {OVERWATCH_CREATE_TIER_OPTIONS.map((o) => (
                       <option key={o.value || '_'} value={o.value}>{o.label}</option>
                     ))}
                   </select>
                 </>
               )}
-              <label className="sidebar-form-label">인원</label>
-              <select className="sidebar-form-input" value={createPartySize} onChange={(e) => setCreatePartySize(e.target.value)}>
-                {OVERWATCH_PARTY_OPTIONS.map((o) => (
-                  <option key={o.value || '_'} value={o.value}>{o.label}</option>
-                ))}
-              </select>
               <label className="sidebar-form-label">역할</label>
               <PositionPicker value={createPosition} onChange={setCreatePosition} game={createGame} />
             </>
@@ -597,16 +1204,10 @@ export default function Home() {
 
           {createGame === 'PUBG' && (
             <>
-              <label className="sidebar-form-label">파티</label>
-              <PositionPicker
-                value={createPartySize || 'ALL'}
-                onChange={(v) => setCreatePartySize(v === 'ALL' ? '' : (v ?? ''))}
-                game={createGame}
-              />
               <label className="sidebar-form-label">인원</label>
               <select className="sidebar-form-input" value={createPartySize} onChange={(e) => setCreatePartySize(e.target.value)}>
-                {PUBG_PARTY_OPTIONS.map((o) => (
-                  <option key={o.value || '_'} value={o.value}>{o.label}</option>
+                {PUBG_CREATE_PARTY_OPTIONS.map((o) => (
+                  <option key={o.value} value={o.value}>{o.label}</option>
                 ))}
               </select>
               <label className="sidebar-form-label">모드</label>
@@ -638,12 +1239,6 @@ export default function Home() {
 
           {createGame === 'COUNTER_STRIKE_2' && (
             <>
-              <label className="sidebar-form-label">인원</label>
-              <select className="sidebar-form-input" value={createPartySize} onChange={(e) => setCreatePartySize(e.target.value)}>
-                {CS2_PARTY_OPTIONS.map((o) => (
-                  <option key={o.value || '_'} value={o.value}>{o.label}</option>
-                ))}
-              </select>
               <label className="sidebar-form-label">역할</label>
               <PositionPicker value={createPosition} onChange={setCreatePosition} game={createGame} />
               <label className="sidebar-form-label">티어</label>
@@ -657,37 +1252,6 @@ export default function Home() {
             </>
           )}
 
-          {createGame === 'APEX_LEGENDS' && (
-            <>
-              <label className="sidebar-form-label">모드</label>
-              <select className="sidebar-form-input" value={createMode} onChange={(e) => setCreateMode(e.target.value)}>
-                {APEX_MODE_OPTIONS.map((o) => (
-                  <option key={o.value || '_'} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-              {createFormShowTier('APEX_LEGENDS', createMode) && (
-                <>
-                  <label className="sidebar-form-label">티어</label>
-                  <select className="sidebar-form-input" value={createTier} onChange={(e) => setCreateTier(e.target.value)}>
-                    {TIER_OPTIONS.map((o) => (
-                      <option key={o.value || '_'} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </>
-              )}
-              <label className="sidebar-form-label">인원</label>
-              <select className="sidebar-form-input" value={createPartySize} onChange={(e) => setCreatePartySize(e.target.value)}>
-                {APEX_PARTY_OPTIONS.map((o) => (
-                  <option key={o.value || '_'} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-              <label className="sidebar-form-label">역할</label>
-              <PositionPicker value={createPosition} onChange={setCreatePosition} game={createGame} />
-              <label className="sidebar-form-label">선호 레전드</label>
-              <input type="text" className="sidebar-form-input" value={createPreferredLegend} onChange={(e) => setCreatePreferredLegend(e.target.value)} placeholder="예: 레이스, 패스파인더" maxLength={100} />
-            </>
-          )}
-
           <label className="sidebar-form-label">글 삭제용 비밀번호</label>
           <input type="password" className="sidebar-form-input" value={createPassword} onChange={(e) => setCreatePassword(e.target.value)} placeholder="삭제 시 입력할 비밀번호" />
 
@@ -696,7 +1260,7 @@ export default function Home() {
             className="sidebar-form-input sidebar-form-textarea"
             value={createMemo}
             onChange={(e) => setCreateMemo(e.target.value)}
-            placeholder={createGame === 'APEX_LEGENDS' ? '없는 내용도 최고 짧게 소개해 주세요' : '찾는 조건이나 하고 싶은 말을 적어주세요'}
+            placeholder="찾는 조건이나 하고 싶은 말을 적어주세요"
             rows={3}
           />
 
@@ -719,6 +1283,10 @@ export default function Home() {
                 setCreatePlatform('');
                 setCreatePartySize('');
                 setCreatePosition(null);
+                setCreateLolRecruiting([]);
+                setCreateLolSecondary(null);
+                setCreateLolQuickSeeking([]);
+                setCreateTierMin('');
                 setShowMatchingSidebar(false);
               }}
             >
@@ -777,24 +1345,39 @@ export default function Home() {
 
       <div className={`main-matching-layout ${showMatchingSidebar ? 'matching-sidebar-visible' : ''}`}>
         <div className="home-matching-main">
-          <div className="section-card home-matching-toolbar">
-            <div className="home-matching-toolbar-actions">
-              <button type="button" className={`team-search-quick-btn ${showMatchingSidebar && sidebarTab === 'random' ? 'active' : ''}`} onClick={() => { if (showMatchingSidebar && sidebarTab === 'random') setShowMatchingSidebar(false); else { setSidebarTab('random'); setShowMatchingSidebar(true); } }}>
-                랜덤 매칭
-              </button>
-              <button type="button" className={`team-search-quick-btn ${showMatchingSidebar && sidebarTab === 'history' ? 'active' : ''}`} onClick={() => { if (showMatchingSidebar && sidebarTab === 'history') setShowMatchingSidebar(false); else { setSidebarTab('history'); setShowMatchingSidebar(true); } }}>
-                랜덤 매칭 내역
-              </button>
-              <button type="button" className={`team-search-quick-btn ${showMatchingSidebar && sidebarTab === 'create' ? 'active' : ''}`} onClick={() => { if (showMatchingSidebar && sidebarTab === 'create') setShowMatchingSidebar(false); else { setSidebarTab('create'); setShowMatchingSidebar(true); } }}>
-                방 만들기
-              </button>
-            </div>
-          </div>
           <section className="section-card home-demo-room-section" aria-labelledby="home-demo-room-heading">
             <div className="home-demo-room-header">
               <div>
                 <h2 id="home-demo-room-heading" className="home-demo-room-title">Team Searching</h2>
                 <p className="home-demo-room-sub">팀 검색 조건 · 서버에 등록된 열린 방 목록</p>
+              </div>
+              <div className="home-demo-room-actions">
+                <button
+                  type="button"
+                  className={`team-search-quick-btn ${showMatchingSidebar && sidebarTab === 'random' ? 'active' : ''}`}
+                  onClick={() => {
+                    if (showMatchingSidebar && sidebarTab === 'random') setShowMatchingSidebar(false);
+                    else {
+                      setSidebarTab('random');
+                      setShowMatchingSidebar(true);
+                    }
+                  }}
+                >
+                  랜덤 매칭
+                </button>
+                <button
+                  type="button"
+                  className={`team-search-quick-btn ${showMatchingSidebar && sidebarTab === 'create' ? 'active' : ''}`}
+                  onClick={() => {
+                    if (showMatchingSidebar && sidebarTab === 'create') setShowMatchingSidebar(false);
+                    else {
+                      setSidebarTab('create');
+                      setShowMatchingSidebar(true);
+                    }
+                  }}
+                >
+                  방 만들기
+                </button>
               </div>
             </div>
             <div className="home-demo-room-table-wrap">
@@ -824,62 +1407,149 @@ export default function Home() {
                   ) : null}
                   {visibleRoomList.map((r) => {
                     const op = parseGameOptions(r.gameOptions);
-                    const tierCell = modeHasNoTier(r.game, op.mode)
-                      ? '-'
-                      : op.tier
-                        ? tierLabel(op.tier, r.game === 'PUBG' || r.game === 'VALORANT' ? r.game : undefined)
-                        : '-';
+                    const currentParticipants = r.currentParticipants ?? r.memberCount ?? 0;
+                    const maxParticipants = r.maxParticipants ?? maxParticipantsFromPartySize(r.game, op.partySize);
+                    const isRoomFull = !r.isMember && maxParticipants != null && currentParticipants >= maxParticipants;
+                    const recruitingLanes = parseRecruitingLanes(op.rp);
+                    const quickSeeking = op.mode === 'QUICK' ? parseQuickSeekingRq(op.rq) : [];
+                    const hostPrimary = op.hp || op.position;
+                    const tierCell =
+                      r.game === 'LEAGUE_OF_LEGENDS'
+                        ? op.tm || op.tx || op.tier
+                          ? formatLolTierRangeCell(op.tm, op.tx, op.tier)
+                          : '-'
+                        : modeHasNoTier(r.game, op.mode)
+                          ? '-'
+                          : op.tier
+                            ? tierLabel(
+                                op.tier,
+                                r.game === 'PUBG' || r.game === 'VALORANT' || r.game === 'COUNTER_STRIKE_2' ? r.game : undefined,
+                                r.game === 'COUNTER_STRIKE_2' ? op.mode : undefined,
+                              )
+                            : '-';
                     let rankCell = '-';
-                    if (r.game === 'LEAGUE_OF_LEGENDS') rankCell = rankLabel(op.mode ?? '');
-                    else if (['VALORANT', 'OVERWATCH', 'APEX_LEGENDS', 'PUBG'].includes(r.game)) rankCell = modeLabel(r.game, op.mode ?? '');
+                    if (r.game === 'LEAGUE_OF_LEGENDS') rankCell = lolQueueLabel(op.mode ?? '');
+                    else if (['VALORANT', 'OVERWATCH', 'APEX_LEGENDS', 'PUBG', 'COUNTER_STRIKE_2'].includes(r.game)) rankCell = modeLabel(r.game, op.mode ?? '');
                     else rankCell = op.mode || '-';
                     let noteCell = extraColumnValue(op, r.game);
                     if (r.game === 'PUBG' && op.preferredMap) {
                       noteCell = noteCell !== '-' ? `${noteCell} · ${op.preferredMap}` : op.preferredMap;
                     }
-                    const partyCell = partySizeLabel(op.partySize, r.game);
-                    const showPos = r.game !== 'PUBG' && showPositionForRoom(r.game, op.mode) && op.position;
+                    const participantCell = maxParticipants != null ? `${currentParticipants}/${maxParticipants}` : `${currentParticipants}`;
+                    let positionTd: ReactNode;
+                    if (r.game === 'LEAGUE_OF_LEGENDS') {
+                      if (isLolAram(r.game, op.mode ?? '')) {
+                        positionTd = '-';
+                      } else if (op.mode === 'QUICK') {
+                        positionTd = (
+                          <div className="home-demo-lol-position-cell">
+                            {hostPrimary ? (
+                              <span className="home-demo-lol-role-pair">
+                                <span className="home-demo-lol-role-tag">주</span>
+                                <span className="home-demo-room-position">
+                                  <PositionIcon position={hostPrimary} game={r.game} showLabel />
+                                </span>
+                              </span>
+                            ) : (
+                              '-'
+                            )}
+                            {op.hs ? (
+                              <span className="home-demo-lol-role-pair">
+                                <span className="home-demo-lol-role-tag">부</span>
+                                <span className="home-demo-room-position">
+                                  <PositionIcon position={op.hs} game={r.game} showLabel />
+                                </span>
+                              </span>
+                            ) : null}
+                            {quickSeeking.length > 0 ? (
+                              <span className="home-demo-lol-recruit">찾는 {formatQuickSeekingSummary(quickSeeking)}</span>
+                            ) : null}
+                          </div>
+                        );
+                      } else {
+                        positionTd = (
+                          <div className="home-demo-lol-position-cell">
+                            {hostPrimary ? (
+                              <span className="home-demo-room-position">
+                                <PositionIcon position={hostPrimary} game={r.game} showLabel />
+                              </span>
+                            ) : (
+                              '-'
+                            )}
+                            {op.hs && (LOL_LANES as readonly string[]).includes(op.hs) ? (
+                              <span className="home-demo-lol-sec">부 {LOL_LANE_LABELS[op.hs as LolLane]}</span>
+                            ) : null}
+                            {recruitingLanes.length > 0 ? (
+                              <span className="home-demo-lol-recruit">구인 {formatRecruitingSummary(recruitingLanes)}</span>
+                            ) : null}
+                          </div>
+                        );
+                      }
+                    } else if (r.game !== 'PUBG' && showPositionForRoom(r.game, op.mode) && op.position) {
+                      positionTd = (
+                        <span className="home-demo-room-position">
+                          <PositionIcon position={op.position} game={r.game} showLabel />
+                        </span>
+                      );
+                    } else {
+                      positionTd = '-';
+                    }
                     return (
                       <tr key={`api-${r.id}`}>
                         <td>{r.title}</td>
                         <td>{tierCell}</td>
                         <td>{rankCell}</td>
-                        <td>
-                          {showPos ? (
-                            <span className="home-demo-room-position">
-                              <PositionIcon position={op.position} game={r.game} showLabel />
-                            </span>
-                          ) : (
-                            '-'
-                          )}
-                        </td>
+                        <td>{positionTd}</td>
                         <td>{noteCell}</td>
-                        <td>{partyCell}</td>
+                        <td>{participantCell}</td>
                         <td>{r.hostNickname ?? '-'}</td>
                         <td>{formatDateForRoom(r.createdAt)}</td>
                         <td>
-                          {r.closed ? (
-                            <span className="home-demo-room-closed-label">마감</span>
-                          ) : r.isMember && r.groupChatRoomId ? (
-                            <button
-                              type="button"
-                              className="home-demo-room-join-btn home-demo-room-join-btn--live"
-                              title="방 채팅으로 이동"
-                              onClick={() => goGameRoomChat(r)}
-                            >
-                              입장
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              className="home-demo-room-join-btn home-demo-room-join-btn--live"
-                              title={user ? '참가' : '로그인 후 참가'}
-                              disabled={joinRoomId === r.id}
-                              onClick={() => handleApiRoomButton(r)}
-                            >
-                              {joinRoomId === r.id ? '참가 중…' : '참가'}
-                            </button>
-                          )}
+                          <div className="home-demo-room-action-wrap">
+                            {r.closed ? (
+                              <span className="home-demo-room-closed-label">마감</span>
+                            ) : r.isMember && r.groupChatRoomId ? (
+                              <button
+                                type="button"
+                                className="home-demo-room-join-btn home-demo-room-join-btn--live"
+                                title="방 채팅으로 이동"
+                                onClick={() => goGameRoomChat(r)}
+                              >
+                                입장
+                              </button>
+                            ) : isRoomFull ? (
+                              <button
+                                type="button"
+                                className="home-demo-room-join-btn home-demo-room-join-btn--full"
+                                aria-disabled="true"
+                                title="정원이 가득 찼습니다."
+                                onClick={() => setShowRoomFullModal(true)}
+                              >
+                                마감
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                className="home-demo-room-join-btn home-demo-room-join-btn--live"
+                                title={user ? '참가' : '로그인 후 참가'}
+                                disabled={joinRoomId === r.id}
+                                onClick={() => handleJoinRoom(r)}
+                              >
+                                {joinRoomId === r.id ? '참가 중…' : '참가'}
+                              </button>
+                            )}
+                            {user?.id === r.hostUserId ? (
+                              <button
+                                type="button"
+                                className="home-demo-room-delete-btn"
+                                title="방 삭제"
+                                disabled={deletingRoomId === r.id}
+                                onClick={() => void handleDeleteApiRoom(r)}
+                              >
+                                {deletingRoomId === r.id ? '삭제 중…' : '삭제'}
+                              </button>
+                            ) : null}
+                          </div>
                         </td>
                       </tr>
                     );
@@ -894,15 +1564,25 @@ export default function Home() {
           <aside className="main-sidebar section-card sidebar-card matching-sidebar-panel">
             <div className="sidebar-tabs">
               <button type="button" className={sidebarTab === 'random' ? 'active' : ''} onClick={() => setSidebarTab('random')}>랜덤 매칭</button>
-              <button type="button" className={sidebarTab === 'history' ? 'active' : ''} onClick={() => setSidebarTab('history')}>랜덤 매칭 내역</button>
               <button type="button" className={sidebarTab === 'create' ? 'active' : ''} onClick={() => setSidebarTab('create')}>방 만들기</button>
             </div>
             <div className="sidebar-content">
               {sidebarTab === 'random' && randomPanelContent}
-              {sidebarTab === 'history' && historyPanelContent}
               {sidebarTab === 'create' && createPanelContent}
             </div>
           </aside>
+        )}
+
+        {showRoomFullModal && (
+          <div className="home-room-full-modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="home-room-full-modal-title">
+            <div className="home-room-full-modal">
+              <h3 id="home-room-full-modal-title" className="home-room-full-modal-title">입장 불가</h3>
+              <p className="home-room-full-modal-message">이미 정원이 가득 찬 방입니다.</p>
+              <button type="button" className="home-room-full-modal-confirm" onClick={() => setShowRoomFullModal(false)}>
+                확인
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </Layout>

@@ -297,4 +297,20 @@ public class GroupChatService {
         ));
         return "ok";
     }
+
+    /** 방장 권한으로 방 삭제 */
+    @Transactional
+    public String deleteRoom(Long roomId, Long hostUserId) {
+        if (roomId == null || hostUserId == null) return "invalid";
+        Optional<GroupChatRoom> roomOpt = roomRepository.findById(roomId);
+        if (roomOpt.isEmpty()) return "not_found";
+        GroupChatRoom room = roomOpt.get();
+        if (!hostUserId.equals(room.getCreatedByUserId())) return "not_host";
+
+        invitationRepository.deleteAll(invitationRepository.findByRoomId(roomId));
+        messageRepository.deleteAll(messageRepository.findByRoomId(roomId));
+        memberRepository.deleteAll(memberRepository.findByRoomId(roomId));
+        roomRepository.delete(room);
+        return "ok";
+    }
 }

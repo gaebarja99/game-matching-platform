@@ -53,6 +53,11 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
   const { toggleTheme } = useTheme();
   const navigate = useNavigate();
 
+  const [isFriendsDrawerOpen, setIsFriendsDrawerOpen] = useState(false);
+  useEffect(() => {
+    if (!showFriendSidebar) setIsFriendsDrawerOpen(false);
+  }, [showFriendSidebar]);
+
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [notificationCount, setNotificationCount] = useState(0);
@@ -502,6 +507,25 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
             </div>
           </span>
 
+          {showFriendSidebar && (
+            <button
+              type="button"
+              className="header-icon-btn"
+              onClick={() => setIsFriendsDrawerOpen((o) => !o)}
+              aria-label="친구 목록"
+              title="친구 목록"
+              aria-expanded={isFriendsDrawerOpen}
+              aria-controls="friend-sidebar"
+            >
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.9" width={22} height={22} aria-hidden="true">
+                <circle cx="8" cy="8" r="3.25" />
+                <circle cx="16.5" cy="9.5" r="2.75" />
+                <path d="M3.5 19c0-2.7 2.4-4.8 5.5-4.8S14.5 16.3 14.5 19" strokeLinecap="round" />
+                <path d="M13.5 18.5c.25-1.9 1.95-3.35 4.2-3.35 1.25 0 2.35.45 3.15 1.2" strokeLinecap="round" />
+              </svg>
+            </button>
+          )}
+
           <button type="button" className="btn-theme" onClick={toggleTheme} title="테마 전환" aria-label="테마 전환">
             <span className="theme-icon">
               <svg className="icon-sun" viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg>
@@ -534,9 +558,19 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
       {topSection}
 
       <div className="page-layout">
-        <main className="main-container">{children}</main>
+        <div className={`friends-main-container ${isFriendsDrawerOpen ? 'friends-main-container-open' : ''}`}>
+          <main className="main-container">{children}</main>
+        </div>
         {showFriendSidebar && (
-          <aside className="friend-sidebar">
+          <>
+            <div
+              className={`friend-drawer-spacer ${isFriendsDrawerOpen ? 'open' : ''}`}
+              aria-hidden="true"
+            />
+            <aside
+              id="friend-sidebar"
+              className={`friend-sidebar ${isFriendsDrawerOpen ? '' : 'friend-sidebar-slide-closed'}`}
+            >
             <div className="friend-sidebar-header">친구</div>
             <div className="friend-sidebar-login-msg no-auth">
               로그인하면 친구 목록과 요청을 볼 수 있어요.
@@ -667,7 +701,8 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
                 </div>
               </div>
             </div>
-          </aside>
+            </aside>
+          </>
         )}
       </div>
 

@@ -159,6 +159,21 @@ public class GroupChatController {
             default -> ResponseEntity.badRequest().body(Map.of("message", "강퇴에 실패했습니다."));
         };
     }
+
+    /** 방장: 단체 채팅방 삭제 */
+    @DeleteMapping("/rooms/{roomId}")
+    public ResponseEntity<?> deleteRoom(@PathVariable Long roomId, HttpSession session) {
+        Long userId = (Long) session.getAttribute(SESSION_USER_ID);
+        if (userId == null) return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
+        String result = groupChatService.deleteRoom(roomId, userId);
+        return switch (result) {
+            case "ok" -> ResponseEntity.ok(Map.of("ok", true));
+            case "not_found" -> ResponseEntity.status(404).body(Map.of("message", "채팅방을 찾을 수 없습니다."));
+            case "not_host" -> ResponseEntity.status(403).body(Map.of("message", "방장만 삭제할 수 있습니다."));
+            default -> ResponseEntity.badRequest().body(Map.of("message", "삭제에 실패했습니다."));
+        };
+    }
+
     @PostMapping("/rooms/{roomId}/presence/{action}")
     public ResponseEntity<?> recordPresence(
             @PathVariable Long roomId,

@@ -6,6 +6,8 @@ export type RandomMatchPendingSnapshot = {
   tier: string;
   partySize: string;
   position: string | null;
+  platform?: string;
+  perspective?: string;
 };
 
 export function saveRandomMatchPending(s: RandomMatchPendingSnapshot): void {
@@ -28,6 +30,8 @@ export function loadRandomMatchPending(): RandomMatchPendingSnapshot | null {
       tier: typeof o.tier === 'string' ? o.tier : '',
       partySize: typeof o.partySize === 'string' ? o.partySize : '',
       position: o.position === null || typeof o.position === 'string' ? o.position : null,
+      platform: typeof o.platform === 'string' ? o.platform : undefined,
+      perspective: typeof o.perspective === 'string' ? o.perspective : undefined,
     };
   } catch {
     return null;

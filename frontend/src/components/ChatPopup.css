@@ -176,6 +176,26 @@
   color: #fff;
 }
 
+.chat-popup-random-wrap select.random-match-chat-input option:disabled {
+  opacity: 0.55;
+  color: #8a8a8f;
+  background: #1f222a;
+}
+
+.chat-popup-random-wrap .random-match-chat-form-error {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ff5252;
+}
+
+.chat-popup-random-wrap .random-match-chat-form-warn {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ffcc66;
+}
+
 .chat-popup-random-wrap .random-match-chat-session-link {
   color: inherit;
 }
@@ -347,6 +367,12 @@
   color: #212529;
 }
 
+.theme-light .chat-popup-random-wrap select.random-match-chat-input option:disabled {
+  opacity: 0.6;
+  background: #f3f4f6;
+  color: #6c757d;
+}
+
 .theme-light .chat-popup-random-wrap .random-match-chat-session-name {
   color: #212529;
 }
@@ -366,4 +392,74 @@
 
 .theme-light .match-chat-panel-loading {
   color: #6c757d;
+}
+
+/* PUBG 플랫폼·시점 (랜덤 매칭 위젯) */
+.random-match-chat-hint {
+  margin: 4px 0 10px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.55);
+}
+.random-match-chat-modal .random-match-chat-hint {
+  color: rgba(255, 255, 255, 0.55);
+}
+.chat-popup-random-wrap .pubg-radio-group,
+.random-match-chat-modal .pubg-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.chat-popup-random-wrap .pubg-radio-pill,
+.random-match-chat-modal .pubg-radio-pill {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #252525;
+  color: #e8e8ec;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.chat-popup-random-wrap .pubg-radio-pill input,
+.random-match-chat-modal .pubg-radio-pill input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.chat-popup-random-wrap .pubg-radio-pill:hover,
+.random-match-chat-modal .pubg-radio-pill:hover {
+  background: #2e2e32;
+}
+.chat-popup-random-wrap .pubg-radio-pill.active,
+.random-match-chat-modal .pubg-radio-pill.active {
+  border-color: #00e676;
+  background: rgba(0, 230, 118, 0.12);
+  box-shadow: 0 0 0 1px rgba(0, 230, 118, 0.35);
+}
+.theme-light .chat-popup-random-wrap .random-match-chat-hint,
+.theme-light .random-match-chat-modal .random-match-chat-hint {
+  color: #6c757d;
+}
+.theme-light .chat-popup-random-wrap .pubg-radio-pill,
+.theme-light .random-match-chat-modal .pubg-radio-pill {
+  background: #fff;
+  border-color: #ced4da;
+  color: #212529;
+}
+.theme-light .chat-popup-random-wrap .pubg-radio-pill:hover,
+.theme-light .random-match-chat-modal .pubg-radio-pill:hover {
+  background: #f3f4f6;
+}
+.theme-light .chat-popup-random-wrap .pubg-radio-pill.active,
+.theme-light .random-match-chat-modal .pubg-radio-pill.active {
+  border-color: #00c853;
+  background: rgba(0, 200, 100, 0.12);
 }
