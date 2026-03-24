@@ -15,6 +15,7 @@ import {
   type GameRoomItem,
 } from '../api/gameRooms';
 import { isHiddenGameRoomHost } from '../utils/gameRoomVisibility';
+import { MATCH_GAME_LABELS } from '../utils/randomMatchHelpers';
 
 const GAME_OPTIONS: { key: string; label: string }[] = [
   { key: 'ALL', label: '전체' },
@@ -23,7 +24,6 @@ const GAME_OPTIONS: { key: string; label: string }[] = [
   { key: 'OVERWATCH', label: '오버워치2' },
   { key: 'PUBG', label: 'PUBG' },
   { key: 'COUNTER_STRIKE_2', label: 'CS2' },
-  { key: 'APEX_LEGENDS', label: '에이펙스' },
 ];
 
 export default function GameRooms() {
@@ -205,7 +205,7 @@ export default function GameRooms() {
                 <div className="game-room-card-head">
                   <span className="game-room-title">{r.title}</span>
                   {r.closed && <span className="game-room-badge closed">마감</span>}
-                  <span className="game-room-game">{GAME_OPTIONS.find((g) => g.key === r.game)?.label ?? r.game}</span>
+                  <span className="game-room-game">{GAME_OPTIONS.find((g) => g.key === r.game)?.label ?? MATCH_GAME_LABELS[r.game] ?? r.game}</span>
                 </div>
                 {r.memo && <p className="game-room-memo">{r.memo}</p>}
                 <div className="game-room-meta">

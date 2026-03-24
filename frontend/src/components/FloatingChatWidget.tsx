@@ -631,7 +631,11 @@ export default function FloatingChatWidget() {
                 className={`floating-chat-widget-fab ${activeMode === key ? 'is-active' : ''}`}
                 aria-label={label}
                 aria-pressed={activeMode === key}
-                onClick={() => openMode(key)}
+                onClick={() => {
+                  // 채팅창이 떠있는 상태에서는(오른쪽 4개 버튼 클릭) 왼쪽 채팅창을 닫는다.
+                  if (panelOpen) closePanel();
+                  else openMode(key);
+                }}
               >
                 <Icon />
               </button>
