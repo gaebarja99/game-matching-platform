@@ -181,7 +181,6 @@ export default function Home() {
   const [createLolSecondary, setCreateLolSecondary] = useState<string | null>(null);
   const [createLolQuickSeeking, setCreateLolQuickSeeking] = useState<LolQuickRole[]>([]);
   const [createTierMin, setCreateTierMin] = useState('');
-  const [createApprovalRequired, setCreateApprovalRequired] = useState(false);
   const [createPassword, setCreatePassword] = useState('');
   const [createMemo, setCreateMemo] = useState('');
   const [creating, setCreating] = useState(false);
@@ -197,7 +196,6 @@ export default function Home() {
       setCreateLolSecondary(null);
       setCreateLolQuickSeeking([]);
       setCreateTierMin('');
-      setCreateApprovalRequired(false);
     }
   }, [createGame]);
 
@@ -655,7 +653,6 @@ export default function Home() {
           recruiting: createLolRecruiting,
           recruitingQuick: createRank === 'QUICK' ? createLolQuickSeeking : [],
           tierMin: createTierMin,
-          approvalRequired: createApprovalRequired,
         }),
       );
     } else {
@@ -693,7 +690,6 @@ export default function Home() {
       setCreateLolSecondary(null);
       setCreateLolQuickSeeking([]);
       setCreateTierMin('');
-      setCreateApprovalRequired(false);
       setShowMatchingSidebar(false);
       fetchRooms();
     } else {
@@ -712,16 +708,6 @@ export default function Home() {
       return;
     }
     if (r.closed) return;
-    try {
-      const o = JSON.parse(r.gameOptions || '{}') as Record<string, string>;
-      if (o.ar === '1') {
-        window.alert(
-          '이 방은 승인제로 표시되어 있으나, 서버에서 수락 절차는 아직 지원하지 않아 바로 입장됩니다. 호스트와 별도로 조율해 주세요.',
-        );
-      }
-    } catch {
-      /* ignore */
-    }
     setJoinRoomId(r.id);
     const ok = await joinGameRoom(r.id);
     setJoinRoomId(null);
@@ -1124,15 +1110,6 @@ export default function Home() {
                   </p>
                 </>
               )}
-              <label className="sidebar-form-label lol-approval-label">
-                <input
-                  type="checkbox"
-                  checked={createApprovalRequired}
-                  onChange={(e) => setCreateApprovalRequired(e.target.checked)}
-                />
-                {' '}승인 후 입장(표시만 — 참가는 즉시 처리)
-              </label>
-              <p className="sidebar-form-hint">승인제는 방 정보에만 저장되며, 서버 수락 절차는 추후 연동 예정입니다.</p>
             </>
           )}
 
@@ -1291,7 +1268,6 @@ export default function Home() {
                 setCreateLolSecondary(null);
                 setCreateLolQuickSeeking([]);
                 setCreateTierMin('');
-                setCreateApprovalRequired(false);
                 setShowMatchingSidebar(false);
               }}
             >
@@ -1436,9 +1412,6 @@ export default function Home() {
                     let noteCell = extraColumnValue(op, r.game);
                     if (r.game === 'PUBG' && op.preferredMap) {
                       noteCell = noteCell !== '-' ? `${noteCell} · ${op.preferredMap}` : op.preferredMap;
-                    }
-                    if (op.ar === '1') {
-                      noteCell = noteCell !== '-' ? `${noteCell} · 승인제` : '승인제';
                     }
                     const partyCell = partySizeLabel(op.partySize, r.game);
                     let positionTd: ReactNode;

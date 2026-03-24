@@ -292,21 +292,6 @@ select.sidebar-form-input option:disabled {
   height: 26px;
 }
 
-.lol-approval-label {
-  display: flex;
-  align-items: flex-start;
-  gap: 8px;
-  font-weight: 500;
-  color: var(--text);
-  cursor: pointer;
-  margin-top: 10px;
-  margin-bottom: 0;
-}
-.lol-approval-label input {
-  margin-top: 3px;
-  flex-shrink: 0;
-}
-
 .home-demo-lol-position-cell {
   display: flex;
   flex-direction: column;

@@ -144,7 +144,6 @@ export function buildLolRoomGameOptions(input: {
   recruiting: LolLane[];
   recruitingQuick: LolQuickRole[];
   tierMin: string;
-  approvalRequired: boolean;
 }): Record<string, string | undefined> {
   return {
     mode: input.queue,
@@ -155,7 +154,6 @@ export function buildLolRoomGameOptions(input: {
     rp: input.queue !== 'QUICK' && input.recruiting.length ? input.recruiting.join(',') : undefined,
     rq: input.queue === 'QUICK' && input.recruitingQuick.length ? input.recruitingQuick.join(',') : undefined,
     tm: input.tierMin || undefined,
-    ar: input.approvalRequired ? '1' : undefined,
   };
 }
 
