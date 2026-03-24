@@ -28,6 +28,8 @@ application-oauth-local.properties
 src/main/resources/application-oauth-local.properties
 application-portone-local.properties
 src/main/resources/application-portone-local.properties
+application-mysql-local.properties
+src/main/resources/application-mysql-local.properties
 
 # IDE / tooling
 .idea/

@@ -3,12 +3,15 @@ package com.gamematcher.service.community;
 import com.gamematcher.constant.Role;
 import com.gamematcher.constant.ReportStatus;
 import com.gamematcher.constant.community.*;
+import com.gamematcher.constant.profile.ProfileImageConstants;
 import com.gamematcher.dto.community.*;
 import com.gamematcher.entity.User;
 import com.gamematcher.entity.community.*;
+import com.gamematcher.entity.profile.UserProfile;
 import com.gamematcher.exception.GameApiException;
 import com.gamematcher.repository.common.CommonUserRepository;
 import com.gamematcher.repository.community.*;
+import com.gamematcher.repository.profile.UserProfileRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -39,6 +42,7 @@ public class CommunityService {
     private final CommunityReportRepository communityReportRepository;
     private final CommunityNotificationRepository notificationRepository;
     private final CommonUserRepository userRepository;
+    private final UserProfileRepository userProfileRepository;
     private final FileStorageService fileStorageService;
 
     public CommunityService(PostRepository postRepository, CommentRepository commentRepository,
@@ -48,7 +52,9 @@ public class CommunityService {
                             HashtagRepository hashtagRepository, PostHashtagRepository postHashtagRepository,
                             CommunityReportRepository communityReportRepository,
                             CommunityNotificationRepository notificationRepository,
-                            CommonUserRepository userRepository, FileStorageService fileStorageService) {
+                            CommonUserRepository userRepository,
+                            UserProfileRepository userProfileRepository,
+                            FileStorageService fileStorageService) {
         this.postRepository = postRepository;
         this.commentRepository = commentRepository;
         this.postLikeRepository = postLikeRepository;
