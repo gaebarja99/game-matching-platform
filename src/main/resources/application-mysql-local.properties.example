@@ -1,0 +1,11 @@
+# 로컬 전용 MySQL 설정 — 이 파일 이름을 application-mysql-local.properties 로 복사한 뒤
+# src/main/resources 에 두면 됩니다. (gitignore 되어 커밋되지 않음)
+#
+# 또는 환경 변수만 쓸 경우 이 파일은 만들지 않아도 됩니다:
+#   SPRING_DATASOURCE_URL
+#   SPRING_DATASOURCE_USERNAME
+#   SPRING_DATASOURCE_PASSWORD
+
+# spring.datasource.url=jdbc:mysql://127.0.0.1:3306/GameMatcher?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=Asia/Seoul&characterEncoding=utf8
+# spring.datasource.username=root
+# spring.datasource.password=
