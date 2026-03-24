@@ -113,7 +113,6 @@ export function validateLolRoomForm(input: {
     return '내 포지션을 선택해 주세요.';
   }
   if (input.queue === 'SOLO') {
-    if (input.partySize !== 'DUO') return '솔로 랭크는 2인만 가능합니다.';
     if (input.recruiting.length !== 1) {
       return '솔로 랭크에서는 구인 포지션을 정확히 1개 선택해 주세요.';
     }
