@@ -1,0 +1,98 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: 'Noto Sans KR', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+.page-placeholder {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0d0d0f;
+  color: #9e9ea6;
+}
+
+.records-page { padding: 24px; max-width: 900px; margin: 0 auto; }
+.records-page-title { margin: 0 0 20px; font-size: 1.25rem; font-weight: 700; color: var(--text); }
+.records-page-image-wrap { text-align: center; background: var(--card-bg); border-radius: 8px; padding: 16px; border: 1px solid var(--border); }
+.records-page-image { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+
+.esports-page { padding: 24px; max-width: 900px; margin: 0 auto; }
+.esports-page-title { margin: 0 0 20px; font-size: 1.25rem; font-weight: 700; color: var(--text); }
+.esports-page-image-wrap { text-align: center; background: var(--card-bg); border-radius: 8px; padding: 16px; border: 1px solid var(--border); }
+.esports-page-image { max-width: 100%; height: auto; display: block; margin: 0 auto; }
+
+/* 게임방 목록 */
+.game-room-list { display: flex; flex-direction: column; gap: 12px; }
+.game-room-card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; padding: 16px; }
+.game-room-card-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+.game-room-title { font-weight: 600; color: var(--text); }
+.game-room-badge.closed { background: var(--text-muted); color: #fff; font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; }
+.game-room-game { font-size: 0.85rem; color: var(--text-muted); }
+.game-room-memo { margin: 0 0 8px; font-size: 0.9rem; color: var(--text-muted); }
+.game-room-meta { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px; }
+.game-room-meta span { margin-right: 12px; }
+.game-room-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn-room-chat { padding: 6px 12px; font-size: 0.85rem; background: var(--hover); color: var(--text); border-radius: 6px; text-decoration: none; }
+.btn-room-join, .btn-room-leave, .btn-room-close, .btn-room-delete { padding: 6px 12px; font-size: 0.85rem; border-radius: 6px; cursor: pointer; border: 1px solid var(--border); }
+.btn-room-join { background: #00e676; color: #0d0d0f; border-color: #00e676; }
+.btn-room-leave { background: transparent; color: var(--text-muted); }
+.btn-room-close { background: var(--hover); color: var(--text); }
+.btn-room-delete { background: #ff5252; color: #fff; border-color: #ff5252; }
+
+/* 랜덤 매칭 바 */
+.random-match-bar { display: flex; align-items: center; gap: 12px; padding: 12px 0; margin-bottom: 8px; flex-wrap: wrap; }
+.random-match-label { font-weight: 600; color: var(--text); }
+.random-match-status { color: var(--text-muted); font-size: 0.9rem; }
+.btn-random-match, .btn-random-cancel { padding: 8px 16px; font-size: 0.9rem; border-radius: 6px; cursor: pointer; }
+.btn-random-match { background: #00e676; color: #0d0d0f; border: none; text-decoration: none; }
+.btn-random-match:disabled { opacity: 0.7; cursor: not-allowed; }
+.btn-random-cancel { background: transparent; border: 1px solid var(--border); color: var(--text-muted); }
+
+/* 매칭 완료 모달 / 일반 모달 */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 1000; }
+.modal-box { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 24px; min-width: 280px; max-width: 90vw; }
+.modal-box h3 { margin: 0 0 12px; font-size: 1.1rem; }
+.modal-box label { display: block; margin: 8px 0 4px; font-size: 0.9rem; color: var(--text-muted); }
+.modal-box input, .modal-box textarea, .modal-box select { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--input-bg); color: var(--text); margin-bottom: 8px; }
+.modal-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 16px; }
+.modal-actions button, .modal-actions a { padding: 8px 16px; border-radius: 6px; font-size: 0.9rem; cursor: pointer; text-decoration: none; color: var(--text); background: var(--hover); border: 1px solid var(--border); }
+.modal-actions button:disabled, .modal-actions a:disabled { opacity: 0.6; cursor: not-allowed; }
+.modal-actions .btn-danger { background: #c62828; color: #fff; border-color: #b71c1c; }
+.modal-actions .btn-danger:hover:not(:disabled) { background: #b71c1c; }
+.modal-box-desc { margin: 0 0 12px; font-size: 0.9rem; color: var(--text-muted); }
+.form-error { color: #ff5252; font-size: 0.85rem; margin: 8px 0; }
+
+/* 랜덤 매칭 채팅 */
+.match-chat-section { display: flex; flex-direction: column; height: calc(100vh - 120px); max-height: 600px; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; }
+.match-chat-header { padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.match-chat-back { background: none; border: none; color: var(--text-muted); cursor: pointer; font-size: 0.9rem; margin-bottom: 4px; }
+.match-chat-header h2 { margin: 0 0 8px; font-size: 1rem; }
+.match-chat-members { display: flex; gap: 12px; flex-wrap: wrap; font-size: 0.85rem; color: var(--text-muted); }
+.match-chat-messages { list-style: none; margin: 0; padding: 16px; overflow-y: auto; flex: 1; }
+.match-msg { display: flex; gap: 8px; margin-bottom: 12px; }
+.match-msg.theirs { flex-direction: row; }
+.match-msg.mine { flex-direction: row-reverse; }
+.match-msg-avatar { width: 32px; height: 32px; border-radius: 50%; overflow: hidden; flex-shrink: 0; }
+.match-msg-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.match-msg-avatar-fallback { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; background: var(--hover); font-size: 0.9rem; }
+.match-msg-body { max-width: 70%; }
+.match-msg-nickname { font-size: 0.8rem; color: var(--text-muted); margin-bottom: 2px; }
+.match-msg-bubble { padding: 8px 12px; border-radius: 12px; background: var(--hover); }
+.match-msg.mine .match-msg-bubble { background: #00e676; color: #0d0d0f; }
+.match-msg-time { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+.match-chat-input-wrap { display: flex; gap: 8px; padding: 12px; border-top: 1px solid var(--border); }
+.match-chat-input-wrap input { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; background: var(--input-bg); color: var(--text); }
+.match-chat-input-wrap button { padding: 8px 16px; border-radius: 6px; background: #00e676; color: #0d0d0f; border: none; cursor: pointer; }
+.match-chat-member { display: inline-flex; align-items: center; gap: 4px; }
+.match-chat-member img { width: 20px; height: 20px; border-radius: 50%; object-fit: cover; }
+
+/* 포지션 아이콘 */
+.position-icon { display: inline-flex; align-items: center; gap: 4px; font-size: 0.9rem; }
+.position-icon-emoji { font-size: 1rem; }
+.position-icon-img { width: 1.25rem; height: 1.25rem; object-fit: contain; vertical-align: middle; }
+.position-icon-label { color: var(--text); }

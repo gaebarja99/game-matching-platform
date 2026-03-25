@@ -1,0 +1,12 @@
+{
+  "name": "gamematcher-rtmp-server",
+  "version": "1.0.0",
+  "description": "RTMP 수신 + HLS 변환 (OBS 연동). Spring Boot와 함께 실행.",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "node-media-server": "^2.6.4"
+  }
+}

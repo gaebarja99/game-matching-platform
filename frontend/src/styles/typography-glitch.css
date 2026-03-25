@@ -1,0 +1,40 @@
+/**
+ * 8080 원본과 동일 - 게임 스타일 타이포그래피 + chromatic aberration(글리치)
+ * React는 body 대신 .theme-dark / .theme-light 래퍼 안에 있으므로 해당 스코프로 적용
+ */
+.theme-dark,
+.theme-light {
+  font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif !important;
+  font-weight: 600 !important;
+  text-shadow: -0.5px -0.5px 0 rgba(255, 95, 60, 0.4), 0.5px 0.5px 0 rgba(60, 165, 255, 0.4) !important;
+}
+
+.theme-dark input,
+.theme-dark button,
+.theme-dark select,
+.theme-dark textarea,
+.theme-light input,
+.theme-light button,
+.theme-light select,
+.theme-light textarea {
+  font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif !important;
+  font-weight: 500 !important;
+  text-shadow: -0.3px -0.3px 0 rgba(255, 95, 60, 0.25), 0.3px 0.3px 0 rgba(60, 165, 255, 0.25) !important;
+}
+
+/* 로고·큰 제목은 효과 강하게 (8080 원본과 동일) */
+.theme-dark .header-logo,
+.theme-light .header-logo,
+.theme-dark .main-header .logo,
+.theme-light .main-header .logo,
+.theme-dark .studio-header .logo,
+.theme-light .studio-header .logo,
+.theme-dark .stream-info .title,
+.theme-light .stream-info .title,
+.theme-dark h1, .theme-dark h2, .theme-dark h3,
+.theme-light h1, .theme-light h2, .theme-light h3,
+.theme-dark .modal-box h2,
+.theme-light .modal-box h2 {
+  font-weight: 700 !important;
+  text-shadow: -1px -1px 0 rgba(255, 90, 55, 0.5), 1px 1px 0 rgba(55, 160, 255, 0.5) !important;
+}

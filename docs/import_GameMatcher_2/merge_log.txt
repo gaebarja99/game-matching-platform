@@ -1,0 +1,15 @@
+Base: C:\GameMatcher1_base
+Source (GameMatcher 2): C:\GameMatcher (2)
+Started: 2026-03-23T13:18:23.9217948+09:00
+Robocopy docs -> C:\GameMatcher1_base\docs\import_GameMatcher_2\original_docs_from_GameMatcher2
+Copied GM2 root files -> C:\GameMatcher1_base\docs\import_GameMatcher_2\root_files_from_GameMatcher2
+Saved pom_GameMatcher2_reference.xml
+Copied gamematcher-frontend -> C:\GameMatcher1_base\gamematcher-frontend
+src files added from GM2 (non-conflicting paths only): 272
+Finished: 2026-03-23T13:18:27.9696528+09:00
+
+--- Post-merge ---
+- 동일 상대 경로가 양쪽에 있던 23개 파일은 base 버전을 유지했습니다(GM2 내용으로 덮어쓰지 않음).
+- pom.xml에 GameMatcher (2)의 OpenAI 클라이언트 의존성(theokanning)을 추가했습니다.
+- mvn compile: BUILD SUCCESS (418 sources).
+- 재실행: docs\merge_GameMatcher2_into_base.ps1 (gamematcher-frontend가 이미 있으면 프론트 복사는 건너뜀)
