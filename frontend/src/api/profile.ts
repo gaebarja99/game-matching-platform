@@ -1,3 +1,5 @@
+import { apiUrl } from './client';
+
 export type ProfileDto = {
   userId: number;
   username: string;
@@ -7,6 +9,14 @@ export type ProfileDto = {
   preferredGames: string | null;
 };
 
+export type ProfilePatchBody = Partial<{
+  username: string;
+  bio: string | null;
+  profileImageUrl: string | null;
+  bannerImageUrl: string | null;
+  preferredGames: string | null;
+}>;
+
 /** 닉네임 검색 목록 행 */
 export type ProfileMatchDto = {
   userId: number;
@@ -15,7 +25,9 @@ export type ProfileMatchDto = {
 };
 
 export async function fetchProfile(userId: number): Promise<ProfileDto> {
-  const res = await fetch(`/api/users/${userId}/profile`);
+  const res = await fetch(apiUrl(`api/users/${userId}/profile`), {
+    credentials: 'include',
+  });
   if (res.status === 404) {
     throw new Error('NOT_FOUND');
   }
@@ -27,7 +39,9 @@ export async function fetchProfile(userId: number): Promise<ProfileDto> {
 
 export async function fetchProfileByUsername(username: string): Promise<ProfileDto> {
   const params = new URLSearchParams({ username: username.trim() });
-  const res = await fetch(`/api/profiles?${params.toString()}`);
+  const res = await fetch(apiUrl(`api/profiles?${params.toString()}`), {
+    credentials: 'include',
+  });
   if (res.status === 404) {
     throw new Error('NOT_FOUND');
   }
@@ -40,7 +54,9 @@ export async function fetchProfileByUsername(username: string): Promise<ProfileD
 /** 닉네임 부분 일치로 최대 50명 */
 export async function fetchProfileMatches(username: string): Promise<ProfileMatchDto[]> {
   const params = new URLSearchParams({ username: username.trim() });
-  const res = await fetch(`/api/profiles/matches?${params.toString()}`);
+  const res = await fetch(apiUrl(`api/profiles/matches?${params.toString()}`), {
+    credentials: 'include',
+  });
   if (res.status === 400) {
     throw new Error('BAD_REQUEST');
   }
@@ -65,18 +81,10 @@ export async function fetchProfileFlexible(query: string): Promise<ProfileDto> {
   return fetchProfileByUsername(q);
 }
 
-export async function patchProfile(
-  userId: number,
-  body: {
-    username?: string;
-    bio: string | null;
-    profileImageUrl: string | null;
-    bannerImageUrl: string | null;
-    preferredGames: string | null;
-  }
-): Promise<ProfileDto> {
-  const res = await fetch(`/api/users/${userId}/profile`, {
+export async function patchProfile(userId: number, body: ProfilePatchBody): Promise<ProfileDto> {
+  const res = await fetch(apiUrl(`api/users/${userId}/profile`), {
     method: 'PATCH',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
   });

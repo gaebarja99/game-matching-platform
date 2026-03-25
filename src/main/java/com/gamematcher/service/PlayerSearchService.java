@@ -35,7 +35,6 @@ public class PlayerSearchService {
 
     public PlayerSearchResponse searchPlayer(PlayerSearchRequest request) {
         request.normalize();
-        request.setCount(20);
 
         String game = request.getGame();
         if (game == null || game.isBlank()) {

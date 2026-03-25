@@ -106,7 +106,8 @@ public class PlayerSearchRequest {
     public PlayerSearchRequest normalize() {
         parseNickname();
         if (region == null || region.isEmpty()) region = "kr";
-        if (count <= 0 || count > 20) count = 5;
+        // JSON에 count 생략 시 null → NPE 방지 (PUBG·APEX 등 count 필드 없는 전적 화면)
+        if (count == null || count <= 0 || count > 20) count = 5;
         if (game != null) game = game.toLowerCase().trim();
         return this;
     }

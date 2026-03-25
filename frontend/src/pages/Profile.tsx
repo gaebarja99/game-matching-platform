@@ -1,8 +1,37 @@
-import { useState, useRef, useMemo } from 'react';
+import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { checkNicknameAvailable } from '../api/auth';
 import { apiUrl, resolveProfileImageUrl } from '../api/client';
+import { fetchProfile, patchProfile, type ProfileDto } from '../api/profile';
+import {
+  PREFERRED_GAME_OPTIONS,
+  parsePreferredGamesToSelected,
+  serializePreferredGames,
+} from '../constants/games';
+import { effectiveCustomProfileUrl } from '../constants/profile';
+
+function resolveBannerStyleUrl(url: string | null | undefined): string | null {
+  if (!url?.trim()) return null;
+  const t = url.trim();
+  if (t.startsWith('http://') || t.startsWith('https://')) return t;
+  return apiUrl(t.replace(/^\//, ''));
+}
+
+function computeExtDirty(
+  publicProfile: ProfileDto | null,
+  banner: string,
+  profileUrl: string,
+  selectedGames: string[]
+): boolean {
+  const b0 = (publicProfile?.bannerImageUrl ?? '').trim();
+  const b1 = banner.trim();
+  const p0 = effectiveCustomProfileUrl(publicProfile?.profileImageUrl ?? null).trim();
+  const p1 = profileUrl.trim();
+  const g0 = serializePreferredGames(parsePreferredGamesToSelected(publicProfile?.preferredGames)) ?? '';
+  const g1 = serializePreferredGames(selectedGames) ?? '';
+  return b0 !== b1 || p0 !== p1 || g0 !== g1;
+}
 
 function formatActivityPeriod(createdAt?: string | null): string {
   if (!createdAt) return '—';
@@ -35,6 +64,47 @@ export default function Profile() {
   const [saveLoading, setSaveLoading] = useState(false);
   const profileImageInputRef = useRef<HTMLInputElement>(null);
 
+  const [publicProfile, setPublicProfile] = useState<ProfileDto | null>(null);
+  const [publicLoading, setPublicLoading] = useState(false);
+  const [publicErr, setPublicErr] = useState('');
+  const [fBannerUrl, setFBannerUrl] = useState('');
+  const [fProfileUrl, setFProfileUrl] = useState('');
+  const [selectedGames, setSelectedGames] = useState<string[]>([]);
+  const [gamesModalOpen, setGamesModalOpen] = useState(false);
+  const [modalGameDraft, setModalGameDraft] = useState<string[]>([]);
+
+  const loadPublicProfile = useCallback(async () => {
+    if (!user?.id) return;
+    setPublicLoading(true);
+    setPublicErr('');
+    try {
+      const p = await fetchProfile(user.id);
+      setPublicProfile(p);
+    } catch {
+      setPublicErr('공개 프로필 정보를 불러오지 못했습니다.');
+      setPublicProfile(null);
+    } finally {
+      setPublicLoading(false);
+    }
+  }, [user?.id]);
+
+  useEffect(() => {
+    void loadPublicProfile();
+  }, [loadPublicProfile]);
+
+  useEffect(() => {
+    if (!editOpen) setGamesModalOpen(false);
+  }, [editOpen]);
+
+  useEffect(() => {
+    if (!gamesModalOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setGamesModalOpen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [gamesModalOpen]);
+
   const originalNickname = (user?.nickname ?? user?.username ?? '').trim();
   const canSave = useMemo(() => {
     const currentNick = editNickname.trim();
@@ -43,7 +113,9 @@ export default function Profile() {
       !nickChanged || (nicknameChecked && checkedNicknameSnapshot !== null && checkedNicknameSnapshot === currentNick);
     const bioChanged = editBio.trim() !== (user?.bio ?? '').trim();
     const hasImage = profileImageFile !== null;
-    const hasChanges = nickChanged || bioChanged || hasImage;
+    const mainDirty = nickChanged || bioChanged || hasImage;
+    const extDirty = computeExtDirty(publicProfile, fBannerUrl, fProfileUrl, selectedGames);
+    const hasChanges = mainDirty || extDirty;
     return nicknameOk && hasChanges;
   }, [
     editNickname,
@@ -53,11 +125,33 @@ export default function Profile() {
     user?.bio,
     nicknameChecked,
     checkedNicknameSnapshot,
+    publicProfile,
+    fBannerUrl,
+    fProfileUrl,
+    selectedGames,
   ]);
 
   const pangBalance = user?.pangBalance ?? 0;
+  const bannerDisplaySrc = publicProfile ? resolveBannerStyleUrl(publicProfile.bannerImageUrl) : null;
+  const gameTagsDisplay = parsePreferredGamesToSelected(publicProfile?.preferredGames);
+  const gamesPreview = (
+    <>
+      <div className="phe-section-label">선호 게임</div>
+      <div className="phe-games-row">
+        {gameTagsDisplay.length === 0 ? (
+          <span className="phe-games-empty">선택된 게임이 없습니다. 프로필 편집에서 추가해 보세요.</span>
+        ) : (
+          gameTagsDisplay.map((g) => (
+            <span key={g} className="phe-game-pill">
+              {g}
+            </span>
+          ))
+        )}
+      </div>
+    </>
+  );
 
-  const handleOpenEdit = () => {
+  const handleOpenEdit = async () => {
     setEditNickname(user?.nickname ?? user?.username ?? '');
     setEditBio(user?.bio ?? '');
     setProfileImageFile(null);
@@ -66,6 +160,24 @@ export default function Profile() {
     setCheckedNicknameSnapshot(null);
     setNicknameMsg('');
     setEditMsg('');
+    let p: ProfileDto | null = publicProfile;
+    if (user?.id) {
+      try {
+        p = await fetchProfile(user.id);
+        setPublicProfile(p);
+      } catch {
+        p = publicProfile;
+      }
+    }
+    if (p) {
+      setFBannerUrl(p.bannerImageUrl ?? '');
+      setFProfileUrl(effectiveCustomProfileUrl(p.profileImageUrl));
+      setSelectedGames(parsePreferredGamesToSelected(p.preferredGames));
+    } else {
+      setFBannerUrl('');
+      setFProfileUrl('');
+      setSelectedGames([]);
+    }
     setEditOpen(true);
   };
 
@@ -114,7 +226,7 @@ export default function Profile() {
       .finally(() => setNicknameCheckLoading(false));
   };
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!canSave || saveLoading) return;
     setEditMsg('');
@@ -124,23 +236,42 @@ export default function Profile() {
       setEditMsg('닉네임 변경 시 중복확인을 해주세요.');
       return;
     }
+    const nickChanged = originalNickname !== nickname;
+    const bioChanged = editBio.trim() !== (user?.bio ?? '').trim();
+    const hasImage = profileImageFile !== null;
+    const mainDirty = nickChanged || bioChanged || hasImage;
+    const extDirty = computeExtDirty(publicProfile, fBannerUrl, fProfileUrl, selectedGames);
+
     setSaveLoading(true);
-    const fd = new FormData();
-    fd.append('nickname', nickname);
-    fd.append('bio', editBio.trim());
-    if (profileImageFile) fd.append('profileImage', profileImageFile);
-    fetch(apiUrl('api/profile'), { method: 'PUT', credentials: 'include', body: fd })
-      .then((r) => {
-        if (r.ok) return r.json();
-        return r.json().then((d: { message?: string }) => Promise.reject(new Error(d.message)));
-      })
-      .then(() => {
-        void refreshUser();
-        setEditOpen(false);
-        navigate('/profile', { replace: true });
-      })
-      .catch((err) => setEditMsg(err?.message ?? '저장에 실패했습니다.'))
-      .finally(() => setSaveLoading(false));
+    try {
+      if (mainDirty) {
+        const fd = new FormData();
+        fd.append('nickname', nickname);
+        fd.append('bio', editBio.trim());
+        if (profileImageFile) fd.append('profileImage', profileImageFile);
+        const r = await fetch(apiUrl('api/profile'), { method: 'PUT', credentials: 'include', body: fd });
+        if (!r.ok) {
+          const d = (await r.json().catch(() => ({}))) as { message?: string };
+          throw new Error(d.message ?? '저장에 실패했습니다.');
+        }
+      }
+      if (extDirty && user?.id) {
+        const next = await patchProfile(user.id, {
+          profileImageUrl: fProfileUrl.trim() === '' ? null : fProfileUrl.trim(),
+          bannerImageUrl: fBannerUrl.trim() === '' ? null : fBannerUrl.trim(),
+          preferredGames: serializePreferredGames(selectedGames),
+        });
+        setPublicProfile(next);
+      }
+      await refreshUser();
+      await loadPublicProfile();
+      setEditOpen(false);
+      navigate('/profile', { replace: true });
+    } catch (err) {
+      setEditMsg(err instanceof Error ? err.message : '저장에 실패했습니다.');
+    } finally {
+      setSaveLoading(false);
+    }
   };
 
   return (
@@ -191,6 +322,37 @@ export default function Profile() {
           <div className="value mileage-value">{(user?.mileage ?? 0).toLocaleString()}원</div>
           <div className="sub">팡 결제 금액의 5% 적립 (1팡=1.2원 기준)</div>
         </div>
+      </div>
+
+      <div className="phe-wrap">
+        <h2 className="phe-title">공개 프로필</h2>
+        <p className="phe-hint">
+          다른 사용자에게 보이는 카드입니다. 닉네임·자기소개·사진 업로드·배너·공개용 이미지 URL·선호 게임은 모두 「프로필 편집」에서 설정할 수 있습니다.
+        </p>
+        {publicLoading ? <div className="phe-loading">불러오는 중…</div> : null}
+        {!publicLoading && publicErr ? (
+          <div className="phe-err" role="alert">
+            {publicErr}{' '}
+            <button type="button" className="phe-btn phe-btn-secondary" onClick={() => void loadPublicProfile()}>
+              다시 시도
+            </button>
+          </div>
+        ) : null}
+        {!publicLoading ? (
+          <>
+            {bannerDisplaySrc ? (
+              <>
+                <div
+                  className="phe-banner has-image"
+                  style={{ backgroundImage: `url(${JSON.stringify(bannerDisplaySrc)})` }}
+                />
+                <div className="phe-card">{gamesPreview}</div>
+              </>
+            ) : (
+              <div className="phe-card phe-card-standalone">{gamesPreview}</div>
+            )}
+          </>
+        ) : null}
       </div>
 
       {/* 프로필 편집 모달 */}
@@ -244,6 +406,72 @@ export default function Profile() {
               <label>자기소개</label>
               <textarea value={editBio} onChange={(e) => setEditBio(e.target.value)} placeholder="간단한 자기소개를 입력하세요." rows={3} maxLength={500} style={{ width: '100%', resize: 'vertical', minHeight: 72, padding: 10, borderRadius: 8, border: '1px solid var(--studio-border-strong, #d8d8dc)', fontSize: '0.95rem', fontFamily: 'inherit', boxSizing: 'border-box' }} />
             </div>
+            <div className="profile-edit-field">
+              <label htmlFor="edit-banner-url">배너 이미지 URL (공개 카드)</label>
+              <input
+                id="edit-banner-url"
+                type="url"
+                placeholder="https://... (비우면 그라데이션 배너)"
+                value={fBannerUrl}
+                onChange={(e) => setFBannerUrl(e.target.value)}
+                autoComplete="off"
+              />
+            </div>
+            <div className="profile-edit-field">
+              <label htmlFor="edit-public-profile-url">프로필 이미지 URL (공개 카드용)</label>
+              <input
+                id="edit-public-profile-url"
+                type="url"
+                placeholder="https://... (비우면 기본 아바타)"
+                value={fProfileUrl}
+                onChange={(e) => setFProfileUrl(e.target.value)}
+                autoComplete="off"
+              />
+              <p className="profile-edit-msg" style={{ marginTop: 6, fontSize: '0.8rem', opacity: 0.85 }}>
+                위에서 파일로 올린 사진과 별도입니다. 전적·커뮤니티 등 공개 프로필 API에 반영됩니다.
+              </p>
+            </div>
+            <div className="profile-edit-field">
+              <span style={{ display: 'block', fontSize: '0.9rem', fontWeight: 500, marginBottom: 8 }}>선호 게임</span>
+              <div className="phe-games-row" style={{ marginBottom: 8 }}>
+                {selectedGames.length === 0 ? (
+                  <span className="phe-games-empty">선택 없음</span>
+                ) : (
+                  selectedGames.map((g) => (
+                    <span key={g} className="phe-game-pill">
+                      <span>{g}</span>
+                      <button
+                        type="button"
+                        aria-label={`${g} 제거`}
+                        onClick={() => setSelectedGames((prev) => prev.filter((x) => x !== g))}
+                        style={{
+                          marginLeft: 6,
+                          border: 'none',
+                          background: 'transparent',
+                          color: 'inherit',
+                          cursor: 'pointer',
+                          padding: 0,
+                          fontSize: '1rem',
+                          lineHeight: 1,
+                        }}
+                      >
+                        ×
+                      </button>
+                    </span>
+                  ))
+                )}
+              </div>
+              <button
+                type="button"
+                className="phe-open-games"
+                onClick={() => {
+                  setModalGameDraft([...selectedGames]);
+                  setGamesModalOpen(true);
+                }}
+              >
+                선호 게임 선택
+              </button>
+            </div>
             <div className="profile-edit-actions">
               <button type="submit" className="btn-save-profile" disabled={!canSave || saveLoading}>
                 {saveLoading ? '저장 중…' : '저장'}
@@ -254,6 +482,54 @@ export default function Profile() {
           </form>
         </div>
       </div>
+
+      {gamesModalOpen ? (
+        <div
+          className="phe-modal-backdrop phe-games-modal-backdrop"
+          onClick={() => setGamesModalOpen(false)}
+          role="presentation"
+        >
+          <div className="phe-modal" role="dialog" aria-modal="true" aria-labelledby="phe-games-title" onClick={(e) => e.stopPropagation()}>
+            <h2 id="phe-games-title">선호 게임</h2>
+            <p className="phe-modal-desc">플레이하는 게임을 눌러 선택하세요. (여러 개 가능)</p>
+            <div className="phe-game-blocks">
+              {PREFERRED_GAME_OPTIONS.map((opt) => {
+                const on = modalGameDraft.includes(opt.value);
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    className={`phe-game-block${on ? ' selected' : ''}`}
+                    onClick={() =>
+                      setModalGameDraft((prev) =>
+                        prev.includes(opt.value) ? prev.filter((v) => v !== opt.value) : [...prev, opt.value]
+                      )
+                    }
+                    aria-pressed={on}
+                  >
+                    {opt.value}
+                  </button>
+                );
+              })}
+            </div>
+            <div className="phe-modal-actions">
+              <button type="button" className="phe-btn phe-btn-secondary" onClick={() => setGamesModalOpen(false)}>
+                취소
+              </button>
+              <button
+                type="button"
+                className="phe-btn phe-btn-primary"
+                onClick={() => {
+                  setSelectedGames(modalGameDraft);
+                  setGamesModalOpen(false);
+                }}
+              >
+                확인
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
 
     </>
   );
