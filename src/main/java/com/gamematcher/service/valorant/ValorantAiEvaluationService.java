@@ -16,6 +16,7 @@ import com.gamematcher.repository.match.ValorantMatchPlayerRepository;
 import com.gamematcher.service.ai.ValorantLlmEvaluationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +35,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class ValorantAiEvaluationService {
+
+    @Value("${ai.llm.model:gpt-5-mini}")
+    private String defaultLlmModel;
 
     private final ValorantMatchDetailRepository valorantMatchDetailRepository;
     private final ValorantMatchPlayerRepository valorantMatchPlayerRepository;
@@ -146,6 +150,15 @@ public class ValorantAiEvaluationService {
         return results;
     }
 
+    /** API/DB에 쓰는 모델 키 (override 없으면 설정 기본 모델) */
+    private String effectiveModelKey(String modelOverride) {
+        String d = defaultLlmModel != null ? defaultLlmModel.trim() : "";
+        if (modelOverride != null && !modelOverride.isBlank()) {
+            return modelOverride.trim();
+        }
+        return d;
+    }
+
     private static List<ValorantMatchPlayer> filterValorantPlayers(
             List<ValorantMatchPlayer> all,
             String filterPuuid,
@@ -215,10 +228,12 @@ public class ValorantAiEvaluationService {
             return Optional.empty();
         }
 
+        String modelKey = effectiveModelKey(modelOverride);
+
         Optional<ValorantMatchAiEvaluation> existingOpt =
-                evaluationRepository.findByValorantMatchPlayerId(player.getId());
+                evaluationRepository.findByValorantMatchPlayer_IdAndLlmModel(player.getId(), modelKey);
         if (existingOpt.isPresent() && !force) {
-            log.debug("이미 평가됨, 스킵: valorantMatchPlayerId={}", player.getId());
+            log.debug("이미 평가됨, 스킵: valorantMatchPlayerId={}, llmModel={}", player.getId(), modelKey);
             return existingOpt.map(evaluationMapper::toDto);
         }
 
@@ -227,7 +242,7 @@ public class ValorantAiEvaluationService {
                 : 100;
 
         Optional<LlmEvaluationResponseDTO> llmResult =
-                valorantLlmEvaluationService.evaluate(playerStats, -1, modelOverride);
+                valorantLlmEvaluationService.evaluate(playerStats, -1, modelKey);
         String summary = llmResult.map(LlmEvaluationResponseDTO::getSummary).orElse(null);
         String detailedComment = llmResult.map(LlmEvaluationResponseDTO::getDetailedComment).orElse(null);
 
@@ -237,6 +252,7 @@ public class ValorantAiEvaluationService {
 
         if (existingOpt.isPresent()) {
             ValorantMatchAiEvaluation entity = existingOpt.get();
+            entity.setLlmModel(modelKey);
             entity.setStatus(EvaluationStatus.COMPLETED);
             entity.setScore(score);
             entity.setGrade(Grade.fromScore(score));
@@ -249,6 +265,7 @@ public class ValorantAiEvaluationService {
 
         ValorantMatchAiEvaluation entity = new ValorantMatchAiEvaluation(
                 player,
+                modelKey,
                 EvaluationStatus.COMPLETED,
                 score,
                 summary,
@@ -281,11 +298,15 @@ public class ValorantAiEvaluationService {
             return Optional.empty();
         }
 
-        ValorantMatchAiEvaluation entity = evaluationRepository.findByValorantMatchPlayerId(player.getId())
+        String modelKey = effectiveModelKey(dto.getLlmModel());
+
+        ValorantMatchAiEvaluation entity = evaluationRepository
+                .findByValorantMatchPlayer_IdAndLlmModel(player.getId(), modelKey)
                 .orElse(null);
 
         if (entity == null) {
             entity = new ValorantMatchAiEvaluation(player);
+            entity.setLlmModel(modelKey);
         }
 
         entity.setStatus(dto.getStatus() != null ? dto.getStatus() : EvaluationStatus.COMPLETED);

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchMatchDetail,
   runValorantMatchAiEvaluation,
@@ -17,6 +17,7 @@ import {
 } from './recordsMatchDetailFormat';
 
 type ParsedAiSavedBlocks = {
+  model?: string;
   status?: string;
   grade?: string;
   score?: string;
@@ -30,7 +31,8 @@ function parseAiSavedBlocks(blocks: MatchDetailBlock[]): ParsedAiSavedBlocks {
   for (const block of blocks) {
     if (block.kind !== 'kv') continue;
     for (const [k, v] of block.items) {
-      if (k === '상태') out.status = v;
+      if (k === '모델') out.model = v;
+      else if (k === '상태') out.status = v;
       else if (k === '등급') out.grade = v;
       else if (k === '점수') out.score = v;
       else if (k === '요약') out.summary = v;
@@ -145,21 +147,24 @@ function RecordsMatchAiTab({
   puuid,
   savedBlocks,
   onMergeDetailPayload,
+  aiModel,
+  onAiModelChange,
 }: {
   gameId: string;
   matchId: string;
   puuid?: string;
   savedBlocks: MatchDetailBlock[];
   onMergeDetailPayload: (patch: Record<string, unknown>) => void;
+  aiModel: string;
+  onAiModelChange: (model: string) => void;
 }) {
-  const [model, setModel] = useState(RECORDS_AI_MODEL_OPTIONS[0]?.value ?? 'gpt-5-mini');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const supported = gameId === 'valorant';
   const parsed = useMemo(() => parseAiSavedBlocks(savedBlocks), [savedBlocks]);
   const hasResultContent = Boolean(
-    parsed.status || parsed.grade || parsed.score || parsed.summary || parsed.detailed,
+    parsed.model || parsed.status || parsed.grade || parsed.score || parsed.summary || parsed.detailed,
   );
 
   const run = async () => {
@@ -170,7 +175,7 @@ function RecordsMatchAiTab({
       const rows = await runValorantMatchAiEvaluation({
         matchId,
         puuid,
-        model,
+        model: aiModel,
         force: true,
       });
       const row = rows.find((r) => r.playerPuuid === puuid) ?? rows[0];
@@ -180,6 +185,7 @@ function RecordsMatchAiTab({
       }
       onMergeDetailPayload({
         records_ai_evaluation: {
+          llmModel: row.llmModel ?? aiModel,
           status: row.status ?? undefined,
           grade: row.grade ?? undefined,
           score: row.score ?? undefined,
@@ -203,8 +209,8 @@ function RecordsMatchAiTab({
               <span className="records-match-detail-ai-model-caption">모델</span>
               <select
                 className="records-match-detail-ai-model-select"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
+                value={aiModel}
+                onChange={(e) => onAiModelChange(e.target.value)}
                 disabled={loading}
               >
                 {RECORDS_AI_MODEL_OPTIONS.map((opt) => (
@@ -262,8 +268,14 @@ function RecordsMatchAiTab({
               </div>
             ) : null}
 
-            {(parsed.status || parsed.grade || parsed.score) && (!loading || hasResultContent) ? (
+            {(parsed.model || parsed.status || parsed.grade || parsed.score) && (!loading || hasResultContent) ? (
               <div className="records-ai-result-meta">
+                {parsed.model ? (
+                  <span className="records-ai-meta-chip is-model">
+                    <span className="records-ai-meta-label">모델</span>
+                    <span className="records-ai-meta-value">{parsed.model}</span>
+                  </span>
+                ) : null}
                 {parsed.status ? (
                   <span
                     className={[
@@ -351,12 +363,16 @@ function MatchDetailFormattedView({
   matchId,
   puuid,
   onMergeDetailPayload,
+  aiModel,
+  onAiModelChange,
 }: {
   detail: FormattedMatchDetail;
   gameId: string;
   matchId: string;
   puuid?: string;
   onMergeDetailPayload: (patch: Record<string, unknown>) => void;
+  aiModel: string;
+  onAiModelChange: (model: string) => void;
 }) {
   const [tab, setTab] = useState<'match' | 'players' | 'ai'>('match');
 
@@ -418,6 +434,8 @@ function MatchDetailFormattedView({
             puuid={puuid}
             savedBlocks={detail.aiBlocks ?? []}
             onMergeDetailPayload={onMergeDetailPayload}
+            aiModel={aiModel}
+            onAiModelChange={onAiModelChange}
           />
         )}
       </div>
@@ -438,6 +456,11 @@ export function MatchRow({
   const [detailPayload, setDetailPayload] = useState<Record<string, unknown> | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [detailAiModel, setDetailAiModel] = useState(RECORDS_AI_MODEL_OPTIONS[0]?.value ?? 'gpt-5-mini');
+  const lastDetailFetchKey = useRef<string | null>(null);
+
+  const buildDetailFetchKey = (model: string) =>
+    `${match.matchId ?? ''}|${gameId}|${gameId === 'valorant' ? model : '-'}|${detailContext.puuid ?? ''}`;
 
   const duration = match.playtime ? `${Math.floor(match.playtime / 60)}m` : null;
   const canDetail = GAMES_WITH_MATCH_DETAIL.has(gameId) && Boolean(match.matchId);
@@ -457,7 +480,8 @@ export function MatchRow({
       return;
     }
     setDetailOpen(true);
-    if (detailPayload != null) return;
+    const fetchKey = buildDetailFetchKey(detailAiModel);
+    if (detailPayload != null && lastDetailFetchKey.current === fetchKey) return;
     setDetailLoading(true);
     setDetailError(null);
     try {
@@ -466,11 +490,40 @@ export function MatchRow({
         matchId: match.matchId!,
         puuid: detailContext.puuid,
         platform: detailContext.platform,
+        llmModel: gameId === 'valorant' ? detailAiModel : undefined,
       });
       if (!res.success) {
         setDetailError(res.errorMessage || '상세를 불러오지 못했습니다.');
         return;
       }
+      lastDetailFetchKey.current = fetchKey;
+      setDetailPayload((res.payload ?? {}) as Record<string, unknown>);
+    } catch (e) {
+      setDetailError(e instanceof Error ? e.message : '상세 요청 오류');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleAiModelChange = async (model: string) => {
+    setDetailAiModel(model);
+    if (!detailOpen || !match.matchId) return;
+    const fetchKey = buildDetailFetchKey(model);
+    setDetailLoading(true);
+    setDetailError(null);
+    try {
+      const res = await fetchMatchDetail({
+        game: gameId,
+        matchId: match.matchId,
+        puuid: detailContext.puuid,
+        platform: detailContext.platform,
+        llmModel: gameId === 'valorant' ? model : undefined,
+      });
+      if (!res.success) {
+        setDetailError(res.errorMessage || '상세를 불러오지 못했습니다.');
+        return;
+      }
+      lastDetailFetchKey.current = fetchKey;
       setDetailPayload((res.payload ?? {}) as Record<string, unknown>);
     } catch (e) {
       setDetailError(e instanceof Error ? e.message : '상세 요청 오류');
@@ -560,6 +613,8 @@ export function MatchRow({
               onMergeDetailPayload={(patch) =>
                 setDetailPayload((prev) => (prev ? { ...prev, ...patch } : prev))
               }
+              aiModel={detailAiModel}
+              onAiModelChange={(m) => void handleAiModelChange(m)}
             />
           ) : null}
         </div>

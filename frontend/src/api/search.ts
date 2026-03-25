@@ -88,6 +88,8 @@ export async function fetchMatchDetail(request: {
   region?: string;
   platform?: string;
   puuid?: string;
+  /** 발로란트: 저장된 AI 분석 중 이 모델 행만 붙임. 생략 시 서버 기본 모델 */
+  llmModel?: string;
   forceRefresh?: boolean;
 }): Promise<MatchDetailResponse> {
   const response = await apiFetch<MatchDetailResponse>('/api/search/match-detail', {
@@ -106,6 +108,7 @@ export async function fetchMatchDetail(request: {
 export interface ValorantAiEvaluationApiRow {
   matchId?: string;
   playerPuuid?: string;
+  llmModel?: string | null;
   summary?: string | null;
   detailedComment?: string | null;
   score?: number | null;

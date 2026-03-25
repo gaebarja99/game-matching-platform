@@ -16,6 +16,7 @@ import com.gamematcher.repository.match.ValorantMatchAiEvaluationRepository;
 import com.gamematcher.repository.match.ValorantMatchPlayerRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.LinkedHashMap;
@@ -29,6 +30,9 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class RecordsMatchDetailService {
+
+    @Value("${ai.llm.model:gpt-5-mini}")
+    private String defaultLlmModel;
 
     private final ValorantApiService valorantApiService;
     private final ValorantMatchService valorantMatchService;
@@ -51,7 +55,7 @@ public class RecordsMatchDetailService {
         }
         try {
             return switch (game) {
-                case "valorant" -> loadValorant(matchId, req.getPuuid());
+                case "valorant" -> loadValorant(matchId, req.getPuuid(), req.getLlmModel());
                 case "lol" -> loadLol(matchId, req.getRegion());
                 case "tft" -> loadTft(matchId, req.getRegion(), req.getPuuid());
                 case "pubg" -> loadPubg(matchId, req.getPlatform());
@@ -64,7 +68,7 @@ public class RecordsMatchDetailService {
         }
     }
 
-    private MatchDetailResponse loadValorant(String matchId, String puuid) {
+    private MatchDetailResponse loadValorant(String matchId, String puuid, String llmModel) {
         ValorantMatchDetailDto dto = valorantApiService.getMatchDetail(matchId);
         if (dto == null) {
             return MatchDetailResponse.error("valorant", matchId, "매치를 찾을 수 없습니다.");
@@ -75,7 +79,7 @@ public class RecordsMatchDetailService {
             log.debug("Valorant 매치 상세 DB 저장 생략: {}", e.getMessage());
         }
         Map<String, Object> payload = objectMapper.convertValue(dto, new TypeReference<>() {});
-        attachValorantAiEvaluationIfPresent(payload, matchId, puuid);
+        attachValorantAiEvaluationIfPresent(payload, matchId, puuid, llmModel);
         return MatchDetailResponse.builder()
                 .success(true)
                 .game("valorant")
@@ -87,7 +91,8 @@ public class RecordsMatchDetailService {
     /**
      * DB에 저장된 해당 매치·puuid AI 평가가 있으면 payload에 넣어 전적 화면 AI 탭에서 표시한다.
      */
-    private void attachValorantAiEvaluationIfPresent(Map<String, Object> payload, String matchId, String puuid) {
+    private void attachValorantAiEvaluationIfPresent(
+            Map<String, Object> payload, String matchId, String puuid, String llmModel) {
         if (puuid == null || puuid.isBlank()) {
             return;
         }
@@ -96,8 +101,15 @@ public class RecordsMatchDetailService {
         if (playerOpt.isEmpty()) {
             return;
         }
-        Optional<ValorantMatchAiEvaluation> evalOpt =
-                valorantMatchAiEvaluationRepository.findByValorantMatchPlayerId(playerOpt.get().getId());
+        String modelKey = (llmModel != null && !llmModel.isBlank())
+                ? llmModel.trim()
+                : (defaultLlmModel != null ? defaultLlmModel.trim() : "");
+        Optional<ValorantMatchAiEvaluation> evalOpt = valorantMatchAiEvaluationRepository
+                .findByValorantMatchPlayer_IdAndLlmModel(playerOpt.get().getId(), modelKey);
+        if (evalOpt.isEmpty() && modelKey.equals(defaultLlmModel != null ? defaultLlmModel.trim() : "")) {
+            evalOpt = valorantMatchAiEvaluationRepository.findByValorantMatchPlayer_IdAndLlmModel(
+                    playerOpt.get().getId(), "");
+        }
         if (evalOpt.isEmpty()) {
             return;
         }
@@ -110,6 +122,9 @@ public class RecordsMatchDetailService {
             return;
         }
         Map<String, Object> ai = new LinkedHashMap<>();
+        if (e.getLlmModel() != null && !e.getLlmModel().isBlank()) {
+            ai.put("llmModel", e.getLlmModel());
+        }
         if (e.getStatus() != null) {
             ai.put("status", e.getStatus().name());
         }

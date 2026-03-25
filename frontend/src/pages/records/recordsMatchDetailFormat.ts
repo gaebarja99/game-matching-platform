@@ -50,9 +50,11 @@ function extractAiBlocks(payload: Record<string, unknown>): MatchDetailBlock[] {
     payload.aiEvaluation;
   if (!isRecord(raw)) return [];
   const items: [string, string][] = [];
+  const model = firstStr(raw, ['llmModel', 'llm_model']);
   const status = firstStr(raw, ['status']);
   const grade = firstStr(raw, ['grade']);
   const scoreRaw = raw.score;
+  if (model) items.push(['모델', model]);
   if (status) items.push(['상태', status]);
   if (grade) items.push(['등급', grade]);
   if (scoreRaw != null && String(scoreRaw).trim() !== '') items.push(['점수', String(scoreRaw)]);

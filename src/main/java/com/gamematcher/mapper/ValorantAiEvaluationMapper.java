@@ -37,6 +37,7 @@ public class ValorantAiEvaluationMapper {
                 .grade(entity.getGrade())
                 .summary(entity.getSummary())
                 .detailedComment(entity.getDetailedComment())
+                .llmModel(entity.getLlmModel())
                 .evaluatedAt(entity.getEvaluatedAt())
                 .build();
     }

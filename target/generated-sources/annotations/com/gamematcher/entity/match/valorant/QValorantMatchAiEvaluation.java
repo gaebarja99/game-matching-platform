@@ -32,6 +32,8 @@ public class QValorantMatchAiEvaluation extends EntityPathBase<ValorantMatchAiEv
 
     public final NumberPath<Long> id = createNumber("id", Long.class);
 
+    public final StringPath llmModel = createString("llmModel");
+
     public final NumberPath<Integer> score = createNumber("score", Integer.class);
 
     public final EnumPath<com.gamematcher.constant.ai.evaluation.EvaluationStatus> status = createEnum("status", com.gamematcher.constant.ai.evaluation.EvaluationStatus.class);

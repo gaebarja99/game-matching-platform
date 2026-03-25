@@ -26,6 +26,11 @@ public class MatchDetailRequest {
      */
     private String puuid;
 
+    /**
+     * 발로란트: DB에 저장된 AI 분석 중 표시할 모델(gpt-5-mini 등). 비우면 서버 기본 {@code ai.llm.model}.
+     */
+    private String llmModel;
+
     private Boolean forceRefresh;
 
     public MatchDetailRequest normalize() {
@@ -39,6 +44,9 @@ public class MatchDetailRequest {
         }
         if (platform != null) {
             platform = platform.trim().toLowerCase();
+        }
+        if (llmModel != null) {
+            llmModel = llmModel.trim();
         }
         return this;
     }

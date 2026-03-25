@@ -105,7 +105,7 @@ class ValorantAiEvaluationFlowTest {
         assertThat(result.get().getGrade()).isEqualTo(Grade.A);
 
         ValorantMatchAiEvaluation savedEntity = evaluationRepository
-                .findByValorantMatchPlayerId(firstPlayer.getId())
+                .findByValorantMatchPlayer_IdAndLlmModel(firstPlayer.getId(), "gpt-5-mini")
                 .orElseThrow();
         assertThat(savedEntity.getSummary()).isEqualTo(dto.getSummary());
         assertThat(savedEntity.getDetailedComment()).isEqualTo(dto.getDetailedComment());
@@ -129,7 +129,7 @@ class ValorantAiEvaluationFlowTest {
 
         ValorantMatchPlayer firstPlayer = savedMatch.getPlayers().get(0);
         ValorantMatchAiEvaluation savedEntity = evaluationRepository
-                .findByValorantMatchPlayerId(firstPlayer.getId())
+                .findByValorantMatchPlayer_IdAndLlmModel(firstPlayer.getId(), "gpt-5-mini")
                 .orElseThrow();
 
         assertThat(savedEntity.getSummary()).isEqualTo(mockLlmResponse.getSummary());
@@ -161,7 +161,7 @@ class ValorantAiEvaluationFlowTest {
 
         for (ValorantMatchPlayer player : savedMatch.getPlayers()) {
             ValorantMatchAiEvaluation entity = evaluationRepository
-                    .findByValorantMatchPlayerId(player.getId())
+                    .findByValorantMatchPlayer_IdAndLlmModel(player.getId(), "gpt-5-mini")
                     .orElseThrow();
             assertThat(entity.getSummary()).isEqualTo(mockLlmResponse.getSummary());
             assertThat(entity.getDetailedComment()).isEqualTo(mockLlmResponse.getDetailedComment());
@@ -179,7 +179,7 @@ class ValorantAiEvaluationFlowTest {
 
         ValorantMatchPlayer firstPlayer = savedMatch.getPlayers().get(0);
         ValorantMatchAiEvaluation savedEntity = evaluationRepository
-                .findByValorantMatchPlayerId(firstPlayer.getId())
+                .findByValorantMatchPlayer_IdAndLlmModel(firstPlayer.getId(), "gpt-5-mini")
                 .orElseThrow();
 
         assertThat(savedEntity.getSummary()).isNull();
