@@ -44,6 +44,7 @@ public class LolEvaluationPromptBuilder {
             - 반드시 한국어로 작성하십시오.
             - 응답은 반드시 아래 JSON 구조를 지켜야 하며, 다른 텍스트는 포함하지 마십시오.
             - detailedComment 내부에 줄바꿈이 필요할 경우 '\\n' 문자로 표현하여 한 줄 문자열로 만드십시오.
+            - [톤·분량 균형] 지침을 반드시 반영하십시오. 데이터상 우수한 경기면 [강점]이 가장 길게.
             
             {"summary":"한 줄 요약 (데이터 근거, 100자 이내)","detailedComment":"[강점]... [약점]... [개선안]... (500자 이내, 줄바꿈은 \\n 사용)"}
             """;
@@ -73,6 +74,11 @@ public class LolEvaluationPromptBuilder {
     public String build(LolPlayerMatchStatsDTO playerStats, int maxTimelineEvents) {
         if (playerStats == null) return "";
         String statsSummary = statsFormatter.formatSummary(playerStats, maxTimelineEvents);
-        return ROLE_AND_TASK + ANALYSIS_GUIDELINE + "\n" + statsSummary + OUTPUT_FORMAT;
+        return ROLE_AND_TASK
+                + ANALYSIS_GUIDELINE
+                + EvaluationPromptTone.commonBalanceSection()
+                + "\n"
+                + statsSummary
+                + OUTPUT_FORMAT;
     }
 }

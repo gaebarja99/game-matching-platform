@@ -101,7 +101,9 @@ public class ValorantController {
             @RequestParam(required = false) String puuid,
             @RequestParam(required = false) String gameName,
             @RequestParam(required = false) String tagLine,
-            @RequestParam(required = false) String riotId
+            @RequestParam(required = false) String riotId,
+            @RequestParam(required = false) String model,
+            @RequestParam(required = false, defaultValue = "false") boolean force
     ) {
         String gn = gameName;
         String tg = tagLine;
@@ -116,7 +118,8 @@ public class ValorantController {
                 tg = null;
             }
         }
-        var results = valorantAiEvaluationService.evaluateAndSaveByMatchId(matchId, puuid, gn, tg);
+        var results = valorantAiEvaluationService.evaluateAndSaveByMatchId(
+                matchId, puuid, gn, tg, model, force);
         return ResponseEntity.ok(results);
     }
 

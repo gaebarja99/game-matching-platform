@@ -10,6 +10,8 @@ import com.gamematcher.repository.match.LolMatchTimelineRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
+
 /**
  * LoL 매치 DB 저장 서비스
  */
@@ -44,6 +46,22 @@ public class LolMatchService {
         }
 
         LolMatch match = lolMatchMapper.toMatchEntity(dto);
+        match.setApiCachedAt(LocalDateTime.now());
+        return lolMatchRepository.save(match);
+    }
+
+    /**
+     * 전적 검색 캐시 갱신: 기존 행이 있으면 삭제 후 API DTO로 다시 저장한다.
+     */
+    @Transactional
+    public LolMatch replaceMatchFromApi(LolMatchDetailDto dto) {
+        if (dto == null || dto.getMetadata() == null || dto.getMetadata().getMatchId() == null) {
+            return null;
+        }
+        String matchId = dto.getMetadata().getMatchId();
+        lolMatchRepository.findByMatchId(matchId).ifPresent(lolMatchRepository::delete);
+        LolMatch match = lolMatchMapper.toMatchEntity(dto);
+        match.setApiCachedAt(LocalDateTime.now());
         return lolMatchRepository.save(match);
     }
 

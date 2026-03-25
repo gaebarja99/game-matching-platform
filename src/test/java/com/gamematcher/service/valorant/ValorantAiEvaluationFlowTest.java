@@ -27,6 +27,7 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.nullable;
 import static org.mockito.Mockito.when;
 
 /**
@@ -120,7 +121,7 @@ class ValorantAiEvaluationFlowTest {
         mockLlmResponse.setSummary("AI가 생성한 요약: 에이전트 활용과 포지셔닝이 우수했습니다.");
         mockLlmResponse.setDetailedComment("AI가 생성한 상세 코멘트: 팀원과의 협동과 오브젝티브 참여도가 높았습니다.");
 
-        when(llmEvaluationService.evaluate(anyString())).thenReturn(Optional.of(mockLlmResponse));
+        when(llmEvaluationService.evaluate(anyString(), nullable(String.class))).thenReturn(Optional.of(mockLlmResponse));
 
         var results = valorantAiEvaluationService.evaluateAndSaveByMatchId(savedMatch.getMatchId());
 
@@ -145,7 +146,7 @@ class ValorantAiEvaluationFlowTest {
         mockLlmResponse.setSummary("파이프라인 검증용 AI 요약");
         mockLlmResponse.setDetailedComment("파이프라인 검증용 AI 상세 코멘트입니다.");
 
-        when(llmEvaluationService.evaluate(anyString())).thenReturn(Optional.of(mockLlmResponse));
+        when(llmEvaluationService.evaluate(anyString(), nullable(String.class))).thenReturn(Optional.of(mockLlmResponse));
 
         var results = valorantAiEvaluationService.evaluateAndSave(savedMatch);
 
@@ -170,7 +171,7 @@ class ValorantAiEvaluationFlowTest {
     @Test
     @DisplayName("LLM 실패 시 규칙 기반 점수만 저장 (summary/detailedComment는 null)")
     void evaluateAndSave_whenLlmFails_savesRuleBasedScoreOnly() {
-        when(llmEvaluationService.evaluate(anyString())).thenReturn(Optional.empty());
+        when(llmEvaluationService.evaluate(anyString(), nullable(String.class))).thenReturn(Optional.empty());
 
         var results = valorantAiEvaluationService.evaluateAndSaveByMatchId(savedMatch.getMatchId());
 

@@ -2,6 +2,7 @@ package com.gamematcher.controller;
 
 import com.gamematcher.dto.search.*;
 import com.gamematcher.service.PlayerSearchService;
+import com.gamematcher.service.search.RecordsMatchDetailService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,7 @@ import java.util.List;
 public class PlayerSearchController {
 
     private final PlayerSearchService playerSearchService;
+    private final RecordsMatchDetailService recordsMatchDetailService;
 
 
 
@@ -34,7 +36,8 @@ public class PlayerSearchController {
      *   "gameName": "hide on bush",
      *   "tagLine": "KR1",       // Riot 계열만 필요 (lol, tft, valorant)
      *   "region": "kr",         // 선택 (기본값: kr)
-     *   "count": 5              // 조회할 매치 수 (기본값: 5, 최대: 20)
+     *   "count": 5,             // 조회할 매치 수 (기본값: 5, 최대: 20)
+     *   "forceRefresh": false  // true면 LoL/TFT/발로/PUBG 매치 DB 캐시 무시 후 API 갱신
      * }
      */
     @PostMapping("/player")
@@ -44,6 +47,15 @@ public class PlayerSearchController {
                 request.getGame(), request.getGameName(), request.getTagLine());
         PlayerSearchResponse response = playerSearchService.searchPlayer(request);
         return ResponseEntity.ok(response);
+    }
+
+    /**
+     * 매치 상세(전체 JSON) 지연 로드 — Records 화면에서 행 펼칠 때 호출
+     */
+    @PostMapping("/match-detail")
+    public ResponseEntity<MatchDetailResponse> matchDetail(@RequestBody MatchDetailRequest request) {
+        log.info("매치 상세 요청 - game: {}, matchId: {}", request.getGame(), request.getMatchId());
+        return ResponseEntity.ok(recordsMatchDetailService.load(request));
     }
 
     /**

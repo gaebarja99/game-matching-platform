@@ -15,6 +15,7 @@ import com.gamematcher.service.ai.LlmEvaluationService;
 import com.gamematcher.service.ai.LlmEvaluationServiceImpl;
 import com.gamematcher.service.ai.PubgEvaluationPromptBuilder;
 import com.gamematcher.service.ai.PubgLlmEvaluationService;
+import com.gamematcher.testsupport.LlmTestSupport;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -25,7 +26,6 @@ import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -139,15 +139,16 @@ class PubgPlayerMatchStatsOutputTest {
         Path outDir = Paths.get(OUTPUT_DIR);
         Files.createDirectories(outDir);
 
-        String apiKey = resolveApiKeyForTest();
+        String apiKey = LlmTestSupport.resolveApiKeyForTest();
 
         ObjectMapper om = new ObjectMapper();
+        String model = LlmTestSupport.resolveLlmModelForTest("gpt-5-mini");
         LlmEvaluationService llmService = new LlmEvaluationServiceImpl(
                 om,
                 apiKey != null ? apiKey : "",
-                "gpt-4o-mini",
-                30,
-                2
+                model,
+                LlmTestSupport.resolveLlmTimeoutSecondsForTest(30),
+                LlmTestSupport.resolveLlmMaxRetriesForTest(2)
         );
 
         // 프롬프트 생성기
@@ -204,7 +205,7 @@ class PubgPlayerMatchStatsOutputTest {
         Optional<LlmEvaluationResponseDTO> result = pubgLlmService.evaluate(stats, MAX_TIMELINE_LINES);
 
         StringBuilder content = new StringBuilder();
-        content.append("=== LLM API 평가 결과 (PUBG, gpt-4o-mini) ===\n");
+        content.append("=== LLM API 평가 결과 (PUBG, ").append(model).append(") ===\n");
         content.append("플레이어: ").append(stats.getPlayerName()).append(" | accountId: ")
                 .append(stats.getAccountId()).append("\n\n");
 
@@ -260,26 +261,6 @@ class PubgPlayerMatchStatsOutputTest {
         e.setItemCategory(row.getItemCategory());
         e.setPayloadJson(row.getPayloadJson());
         return e;
-    }
-
-    private static String resolveApiKeyForTest() {
-        String key = System.getenv("AI_API_KEY");
-        if (key != null && !key.isBlank()) return key;
-        key = System.getenv("OPENAI_API_KEY");
-        if (key != null && !key.isBlank()) return key;
-
-        try {
-            Path propsPath = Paths.get("src/main/resources/application.properties");
-            if (Files.exists(propsPath)) {
-                String content = Files.readString(propsPath);
-                var m = Pattern.compile("ai\\.llm\\.api-key=\\$\\{.*?:([^}]*)\\}").matcher(content);
-                if (m.find() && m.group(1) != null && !m.group(1).isBlank()) {
-                    return m.group(1).trim();
-                }
-            }
-        } catch (java.io.IOException | RuntimeException ignored) {
-        }
-        return "";
     }
 
     private static ObjectMapper createOutputObjectMapper() {

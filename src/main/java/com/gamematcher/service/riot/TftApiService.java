@@ -21,7 +21,7 @@ import java.util.List;
 /**
  * TFT 전적 조회 및 DB 저장
  */
-@Service
+@Service("riotTftApiService")
 @RequiredArgsConstructor
 public class TftApiService {
 

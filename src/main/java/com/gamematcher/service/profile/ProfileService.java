@@ -7,7 +7,7 @@ import com.gamematcher.dto.profile.ProfilePublicResponseDto;
 import com.gamematcher.entity.User;
 import com.gamematcher.entity.profile.UserProfile;
 import com.gamematcher.exception.GameApiException;
-import com.gamematcher.repository.common.UserRepository;
+import com.gamematcher.repository.UserRepository;
 import com.gamematcher.repository.profile.UserProfileRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;

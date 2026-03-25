@@ -46,4 +46,34 @@ public class ValorantAccountMapper {
         }
         return toEntity(response.getData());
     }
+
+    /**
+     * DB 엔티티 → Henrik 계정 API와 동일한 형태의 응답 (전적 검색 캐시 히트용)
+     */
+    public ValorantPuuidApiResponse toPuuidApiResponse(ValorantAccount entity) {
+        if (entity == null || entity.getPuuid() == null || entity.getPuuid().isBlank()) {
+            return null;
+        }
+        ValorantPuuidApiResponse.AccountData data = new ValorantPuuidApiResponse.AccountData();
+        data.setPuuid(entity.getPuuid());
+        data.setRegion(entity.getRegion());
+        data.setAccountLevel(entity.getAccountLevel());
+        data.setName(entity.getName());
+        data.setTag(entity.getTag());
+        data.setLastUpdate(entity.getLastUpdate());
+        data.setLastUpdateRaw(entity.getLastUpdateRaw());
+        if (entity.getCardSmall() != null || entity.getCardLarge() != null
+                || entity.getCardWide() != null || entity.getCardId() != null) {
+            ValorantPuuidApiResponse.Card card = new ValorantPuuidApiResponse.Card();
+            card.setId(entity.getCardId());
+            card.setSmall(entity.getCardSmall());
+            card.setLarge(entity.getCardLarge());
+            card.setWide(entity.getCardWide());
+            data.setCard(card);
+        }
+        ValorantPuuidApiResponse response = new ValorantPuuidApiResponse();
+        response.setStatus(200);
+        response.setData(data);
+        return response;
+    }
 }

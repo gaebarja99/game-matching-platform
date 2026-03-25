@@ -3,6 +3,7 @@ package com.gamematcher.service.tft;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamematcher.config.api.RiotApiProperties;
+import com.gamematcher.service.MatchApiCachePolicy;
 import com.gamematcher.dto.search.PlayerSearchRequest;
 import com.gamematcher.dto.search.PlayerSearchResponse;
 import com.gamematcher.dto.search.PlayerSearchResponse.*;
@@ -125,6 +126,7 @@ public class TftApiService {
                         match.setUnits(p.has("units") ? p.get("units").toString() : null);
                         match.setGameDuration(info.has("game_datetime") ? (int) (info.get("game_datetime").asLong() / 1000) : null);
                         match.setGameCreation(info.has("game_datetime") ? info.get("game_datetime").asLong() : null);
+                        match.setApiCachedAt(LocalDateTime.now());
                         tftMatchRepository.save(match);
                         break;
                     }
@@ -215,7 +217,7 @@ public class TftApiService {
             if (matchIds != null) {
                 for (String matchId : matchIds) {
                     try {
-                        MatchInfo info = fetchTftMatchDetailForSearch(matchId, puuid, routing);
+                        MatchInfo info = fetchTftMatchDetailWithCache(matchId, puuid, routing, req);
                         if (info != null) matches.add(info);
                     } catch (Exception e) {
                         log.warn("TFT 매치 상세 실패 - {}: {}", matchId, e.getMessage());
@@ -238,9 +240,88 @@ public class TftApiService {
         }
     }
 
-    @SuppressWarnings("unchecked")
-    private MatchInfo fetchTftMatchDetailForSearch(String matchId, String puuid, String routing) {
+    private MatchInfo fetchTftMatchDetailWithCache(String matchId, String puuid, String routing, PlayerSearchRequest req) {
+        Optional<TftMatch> row = tftMatchRepository.findByPuuidAndMatchId(puuid, matchId);
+        if (row.isPresent() && !Boolean.TRUE.equals(req.getForceRefresh())
+                && !MatchApiCachePolicy.isStale(row.get().getApiCachedAt())) {
+            return matchInfoFromTftEntity(row.get());
+        }
         Map<String, Object> match = reqMap(String.format("https://%s.api.riotgames.com/tft/match/v1/matches/%s", routing, matchId));
+        MatchInfo mi = matchInfoFromTftRiotMap(match, matchId, puuid);
+        if (mi != null) {
+            try {
+                upsertTftMatchFromRiotMap(match, puuid);
+            } catch (Exception e) {
+                log.warn("TFT 매치 DB 캐시 저장 실패 {}: {}", matchId, e.getMessage());
+            }
+        }
+        return mi;
+    }
+
+    private MatchInfo matchInfoFromTftEntity(TftMatch m) {
+        int placement = m.getPlacement();
+        boolean win = placement <= 4;
+        long ts = m.getGameCreation() != null ? m.getGameCreation() : 0L;
+        String playedAt = ts > 0 ? LocalDateTime.ofInstant(Instant.ofEpochMilli(ts), ZoneId.of("Asia/Seoul")).format(FORMATTER) : "";
+        Map<String, Object> extras = new LinkedHashMap<>();
+        extras.put("placement", placement + "위");
+        extras.put("level", m.getLevel());
+        if (m.getTotalPlayers() != null) extras.put("totalPlayers", m.getTotalPlayers());
+        return MatchInfo.builder()
+                .matchId(m.getMatchId()).gameMode("TFT").win(win)
+                .kills(0).deaths(0).assists(0)
+                .kda((double) placement)
+                .playtime(m.getGameDuration() != null ? m.getGameDuration() : 0).playedAt(playedAt).extras(extras).build();
+    }
+
+    /**
+     * Records 매치 상세: TFT match v1 원본 JSON
+     */
+    public Map<String, Object> fetchTftMatchRawForRecords(String matchId, String regionInput) {
+        if (riotApiProperties.getApiKey() == null || riotApiProperties.getApiKey().isBlank()) {
+            return null;
+        }
+        String rawRegion = regionInput != null ? regionInput.toLowerCase() : "kr";
+        String platform = PLATFORM_NORMALIZE.getOrDefault(rawRegion, rawRegion);
+        String routing = REGION_ROUTING.getOrDefault(platform, "asia");
+        return reqMap(String.format("https://%s.api.riotgames.com/tft/match/v1/matches/%s", routing, matchId));
+    }
+
+    public void upsertTftMatchFromRiotMapForRecords(Map<String, Object> matchRoot, String puuid) {
+        upsertTftMatchFromRiotMap(matchRoot, puuid);
+    }
+
+    private void upsertTftMatchFromRiotMap(Map<String, Object> matchRoot, String puuid) {
+        if (matchRoot == null) return;
+        JsonNode root = objectMapper.valueToTree(matchRoot);
+        JsonNode metadata = root.get("metadata");
+        JsonNode info = root.get("info");
+        if (metadata == null || info == null) return;
+        String matchId = metadata.get("match_id").asText();
+        tftMatchRepository.findByPuuidAndMatchId(puuid, matchId).ifPresent(tftMatchRepository::delete);
+        JsonNode participants = info.get("participants");
+        if (participants == null || !participants.isArray()) return;
+        for (JsonNode p : participants) {
+            if (puuid.equals(p.get("puuid").asText())) {
+                TftMatch match = new TftMatch();
+                match.setPuuid(puuid);
+                match.setMatchId(matchId);
+                match.setPlacement(p.get("placement").asInt());
+                match.setLevel(p.has("level") ? p.get("level").asInt() : 0);
+                match.setTotalPlayers(participants.size());
+                match.setTraits(p.has("traits") ? p.get("traits").toString() : null);
+                match.setUnits(p.has("units") ? p.get("units").toString() : null);
+                match.setGameDuration(info.has("game_length") ? info.get("game_length").asInt() : null);
+                match.setGameCreation(info.has("game_datetime") ? info.get("game_datetime").asLong() : null);
+                match.setApiCachedAt(LocalDateTime.now());
+                tftMatchRepository.save(match);
+                return;
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private MatchInfo matchInfoFromTftRiotMap(Map<String, Object> match, String matchId, String puuid) {
         if (match == null) return null;
         Map<String, Object> info = (Map<String, Object>) match.get("info");
         if (info == null) return null;

@@ -81,6 +81,11 @@ public class PlayerSearchRequest {
     private Integer queueType;
 
     /**
+     * true 이면 DB에 캐시된 매치가 있어도 외부 API로 다시 받아 갱신한다.
+     */
+    private Boolean forceRefresh;
+
+    /**
      * nickname 필드에서 gameName / tagLine 자동 파싱
      */
     public void parseNickname() {

@@ -4,7 +4,7 @@ import com.gamematcher.constant.Role;
 import com.gamematcher.constant.UserStatus;
 import com.gamematcher.entity.User;
 import com.gamematcher.entity.profile.UserProfile;
-import com.gamematcher.repository.common.UserRepository;
+import com.gamematcher.repository.UserRepository;
 import com.gamematcher.repository.profile.UserProfileRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
