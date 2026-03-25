@@ -647,18 +647,44 @@
                     })
                     .catch(function (err) { editNicknameMsg.textContent = window.toKoreanErrorMessage(err && err.message) || '저장에 실패했습니다.'; editNicknameMsg.className = 'profile-edit-msg err'; });
             });
-            function formatActivityPeriod(createdAt) {
-                if (!createdAt) return '—';
-                var d = new Date(createdAt);
-                var now = new Date();
-                var months = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
-                if (months >= 12) {
-                    var years = Math.floor(months / 12);
-                    return years + '년 ' + (months % 12) + '개월 +';
+            function parseJoinDate(createdAt) {
+                if (createdAt == null) return null;
+                if (typeof createdAt === 'string') {
+                    var s = createdAt.trim();
+                    if (!s) return null;
+                    var d = new Date(s);
+                    return isNaN(d.getTime()) ? null : d;
                 }
-                if (months >= 1) return months + '개월 +';
-                var days = Math.max(0, Math.floor((now - d) / (24 * 60 * 60 * 1000)));
-                return days + '일';
+                if (Array.isArray(createdAt) && createdAt.length >= 3) {
+                    var y = Number(createdAt[0]);
+                    var mr = Number(createdAt[1]);
+                    var day = Number(createdAt[2]);
+                    if (!isFinite(y) || !isFinite(mr) || !isFinite(day)) return null;
+                    var mi = (mr >= 1 && mr <= 12) ? mr - 1 : mr;
+                    var d2 = new Date(y, mi, day);
+                    return isNaN(d2.getTime()) ? null : d2;
+                }
+                return null;
+            }
+            function formatActivityPeriod(createdAt) {
+                var d = parseJoinDate(createdAt);
+                if (!d) return '—';
+                var now = new Date();
+                if (d.getTime() > now.getTime()) return '—';
+                var totalMonths = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
+                var dayAdj = now.getDate() < d.getDate() ? -1 : 0;
+                var tm = totalMonths + dayAdj;
+                if (tm >= 12) {
+                    var y = Math.floor(tm / 12);
+                    var m = tm % 12;
+                    return m > 0 ? (y + '년 ' + m + '개월 +') : (y + '년 +');
+                }
+                if (tm >= 1) return tm + '개월 +';
+                var startJoin = Date.UTC(d.getFullYear(), d.getMonth(), d.getDate());
+                var startToday = Date.UTC(now.getFullYear(), now.getMonth(), now.getDate());
+                var diffDays = Math.floor((startToday - startJoin) / 86400000);
+                var inclusive = diffDays + 1;
+                return (inclusive < 1 ? 1 : inclusive) + '일';
             }
             fetch('/api/auth/me', { credentials: 'include' })
                 .then(function (r) {

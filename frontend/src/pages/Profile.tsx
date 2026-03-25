@@ -3,13 +3,13 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { checkNicknameAvailable } from '../api/auth';
 import { apiUrl, resolveProfileImageUrl } from '../api/client';
-import { fetchProfile, patchProfile, type ProfileDto } from '../api/profile';
+import { fetchProfile, patchProfile, type ProfileDto, type ProfilePatchBody } from '../api/profile';
 import {
   PREFERRED_GAME_OPTIONS,
   parsePreferredGamesToSelected,
   serializePreferredGames,
 } from '../constants/games';
-import { effectiveCustomProfileUrl } from '../constants/profile';
+import { formatActivityPeriod } from '../lib/activityPeriod';
 
 function resolveBannerStyleUrl(url: string | null | undefined): string | null {
   if (!url?.trim()) return null;
@@ -21,30 +21,13 @@ function resolveBannerStyleUrl(url: string | null | undefined): string | null {
 function computeExtDirty(
   publicProfile: ProfileDto | null,
   banner: string,
-  profileUrl: string,
   selectedGames: string[]
 ): boolean {
   const b0 = (publicProfile?.bannerImageUrl ?? '').trim();
   const b1 = banner.trim();
-  const p0 = effectiveCustomProfileUrl(publicProfile?.profileImageUrl ?? null).trim();
-  const p1 = profileUrl.trim();
   const g0 = serializePreferredGames(parsePreferredGamesToSelected(publicProfile?.preferredGames)) ?? '';
   const g1 = serializePreferredGames(selectedGames) ?? '';
-  return b0 !== b1 || p0 !== p1 || g0 !== g1;
-}
-
-function formatActivityPeriod(createdAt?: string | null): string {
-  if (!createdAt) return '—';
-  const d = new Date(createdAt);
-  const now = new Date();
-  const months = (now.getFullYear() - d.getFullYear()) * 12 + (now.getMonth() - d.getMonth());
-  if (months >= 12) {
-    const years = Math.floor(months / 12);
-    return `${years}년 ${months % 12}개월 +`;
-  }
-  if (months >= 1) return `${months}개월 +`;
-  const days = Math.max(0, Math.floor((now.getTime() - d.getTime()) / (24 * 60 * 60 * 1000)));
-  return `${days}일`;
+  return b0 !== b1 || g0 !== g1;
 }
 
 export default function Profile() {
@@ -68,7 +51,6 @@ export default function Profile() {
   const [publicLoading, setPublicLoading] = useState(false);
   const [publicErr, setPublicErr] = useState('');
   const [fBannerUrl, setFBannerUrl] = useState('');
-  const [fProfileUrl, setFProfileUrl] = useState('');
   const [selectedGames, setSelectedGames] = useState<string[]>([]);
   const [gamesModalOpen, setGamesModalOpen] = useState(false);
   const [modalGameDraft, setModalGameDraft] = useState<string[]>([]);
@@ -114,7 +96,7 @@ export default function Profile() {
     const bioChanged = editBio.trim() !== (user?.bio ?? '').trim();
     const hasImage = profileImageFile !== null;
     const mainDirty = nickChanged || bioChanged || hasImage;
-    const extDirty = computeExtDirty(publicProfile, fBannerUrl, fProfileUrl, selectedGames);
+    const extDirty = computeExtDirty(publicProfile, fBannerUrl, selectedGames);
     const hasChanges = mainDirty || extDirty;
     return nicknameOk && hasChanges;
   }, [
@@ -127,7 +109,6 @@ export default function Profile() {
     checkedNicknameSnapshot,
     publicProfile,
     fBannerUrl,
-    fProfileUrl,
     selectedGames,
   ]);
 
@@ -171,11 +152,9 @@ export default function Profile() {
     }
     if (p) {
       setFBannerUrl(p.bannerImageUrl ?? '');
-      setFProfileUrl(effectiveCustomProfileUrl(p.profileImageUrl));
       setSelectedGames(parsePreferredGamesToSelected(p.preferredGames));
     } else {
       setFBannerUrl('');
-      setFProfileUrl('');
       setSelectedGames([]);
     }
     setEditOpen(true);
@@ -240,27 +219,35 @@ export default function Profile() {
     const bioChanged = editBio.trim() !== (user?.bio ?? '').trim();
     const hasImage = profileImageFile !== null;
     const mainDirty = nickChanged || bioChanged || hasImage;
-    const extDirty = computeExtDirty(publicProfile, fBannerUrl, fProfileUrl, selectedGames);
+    const extDirty = computeExtDirty(publicProfile, fBannerUrl, selectedGames);
 
     setSaveLoading(true);
     try {
+      let uploadedPublicImagePath: string | undefined;
       if (mainDirty) {
         const fd = new FormData();
         fd.append('nickname', nickname);
         fd.append('bio', editBio.trim());
         if (profileImageFile) fd.append('profileImage', profileImageFile);
         const r = await fetch(apiUrl('api/profile'), { method: 'PUT', credentials: 'include', body: fd });
+        const putData = (await r.json().catch(() => ({}))) as { message?: string; profileImageUrl?: string | null };
         if (!r.ok) {
-          const d = (await r.json().catch(() => ({}))) as { message?: string };
-          throw new Error(d.message ?? '저장에 실패했습니다.');
+          throw new Error(putData.message ?? '저장에 실패했습니다.');
+        }
+        if (profileImageFile && putData.profileImageUrl) {
+          uploadedPublicImagePath = putData.profileImageUrl;
         }
       }
-      if (extDirty && user?.id) {
-        const next = await patchProfile(user.id, {
-          profileImageUrl: fProfileUrl.trim() === '' ? null : fProfileUrl.trim(),
-          bannerImageUrl: fBannerUrl.trim() === '' ? null : fBannerUrl.trim(),
-          preferredGames: serializePreferredGames(selectedGames),
-        });
+      const patchBody: ProfilePatchBody = {};
+      if (extDirty) {
+        patchBody.bannerImageUrl = fBannerUrl.trim() === '' ? null : fBannerUrl.trim();
+        patchBody.preferredGames = serializePreferredGames(selectedGames);
+      }
+      if (uploadedPublicImagePath !== undefined) {
+        patchBody.profileImageUrl = uploadedPublicImagePath;
+      }
+      if (user?.id && Object.keys(patchBody).length > 0) {
+        const next = await patchProfile(user.id, patchBody);
         setPublicProfile(next);
       }
       await refreshUser();
@@ -310,7 +297,7 @@ export default function Profile() {
         </div>
         <div className="profile-stat-card">
           <div className="label">활동 기간</div>
-          <div className="value">{formatActivityPeriod(user?.createdAt)}</div>
+          <div className="value">{formatActivityPeriod(user?.createdAt ?? null)}</div>
         </div>
         <div className="profile-stat-card" id="profile-pang-card">
           <div className="label">보유중인 팡</div>
@@ -327,7 +314,7 @@ export default function Profile() {
       <div className="phe-wrap">
         <h2 className="phe-title">공개 프로필</h2>
         <p className="phe-hint">
-          다른 사용자에게 보이는 카드입니다. 닉네임·자기소개·사진 업로드·배너·공개용 이미지 URL·선호 게임은 모두 「프로필 편집」에서 설정할 수 있습니다.
+          다른 사용자에게 보이는 카드입니다. 닉네임·자기소개·프로필 사진·배너 URL·선호 게임은 모두 「프로필 편집」에서 설정할 수 있습니다.
         </p>
         {publicLoading ? <div className="phe-loading">불러오는 중…</div> : null}
         {!publicLoading && publicErr ? (
@@ -362,6 +349,9 @@ export default function Profile() {
           <form onSubmit={handleSaveProfile}>
             <div className="profile-edit-field profile-edit-avatar-row">
               <label>프로필 사진</label>
+              <p className="profile-edit-msg" style={{ margin: '0 0 8px', fontSize: '0.8rem', opacity: 0.85 }}>
+                공개 프로필(전적·커뮤니티 등)에도 같은 사진이 쓰입니다.
+              </p>
               <div className="profile-edit-avatar-wrap">
                 <div className="profile-edit-avatar-preview">
                   {profileImagePreview ? (
@@ -416,20 +406,6 @@ export default function Profile() {
                 onChange={(e) => setFBannerUrl(e.target.value)}
                 autoComplete="off"
               />
-            </div>
-            <div className="profile-edit-field">
-              <label htmlFor="edit-public-profile-url">프로필 이미지 URL (공개 카드용)</label>
-              <input
-                id="edit-public-profile-url"
-                type="url"
-                placeholder="https://... (비우면 기본 아바타)"
-                value={fProfileUrl}
-                onChange={(e) => setFProfileUrl(e.target.value)}
-                autoComplete="off"
-              />
-              <p className="profile-edit-msg" style={{ marginTop: 6, fontSize: '0.8rem', opacity: 0.85 }}>
-                위에서 파일로 올린 사진과 별도입니다. 전적·커뮤니티 등 공개 프로필 API에 반영됩니다.
-              </p>
             </div>
             <div className="profile-edit-field">
               <span style={{ display: 'block', fontSize: '0.9rem', fontWeight: 500, marginBottom: 8 }}>선호 게임</span>
