@@ -1,5 +1,6 @@
 package com.gamematcher.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamematcher.dto.search.PlayerSearchRequest;
 import com.gamematcher.dto.search.PlayerSearchResponse;
 import com.gamematcher.service.search.ApexSearchService;
@@ -8,7 +9,7 @@ import com.gamematcher.service.search.LolSearchService;
 import com.gamematcher.service.search.OverwatchSearchService;
 import com.gamematcher.service.search.PubgSearchService;
 import com.gamematcher.service.search.TftSearchService;
-import com.gamematcher.service.search.ValorantSearchService;
+import com.gamematcher.service.valorant.ValorantApiService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -31,7 +32,8 @@ class PlayerSearchServiceTest {
 
     @Mock LolSearchService lolSearchService;
     @Mock TftSearchService tftSearchService;
-    @Mock ValorantSearchService valorantSearchService;
+    @Mock ValorantApiService valorantApiService;
+    @Mock ObjectMapper objectMapper;
     @Mock PubgSearchService pubgSearchService;
     @Mock OverwatchSearchService overwatchSearchService;
     @Mock ApexSearchService apexSearchService;
@@ -52,7 +54,7 @@ class PlayerSearchServiceTest {
     void setUp() {
         when(lolSearchService.search(any())).thenReturn(mockSuccessResponse("lol"));
         when(tftSearchService.search(any())).thenReturn(mockSuccessResponse("tft"));
-        when(valorantSearchService.search(any())).thenReturn(mockSuccessResponse("valorant"));
+        when(valorantApiService.search(any())).thenReturn(mockSuccessResponse("valorant"));
         when(pubgSearchService.search(any())).thenReturn(mockSuccessResponse("pubg"));
         when(overwatchSearchService.search(any())).thenReturn(mockSuccessResponse("overwatch"));
         when(apexSearchService.search(any())).thenReturn(mockSuccessResponse("apex"));
@@ -99,7 +101,7 @@ class PlayerSearchServiceTest {
 
             PlayerSearchResponse response = playerSearchService.searchPlayer(req);
 
-            verify(valorantSearchService).search(any());
+            verify(valorantApiService).search(any());
             assertThat(response.getGame()).isEqualTo("valorant");
         }
 

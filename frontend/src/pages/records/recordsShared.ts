@@ -58,21 +58,27 @@ export function parseProfileSlug(
       return { nickname: playerSlug, tagLine: tagFromHash.trim() };
     }
   }
-  const last = playerSlug.lastIndexOf('-');
-  if (last <= 0) {
-    try {
-      return { nickname: decodeURIComponent(playerSlug), tagLine: '' };
-    } catch {
-      return { nickname: playerSlug, tagLine: '' };
-    }
-  }
-  const a = playerSlug.slice(0, last);
-  const b = playerSlug.slice(last + 1);
+  let decodedSlug = playerSlug;
   try {
-    return { nickname: decodeURIComponent(a), tagLine: decodeURIComponent(b) };
+    decodedSlug = decodeURIComponent(playerSlug);
   } catch {
-    return { nickname: a, tagLine: b };
+    decodedSlug = playerSlug;
   }
+  // 경로에 `#` 또는 `%23` 이 포함된 경우 (브라우저 해시와 별개로 slug 한 덩어리로 올 때)
+  const hashInSlug = decodedSlug.indexOf('#');
+  if (hashInSlug > 0 && hashInSlug < decodedSlug.length - 1) {
+    return {
+      nickname: decodedSlug.slice(0, hashInSlug).trim(),
+      tagLine: decodedSlug.slice(hashInSlug + 1).trim(),
+    };
+  }
+  const last = decodedSlug.lastIndexOf('-');
+  if (last <= 0) {
+    return { nickname: decodedSlug, tagLine: '' };
+  }
+  const a = decodedSlug.slice(0, last).trim();
+  const b = decodedSlug.slice(last + 1).trim();
+  return { nickname: a, tagLine: b };
 }
 
 export function buildRecordsProfileUrl(

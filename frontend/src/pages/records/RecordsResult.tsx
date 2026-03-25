@@ -29,7 +29,7 @@ function RecordsResultContent({
   const game = useMemo(() => GAMES.find((item) => item.id === gameId) || GAMES[0], [gameId]);
 
   useEffect(() => {
-    const parsed = parseProfileSlug(gameId, playerSlug);
+    const parsed = parseProfileSlug(gameId, playerSlug, urlHash);
     setNickname(parsed.nickname);
     setTagLine(parsed.tagLine);
     const platQ = searchParams.get('platform');
@@ -41,7 +41,7 @@ function RecordsResultContent({
     if (c && [5, 10, 15, 20].includes(Number(c))) {
       setCount(Number(c));
     }
-  }, [gameId, playerSlug, searchParams]);
+  }, [gameId, playerSlug, urlHash, searchParams]);
 
   useEffect(() => {
     if (!game.platformOptions?.length) {
