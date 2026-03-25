@@ -1,0 +1,1184 @@
+{
+  "winning_team": "Blue",
+  "end_type": "Eliminated",
+  "bomb_planted": false,
+  "bomb_defused": false,
+  "plant_events": {
+    "plant_location": null,
+    "planted_by": null,
+    "plant_site": null,
+    "plant_time_in_round": null,
+    "player_locations_on_plant": null
+  },
+  "defuse_events": {
+    "defuse_location": null,
+    "defused_by": null,
+    "defuse_time_in_round": null,
+    "player_locations_on_defuse": null
+  },
+  "player_stats": [
+    {
+      "ability_casts": {
+        "x_casts": null,
+        "e_casts": null,
+        "q_casts": null,
+        "c_casts": null
+      },
+      "player_puuid": "57101dd8-4766-52e9-b560-c024de07ee43",
+      "player_display_name": "COACH X#MEGGG",
+      "player_team": "Red",
+      "damage_events": [
+        {
+          "receiver_puuid": "e0a1f22e-e910-5b58-84c7-f857939c74ab",
+          "receiver_display_name": "moefcute#VNE",
+          "receiver_team": "Blue",
+          "bodyshots": 0,
+          "headshots": 1,
+          "legshots": 0,
+          "damage": 105
+        }
+      ],
+      "damage": 105,
+      "headshots": 1,
+      "bodyshots": 0,
+      "legshots": 0,
+      "kill_events": [
+        {
+          "kill_time_in_round": 4270,
+          "kill_time_in_match": 59341,
+          "killer_puuid": "57101dd8-4766-52e9-b560-c024de07ee43",
+          "killer_display_name": "COACH X#MEGGG",
+          "killer_team": "Red",
+          "victim_puuid": "e0a1f22e-e910-5b58-84c7-f857939c74ab",
+          "victim_display_name": "moefcute#VNE",
+          "victim_team": "Blue",
+          "victim_death_location": {
+            "x": 929,
+            "y": -356
+          },
+          "damage_weapon_id": "1baa85b4-4c70-1284-64bb-6481dfc3bb4e",
+          "damage_weapon_name": "Ghost",
+          "damage_weapon_assets": {
+            "display_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/displayicon.png",
+            "killfeed_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/killstreamicon.png"
+          },
+          "secondary_fire_mode": false,
+          "player_locations_on_kill": [
+            {
+              "player_puuid": "57101dd8-4766-52e9-b560-c024de07ee43",
+              "player_display_name": "COACH X#MEGGG",
+              "player_team": "Red",
+              "location": {
+                "x": -351,
+                "y": 1165
+              },
+              "view_radians": 5.4177327
+            },
+            {
+              "player_puuid": "d3f9e5b1-be48-5ee3-a682-fb04223772f1",
+              "player_display_name": "Horhe#2000",
+              "player_team": "Red",
+              "location": {
+                "x": 3087,
+                "y": 1045
+              },
+              "view_radians": 0.7171053
+            },
+            {
+              "player_puuid": "78745e7f-4b89-5dfb-8303-e8bf9f0af68d",
+              "player_display_name": "05 egg#xixi",
+              "player_team": "Red",
+              "location": {
+                "x": 361,
+                "y": 1628
+              },
+              "view_radians": 4.8067455
+            },
+            {
+              "player_puuid": "6397ce2f-d932-5966-958b-16ead596b902",
+              "player_display_name": "Lunex#2116",
+              "player_team": "Red",
+              "location": {
+                "x": -2442,
+                "y": 252
+              },
+              "view_radians": 3.2085125
+            },
+            {
+              "player_puuid": "a43bf7f7-c60a-54b6-99fc-60517d1e13e8",
+              "player_display_name": "WelcometotheShow#1111",
+              "player_team": "Blue",
+              "location": {
+                "x": 5512,
+                "y": -1724
+              },
+              "view_radians": 4.7177577
+            },
+            {
+              "player_puuid": "163593cc-6931-5f72-b839-00af68b9ce6e",
+              "player_display_name": "殲 saucee#ovv",
+              "player_team": "Blue",
+              "location": {
+                "x": 3785,
+                "y": 850
+              },
+              "view_radians": 2.4556146
+            },
+            {
+              "player_puuid": "bf4e8c68-67b5-51c0-b713-117213fa123f",
+              "player_display_name": "OG deecee#moe",
+              "player_team": "Blue",
+              "location": {
+                "x": -337,
+                "y": -2018
+              },
+              "view_radians": 1.3841956
+            },
+            {
+              "player_puuid": "664336af-3abc-5252-b295-c9e4d125ee96",
+              "player_display_name": "VLT Lightningf#0007",
+              "player_team": "Blue",
+              "location": {
+                "x": -4940,
+                "y": -2127
+              },
+              "view_radians": 0.65750253
+            },
+            {
+              "player_puuid": "2e391b6a-4ed2-53f1-9763-97c701f687fa",
+              "player_display_name": "theDoctorr#0000",
+              "player_team": "Red",
+              "location": {
+                "x": 636,
+                "y": 2890
+              },
+              "view_radians": 4.540434
+            }
+          ],
+          "assistants": []
+        }
+      ],
+      "kills": 1,
+      "score": 250,
+      "economy": {
+        "loadout_value": 800,
+        "remaining": 0,
+        "spent": 1300,
+        "weapon": {
+          "id": "1baa85b4-4c70-1284-64bb-6481dfc3bb4e",
+          "name": "Ghost",
+          "assets": {
+            "display_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/displayicon.png",
+            "killfeed_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/killstreamicon.png"
+          }
+        },
+        "armor": {
+          "id": null,
+          "name": null,
+          "assets": {
+            "display_icon": null
+          }
+        }
+      },
+      "was_afk": false,
+      "was_penalized": false,
+      "stayed_in_spawn": false
+    },
+    {
+      "ability_casts": {
+        "x_casts": null,
+        "e_casts": null,
+        "q_casts": null,
+        "c_casts": null
+      },
+      "player_puuid": "d3f9e5b1-be48-5ee3-a682-fb04223772f1",
+      "player_display_name": "Horhe#2000",
+      "player_team": "Red",
+      "damage_events": [
+        {
+          "receiver_puuid": "163593cc-6931-5f72-b839-00af68b9ce6e",
+          "receiver_display_name": "殲 saucee#ovv",
+          "receiver_team": "Blue",
+          "bodyshots": 0,
+          "headshots": 2,
+          "legshots": 0,
+          "damage": 210
+        }
+      ],
+      "damage": 210,
+      "headshots": 2,
+      "bodyshots": 0,
+      "legshots": 0,
+      "kill_events": [
+        {
+          "kill_time_in_round": 6148,
+          "kill_time_in_match": 61219,
+          "killer_puuid": "d3f9e5b1-be48-5ee3-a682-fb04223772f1",
+          "killer_display_name": "Horhe#2000",
+          "killer_team": "Red",
+          "victim_puuid": "163593cc-6931-5f72-b839-00af68b9ce6e",
+          "victim_display_name": "殲 saucee#ovv",
+          "victim_team": "Blue",
+          "victim_death_location": {
+            "x": 3333,
+            "y": 807
+          },
+          "damage_weapon_id": "1baa85b4-4c70-1284-64bb-6481dfc3bb4e",
+          "damage_weapon_name": "Ghost",
+          "damage_weapon_assets": {
+            "display_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/displayicon.png",
+            "killfeed_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/killstreamicon.png"
+          },
+          "secondary_fire_mode": false,
+          "player_locations_on_kill": [
+            {
+              "player_puuid": "57101dd8-4766-52e9-b560-c024de07ee43",
+              "player_display_name": "COACH X#MEGGG",
+              "player_team": "Red",
+              "location": {
+                "x": -256,
+                "y": 2167
+              },
+              "view_radians": 4.7745996
+            },
+            {
+              "player_puuid": "d3f9e5b1-be48-5ee3-a682-fb04223772f1",
+              "player_display_name": "Horhe#2000",
+              "player_team": "Red",
+              "location": {
+                "x": 3430,
+                "y": 596
+              },
+              "view_radians": 1.9785476
+            },
+            {
+              "player_puuid": "78745e7f-4b89-5dfb-8303-e8bf9f0af68d",
+              "player_display_name": "05 egg#xixi",
+              "player_team": "Red",
+              "location": {
+                "x": 501,
+                "y": 619
+              },
+              "view_radians": 4.8818936
+            },
+            {
+              "player_puuid": "6397ce2f-d932-5966-958b-16ead596b902",
+              "player_display_name": "Lunex#2116",
+              "player_team": "Red",
+              "location": {
+                "x": -2487,
+                "y": -106
+              },
+              "view_radians": 2.8017821
+            },
+            {
+              "player_puuid": "a43bf7f7-c60a-54b6-99fc-60517d1e13e8",
+              "player_display_name": "WelcometotheShow#1111",
+              "player_team": "Blue",
+              "location": {
+                "x": 5077,
+                "y": -2834
+              },
+              "view_radians": 3.6059377
+            },
+            {
+              "player_puuid": "bf4e8c68-67b5-51c0-b713-117213fa123f",
+              "player_display_name": "OG deecee#moe",
+              "player_team": "Blue",
+              "location": {
+                "x": -383,
+                "y": -1925
+              },
+              "view_radians": 1.2001595
+            },
+            {
+              "player_puuid": "664336af-3abc-5252-b295-c9e4d125ee96",
+              "player_display_name": "VLT Lightningf#0007",
+              "player_team": "Blue",
+              "location": {
+                "x": -4936,
+                "y": -2124
+              },
+              "view_radians": 0.64369667
+            },
+            {
+              "player_puuid": "2e391b6a-4ed2-53f1-9763-97c701f687fa",
+              "player_display_name": "theDoctorr#0000",
+              "player_team": "Red",
+              "location": {
+                "x": 493,
+                "y": 3049
+              },
+              "view_radians": 4.590054
+            }
+          ],
+          "assistants": []
+        }
+      ],
+      "kills": 1,
+      "score": 255,
+      "economy": {
+        "loadout_value": 750,
+        "remaining": 50,
+        "spent": 250,
+        "weapon": {
+          "id": "1baa85b4-4c70-1284-64bb-6481dfc3bb4e",
+          "name": "Ghost",
+          "assets": {
+            "display_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/displayicon.png",
+            "killfeed_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/killstreamicon.png"
+          }
+        },
+        "armor": {
+          "id": null,
+          "name": null,
+          "assets": {
+            "display_icon": null
+          }
+        }
+      },
+      "was_afk": false,
+      "was_penalized": false,
+      "stayed_in_spawn": false
+    },
+    {
+      "ability_casts": {
+        "x_casts": null,
+        "e_casts": null,
+        "q_casts": null,
+        "c_casts": null
+      },
+      "player_puuid": "78745e7f-4b89-5dfb-8303-e8bf9f0af68d",
+      "player_display_name": "05 egg#xixi",
+      "player_team": "Red",
+      "damage_events": [
+        {
+          "receiver_puuid": "bf4e8c68-67b5-51c0-b713-117213fa123f",
+          "receiver_display_name": "OG deecee#moe",
+          "receiver_team": "Blue",
+          "bodyshots": 1,
+          "headshots": 0,
+          "legshots": 0,
+          "damage": 30
+        }
+      ],
+      "damage": 30,
+      "headshots": 0,
+      "bodyshots": 1,
+      "legshots": 0,
+      "kill_events": [],
+      "kills": 0,
+      "score": 30,
+      "economy": {
+        "loadout_value": 750,
+        "remaining": 50,
+        "spent": 750,
+        "weapon": {
+          "id": "1baa85b4-4c70-1284-64bb-6481dfc3bb4e",
+          "name": "Ghost",
+          "assets": {
+            "display_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/displayicon.png",
+            "killfeed_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/killstreamicon.png"
+          }
+        },
+        "armor": {
+          "id": null,
+          "name": null,
+          "assets": {
+            "display_icon": null
+          }
+        }
+      },
+      "was_afk": false,
+      "was_penalized": false,
+      "stayed_in_spawn": false
+    },
+    {
+      "ability_casts": {
+        "x_casts": null,
+        "e_casts": null,
+        "q_casts": null,
+        "c_casts": null
+      },
+      "player_puuid": "6397ce2f-d932-5966-958b-16ead596b902",
+      "player_display_name": "Lunex#2116",
+      "player_team": "Red",
+      "damage_events": [],
+      "damage": 0,
+      "headshots": 0,
+      "bodyshots": 0,
+      "legshots": 0,
+      "kill_events": [],
+      "kills": 0,
+      "score": 0,
+      "economy": {
+        "loadout_value": 900,
+        "remaining": 50,
+        "spent": 750,
+        "weapon": {
+          "id": "410b2e0b-4ceb-1321-1727-20858f7f3477",
+          "name": "Bandit",
+          "assets": {
+            "display_icon": "https://media.valorant-api.com/weapons/410b2e0b-4ceb-1321-1727-20858f7f3477/displayicon.png",
+            "killfeed_icon": "https://media.valorant-api.com/weapons/410b2e0b-4ceb-1321-1727-20858f7f3477/killstreamicon.png"
+          }
+        },
+        "armor": {
+          "id": null,
+          "name": null,
+          "assets": {
+            "display_icon": null
+          }
+        }
+      },
+      "was_afk": false,
+      "was_penalized": false,
+      "stayed_in_spawn": false
+    },
+    {
+      "ability_casts": {
+        "x_casts": null,
+        "e_casts": null,
+        "q_casts": null,
+        "c_casts": null
+      },
+      "player_puuid": "a43bf7f7-c60a-54b6-99fc-60517d1e13e8",
+      "player_display_name": "WelcometotheShow#1111",
+      "player_team": "Blue",
+      "damage_events": [],
+      "damage": 0,
+      "headshots": 0,
+      "bodyshots": 0,
+      "legshots": 0,
+      "kill_events": [],
+      "kills": 0,
+      "score": 0,
+      "economy": {
+        "loadout_value": 700,
+        "remaining": 100,
+        "spent": 700,
+        "weapon": {
+          "id": "1baa85b4-4c70-1284-64bb-6481dfc3bb4e",
+          "name": "Ghost",
+          "assets": {
+            "display_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/displayicon.png",
+            "killfeed_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/killstreamicon.png"
+          }
+        },
+        "armor": {
+          "id": null,
+          "name": null,
+          "assets": {
+            "display_icon": null
+          }
+        }
+      },
+      "was_afk": false,
+      "was_penalized": false,
+      "stayed_in_spawn": false
+    },
+    {
+      "ability_casts": {
+        "x_casts": null,
+        "e_casts": null,
+        "q_casts": null,
+        "c_casts": null
+      },
+      "player_puuid": "e0a1f22e-e910-5b58-84c7-f857939c74ab",
+      "player_display_name": "moefcute#VNE",
+      "player_team": "Blue",
+      "damage_events": [
+        {
+          "receiver_puuid": "57101dd8-4766-52e9-b560-c024de07ee43",
+          "receiver_display_name": "COACH X#MEGGG",
+          "receiver_team": "Red",
+          "bodyshots": 1,
+          "headshots": 0,
+          "legshots": 0,
+          "damage": 30
+        }
+      ],
+      "damage": 30,
+      "headshots": 0,
+      "bodyshots": 1,
+      "legshots": 0,
+      "kill_events": [],
+      "kills": 0,
+      "score": 30,
+      "economy": {
+        "loadout_value": 800,
+        "remaining": 0,
+        "spent": 800,
+        "weapon": {
+          "id": "1baa85b4-4c70-1284-64bb-6481dfc3bb4e",
+          "name": "Ghost",
+          "assets": {
+            "display_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/displayicon.png",
+            "killfeed_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/killstreamicon.png"
+          }
+        },
+        "armor": {
+          "id": null,
+          "name": null,
+          "assets": {
+            "display_icon": null
+          }
+        }
+      },
+      "was_afk": false,
+      "was_penalized": false,
+      "stayed_in_spawn": false
+    },
+    {
+      "ability_casts": {
+        "x_casts": null,
+        "e_casts": null,
+        "q_casts": null,
+        "c_casts": null
+      },
+      "player_puuid": "163593cc-6931-5f72-b839-00af68b9ce6e",
+      "player_display_name": "殲 saucee#ovv",
+      "player_team": "Blue",
+      "damage_events": [],
+      "damage": 0,
+      "headshots": 0,
+      "bodyshots": 0,
+      "legshots": 0,
+      "kill_events": [],
+      "kills": 0,
+      "score": 0,
+      "economy": {
+        "loadout_value": 700,
+        "remaining": 100,
+        "spent": 700,
+        "weapon": {
+          "id": "29a0cfab-485b-f5d5-779a-b59f85e204a8",
+          "name": "Classic",
+          "assets": {
+            "display_icon": "https://media.valorant-api.com/weapons/29a0cfab-485b-f5d5-779a-b59f85e204a8/displayicon.png",
+            "killfeed_icon": "https://media.valorant-api.com/weapons/29a0cfab-485b-f5d5-779a-b59f85e204a8/killstreamicon.png"
+          }
+        },
+        "armor": {
+          "id": "4dec83d5-4902-9ab3-bed6-a7a390761157",
+          "name": "Light Armor",
+          "assets": {
+            "display_icon": "https://media.valorant-api.com/gear/4dec83d5-4902-9ab3-bed6-a7a390761157/displayicon.png"
+          }
+        }
+      },
+      "was_afk": false,
+      "was_penalized": false,
+      "stayed_in_spawn": false
+    },
+    {
+      "ability_casts": {
+        "x_casts": null,
+        "e_casts": null,
+        "q_casts": null,
+        "c_casts": null
+      },
+      "player_puuid": "bf4e8c68-67b5-51c0-b713-117213fa123f",
+      "player_display_name": "OG deecee#moe",
+      "player_team": "Blue",
+      "damage_events": [
+        {
+          "receiver_puuid": "2e391b6a-4ed2-53f1-9763-97c701f687fa",
+          "receiver_display_name": "theDoctorr#0000",
+          "receiver_team": "Red",
+          "bodyshots": 1,
+          "headshots": 0,
+          "legshots": 1,
+          "damage": 46
+        },
+        {
+          "receiver_puuid": "57101dd8-4766-52e9-b560-c024de07ee43",
+          "receiver_display_name": "COACH X#MEGGG",
+          "receiver_team": "Red",
+          "bodyshots": 1,
+          "headshots": 1,
+          "legshots": 0,
+          "damage": 119
+        },
+        {
+          "receiver_puuid": "6397ce2f-d932-5966-958b-16ead596b902",
+          "receiver_display_name": "Lunex#2116",
+          "receiver_team": "Red",
+          "bodyshots": 0,
+          "headshots": 1,
+          "legshots": 0,
+          "damage": 105
+        },
+        {
+          "receiver_puuid": "78745e7f-4b89-5dfb-8303-e8bf9f0af68d",
+          "receiver_display_name": "05 egg#xixi",
+          "receiver_team": "Red",
+          "bodyshots": 0,
+          "headshots": 1,
+          "legshots": 0,
+          "damage": 105
+        }
+      ],
+      "damage": 375,
+      "headshots": 3,
+      "bodyshots": 2,
+      "legshots": 1,
+      "kill_events": [
+        {
+          "kill_time_in_round": 24328,
+          "kill_time_in_match": 79399,
+          "killer_puuid": "bf4e8c68-67b5-51c0-b713-117213fa123f",
+          "killer_display_name": "OG deecee#moe",
+          "killer_team": "Blue",
+          "victim_puuid": "57101dd8-4766-52e9-b560-c024de07ee43",
+          "victim_display_name": "COACH X#MEGGG",
+          "victim_team": "Red",
+          "victim_death_location": {
+            "x": -335,
+            "y": -1917
+          },
+          "damage_weapon_id": "1baa85b4-4c70-1284-64bb-6481dfc3bb4e",
+          "damage_weapon_name": "Ghost",
+          "damage_weapon_assets": {
+            "display_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/displayicon.png",
+            "killfeed_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/killstreamicon.png"
+          },
+          "secondary_fire_mode": false,
+          "player_locations_on_kill": [
+            {
+              "player_puuid": "78745e7f-4b89-5dfb-8303-e8bf9f0af68d",
+              "player_display_name": "05 egg#xixi",
+              "player_team": "Red",
+              "location": {
+                "x": -75,
+                "y": -1743
+              },
+              "view_radians": 3.1661363
+            },
+            {
+              "player_puuid": "6397ce2f-d932-5966-958b-16ead596b902",
+              "player_display_name": "Lunex#2116",
+              "player_team": "Red",
+              "location": {
+                "x": -3953,
+                "y": -1019
+              },
+              "view_radians": 4.0244694
+            },
+            {
+              "player_puuid": "a43bf7f7-c60a-54b6-99fc-60517d1e13e8",
+              "player_display_name": "WelcometotheShow#1111",
+              "player_team": "Blue",
+              "location": {
+                "x": -3725,
+                "y": -5066
+              },
+              "view_radians": 2.9535122
+            },
+            {
+              "player_puuid": "bf4e8c68-67b5-51c0-b713-117213fa123f",
+              "player_display_name": "OG deecee#moe",
+              "player_team": "Blue",
+              "location": {
+                "x": -1957,
+                "y": -1489
+              },
+              "view_radians": 6.0330505
+            },
+            {
+              "player_puuid": "664336af-3abc-5252-b295-c9e4d125ee96",
+              "player_display_name": "VLT Lightningf#0007",
+              "player_team": "Blue",
+              "location": {
+                "x": -5097,
+                "y": -2093
+              },
+              "view_radians": 1.0084844
+            },
+            {
+              "player_puuid": "2e391b6a-4ed2-53f1-9763-97c701f687fa",
+              "player_display_name": "theDoctorr#0000",
+              "player_team": "Red",
+              "location": {
+                "x": -378,
+                "y": 601
+              },
+              "view_radians": 5.7325435
+            }
+          ],
+          "assistants": []
+        },
+        {
+          "kill_time_in_round": 25820,
+          "kill_time_in_match": 80891,
+          "killer_puuid": "bf4e8c68-67b5-51c0-b713-117213fa123f",
+          "killer_display_name": "OG deecee#moe",
+          "killer_team": "Blue",
+          "victim_puuid": "6397ce2f-d932-5966-958b-16ead596b902",
+          "victim_display_name": "Lunex#2116",
+          "victim_team": "Red",
+          "victim_death_location": {
+            "x": -3520,
+            "y": -1117
+          },
+          "damage_weapon_id": "1baa85b4-4c70-1284-64bb-6481dfc3bb4e",
+          "damage_weapon_name": "Ghost",
+          "damage_weapon_assets": {
+            "display_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/displayicon.png",
+            "killfeed_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/killstreamicon.png"
+          },
+          "secondary_fire_mode": false,
+          "player_locations_on_kill": [
+            {
+              "player_puuid": "78745e7f-4b89-5dfb-8303-e8bf9f0af68d",
+              "player_display_name": "05 egg#xixi",
+              "player_team": "Red",
+              "location": {
+                "x": -372,
+                "y": -1909
+              },
+              "view_radians": 3.0690694
+            },
+            {
+              "player_puuid": "a43bf7f7-c60a-54b6-99fc-60517d1e13e8",
+              "player_display_name": "WelcometotheShow#1111",
+              "player_team": "Blue",
+              "location": {
+                "x": -4430,
+                "y": -4425
+              },
+              "view_radians": 2.0328748
+            },
+            {
+              "player_puuid": "bf4e8c68-67b5-51c0-b713-117213fa123f",
+              "player_display_name": "OG deecee#moe",
+              "player_team": "Blue",
+              "location": {
+                "x": -2026,
+                "y": -1798
+              },
+              "view_radians": 2.716009
+            },
+            {
+              "player_puuid": "664336af-3abc-5252-b295-c9e4d125ee96",
+              "player_display_name": "VLT Lightningf#0007",
+              "player_team": "Blue",
+              "location": {
+                "x": -5041,
+                "y": -2252
+              },
+              "view_radians": 0.85787874
+            },
+            {
+              "player_puuid": "2e391b6a-4ed2-53f1-9763-97c701f687fa",
+              "player_display_name": "theDoctorr#0000",
+              "player_team": "Red",
+              "location": {
+                "x": -301,
+                "y": 214
+              },
+              "view_radians": 4.923791
+            }
+          ],
+          "assistants": []
+        },
+        {
+          "kill_time_in_round": 27017,
+          "kill_time_in_match": 82088,
+          "killer_puuid": "bf4e8c68-67b5-51c0-b713-117213fa123f",
+          "killer_display_name": "OG deecee#moe",
+          "killer_team": "Blue",
+          "victim_puuid": "78745e7f-4b89-5dfb-8303-e8bf9f0af68d",
+          "victim_display_name": "05 egg#xixi",
+          "victim_team": "Red",
+          "victim_death_location": {
+            "x": -384,
+            "y": -2025
+          },
+          "damage_weapon_id": "1baa85b4-4c70-1284-64bb-6481dfc3bb4e",
+          "damage_weapon_name": "Ghost",
+          "damage_weapon_assets": {
+            "display_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/displayicon.png",
+            "killfeed_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/killstreamicon.png"
+          },
+          "secondary_fire_mode": false,
+          "player_locations_on_kill": [
+            {
+              "player_puuid": "a43bf7f7-c60a-54b6-99fc-60517d1e13e8",
+              "player_display_name": "WelcometotheShow#1111",
+              "player_team": "Blue",
+              "location": {
+                "x": -4892,
+                "y": -3801
+              },
+              "view_radians": 2.0818036
+            },
+            {
+              "player_puuid": "bf4e8c68-67b5-51c0-b713-117213fa123f",
+              "player_display_name": "OG deecee#moe",
+              "player_team": "Blue",
+              "location": {
+                "x": -2023,
+                "y": -1683
+              },
+              "view_radians": 6.0723586
+            },
+            {
+              "player_puuid": "664336af-3abc-5252-b295-c9e4d125ee96",
+              "player_display_name": "VLT Lightningf#0007",
+              "player_team": "Blue",
+              "location": {
+                "x": -5242,
+                "y": -2499
+              },
+              "view_radians": 0.37477067
+            },
+            {
+              "player_puuid": "2e391b6a-4ed2-53f1-9763-97c701f687fa",
+              "player_display_name": "theDoctorr#0000",
+              "player_team": "Red",
+              "location": {
+                "x": -210,
+                "y": -369
+              },
+              "view_radians": 4.874541
+            }
+          ],
+          "assistants": []
+        }
+      ],
+      "kills": 3,
+      "score": 745,
+      "economy": {
+        "loadout_value": 750,
+        "remaining": 50,
+        "spent": 750,
+        "weapon": {
+          "id": "1baa85b4-4c70-1284-64bb-6481dfc3bb4e",
+          "name": "Ghost",
+          "assets": {
+            "display_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/displayicon.png",
+            "killfeed_icon": "https://media.valorant-api.com/weapons/1baa85b4-4c70-1284-64bb-6481dfc3bb4e/killstreamicon.png"
+          }
+        },
+        "armor": {
+          "id": null,
+          "name": null,
+          "assets": {
+            "display_icon": null
+          }
+        }
+      },
+      "was_afk": false,
+      "was_penalized": false,
+      "stayed_in_spawn": false
+    },
+    {
+      "ability_casts": {
+        "x_casts": null,
+        "e_casts": null,
+        "q_casts": null,
+        "c_casts": null
+      },
+      "player_puuid": "664336af-3abc-5252-b295-c9e4d125ee96",
+      "player_display_name": "VLT Lightningf#0007",
+      "player_team": "Blue",
+      "damage_events": [
+        {
+          "receiver_puuid": "d3f9e5b1-be48-5ee3-a682-fb04223772f1",
+          "receiver_display_name": "Horhe#2000",
+          "receiver_team": "Red",
+          "bodyshots": 1,
+          "headshots": 1,
+          "legshots": 0,
+          "damage": 104
+        },
+        {
+          "receiver_puuid": "2e391b6a-4ed2-53f1-9763-97c701f687fa",
+          "receiver_display_name": "theDoctorr#0000",
+          "receiver_team": "Red",
+          "bodyshots": 2,
+          "headshots": 0,
+          "legshots": 0,
+          "damage": 78
+        }
+      ],
+      "damage": 182,
+      "headshots": 1,
+      "bodyshots": 3,
+      "legshots": 0,
+      "kill_events": [
+        {
+          "kill_time_in_round": 22443,
+          "kill_time_in_match": 77514,
+          "killer_puuid": "664336af-3abc-5252-b295-c9e4d125ee96",
+          "killer_display_name": "VLT Lightningf#0007",
+          "killer_team": "Blue",
+          "victim_puuid": "d3f9e5b1-be48-5ee3-a682-fb04223772f1",
+          "victim_display_name": "Horhe#2000",
+          "victim_team": "Red",
+          "victim_death_location": {
+            "x": -3990,
+            "y": -951
+          },
+          "damage_weapon_id": "29a0cfab-485b-f5d5-779a-b59f85e204a8",
+          "damage_weapon_name": "Classic",
+          "damage_weapon_assets": {
+            "display_icon": "https://media.valorant-api.com/weapons/29a0cfab-485b-f5d5-779a-b59f85e204a8/displayicon.png",
+            "killfeed_icon": "https://media.valorant-api.com/weapons/29a0cfab-485b-f5d5-779a-b59f85e204a8/killstreamicon.png"
+          },
+          "secondary_fire_mode": false,
+          "player_locations_on_kill": [
+            {
+              "player_puuid": "57101dd8-4766-52e9-b560-c024de07ee43",
+              "player_display_name": "COACH X#MEGGG",
+              "player_team": "Red",
+              "location": {
+                "x": -237,
+                "y": -1372
+              },
+              "view_radians": 4.5191073
+            },
+            {
+              "player_puuid": "78745e7f-4b89-5dfb-8303-e8bf9f0af68d",
+              "player_display_name": "05 egg#xixi",
+              "player_team": "Red",
+              "location": {
+                "x": 242,
+                "y": -1326
+              },
+              "view_radians": 3.5885518
+            },
+            {
+              "player_puuid": "6397ce2f-d932-5966-958b-16ead596b902",
+              "player_display_name": "Lunex#2116",
+              "player_team": "Red",
+              "location": {
+                "x": -4489,
+                "y": -552
+              },
+              "view_radians": 4.9073005
+            },
+            {
+              "player_puuid": "a43bf7f7-c60a-54b6-99fc-60517d1e13e8",
+              "player_display_name": "WelcometotheShow#1111",
+              "player_team": "Blue",
+              "location": {
+                "x": -2456,
+                "y": -5117
+              },
+              "view_radians": 3.1491666
+            },
+            {
+              "player_puuid": "bf4e8c68-67b5-51c0-b713-117213fa123f",
+              "player_display_name": "OG deecee#moe",
+              "player_team": "Blue",
+              "location": {
+                "x": -1822,
+                "y": -1342
+              },
+              "view_radians": 5.8938417
+            },
+            {
+              "player_puuid": "664336af-3abc-5252-b295-c9e4d125ee96",
+              "player_display_name": "VLT Lightningf#0007",
+              "player_team": "Blue",
+              "location": {
+                "x": -4976,
+                "y": -2374
+              },
+              "view_radians": 0.9554783
+            },
+            {
+              "player_puuid": "2e391b6a-4ed2-53f1-9763-97c701f687fa",
+              "player_display_name": "theDoctorr#0000",
+              "player_team": "Red",
+              "location": {
+                "x": -424,
+                "y": 1042
+              },
+              "view_radians": 5.5620475
+            }
+          ],
+          "assistants": []
+        },
+        {
+          "kill_time_in_round": 65426,
+          "kill_time_in_match": 120497,
+          "killer_puuid": "664336af-3abc-5252-b295-c9e4d125ee96",
+          "killer_display_name": "VLT Lightningf#0007",
+          "killer_team": "Blue",
+          "victim_puuid": "2e391b6a-4ed2-53f1-9763-97c701f687fa",
+          "victim_display_name": "theDoctorr#0000",
+          "victim_team": "Red",
+          "victim_death_location": {
+            "x": -4740,
+            "y": -2097
+          },
+          "damage_weapon_id": "410b2e0b-4ceb-1321-1727-20858f7f3477",
+          "damage_weapon_name": "Bandit",
+          "damage_weapon_assets": {
+            "display_icon": "https://media.valorant-api.com/weapons/410b2e0b-4ceb-1321-1727-20858f7f3477/displayicon.png",
+            "killfeed_icon": "https://media.valorant-api.com/weapons/410b2e0b-4ceb-1321-1727-20858f7f3477/killstreamicon.png"
+          },
+          "secondary_fire_mode": false,
+          "player_locations_on_kill": [
+            {
+              "player_puuid": "a43bf7f7-c60a-54b6-99fc-60517d1e13e8",
+              "player_display_name": "WelcometotheShow#1111",
+              "player_team": "Blue",
+              "location": {
+                "x": -1957,
+                "y": -2257
+              },
+              "view_radians": 0.2579005
+            },
+            {
+              "player_puuid": "664336af-3abc-5252-b295-c9e4d125ee96",
+              "player_display_name": "VLT Lightningf#0007",
+              "player_team": "Blue",
+              "location": {
+                "x": -4105,
+                "y": 291
+              },
+              "view_radians": 4.4542966
+            }
+          ],
+          "assistants": []
+        }
+      ],
+      "kills": 2,
+      "score": 423,
+      "economy": {
+        "loadout_value": 950,
+        "remaining": 0,
+        "spent": 800,
+        "weapon": {
+          "id": "29a0cfab-485b-f5d5-779a-b59f85e204a8",
+          "name": "Classic",
+          "assets": {
+            "display_icon": "https://media.valorant-api.com/weapons/29a0cfab-485b-f5d5-779a-b59f85e204a8/displayicon.png",
+            "killfeed_icon": "https://media.valorant-api.com/weapons/29a0cfab-485b-f5d5-779a-b59f85e204a8/killstreamicon.png"
+          }
+        },
+        "armor": {
+          "id": "4dec83d5-4902-9ab3-bed6-a7a390761157",
+          "name": "Light Armor",
+          "assets": {
+            "display_icon": "https://media.valorant-api.com/gear/4dec83d5-4902-9ab3-bed6-a7a390761157/displayicon.png"
+          }
+        }
+      },
+      "was_afk": false,
+      "was_penalized": false,
+      "stayed_in_spawn": false
+    },
+    {
+      "ability_casts": {
+        "x_casts": null,
+        "e_casts": null,
+        "q_casts": null,
+        "c_casts": null
+      },
+      "player_puuid": "2e391b6a-4ed2-53f1-9763-97c701f687fa",
+      "player_display_name": "theDoctorr#0000",
+      "player_team": "Red",
+      "damage_events": [
+        {
+          "receiver_puuid": "bf4e8c68-67b5-51c0-b713-117213fa123f",
+          "receiver_display_name": "OG deecee#moe",
+          "receiver_team": "Blue",
+          "bodyshots": 0,
+          "headshots": 1,
+          "legshots": 0,
+          "damage": 159
+        }
+      ],
+      "damage": 159,
+      "headshots": 1,
+      "bodyshots": 0,
+      "legshots": 0,
+      "kill_events": [
+        {
+          "kill_time_in_round": 34533,
+          "kill_time_in_match": 89604,
+          "killer_puuid": "2e391b6a-4ed2-53f1-9763-97c701f687fa",
+          "killer_display_name": "theDoctorr#0000",
+          "killer_team": "Red",
+          "victim_puuid": "bf4e8c68-67b5-51c0-b713-117213fa123f",
+          "victim_display_name": "OG deecee#moe",
+          "victim_team": "Blue",
+          "victim_death_location": {
+            "x": -2458,
+            "y": -1622
+          },
+          "damage_weapon_id": "",
+          "damage_weapon_name": null,
+          "damage_weapon_assets": {
+            "display_icon": null,
+            "killfeed_icon": null
+          },
+          "secondary_fire_mode": false,
+          "player_locations_on_kill": [
+            {
+              "player_puuid": "a43bf7f7-c60a-54b6-99fc-60517d1e13e8",
+              "player_display_name": "WelcometotheShow#1111",
+              "player_team": "Blue",
+              "location": {
+                "x": -4207,
+                "y": -2725
+              },
+              "view_radians": 1.3234915
+            },
+            {
+              "player_puuid": "664336af-3abc-5252-b295-c9e4d125ee96",
+              "player_display_name": "VLT Lightningf#0007",
+              "player_team": "Blue",
+              "location": {
+                "x": -4221,
+                "y": -724
+              },
+              "view_radians": 1.1224904
+            },
+            {
+              "player_puuid": "2e391b6a-4ed2-53f1-9763-97c701f687fa",
+              "player_display_name": "theDoctorr#0000",
+              "player_team": "Red",
+              "location": {
+                "x": -508,
+                "y": -2028
+              },
+              "view_radians": 2.9371898
+            }
+          ],
+          "assistants": []
+        }
+      ],
+      "kills": 1,
+      "score": 180,
+      "economy": {
+        "loadout_value": 600,
+        "remaining": 0,
+        "spent": 800,
+        "weapon": {
+          "id": "29a0cfab-485b-f5d5-779a-b59f85e204a8",
+          "name": "Classic",
+          "assets": {
+            "display_icon": "https://media.valorant-api.com/weapons/29a0cfab-485b-f5d5-779a-b59f85e204a8/displayicon.png",
+            "killfeed_icon": "https://media.valorant-api.com/weapons/29a0cfab-485b-f5d5-779a-b59f85e204a8/killstreamicon.png"
+          }
+        },
+        "armor": {
+          "id": null,
+          "name": null,
+          "assets": {
+            "display_icon": null
+          }
+        }
+      },
+      "was_afk": false,
+      "was_penalized": false,
+      "stayed_in_spawn": false
+    }
+  ]
+}

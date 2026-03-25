@@ -1,0 +1,280 @@
+.page {
+  display: grid;
+  gap: 24px;
+}
+
+.hero {
+  padding: 28px 30px;
+  border-radius: 28px;
+  background:
+    radial-gradient(circle at top left, rgba(56, 189, 248, 0.2), transparent 26%),
+    radial-gradient(circle at bottom right, rgba(249, 115, 22, 0.18), transparent 24%),
+    linear-gradient(135deg, #0f172a, #1e293b);
+  color: #f8fafc;
+}
+
+.eyebrow {
+  margin: 0 0 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 12px;
+  opacity: 0.72;
+}
+
+.title {
+  margin: 0 0 10px;
+  font-size: clamp(28px, 4vw, 42px);
+}
+
+.description {
+  margin: 0;
+  max-width: 720px;
+  line-height: 1.6;
+  color: rgba(248, 250, 252, 0.84);
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+  gap: 16px;
+}
+
+.filter {
+  display: grid;
+  gap: 8px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.filter select {
+  min-width: 220px;
+  border: 1px solid #d6dbe4;
+  background: #fff;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font: inherit;
+}
+
+.list {
+  display: grid;
+  gap: 18px;
+}
+
+.card {
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 24px;
+  padding: 22px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  display: grid;
+  gap: 18px;
+}
+
+.cardHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.reportId {
+  margin: 0 0 6px;
+  font-size: 13px;
+  color: #64748b;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 22px;
+  color: #0f172a;
+}
+
+.cardTitle span {
+  color: #64748b;
+  font-size: 16px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 7px 12px;
+  border-radius: 999px;
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.04em;
+  background: #e2e8f0;
+  color: #334155;
+}
+
+.statusPENDING {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.statusIN_REVIEW {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
+.statusRESOLVED {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.statusDISMISSED {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.metaGrid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.metaGrid div,
+.detailBox {
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: #f8fafc;
+}
+
+.metaLabel {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.detailBox p {
+  margin: 0;
+  color: #0f172a;
+  line-height: 1.6;
+}
+
+.formGrid {
+  display: grid;
+  grid-template-columns: 220px minmax(0, 1fr);
+  gap: 16px;
+}
+
+.formGrid label {
+  display: grid;
+  gap: 8px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.formGrid select,
+.formGrid textarea {
+  border: 1px solid #d6dbe4;
+  background: #fff;
+  border-radius: 14px;
+  padding: 12px 14px;
+  font: inherit;
+}
+
+.noteField textarea {
+  resize: vertical;
+  min-height: 108px;
+}
+
+.cardFooter {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+}
+
+.footerActions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.timestamps {
+  color: #64748b;
+  font-size: 14px;
+}
+
+.primaryBtn,
+.secondaryBtn,
+.dangerBtn {
+  border: 0;
+  border-radius: 14px;
+  padding: 12px 16px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.primaryBtn {
+  background: #111827;
+  color: #fff;
+}
+
+.primaryBtn:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.secondaryBtn {
+  background: #eef2f7;
+  color: #111827;
+}
+
+.dangerBtn {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.dangerBtn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.errorBox,
+.noticeBox,
+.emptyState {
+  padding: 16px 18px;
+  border-radius: 18px;
+}
+
+.errorBox {
+  background: #fff1f2;
+  color: #9f1239;
+  border: 1px solid #fecdd3;
+}
+
+.noticeBox {
+  background: #ecfdf3;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.emptyState {
+  background: #fff;
+  border: 1px dashed #cbd5e1;
+  color: #475569;
+}
+
+@media (max-width: 960px) {
+  .toolbar,
+  .cardHead,
+  .cardFooter {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .metaGrid,
+  .formGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .filter,
+  .filter select {
+    width: 100%;
+  }
+}

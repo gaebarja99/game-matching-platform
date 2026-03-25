@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>전적 검색 - GameMatcher</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+      background: #0f0f12;
+      color: #e4e4e7;
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    .container { max-width: 960px; margin: 0 auto; padding: 24px; }
+    .nav-links { margin-bottom: 24px; }
+    .nav-links a {
+      color: #71717a;
+      text-decoration: none;
+      font-size: 0.9rem;
+    }
+    .nav-links a:hover { color: #a78bfa; }
+    h1 {
+      font-size: 1.75rem;
+      margin-bottom: 24px;
+      background: linear-gradient(90deg, #f59e0b, #ef4444);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .search-card {
+      background: #18181b;
+      border-radius: 12px;
+      padding: 24px;
+      margin-bottom: 24px;
+      border: 1px solid #27272a;
+    }
+    .form-row {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      margin-bottom: 16px;
+    }
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .form-group label {
+      font-size: 0.85rem;
+      color: #a1a1aa;
+    }
+    .form-group input,
+    .form-group select {
+      padding: 10px 14px;
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      color: #e4e4e7;
+      font-size: 0.95rem;
+      min-width: 140px;
+    }
+    .form-group input::placeholder { color: #71717a; }
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 0.95rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn-primary { background: #f59e0b; color: #0f0f12; }
+    .btn-primary:hover { background: #d97706; }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; }
+    .results-card {
+      background: #18181b;
+      border-radius: 12px;
+      overflow: hidden;
+      border: 1px solid #27272a;
+      margin-bottom: 24px;
+    }
+    .results-header {
+      padding: 20px 24px;
+      border-bottom: 1px solid #27272a;
+      background: linear-gradient(135deg, #27272a 0%, #18181b 100%);
+    }
+    .player-info {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px 24px;
+      align-items: center;
+    }
+    .player-name { font-size: 1.25rem; font-weight: 600; }
+    .player-tag {
+      display: inline-flex;
+      padding: 4px 10px;
+      background: #27272a;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      color: #a1a1aa;
+    }
+    .player-tier {
+      display: inline-flex;
+      padding: 4px 12px;
+      background: linear-gradient(135deg, #4338ca, #6366f1);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 500;
+    }
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .stat-box {
+      background: #27272a;
+      padding: 12px;
+      border-radius: 8px;
+      text-align: center;
+    }
+    .stat-value { font-size: 1.25rem; font-weight: 600; color: #f59e0b; }
+    .stat-label { font-size: 0.8rem; color: #71717a; margin-top: 4px; }
+    .match-list { padding: 0; }
+    .match-item {
+      display: grid;
+      grid-template-columns: 80px 1fr auto auto;
+      gap: 16px;
+      align-items: center;
+      padding: 16px 24px;
+      border-bottom: 1px solid #27272a;
+      transition: background 0.2s;
+    }
+    .match-item:last-child { border-bottom: none; }
+    .match-item:hover { background: #27272a; }
+    .match-item.win { border-left: 4px solid #22c55e; }
+    .match-item.loss { border-left: 4px solid #ef4444; }
+    .match-champ {
+      font-weight: 500;
+      font-size: 0.95rem;
+    }
+    .match-mode { font-size: 0.8rem; color: #71717a; margin-top: 2px; }
+    .match-result {
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .match-result.victory { background: #166534; color: #86efac; }
+    .match-result.defeat { background: #7f1d1d; color: #fca5a5; }
+    .match-kda {
+      font-family: 'Consolas', monospace;
+      font-size: 0.9rem;
+      color: #a1a1aa;
+    }
+    .match-date { font-size: 0.85rem; color: #71717a; }
+    .loading { text-align: center; padding: 48px; color: #71717a; }
+    .error {
+      padding: 16px 24px;
+      background: #7f1d1d;
+      color: #fca5a5;
+      border-radius: 8px;
+      margin-bottom: 16px;
+    }
+    .empty { text-align: center; padding: 48px; color: #71717a; }
+    .game-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      font-size: 0.75rem;
+      border-radius: 4px;
+      text-transform: uppercase;
+      margin-left: 8px;
+    }
+    .game-lol { background: #7c3aed; }
+    .game-valorant { background: #ef4444; }
+    .game-tft { background: #06b6d4; }
+    .game-steam { background: #1b2838; }
+    .game-blizzard { background: #00aeff; }
+    .game-pubg { background: #f59e0b; }
+    .game-overwatch { background: #ff9c00; }
+    .game-cs2 { background: #eb4b4b; }
+    .game-apex { background: #da292a; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="nav-links">
+      <a href="/">← 홈</a>
+      <span style="color:#71717a; margin:0 8px">|</span>
+      <a href="/community/index.html">커뮤니티</a>
+    </div>
+
+    <h1>전적 검색</h1>
+
+    <div class="search-card">
+      <div class="form-row">
+        <div class="form-group">
+          <label>게임</label>
+          <select id="game">
+            <option value="lol">리그 오브 레전드</option>
+            <option value="valorant">발로란트</option>
+            <option value="tft">전략적 팀 전투 (TFT)</option>
+            <option value="steam">스팀 (CS2 등)</option>
+            <option value="blizzard">블리자드</option>
+            <option value="pubg">배틀그라운드</option>
+            <option value="overwatch">오버워치</option>
+            <option value="cs2">CS2</option>
+            <option value="apex">에이펙스 레전드</option>
+          </select>
+        </div>
+
+        <div class="form-group" id="riotGroup">
+          <label>닉네임 (게임이름)</label>
+          <input type="text" id="gameName" placeholder="예: hide on bush">
+        </div>
+
+        <div class="form-group" id="tagGroup">
+          <label>태그 (#뒷부분)</label>
+          <input type="text" id="tagLine" placeholder="예: KR1">
+        </div>
+
+        <div class="form-group" id="steamGroup" style="display:none">
+          <label>Steam ID / URL</label>
+          <input type="text" id="steamId" placeholder="Steam64 ID 또는 커스텀 URL">
+        </div>
+
+        <div class="form-group" id="pubgGroup" style="display:none">
+          <label>플랫폼</label>
+          <select id="platform">
+            <option value="steam">Steam</option>
+            <option value="kakao">Kakao</option>
+            <option value="xbox">Xbox</option>
+            <option value="psn">PlayStation</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>매치 수</label>
+          <input type="number" id="count" value="5" min="1" max="20" placeholder="1~20">
+        </div>
+
+        <div class="form-group" id="regionGroup">
+          <label>지역</label>
+          <select id="region">
+            <option value="kr">한국 (kr)</option>
+            <option value="asia">아시아 (asia)</option>
+            <option value="americas">미주 (americas)</option>
+            <option value="europe">유럽 (europe)</option>
+            <option value="jp">일본 (jp)</option>
+          </select>
+        </div>
+
+        <div class="form-group" style="align-self: flex-end;">
+          <button class="btn btn-primary" id="searchBtn">검색</button>
+        </div>
+      </div>
+
+      <p style="font-size:0.85rem; color:#71717a;">
+        Riot 게임(LoL, TFT, Valorant)은 <strong>닉네임#태그</strong> 형식으로 입력하세요. 블리자드는 BattleTag 형식, Steam은 Steam64 ID 또는 프로필 URL을 입력하세요.
+      </p>
+    </div>
+
+    <div id="error" class="error" style="display:none"></div>
+    <div id="results"></div>
+  </div>
+
+  <script>
+    const gameSelect = document.getElementById('game');
+    const riotGroup = document.getElementById('riotGroup');
+    const tagGroup = document.getElementById('tagGroup');
+    const steamGroup = document.getElementById('steamGroup');
+    const pubgGroup = document.getElementById('pubgGroup');
+    const regionGroup = document.getElementById('regionGroup');
+    const searchBtn = document.getElementById('searchBtn');
+
+    function updateFormVisibility() {
+      const game = gameSelect.value;
+      riotGroup.style.display = (game === 'steam') ? 'none' : 'flex';
+      tagGroup.style.display = ['lol', 'tft', 'valorant', 'blizzard'].includes(game) ? 'flex' : 'none';
+      steamGroup.style.display = (game === 'steam') ? 'flex' : 'none';
+      pubgGroup.style.display = (game === 'pubg') ? 'flex' : 'none';
+      regionGroup.style.display = ['lol', 'tft', 'valorant'].includes(game) ? 'flex' : 'none';
+    }
+    gameSelect.addEventListener('change', updateFormVisibility);
+    updateFormVisibility();
+
+    searchBtn.addEventListener('click', async () => {
+      const game = gameSelect.value;
+      const gameName = document.getElementById('gameName').value.trim();
+      const tagLine = document.getElementById('tagLine').value.trim();
+      const steamId = document.getElementById('steamId').value.trim();
+      const platform = document.getElementById('platform').value;
+      let count = parseInt(document.getElementById('count').value, 10);
+      if (isNaN(count) || count < 1) count = 1;
+      if (count > 20) count = 20;
+      const region = document.getElementById('region').value;
+
+      document.getElementById('error').style.display = 'none';
+      document.getElementById('results').innerHTML = '<div class="loading">검색 중...</div>';
+      searchBtn.disabled = true;
+
+      const body = { game, count };
+
+      if (game === 'steam') {
+        if (!steamId) {
+          showError('Steam ID 또는 프로필 URL을 입력하세요.');
+          searchBtn.disabled = false;
+          return;
+        }
+        body.steamId = steamId;
+      } else {
+        if (!gameName) {
+          showError('닉네임을 입력하세요.');
+          searchBtn.disabled = false;
+          return;
+        }
+        body.gameName = gameName;
+        if (['lol', 'tft', 'valorant', 'blizzard'].includes(game)) {
+          body.tagLine = tagLine || (game === 'blizzard' ? '0' : 'KR1');
+        }
+        if (game === 'pubg') body.platform = platform;
+        if (['lol', 'tft', 'valorant'].includes(game)) body.region = region;
+      }
+
+      try {
+        const res = await fetch('/api/search/player', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        const data = await res.json();
+
+        if (!res.ok) throw new Error(data.errorMessage || '검색에 실패했습니다.');
+        renderResults(data);
+      } catch (err) {
+        showError(err.message || '전적 조회 중 오류가 발생했습니다.');
+        document.getElementById('results').innerHTML = '';
+      } finally {
+        searchBtn.disabled = false;
+      }
+    });
+
+    function showError(msg) {
+      const el = document.getElementById('error');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+
+    function escapeHtml(s) {
+      if (!s) return '';
+      const div = document.createElement('div');
+      div.textContent = s;
+      return div.innerHTML;
+    }
+
+    function getGameBadgeClass(game) {
+      return 'game-badge game-' + (game || '').toLowerCase();
+    }
+
+    function renderResults(data) {
+      const container = document.getElementById('results');
+
+      if (!data.success) {
+        container.innerHTML = '<div class="error">' + escapeHtml(data.errorMessage || '검색 실패') + '</div>';
+        return;
+      }
+
+      const info = data.playerInfo || {};
+      const matches = data.matches || [];
+      const stats = data.stats || {};
+
+      let html = '<div class="results-card">';
+      html += '<div class="results-header">';
+      html += '<div class="player-info">';
+      html += '<span class="player-name">' + escapeHtml(data.nickname || '-') + '</span>';
+      html += '<span class="' + getGameBadgeClass(data.game) + '">' + escapeHtml(data.game || '') + '</span>';
+      if (info.tier) html += '<span class="player-tag">' + escapeHtml(info.tier) + ' ' + escapeHtml(info.rank || '') + (info.lp ? ' ' + escapeHtml(info.lp) + ' LP' : '') + '</span>';
+      html += '</div>';
+
+      if (stats.totalGames > 0) {
+        html += '<div class="stats-grid">';
+        html += '<div class="stat-box"><span class="stat-value">' + stats.totalGames + '</span><div class="stat-label">총 경기</div></div>';
+        html += '<div class="stat-box"><span class="stat-value" style="color:#22c55e">' + stats.wins + '</span><div class="stat-label">승리</div></div>';
+        html += '<div class="stat-box"><span class="stat-value" style="color:#ef4444">' + stats.losses + '</span><div class="stat-label">패배</div></div>';
+        html += '<div class="stat-box"><span class="stat-value">' + (stats.winRate ? stats.winRate.toFixed(1) : 0) + '%</span><div class="stat-label">승률</div></div>';
+        html += '<div class="stat-box"><span class="stat-value">' + (stats.avgKda ? stats.avgKda.toFixed(1) : '-') + '</span><div class="stat-label">평균 KDA</div></div>';
+        if (stats.mostUsedChampionOrAgent) {
+          html += '<div class="stat-box"><span class="stat-value" style="font-size:0.9rem">' + escapeHtml(stats.mostUsedChampionOrAgent) + '</span><div class="stat-label">많이 사용</div></div>';
+        }
+        html += '</div>';
+      }
+      html += '</div>';
+
+      if (matches.length === 0) {
+        html += '<div class="empty" style="padding:32px">최근 매치 기록이 없습니다.</div>';
+      } else {
+        html += '<div class="match-list">';
+        matches.forEach(m => {
+          const winClass = m.win === true ? 'win' : (m.win === false ? 'loss' : '');
+          const resultClass = m.win === true ? 'victory' : (m.win === false ? 'defeat' : '');
+          const resultText = m.win === true ? '승리' : (m.win === false ? '패배' : '-');
+          const champOrAgent = m.champion || m.agent || '-';
+          const kdaStr = [m.kills, m.deaths, m.assists].every(v => v != null)
+            ? m.kills + ' / ' + m.deaths + ' / ' + m.assists + (m.kda != null ? ' (KDA ' + m.kda.toFixed(1) + ')' : '')
+            : '-';
+          html += '<div class="match-item ' + winClass + '">';
+          html += '<div><div class="match-champ">' + escapeHtml(champOrAgent) + '</div><div class="match-mode">' + escapeHtml(m.gameMode || '') + '</div></div>';
+          html += '<div class="match-result ' + resultClass + '">' + resultText + '</div>';
+          html += '<div class="match-kda">' + escapeHtml(kdaStr) + '</div>';
+          html += '<div class="match-date">' + escapeHtml(m.playedAt || '') + '</div>';
+          html += '</div>';
+        });
+        html += '</div>';
+      }
+      html += '</div>';
+
+      container.innerHTML = html;
+    }
+  </script>
+</body>
+</html>

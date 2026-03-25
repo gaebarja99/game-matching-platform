@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>글쓰기 - GameMatcher 커뮤니티</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
+      background: #0f0f12;
+      color: #e4e4e7;
+      min-height: 100vh;
+      line-height: 1.6;
+    }
+    .container { max-width: 700px; margin: 0 auto; padding: 24px; }
+    a { color: #60a5fa; text-decoration: none; }
+    a:hover { text-decoration: underline; }
+    .back { margin-bottom: 20px; font-size: 0.9rem; }
+    .form-card {
+      background: #18181b;
+      border-radius: 12px;
+      padding: 28px;
+      border: 1px solid #27272a;
+    }
+    .form-group { margin-bottom: 20px; }
+    .form-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: #a1a1aa;
+      font-size: 0.9rem;
+    }
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 12px 16px;
+      background: #27272a;
+      border: 1px solid #3f3f46;
+      border-radius: 8px;
+      color: #e4e4e7;
+      font-size: 1rem;
+    }
+    .form-group textarea {
+      min-height: 200px;
+      resize: vertical;
+    }
+    .form-group input::placeholder,
+    .form-group textarea::placeholder { color: #71717a; }
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-size: 1rem;
+      font-weight: 500;
+    }
+    .btn-primary { background: #6366f1; color: white; }
+    .btn-primary:hover { background: #4f46e5; }
+    .btn-secondary { background: #27272a; color: #e4e4e7; margin-right: 12px; }
+    .btn-secondary:hover { background: #3f3f46; }
+    .error { padding: 12px; background: #7f1d1d; color: #fca5a5; border-radius: 8px; margin-bottom: 16px; display: none; }
+    .hint { font-size: 0.85rem; color: #71717a; margin-top: 6px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <a href="index.html" class="back">← 목록으로</a>
+
+    <div class="form-card">
+      <h2 style="margin-bottom:24px">글쓰기</h2>
+      <div id="error" class="error"></div>
+
+      <div class="form-group">
+        <label>사용자 ID *</label>
+        <input type="number" id="userId" value="1" min="1">
+        <div class="hint">DB users 테이블에 존재하는 ID를 입력하세요.</div>
+      </div>
+
+      <div class="form-group">
+        <label>게시판 *</label>
+        <select id="boardCategory">
+          <option value="FREE">자유게시판</option>
+          <option value="NOTICE">공지사항</option>
+          <option value="QUESTION">질문게시판</option>
+          <option value="LOL">롤</option>
+          <option value="VALORANT">발로란트</option>
+          <option value="PUBG">배그</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>제목 *</label>
+        <input type="text" id="title" placeholder="제목을 입력하세요" maxlength="200">
+      </div>
+
+      <div class="form-group">
+        <label>내용 *</label>
+        <textarea id="content" placeholder="내용을 입력하세요"></textarea>
+      </div>
+
+      <div class="form-group">
+        <label>해시태그 (쉼표로 구분)</label>
+        <input type="text" id="hashtags" placeholder="예: 게임, 롤, 질문">
+      </div>
+
+      <div class="form-group">
+        <button type="button" class="btn btn-primary" onclick="submitPost()">등록</button>
+        <button type="button" class="btn btn-secondary" onclick="location.href='index.html'">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const savedUserId = localStorage.getItem('communityUserId');
+    if (savedUserId) document.getElementById('userId').value = savedUserId;
+    document.getElementById('userId').addEventListener('change', e => localStorage.setItem('communityUserId', e.target.value));
+
+    async function submitPost() {
+      const userId = document.getElementById('userId').value;
+      const boardCategory = document.getElementById('boardCategory').value;
+      const title = document.getElementById('title').value.trim();
+      const content = document.getElementById('content').value.trim();
+      const hashtagStr = document.getElementById('hashtags').value.trim();
+      const hashtags = hashtagStr ? hashtagStr.split(',').map(s => s.trim()).filter(Boolean) : [];
+
+      document.getElementById('error').style.display = 'none';
+
+      if (!title) {
+        showError('제목을 입력하세요.');
+        return;
+      }
+      if (!content) {
+        showError('내용을 입력하세요.');
+        return;
+      }
+
+      const body = {
+        boardCategory,
+        title,
+        content,
+        isNotice: false,
+        hashtags: hashtags.slice(0, 10)
+      };
+
+      try {
+        const res = await fetch(`/api/users/${userId}/community/posts/json`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+          const err = await res.json().catch(() => ({}));
+          throw new Error(err.details || err.error || '등록 실패');
+        }
+
+        const post = await res.json();
+        location.href = `post.html?id=${post.id}`;
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+
+    function showError(msg) {
+      const el = document.getElementById('error');
+      el.textContent = msg;
+      el.style.display = 'block';
+    }
+  </script>
+</body>
+</html>
