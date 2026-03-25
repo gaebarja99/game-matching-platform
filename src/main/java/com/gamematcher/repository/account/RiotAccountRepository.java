@@ -13,4 +13,6 @@ public interface RiotAccountRepository extends JpaRepository<RiotAccount, Long> 
     boolean existsByPuuid(String puuid);
 
     List<RiotAccount> findByUserId(Long userId);
+
+    Optional<RiotAccount> findFirstByUserId(Long userId);
 }

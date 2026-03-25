@@ -4,7 +4,7 @@ import com.gamematcher.entity.User;
 import com.gamematcher.entity.account.BlizzardAccount;
 import com.gamematcher.exception.GameApiException;
 import com.gamematcher.repository.account.BlizzardAccountRepository;
-import com.gamematcher.repository.common.UserRepository;
+import com.gamematcher.repository.common.CommonUserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class BlizzardAccountService {
 
     private final BlizzardAccountRepository blizzardAccountRepository;
-    private final UserRepository userRepository;
+    private final CommonUserRepository userRepository;
 
     @Transactional
     public BlizzardAccount linkBlizzardAccount(Long userId, String battleTag, String accountId, String region) {

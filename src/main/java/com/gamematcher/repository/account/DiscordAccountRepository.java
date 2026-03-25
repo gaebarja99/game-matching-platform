@@ -13,4 +13,6 @@ public interface DiscordAccountRepository extends JpaRepository<DiscordAccount, 
     boolean existsByDiscordId(String discordId);
 
     List<DiscordAccount> findByUserId(Long userId);
+
+    Optional<DiscordAccount> findFirstByUserId(Long userId);
 }

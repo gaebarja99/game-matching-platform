@@ -4,7 +4,7 @@ import com.gamematcher.entity.BlockedUser;
 import com.gamematcher.entity.User;
 import com.gamematcher.exception.GameApiException;
 import com.gamematcher.repository.common.BlockedUserRepository;
-import com.gamematcher.repository.common.UserRepository;
+import com.gamematcher.repository.common.CommonUserRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,9 +16,9 @@ import java.util.stream.Collectors;
 public class BlockService {
 
     private final BlockedUserRepository blockedUserRepository;
-    private final UserRepository userRepository;
+    private final CommonUserRepository userRepository;
 
-    public BlockService(BlockedUserRepository blockedUserRepository, UserRepository userRepository) {
+    public BlockService(BlockedUserRepository blockedUserRepository, CommonUserRepository userRepository) {
         this.blockedUserRepository = blockedUserRepository;
         this.userRepository = userRepository;
     }

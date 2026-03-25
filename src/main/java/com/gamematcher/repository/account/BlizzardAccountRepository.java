@@ -13,4 +13,6 @@ public interface BlizzardAccountRepository extends JpaRepository<BlizzardAccount
     boolean existsByAccountIdAndRegion(String accountId, String region);
 
     List<BlizzardAccount> findByUserId(Long userId);
+
+    Optional<BlizzardAccount> findFirstByUserId(Long userId);
 }

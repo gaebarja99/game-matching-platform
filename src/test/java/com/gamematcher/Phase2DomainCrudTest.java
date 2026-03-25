@@ -19,7 +19,7 @@ import com.gamematcher.repository.ai.evaluation.GameRepository;
 import com.gamematcher.repository.ai.evaluation.MatchRecordEvaluationRepository;
 import com.gamematcher.repository.ai.evaluation.MatchRecordParticipantRepository;
 import com.gamematcher.repository.ai.evaluation.MatchRecordRepository;
-import com.gamematcher.repository.common.UserRepository;
+import com.gamematcher.repository.common.CommonUserRepository;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,7 +47,7 @@ class Phase2DomainCrudTest {
     @Autowired MatchRecordRepository matchRecordRepository;
     @Autowired MatchRecordParticipantRepository participantRepository;
     @Autowired MatchRecordEvaluationRepository evaluationRepository;
-    @Autowired UserRepository userRepository;
+    @Autowired CommonUserRepository userRepository;
     @Autowired StatsConverter statsConverter;
 
     @Test

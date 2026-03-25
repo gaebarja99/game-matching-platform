@@ -2,7 +2,7 @@ package com.gamematcher.controller.account;
 
 import com.gamematcher.dto.search.PlayerSearchRequest;
 import com.gamematcher.dto.search.PlayerSearchResponse;
-import com.gamematcher.service.cs2.Cs2ApiService;
+import com.gamematcher.service.search.Cs2SearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,7 +22,7 @@ import org.springframework.web.bind.annotation.*;
 @CrossOrigin(origins = "*")
 public class Cs2Controller {
 
-    private final Cs2ApiService cs2ApiService;
+    private final Cs2SearchService cs2SearchService;
 
     /**
      * CS2 전적 검색
@@ -32,6 +32,6 @@ public class Cs2Controller {
     public ResponseEntity<PlayerSearchResponse> searchCs2(
             @RequestBody PlayerSearchRequest request) {
         request.setGame("cs2");
-        return ResponseEntity.ok(cs2ApiService.search(request));
+        return ResponseEntity.ok(cs2SearchService.search(request));
     }
 }

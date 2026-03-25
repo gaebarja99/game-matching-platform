@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none">
+  <defs>
+    <filter id="sparkle-glow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="0.6" result="blur"/>
+      <feFlood flood-color="#00e676" flood-opacity="0.5"/>
+      <feComposite in2="blur" operator="in" result="glow"/>
+      <feMerge>
+        <feMergeNode in="glow"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+  </defs>
+  <!-- 4-point star, bright center, sharp symmetrical (팡 1번 스타일) -->
+  <path filter="url(#sparkle-glow)" fill="#00e676" stroke="#00e676" stroke-width="0.5" stroke-linejoin="round" d="M12 2l2.2 7.6L22 12l-7.8 2.4L12 22l-2.2-7.6L2 12l7.8-2.4L12 2z"/>
+</svg>

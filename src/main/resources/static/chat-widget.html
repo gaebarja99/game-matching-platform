@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>채팅 - GameMatcher</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sockjs-client@1/dist/sockjs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
+    <script src="/js/alert-popup.js"></script>
+    <script src="/js/error-messages-ko.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'Noto Sans KR', sans-serif; height: 100vh; display: flex; flex-direction: column; background: #18181b; color: #efeff1; }
+        .cw-header { padding: 10px 16px; border-bottom: 1px solid #26262c; display: flex; align-items: center; gap: 12px; flex-shrink: 0; }
+        .cw-header.cw-header-hidden { display: none !important; }
+        .cw-header a { color: #00e676; text-decoration: none; font-size: 0.9rem; }
+        .cw-header .title { flex: 1; font-weight: 600; font-size: 1rem; }
+        .cw-notice { padding: 10px 16px; background: #1e1e21; border-bottom: 1px solid #26262c; font-size: 0.9rem; color: #b0b0b5; display: none; }
+        .cw-notice.show { display: block; }
+        .cw-frozen-msg { padding: 8px 16px; background: rgba(233,25,22,0.15); border-top: 1px solid #26262c; font-size: 0.85rem; color: #e91916; display: none; flex-shrink: 0; }
+        .cw-frozen-msg.show { display: block; }
+        .cw-host-toolbar { padding: 8px 16px; border-bottom: 1px solid #26262c; display: none; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .cw-host-toolbar.show { display: flex; }
+        .cw-host-toolbar button { padding: 6px 12px; border-radius: 6px; font-size: 0.85rem; border: 1px solid #3a3a3d; background: #26262c; color: #efeff1; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; }
+        .cw-host-toolbar button:hover { background: #3a3a3d; }
+        .cw-host-toolbar button.btn-freeze.on { background: rgba(233,25,22,0.2); border-color: #e91916; color: #e91916; }
+        .cw-host-toolbar button.btn-notice { border-color: #00e676; color: #00e676; }
+        .cw-messages { flex: 1; overflow-y: auto; padding: 12px; font-size: 1.1rem; line-height: 1.5; }
+        .cw-messages .chat-msg { margin-bottom: 0.6rem; word-break: break-word; line-height: 1.5; }
+        .cw-messages .chat-msg .user { margin-right: 0.4rem; font-weight: 600; color: #60a5fa; font-size: 1.05rem; }
+        .cw-messages .chat-msg .chat-badges { display: inline-flex; align-items: center; gap: 2px; margin-right: 4px; vertical-align: middle; }
+        .cw-messages .chat-msg .chat-badge { font-size: 0.85rem; line-height: 1; }
+        .cw-messages .chat-msg .chat-badge-sub { font-size: 0.65rem; font-weight: 700; color: #fff; background: #00e676; padding: 0.1rem 0.35rem; border-radius: 4px; }
+        .cw-messages .chat-msg .chat-badge-level { font-size: 0.7rem; font-weight: 700; color: #00e676; background: rgba(0,230,118,0.15); padding: 0.1rem 0.35rem; border-radius: 4px; }
+        .cw-messages .chat-msg .chat-badge.donor-heart { color: #e91916; }
+        .cw-messages .chat-msg.chat-msg-streamer .user { color: #e91916; }
+        .cw-messages .chat-msg.chat-msg-rank1 .user { color: #fbbf24; }
+        .cw-messages .chat-msg.chat-msg-rank2 .user { color: #9ca3af; }
+        .cw-messages .chat-msg.chat-msg-rank3 .user { color: #d97706; }
+        .cw-messages .chat-msg.chat-msg-donor .user { color: #a78bfa; }
+        .cw-messages .chat-msg .streamer-badge { font-size: 0.8rem; font-weight: 700; color: #fff; background: #e91916; padding: 0.15rem 0.4rem; border-radius: 4px; margin-right: 0.35rem; }
+        .cw-messages .chat-msg .partner-badge { font-size: 0.85rem; font-weight: 700; color: #00e676; margin-right: 0.25rem; }
+        .cw-messages .chat-msg.pang-effect { font-weight: 700; color: #ffd700; font-size: 1.05rem; }
+        .cw-messages .chat-msg.pang-effect .user { color: #ffd700; }
+        .cw-messages .chat-msg .chat-consecutive-days { font-size: 0.85rem; color: #fef08a; margin-left: 0.35rem; font-weight: 600; }
+        /* 후원 카드 - watch.html과 동일 */
+        .cw-messages .chat-msg-donation-card { margin: 8px 0; display: block; }
+        .cw-messages .chat-msg-donation-card { max-width: 100%; min-width: 0; }
+        .cw-messages .chat-msg-donation-card .twitch-alert { background: #18181b; border-radius: 6px; overflow: hidden; box-shadow: 0 2px 12px rgba(0,0,0,0.35); border-left: 3px solid #9147ff; font-size: 13px; max-width: 100%; min-width: 0; width: 100%; box-sizing: border-box; }
+        .cw-messages .chat-msg-donation-card .twitch-alert-body { min-width: 0; overflow: hidden; }
+        .cw-messages .chat-msg-donation-card .twitch-alert-donor { flex-wrap: wrap; min-width: 0; }
+        .cw-messages .chat-msg-donation-card .twitch-alert-donor .pang-emoji-img { max-width: 20px; height: auto; }
+        .cw-messages .chat-msg-donation-card .twitch-alert-donor .donation-label-img { max-width: 80px; }
+        .cw-messages .chat-msg-donation-card .twitch-alert.tier-mega { border-left-color: #ff6b9d; }
+        .cw-messages .chat-msg-donation-card .twitch-alert.tier-super { border-left-color: #00e676; }
+        .cw-messages .chat-msg-donation-card .twitch-alert-header { background: linear-gradient(90deg, #9147ff 0%, #772ce8 100%); padding: 0.35em 0.7em; font-size: 0.65rem; font-weight: 800; color: #fff; }
+        .cw-messages .chat-msg-donation-card .twitch-alert.tier-mega .twitch-alert-header { background: linear-gradient(90deg, #ff6b9d 0%, #e8488a 100%); }
+        .cw-messages .chat-msg-donation-card .twitch-alert.tier-super .twitch-alert-header { background: linear-gradient(90deg, #00e676 0%, #00a858 100%); color: #fff; }
+        .cw-messages .chat-msg-donation-card .twitch-alert-body { padding: 0.6em 0.75em; color: #efeff1; }
+        .cw-messages .chat-msg-donation-card .twitch-alert-donor { font-size: 0.9rem; font-weight: 700; color: #fff; display: flex; align-items: center; flex-wrap: wrap; gap: 2px 6px; }
+        .cw-messages .chat-msg-donation-card .twitch-alert-donor .twitch-name { color: #a970ff; }
+        .cw-messages .chat-msg-donation-card .twitch-alert-donor .donation-label-img { height: 1.35em; max-height: 22px; width: auto; object-fit: contain; vertical-align: middle; margin: 0 2px; }
+        .cw-messages .chat-msg-donation-card .twitch-alert-donor .pang-emoji-img { height: 1em; width: auto; vertical-align: middle; margin: 0 1px; }
+        .cw-messages .chat-msg-donation-card .twitch-alert-msg { margin-top: 0.4em; padding: 0.4em 0.55em; background: rgba(255,255,255,0.06); border-radius: 4px; font-size: 0.82rem; color: #e0e0e0; word-break: break-word; }
+        .cw-messages .chat-msg-donation-card .twitch-alert-consecutive { font-size: 0.85rem; font-weight: 700; color: #fef08a; margin-top: 4px; }
+        .cw-messages .chat-msg .user-id { font-size: 0.85rem; font-weight: 500; color: #6b6b70; margin-left: 0.25rem; }
+        .cw-messages .chat-msg.chat-msg-system { font-size: 0.9rem; padding: 0.4rem 0; }
+        .cw-messages .chat-msg.chat-msg-system .user { color: #adadb8; }
+        .cw-input-wrap { padding: 12px; border-top: 1px solid #26262c; flex-shrink: 0; }
+        .cw-input-wrap input { width: 100%; padding: 10px 14px; border-radius: 8px; border: 2px solid #3a3a3d; background: #26262c; color: #efeff1; font-size: 1.05rem; box-sizing: border-box; }
+        .cw-input-wrap input:focus { outline: none; border-color: #00e676; }
+        .cw-input-wrap input:disabled { opacity: 0.6; cursor: not-allowed; }
+        .cw-login-msg { padding: 12px; font-size: 0.9rem; color: #8b8b90; }
+        .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 1000; display: none; align-items: center; justify-content: center; }
+        .modal-backdrop.show { display: flex; }
+        .modal-box { background: #1e1e21; border: 1px solid #2c2c2e; border-radius: 12px; padding: 24px; max-width: 420px; width: 90%; transition: background 0.2s, border-color 0.2s, color 0.2s; }
+        body.theme-light .modal-box { background: #fff; border-color: #e5e5e7; box-shadow: 0 8px 32px rgba(0,0,0,0.12); }
+        .modal-box h2 { margin: 0 0 16px 0; font-size: 1.1rem; color: #efeff1; }
+        body.theme-light .modal-box h2 { color: #1a1a1d; }
+        .modal-box textarea { width: 100%; padding: 10px; border-radius: 8px; border: 2px solid #3a3a3d; background: #26262c; color: #efeff1; font-size: 0.95rem; resize: vertical; min-height: 80px; box-sizing: border-box; }
+        body.theme-light .modal-box textarea { border-color: #e0e0e2; background: #f5f5f7; color: #1a1a1d; }
+        .modal-box .char-count { font-size: 0.8rem; color: #6b6b70; margin-top: 4px; text-align: right; }
+        .modal-box .toggle-row { display: flex; align-items: center; gap: 10px; margin-bottom: 16px; }
+        .modal-box .toggle-row label { flex: 1; color: #efeff1; }
+        body.theme-light .modal-box .toggle-row label { color: #1a1a1d; }
+        .modal-box .modal-actions { display: flex; gap: 8px; margin-top: 16px; }
+        .modal-box .btn-apply { flex: 1; padding: 10px; background: #00e676; color: #0d0d0f; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .modal-box .btn-cancel { padding: 10px 16px; background: #26262c; color: #b0b0b5; border: 1px solid #3a3a3d; border-radius: 8px; cursor: pointer; }
+        body.theme-light .modal-box .btn-cancel { background: #f5f5f7; color: #53535a; border-color: #e0e0e2; }
+        body.theme-light .modal-box .btn-cancel:hover { background: #e5e5e7; color: #1a1a1d; }
+        .modal-box .ban-list { max-height: 200px; overflow-y: auto; margin: 12px 0; }
+        .modal-box .ban-list .ban-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #2c2c2e; }
+        body.theme-light .modal-box .ban-list .ban-item { border-bottom-color: #e5e5e7; }
+        .modal-box .ban-list .ban-item button { padding: 4px 10px; font-size: 0.8rem; border-radius: 4px; border: 1px solid #e91916; background: transparent; color: #e91916; cursor: pointer; }
+        .modal-box .add-ban-row { display: flex; gap: 8px; margin-top: 12px; }
+        .modal-box .add-ban-row input { flex: 1; padding: 8px 10px; border-radius: 6px; border: 2px solid #3a3a3d; background: #26262c; color: #efeff1; }
+        body.theme-light .modal-box .add-ban-row input { border-color: #e0e0e2; background: #f5f5f7; color: #1a1a1d; }
+
+        /* 방송 오버레이 모드: ?overlay=1 — 헤더/로그인/입력란 숨김, 가로 여백 축소, 글자 확대, 가로·세로 리사이즈 */
+        body.overlay-mode { background: transparent; padding: 0; margin: 0; align-items: flex-start; justify-content: flex-start; }
+        body.overlay-mode .cw-header,
+        body.overlay-mode .cw-login-msg,
+        body.overlay-mode .cw-input-wrap,
+        body.overlay-mode .cw-host-toolbar { display: none !important; }
+        body.overlay-mode .overlay-resize-wrap {
+            resize: both;
+            overflow: hidden;
+            min-width: 220px;
+            min-height: 180px;
+            max-width: 100vw;
+            max-height: 100vh;
+            width: 320px;
+            height: 280px;
+            display: flex;
+            flex-direction: column;
+            border: 1px solid rgba(255,255,255,0.15);
+            border-radius: 8px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+        }
+        body.overlay-mode .overlay-resize-wrap .cw-messages {
+            flex: 1;
+            min-height: 0;
+            min-width: 0;
+            width: 100%;
+        }
+        body.overlay-mode .cw-messages .chat-msg {
+            max-width: 100%;
+        }
+        body.overlay-mode .cw-messages {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+            background: rgba(0, 0, 0, 0.45);
+            color: #fff;
+            text-shadow: 0 0 2px #000, 0 1px 4px rgba(0,0,0,0.9), 1px 1px 2px #000;
+            padding: 6px 8px;
+            font-size: 1.35rem;
+            box-sizing: border-box;
+        }
+        body.overlay-mode .cw-messages .chat-msg { font-size: 1.35rem; margin-bottom: 0.5rem; }
+        body.overlay-mode .cw-messages .chat-msg .user { font-size: 1.3rem; color: #c4b5fd; text-shadow: 0 0 2px #000, 0 1px 4px rgba(0,0,0,0.9); }
+        body.overlay-mode .cw-messages .chat-msg.chat-msg-streamer .user { color: #fca5a5; }
+        body.overlay-mode .cw-messages .chat-msg .partner-badge { color: #00e676; }
+        body.overlay-mode .cw-messages .chat-msg.pang-effect { font-size: 1.4rem; }
+        body.overlay-mode .cw-messages .chat-msg.pang-effect .user { color: #fef08a; }
+        body.overlay-mode .cw-messages .chat-msg-donation-card .twitch-alert { font-size: 14px; }
+        body.overlay-mode .cw-messages .chat-msg-donation-card .twitch-alert-donor { font-size: 1rem; }
+        body.overlay-mode .cw-messages .chat-msg-donation-card .twitch-alert-donor .donation-label-img { max-height: 26px; }
+        body.overlay-mode .cw-notice.show { background: rgba(0, 0, 0, 0.5); color: #e5e5e5; padding: 6px 8px; font-size: 1.1rem; }
+        body.overlay-mode .cw-frozen-msg.show { background: rgba(233, 25, 22, 0.25); padding: 6px 8px; font-size: 1.1rem; }
+        /* 채팅 오버레이: 스크롤바 숨김 (스크롤은 유지) */
+        body.overlay-mode .cw-messages::-webkit-scrollbar { display: none; }
+    </style>
+</head>
+<body>
+    <div class="cw-header cw-header-hidden" aria-hidden="true">
+        <a href="/streams.html">← 목록</a>
+        <span class="title" id="widget-stream-title">채팅</span>
+    </div>
+    <div class="cw-notice" id="widget-notice"></div>
+    <div class="cw-host-toolbar" id="host-toolbar">
+        <button type="button" class="btn-notice" id="btn-notice" title="BJ 공지">📢 공지</button>
+        <button type="button" class="btn-freeze" id="btn-freeze">얼리기</button>
+        <button type="button" id="btn-ban" title="채팅 금지">채팅금지</button>
+        <button type="button" id="btn-blacklist" title="블랙리스트 (방송 입장 차단)">블랙리스트</button>
+        <button type="button" id="btn-managers" title="매니저 지정/해제">매니저</button>
+        <button type="button" id="btn-pang-limit" title="후원 팡 제한">후원</button>
+    </div>
+    <div class="cw-messages" id="chat-messages">
+        <div class="chat-msg"><span class="user">시스템</span> 채팅창에 오신 것을 환영합니다.</div>
+    </div>
+    <div class="cw-login-msg" id="login-msg" style="display:none;">로그인 후 채팅을 이용할 수 있습니다.</div>
+    <div class="cw-frozen-msg" id="widget-frozen-msg">채팅이 얼려졌습니다. 방장만 채팅할 수 있습니다.</div>
+    <div class="cw-input-wrap">
+        <input type="text" id="chat-input" placeholder="메시지를 입력해주세요" disabled maxlength="500">
+    </div>
+
+    <div id="modal-notice" class="modal-backdrop">
+        <div class="modal-box">
+            <h2>BJ 공지 등록</h2>
+            <div class="toggle-row">
+                <label>공지 노출</label>
+                <input type="checkbox" id="notice-visible" checked>
+            </div>
+            <textarea id="notice-text" maxlength="200" placeholder="공지사항 등록 후 노출 처리 시 채팅창 상단에 등록됩니다."></textarea>
+            <p class="char-count" id="notice-char-count">0/200</p>
+            <div class="modal-actions">
+                <button type="button" class="btn-apply" id="notice-apply">적용</button>
+                <button type="button" class="btn-cancel" id="notice-cancel">취소</button>
+            </div>
+        </div>
+    </div>
+    <div id="modal-ban" class="modal-backdrop">
+        <div class="modal-box">
+            <h2>채팅 금지 사용자</h2>
+            <div class="ban-list" id="ban-list"></div>
+            <div class="add-ban-row">
+                <input type="text" id="ban-user-id" placeholder="로그인 아이디 또는 사용자 ID (숫자)" autocomplete="off">
+                <select id="ban-duration">
+                    <option value="">영구</option>
+                    <option value="5" selected>5분</option>
+                    <option value="10">10분</option>
+                    <option value="30">30분</option>
+                </select>
+                <button type="button" class="btn-apply" id="ban-add">추가</button>
+            </div>
+            <div class="modal-actions" style="margin-top:12px;">
+                <button type="button" class="btn-cancel" id="ban-close">닫기</button>
+            </div>
+        </div>
+    </div>
+    <div id="modal-blacklist" class="modal-backdrop">
+        <div class="modal-box">
+            <h2>블랙리스트 (방송 입장 차단)</h2>
+            <div class="ban-list" id="blacklist-list"></div>
+            <div class="add-ban-row">
+                <input type="text" id="blacklist-user-id" placeholder="로그인 아이디 또는 사용자 ID" autocomplete="off">
+                <button type="button" class="btn-apply" id="blacklist-add">추가</button>
+            </div>
+            <div class="modal-actions" style="margin-top:12px;">
+                <button type="button" class="btn-cancel" id="blacklist-close">닫기</button>
+            </div>
+        </div>
+    </div>
+    <div id="modal-managers" class="modal-backdrop">
+        <div class="modal-box">
+            <h2>매니저</h2>
+            <div class="ban-list" id="managers-list"></div>
+            <div class="add-ban-row">
+                <input type="text" id="manager-user-id" placeholder="로그인 아이디 또는 사용자 ID" autocomplete="off">
+                <button type="button" class="btn-apply" id="manager-add">매니저 지정</button>
+            </div>
+            <div class="modal-actions" style="margin-top:12px;">
+                <button type="button" class="btn-cancel" id="managers-close">닫기</button>
+            </div>
+        </div>
+    </div>
+    <div id="modal-pang-limit" class="modal-backdrop">
+        <div class="modal-box">
+            <h2>후원 팡 제한</h2>
+            <p class="hint" style="font-size:0.85rem; color:#8b8b90; margin-bottom:14px; line-height:1.4;">영상 후원 / TTS(후원 메시지)는 설정한 팡 이상일 때만 가능합니다. 0이면 제한 없음.</p>
+            <div class="modal-field" style="margin-bottom:12px;">
+                <label style="display:block; margin-bottom:6px;">영상 후원 최소 (팡)</label>
+                <input type="number" id="donation-limit-video" min="0" value="0" style="width:100%; padding:8px 10px; border-radius:6px; border:2px solid #3a3a3d; background:#26262c; color:#efeff1; box-sizing:border-box;">
+            </div>
+            <div class="modal-field" style="margin-bottom:16px;">
+                <label style="display:block; margin-bottom:6px;">TTS 최소 (팡)</label>
+                <input type="number" id="donation-limit-tts" min="0" value="0" style="width:100%; padding:8px 10px; border-radius:6px; border:2px solid #3a3a3d; background:#26262c; color:#efeff1; box-sizing:border-box;">
+            </div>
+            <div class="modal-actions">
+                <button type="button" class="btn-apply" id="btn-save-donation-limits">저장</button>
+                <button type="button" class="btn-cancel" id="modal-pang-limit-close">닫기</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var params = new URLSearchParams(location.search);
+            var streamId = params.get('streamId') || params.get('streamid');
+            var isOverlay = params.get('overlay') === '1' || params.get('overlay') === 'true';
+            if (isOverlay) {
+                document.body.classList.add('overlay-mode');
+                var wrap = document.createElement('div');
+                wrap.className = 'overlay-resize-wrap';
+                var notice = document.getElementById('widget-notice');
+                var messages = document.getElementById('chat-messages');
+                var frozen = document.getElementById('widget-frozen-msg');
+                if (notice) wrap.appendChild(notice);
+                if (messages) wrap.appendChild(messages);
+                if (frozen) wrap.appendChild(frozen);
+                document.body.appendChild(wrap);
+            }
+            function setOverlayStatus(text) { /* 제거됨: 오버레이에서는 상태 문구 미표시 */ }
+
+            if (!streamId) {
+                document.getElementById('chat-messages').innerHTML = '<div class="chat-msg"><span class="user">시스템</span> URL에 streamId가 필요합니다. 예: chat-widget.html?streamId=1</div>';
+                return;
+            }
+
+            var streamData = { userId: null, title: '', chatFrozen: false, streamNotice: '', streamNoticeVisible: false, partner: false };
+            var currentUserId = null;
+            var isHost = false;
+
+            function esc(s) {
+                if (!s) return '';
+                var d = document.createElement('div');
+                d.textContent = s;
+                return d.innerHTML;
+            }
+            var donorUserIds = new Set();
+            var donorRank1Id = null, donorRank2Id = null, donorRank3Id = null;
+            var subscriberUserIds = new Set();
+            function appendChatMsg(displayName, text, isStreamer, userId, level) {
+                var el = document.getElementById('chat-messages');
+                if (!el) return;
+                var uid = userId != null ? Number(userId) : null;
+                var isDonor = uid != null && donorUserIds.has(uid);
+                var rank = (uid !== null && uid === donorRank1Id) ? 1 : (uid === donorRank2Id) ? 2 : (uid === donorRank3Id) ? 3 : 0;
+                var isSub = uid != null && subscriberUserIds.has(uid);
+                var classes = 'chat-msg' + (isStreamer ? ' chat-msg-streamer' : '');
+                if (rank === 1) classes += ' chat-msg-rank1';
+                if (rank === 2) classes += ' chat-msg-rank2';
+                if (rank === 3) classes += ' chat-msg-rank3';
+                if (isDonor) classes += ' chat-msg-donor';
+                if (isSub) classes += ' chat-msg-subscriber';
+                var div = document.createElement('div');
+                div.className = classes;
+                var badges = [];
+                var lv = level != null ? parseInt(level, 10) : 1;
+                if (lv >= 1) badges.push('<span class="chat-badge chat-badge-level" title="레벨 ' + lv + '">LV.' + lv + '</span>');
+                if (isDonor && rank === 0) badges.push('<span class="chat-badge donor-heart" title="후원자">❤</span>');
+                if (rank === 1) badges.push('<span class="chat-badge donor-rank-1" title="후원 1등">🥇</span>');
+                if (rank === 2) badges.push('<span class="chat-badge donor-rank-2" title="후원 2등">🥈</span>');
+                if (rank === 3) badges.push('<span class="chat-badge donor-rank-3" title="후원 3등">🥉</span>');
+                if (isSub) badges.push('<span class="chat-badge chat-badge-sub" title="구독자">구독</span>');
+                if (isStreamer && streamData.partner) badges.push('<span class="chat-badge partner-badge" title="파트너">✓</span>');
+                var badgeHtml = badges.length ? '<span class="chat-badges">' + badges.join('') + '</span>' : '';
+                var userPart = isStreamer
+                    ? '<span class="streamer-badge">방송자</span>' + badgeHtml + '<span class="user">' + esc(displayName) + '</span>'
+                    : badgeHtml + '<span class="user">' + esc(displayName) + '</span>';
+                div.innerHTML = userPart + esc(text);
+                el.appendChild(div);
+                el.scrollTop = el.scrollHeight;
+            }
+            function showDonationOnScreen(data) {
+                var donorName = (data && data.donorName) ? data.donorName : '후원자';
+                var amount = (data && data.amount) ? data.amount : 0;
+                var tier = (data && data.tier) ? data.tier : '팡';
+                var donorMessage = (data && data.donorMessage) ? data.donorMessage.trim() : '';
+                var consecutiveDays = (data && data.consecutiveDonationDays) ? parseInt(data.consecutiveDonationDays, 10) : 0;
+                var el = document.getElementById('chat-messages');
+                if (el) {
+                    var tierClass = tier === '메가팡' ? 'tier-mega' : (tier === '슈퍼팡' ? 'tier-super' : '');
+                    var pangImg = '<img src="/images/pang-sparkle.svg" alt="팡" class="pang-emoji-img">';
+                    var displayName = (donorName && donorName.trim()) ? donorName.trim() : '익명의 후원자';
+                    var safeMsg = donorMessage ? donorMessage.replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;') : '';
+                    var bodyHtml = '<div class="twitch-alert-donor">&#127881; <span class="twitch-name">' + (displayName ? displayName.replace(/</g, '&lt;').replace(/>/g, '&gt;').trim() : '익명') + '님이</span> ' + amount.toLocaleString() + '팡 후원! 팡! ' + pangImg + '</div>';
+                    if (safeMsg) bodyHtml += '<div class="twitch-alert-msg">' + safeMsg + '</div>';
+                    if (consecutiveDays >= 1) bodyHtml += '<div class="twitch-alert-consecutive">연속후원 ' + consecutiveDays + '일</div>';
+                    var line = document.createElement('div');
+                    line.className = 'chat-msg chat-msg-donation-card';
+                    line.innerHTML = '<div class="twitch-alert ' + tierClass + '"><div class="twitch-alert-header">' + (tier || '팡') + '</div><div class="twitch-alert-body">' + bodyHtml + '</div></div>';
+                    el.appendChild(line);
+                    el.scrollTop = el.scrollHeight;
+                }
+                window.showDonationOnScreen = showDonationOnScreen;
+            }
+
+            function applyChatSettings(data) {
+                if (data && typeof data.chatFrozen !== 'undefined') streamData.chatFrozen = !!data.chatFrozen;
+                if (data && typeof data.streamNotice !== 'undefined') streamData.streamNotice = data.streamNotice != null ? String(data.streamNotice) : '';
+                if (data && typeof data.streamNoticeVisible !== 'undefined') streamData.streamNoticeVisible = !!data.streamNoticeVisible;
+                var frozenEl = document.getElementById('widget-frozen-msg');
+                if (frozenEl) frozenEl.classList.toggle('show', !!streamData.chatFrozen);
+                var noticeEl = document.getElementById('widget-notice');
+                if (noticeEl) {
+                    if (streamData.streamNoticeVisible && streamData.streamNotice) {
+                        noticeEl.textContent = streamData.streamNotice;
+                        noticeEl.classList.add('show');
+                    } else { noticeEl.classList.remove('show'); }
+                }
+                var freezeBtn = document.getElementById('btn-freeze');
+                if (freezeBtn) {
+                    freezeBtn.textContent = streamData.chatFrozen ? '열리기 (녹이기)' : '얼리기';
+                    freezeBtn.classList.toggle('on', !!streamData.chatFrozen);
+                }
+            }
+
+            function loadStreamAndSettings() {
+                Promise.all([
+                    fetch('/api/streams/' + streamId, { credentials: 'include' }).then(function (r) { return r.json(); }),
+                    fetch('/api/streams/' + streamId + '/chat-settings', { credentials: 'include' }).then(function (r) { return r.json(); }),
+                    fetch('/api/auth/me', { credentials: 'include' }).then(function (r) { return r.ok ? r.json() : null; })
+                ]).then(function (results) {
+                    var stream = results[0];
+                    var settings = results[1];
+                    var me = results[2];
+                    streamData.userId = stream.userId;
+                    streamData.title = stream.title || '방송';
+                    streamData.partner = !!(stream.partner);
+                    streamData.chatFrozen = settings.chatFrozen;
+                    streamData.streamNotice = settings.streamNotice || '';
+                    streamData.streamNoticeVisible = settings.streamNoticeVisible;
+                    currentUserId = me ? me.id : null;
+                    isHost = currentUserId && streamData.userId && currentUserId === streamData.userId;
+
+                    document.getElementById('widget-stream-title').textContent = streamData.title + ' - 채팅 (방송 ID: ' + streamId + ')';
+                    var toolbar = document.getElementById('host-toolbar');
+                    if (isHost) toolbar.classList.add('show');
+                    else toolbar.classList.remove('show');
+                    applyChatSettings({ chatFrozen: streamData.chatFrozen, streamNotice: streamData.streamNotice, streamNoticeVisible: streamData.streamNoticeVisible });
+
+                    if (currentUserId) document.getElementById('login-msg').style.display = 'none';
+                    else document.getElementById('login-msg').style.display = 'block';
+                }).catch(function () {});
+            }
+
+            function appendDonationLine(donorName, amount, tier, donorMessage, consecutiveDonationDays) {
+                var el = document.getElementById('chat-messages');
+                if (!el) return;
+                var displayName = (donorName && donorName.trim()) ? donorName.trim() : '익명의 후원자';
+                var safeMsg = (donorMessage && donorMessage.trim()) ? esc(donorMessage) : '';
+                var days = consecutiveDonationDays != null ? parseInt(consecutiveDonationDays, 10) : 0;
+                var tierVal = tier || '팡';
+                var tierClass = tierVal === '메가팡' ? 'tier-mega' : (tierVal === '슈퍼팡' ? 'tier-super' : '');
+                var amountNum = amount != null ? Number(amount).toLocaleString() : '0';
+                var pangImg = '<img src="/images/pang-sparkle.svg" alt="팡" class="pang-emoji-img">';
+                var bodyHtml = '<div class="twitch-alert-donor">&#127881; <span class="twitch-name">' + esc((displayName && displayName.trim()) ? displayName.trim() : '익명') + '님이</span> ' + amountNum + '팡 후원! 팡! ' + pangImg + '</div>';
+                if (safeMsg) bodyHtml += '<div class="twitch-alert-msg">' + safeMsg + '</div>';
+                if (days >= 1) bodyHtml += '<div class="twitch-alert-consecutive">연속후원 ' + days + '일</div>';
+                var line = document.createElement('div');
+                line.className = 'chat-msg chat-msg-donation-card';
+                line.innerHTML = '<div class="twitch-alert ' + tierClass + '"><div class="twitch-alert-header">' + esc(tierVal) + '</div><div class="twitch-alert-body">' + bodyHtml + '</div></div>';
+                el.appendChild(line);
+                el.scrollTop = el.scrollHeight;
+            }
+            var lastTimelineCreatedAt = '';
+            function loadChatHistory() {
+                Promise.all([
+                    fetch('/api/streams/' + streamId + '/donors', { credentials: 'include' }).then(function (r) { return r.ok ? r.json() : []; }),
+                    fetch('/api/streams/' + streamId + '/weekly-donor-rank', { credentials: 'include' }).then(function (r) { return r.ok ? r.json() : []; }),
+                    fetch('/api/streams/' + streamId + '/subscriber-ids', { credentials: 'include' }).then(function (r) { return r.ok ? r.json() : []; })
+                ]).then(function (results) {
+                    var ids = results[0], weekly = results[1], subIds = results[2];
+                    if (Array.isArray(ids)) ids.forEach(function (id) { donorUserIds.add(Number(id)); });
+                    if (Array.isArray(weekly) && weekly.length >= 1 && weekly[0].userId != null) donorRank1Id = Number(weekly[0].userId);
+                    if (Array.isArray(weekly) && weekly.length >= 2 && weekly[1].userId != null) donorRank2Id = Number(weekly[1].userId);
+                    if (Array.isArray(weekly) && weekly.length >= 3 && weekly[2].userId != null) donorRank3Id = Number(weekly[2].userId);
+                    if (Array.isArray(subIds)) subIds.forEach(function (id) { subscriberUserIds.add(Number(id)); });
+                    return fetch('/api/streams/' + streamId + '/chat-timeline?limit=100', { credentials: 'include' });
+                }).then(function (r) { return r.ok ? r.json() : []; })
+                    .then(function (list) {
+                        var el = document.getElementById('chat-messages');
+                        if (!el || !Array.isArray(list)) return;
+                        el.innerHTML = '<div class="chat-msg"><span class="user">시스템</span> 채팅창에 오신 것을 환영합니다.</div>';
+                        list.forEach(function (item) {
+                            if (!item) return;
+                            if (item.type === 'donation') appendDonationLine(item.donorName, item.amount, item.tier, item.donorMessage, item.consecutiveDonationDays);
+                            else if (item.displayName != null && item.text != null) appendChatMsg(item.displayName, item.text, !!item.streamer, item.userId, item.level);
+                            if (item.createdAt) lastTimelineCreatedAt = item.createdAt;
+                        });
+                    }).catch(function () {});
+            }
+            function pollNewMessages() {
+                if (!streamId) return;
+                if (!isOverlay && stompClient && stompClient.connected) return;
+                fetch('/api/streams/' + streamId + '/chat-timeline?limit=100', { credentials: 'include' })
+                    .then(function (r) { return r.ok ? r.json() : []; })
+                    .then(function (list) {
+                        if (!Array.isArray(list)) return;
+                        list.forEach(function (item) {
+                            if (!item || !item.createdAt) return;
+                            if (item.createdAt <= lastTimelineCreatedAt) return;
+                            lastTimelineCreatedAt = item.createdAt;
+                            var el = document.getElementById('chat-messages');
+                            if (!el) return;
+                            if (item.type === 'donation') appendDonationLine(item.donorName, item.amount, item.tier, item.donorMessage, item.consecutiveDonationDays);
+                            else if (item.displayName != null && item.text != null) appendChatMsg(item.displayName, item.text, !!item.streamer, item.userId, item.level);
+                        });
+                    }).catch(function () {});
+            }
+            setInterval(pollNewMessages, isOverlay ? 1200 : 2500);
+
+            function pollChatSettings() {
+                if (!streamId) return;
+                fetch('/api/streams/' + streamId + '/chat-settings', { credentials: 'include' })
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (s) {
+                        if (s) applyChatSettings({ chatFrozen: s.chatFrozen, streamNotice: s.streamNotice, streamNoticeVisible: s.streamNoticeVisible });
+                    })
+                    .catch(function () {});
+            }
+            setInterval(pollChatSettings, 4000);
+
+            var stompClient = null;
+            var chatInput = document.getElementById('chat-input');
+            if (!isOverlay) {
+                try {
+                    stompClient = new StompJs.Client({
+                        webSocketFactory: function () { return new SockJS(location.origin + '/ws'); },
+                        reconnectDelay: 3000,
+                        onConnect: function () {
+                            if (currentUserId) chatInput.disabled = false;
+                            stompClient.subscribe('/topic/stream/' + streamId, function (msg) {
+                                if (!msg || !msg.body) return;
+                                try {
+                                    var d = JSON.parse(msg.body);
+                                    if (d && d.type === 'chatSettings') {
+                                        applyChatSettings(d);
+                                        return;
+                                    }
+                                    if (d && d.type === 'donation') { if (d.donorUserId != null) donorUserIds.add(Number(d.donorUserId)); if (window.showDonationOnScreen) window.showDonationOnScreen(d); return; }
+                                    if (d && d.type === 'system' && d.text) {
+                                        var el = document.getElementById('chat-messages');
+                                        if (el) {
+                                            var div = document.createElement('div');
+                                            div.className = 'chat-msg chat-msg-system';
+                                            div.innerHTML = '<span class="user">시스템</span> ' + (function esc(s) { if (!s) return ''; var d = document.createElement('div'); d.textContent = s; return d.innerHTML; })(d.text);
+                                            el.appendChild(div);
+                                            el.scrollTop = el.scrollHeight;
+                                        }
+                                        return;
+                                    }
+                                    if (d && d.displayName != null && d.text != null) appendChatMsg(d.displayName, d.text, !!d.streamer, d.userId, d.level);
+                                } catch (e) {}
+                            });
+                        }
+                    });
+                    stompClient.activate();
+                } catch (e) {}
+            }
+
+            chatInput.addEventListener('keydown', function (e) {
+                if (e.key !== 'Enter') return;
+                var t = (this.value || '').trim();
+                if (!t) return;
+                e.preventDefault();
+                if (stompClient && stompClient.connected) {
+                    stompClient.publish({ destination: '/app/chat/' + streamId, body: t });
+                    this.value = '';
+                }
+            });
+
+            document.getElementById('btn-freeze').addEventListener('click', function () {
+                if (!isHost) return;
+                var next = !streamData.chatFrozen;
+                fetch('/api/streams/' + streamId + '/chat-settings/freeze', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ frozen: next })
+                }).then(function (r) { return r.json(); }).then(function (res) {
+                    applyChatSettings({ chatFrozen: next });
+                }).catch(function () {});
+            });
+
+            var modalNotice = document.getElementById('modal-notice');
+            document.getElementById('btn-notice').addEventListener('click', function () {
+                if (!isHost) return;
+                document.getElementById('notice-text').value = streamData.streamNotice || '';
+                document.getElementById('notice-visible').checked = streamData.streamNoticeVisible;
+                document.getElementById('notice-char-count').textContent = (streamData.streamNotice || '').length + '/200';
+                modalNotice.classList.add('show');
+            });
+            document.getElementById('notice-text').addEventListener('input', function () {
+                document.getElementById('notice-char-count').textContent = this.value.length + '/200';
+            });
+            document.getElementById('notice-cancel').addEventListener('click', function () { modalNotice.classList.remove('show'); });
+            document.getElementById('notice-apply').addEventListener('click', function () {
+                var text = document.getElementById('notice-text').value.trim().substring(0, 200);
+                var visible = document.getElementById('notice-visible').checked;
+                fetch('/api/streams/' + streamId + '/chat-settings/notice', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ text: text, visible: visible })
+                }).then(function (r) { return r.json(); }).then(function () {
+                    applyChatSettings({ streamNotice: text, streamNoticeVisible: visible });
+                    modalNotice.classList.remove('show');
+                }).catch(function () {});
+            });
+            modalNotice.addEventListener('click', function (e) { if (e.target === modalNotice) modalNotice.classList.remove('show'); });
+
+            var modalBan = document.getElementById('modal-ban');
+            function refreshBanList() {
+                fetch('/api/streams/' + streamId + '/chat/bans', { credentials: 'include' })
+                    .then(function (r) { return r.ok ? r.json() : []; })
+                    .then(function (list) {
+                        var ul = document.getElementById('ban-list');
+                        ul.innerHTML = '';
+                        (list || []).forEach(function (b) {
+                            var row = document.createElement('div');
+                            row.className = 'ban-item';
+                            var exp = (b.expiresAt || '').toString().substring(0, 16);
+                            row.innerHTML = '<span>' + esc(b.displayName) + ' (' + (b.loginId ? esc(b.loginId) : ('ID:' + b.userId)) + ')' + (exp ? ' ~' + exp : '') + '</span><button type="button" data-user-id="' + b.userId + '">해제</button>';
+                            row.querySelector('button').addEventListener('click', function () {
+                                fetch('/api/streams/' + streamId + '/chat/ban/' + b.userId, { method: 'DELETE', credentials: 'include' })
+                                    .then(function () { refreshBanList(); });
+                            });
+                            ul.appendChild(row);
+                        });
+                    });
+            }
+            document.getElementById('btn-ban').addEventListener('click', function () {
+                if (!isHost) return;
+                refreshBanList();
+                document.getElementById('ban-user-id').value = '';
+                modalBan.classList.add('show');
+            });
+            document.getElementById('ban-close').addEventListener('click', function () { modalBan.classList.remove('show'); });
+            document.getElementById('ban-add').addEventListener('click', function () {
+                var raw = document.getElementById('ban-user-id').value.trim();
+                if (!raw) return;
+                var body;
+                var uid = parseInt(raw, 10);
+                if (!isNaN(uid) && uid >= 1) {
+                    body = { userId: uid };
+                } else {
+                    body = { loginId: raw };
+                }
+                var durEl = document.getElementById('ban-duration');
+                if (durEl && durEl.value) body.durationMinutes = parseInt(durEl.value, 10);
+                fetch('/api/streams/' + streamId + '/chat/ban', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify(body)
+                }).then(function (r) { return r.json().then(function (res) { return { ok: r.ok, res: res }; }); }).then(function (out) {
+                    if (out.ok) {
+                        refreshBanList();
+                        document.getElementById('ban-user-id').value = '';
+                    }
+                    if (out.res && out.res.message) alert(window.toKoreanErrorMessage(out.res.message));
+                }).catch(function () { alert('요청에 실패했습니다.'); });
+            });
+            modalBan.addEventListener('click', function (e) { if (e.target === modalBan) modalBan.classList.remove('show'); });
+
+            var modalBlacklist = document.getElementById('modal-blacklist');
+            function refreshBlacklist() {
+                fetch('/api/streams/' + streamId + '/chat/blacklist', { credentials: 'include' }).then(function (r) { return r.ok ? r.json() : []; }).then(function (list) {
+                    var ul = document.getElementById('blacklist-list');
+                    if (!ul) return;
+                    ul.innerHTML = '';
+                    (list || []).forEach(function (b) {
+                        var row = document.createElement('div');
+                        row.className = 'ban-item';
+                        row.innerHTML = '<span>' + esc(b.displayName) + ' (' + (b.loginId ? esc(b.loginId) : ('ID:' + b.userId)) + ')</span><button type="button" data-user-id="' + b.userId + '">제거</button>';
+                        row.querySelector('button').addEventListener('click', function () {
+                            fetch('/api/streams/' + streamId + '/chat/blacklist/' + b.userId, { method: 'DELETE', credentials: 'include' }).then(function () { refreshBlacklist(); });
+                        });
+                        ul.appendChild(row);
+                    });
+                });
+            }
+            document.getElementById('btn-blacklist').addEventListener('click', function () {
+                if (!isHost) return;
+                refreshBlacklist();
+                document.getElementById('blacklist-user-id').value = '';
+                modalBlacklist.classList.add('show');
+            });
+            document.getElementById('blacklist-close').addEventListener('click', function () { modalBlacklist.classList.remove('show'); });
+            document.getElementById('blacklist-add').addEventListener('click', function () {
+                var raw = document.getElementById('blacklist-user-id').value.trim();
+                if (!raw) return;
+                var body = /^\d+$/.test(raw) ? { userId: parseInt(raw, 10) } : { loginId: raw };
+                fetch('/api/streams/' + streamId + '/chat/blacklist', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(body) })
+                    .then(function (r) { return r.json().then(function (res) { return { ok: r.ok, res: res }; }); })
+                    .then(function (out) { if (out.ok) { refreshBlacklist(); document.getElementById('blacklist-user-id').value = ''; } if (out.res && out.res.message) alert(window.toKoreanErrorMessage(out.res.message)); }).catch(function () { alert('요청에 실패했습니다.'); });
+            });
+            modalBlacklist.addEventListener('click', function (e) { if (e.target === modalBlacklist) modalBlacklist.classList.remove('show'); });
+
+            var modalManagers = document.getElementById('modal-managers');
+            function refreshManagers() {
+                fetch('/api/streams/' + streamId + '/chat/managers', { credentials: 'include' }).then(function (r) { return r.ok ? r.json() : []; }).then(function (list) {
+                    var ul = document.getElementById('managers-list');
+                    if (!ul) return;
+                    ul.innerHTML = '';
+                    (list || []).forEach(function (m) {
+                        var row = document.createElement('div');
+                        row.className = 'ban-item';
+                        row.innerHTML = '<span>' + esc(m.displayName) + ' (' + (m.loginId ? esc(m.loginId) : ('ID:' + m.userId)) + ')</span><button type="button" data-user-id="' + m.userId + '">해제</button>';
+                        row.querySelector('button').addEventListener('click', function () {
+                            fetch('/api/streams/' + streamId + '/chat/managers/' + m.userId, { method: 'DELETE', credentials: 'include' }).then(function () { refreshManagers(); });
+                        });
+                        ul.appendChild(row);
+                    });
+                });
+            }
+            document.getElementById('btn-managers').addEventListener('click', function () {
+                if (!isHost) return;
+                refreshManagers();
+                document.getElementById('manager-user-id').value = '';
+                modalManagers.classList.add('show');
+            });
+            document.getElementById('managers-close').addEventListener('click', function () { modalManagers.classList.remove('show'); });
+            document.getElementById('manager-add').addEventListener('click', function () {
+                var raw = document.getElementById('manager-user-id').value.trim();
+                if (!raw) return;
+                var body = /^\d+$/.test(raw) ? { userId: parseInt(raw, 10) } : { loginId: raw };
+                fetch('/api/streams/' + streamId + '/chat/managers', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(body) })
+                    .then(function (r) { return r.json().then(function (res) { return { ok: r.ok, res: res }; }); })
+                    .then(function (out) { if (out.ok) { refreshManagers(); document.getElementById('manager-user-id').value = ''; } if (out.res && out.res.message) alert(window.toKoreanErrorMessage(out.res.message)); }).catch(function () { alert('요청에 실패했습니다.'); });
+            });
+            modalManagers.addEventListener('click', function (e) { if (e.target === modalManagers) modalManagers.classList.remove('show'); });
+
+            var modalPangLimit = document.getElementById('modal-pang-limit');
+            document.getElementById('btn-pang-limit').addEventListener('click', function () {
+                if (!isHost || !streamId) return;
+                modalPangLimit.classList.add('show');
+                fetch('/api/streams/' + streamId + '/chat-settings', { credentials: 'include' })
+                    .then(function (r) { return r.ok ? r.json() : {}; })
+                    .then(function (s) {
+                        var v = document.getElementById('donation-limit-video');
+                        var t = document.getElementById('donation-limit-tts');
+                        if (v) v.value = (s.minVideoPang != null ? s.minVideoPang : 0);
+                        if (t) t.value = (s.minTtsPang != null ? s.minTtsPang : 0);
+                    }).catch(function () {});
+            });
+            document.getElementById('modal-pang-limit-close').addEventListener('click', function () { modalPangLimit.classList.remove('show'); });
+            modalPangLimit.addEventListener('click', function (e) { if (e.target === modalPangLimit) modalPangLimit.classList.remove('show'); });
+            document.getElementById('btn-save-donation-limits').addEventListener('click', function () {
+                if (!isHost || !streamId) return;
+                var videoLimitInput = document.getElementById('donation-limit-video');
+                var ttsLimitInput = document.getElementById('donation-limit-tts');
+                if (!videoLimitInput || !ttsLimitInput) return;
+                var minVideo = parseInt(videoLimitInput.value, 10);
+                var minTts = parseInt(ttsLimitInput.value, 10);
+                if (isNaN(minVideo) || minVideo < 0) minVideo = 0;
+                if (isNaN(minTts) || minTts < 0) minTts = 0;
+                var btn = this;
+                btn.disabled = true;
+                fetch('/api/streams/' + streamId + '/chat-settings/donation-limits', {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ minVideoPang: minVideo, minTtsPang: minTts })
+                }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); }).then(function (res) {
+                    if (res.ok) { alert('저장되었습니다.'); modalPangLimit.classList.remove('show'); }
+                    else alert(window.toKoreanErrorMessage(res.data && res.data.message) || '저장에 실패했습니다.');
+                }).catch(function () { alert('저장에 실패했습니다.'); }).finally(function () { btn.disabled = false; });
+            });
+
+            loadStreamAndSettings();
+            loadChatHistory();
+        })();
+    </script>
+</body>
+</html>

@@ -7,8 +7,8 @@ import com.gamematcher.entity.User;
 import com.gamematcher.entity.account.RiotAccount;
 import com.gamematcher.exception.GameApiException;
 import com.gamematcher.repository.account.RiotAccountRepository;
-import com.gamematcher.repository.common.UserRepository;
-import com.gamematcher.service.lol.LolApiService;
+import com.gamematcher.repository.common.CommonUserRepository;
+import com.gamematcher.service.riot.LolApiService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -20,21 +20,23 @@ public class RiotAccountService {
 
     private final LolApiService lolApiService;
     private final RiotAccountRepository riotAccountRepository;
-    private final UserRepository userRepository;
+    private final CommonUserRepository userRepository;
 
     @Transactional
     public RiotAccountLinkResponseDto linkAccount(RiotAccountLinkRequestDto request) {
-        User user = userRepository.findById(request.getUserId())
-                .orElseThrow(() -> new GameApiException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다: " + request.getUserId()));
+        return linkAccount(request.getUserId(), request.getGameName(), request.getTagLine());
+    }
 
-        RiotAccountResponseDto riotAccount = lolApiService.getAccountByRiotId(
-                request.getGameName(),
-                request.getTagLine()
-        );
+    @Transactional
+    public RiotAccountLinkResponseDto linkAccount(Long userId, String gameName, String tagLine) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GameApiException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다: " + userId));
+
+        RiotAccountResponseDto riotAccount = lolApiService.getAccountByRiotId(gameName, tagLine);
 
         if (riotAccountRepository.existsByPuuid(riotAccount.getPuuid())) {
             RiotAccount existing = riotAccountRepository.findByPuuid(riotAccount.getPuuid()).orElseThrow();
-            if (existing.getUser().getId().equals(request.getUserId())) {
+            if (existing.getUser().getId().equals(userId)) {
                 return new RiotAccountLinkResponseDto(
                         existing.getId(),
                         user.getId(),
@@ -44,7 +46,7 @@ public class RiotAccountService {
                         "이미 연동된 Riot 계정입니다."
                 );
             }
-            throw new GameApiException(HttpStatus.CONFLICT, "이 puuid는 이미 다른 사용자에게 연동되어 있습니다.");
+            throw new GameApiException(HttpStatus.CONFLICT, "이미 다른 사용자에게 연동된 Riot 계정입니다.");
         }
 
         RiotAccount entity = new RiotAccount();

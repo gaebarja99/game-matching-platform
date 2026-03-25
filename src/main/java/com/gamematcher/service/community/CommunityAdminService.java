@@ -12,10 +12,10 @@ import com.gamematcher.entity.community.Comment;
 import com.gamematcher.entity.community.Notification;
 import com.gamematcher.entity.community.Post;
 import com.gamematcher.exception.GameApiException;
-import com.gamematcher.repository.common.UserRepository;
+import com.gamematcher.repository.common.CommonUserRepository;
 import com.gamematcher.repository.community.CommentRepository;
 import com.gamematcher.repository.community.CommunityReportRepository;
-import com.gamematcher.repository.community.NotificationRepository;
+import com.gamematcher.repository.community.CommunityNotificationRepository;
 import com.gamematcher.repository.community.PostRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -26,7 +26,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 public class CommunityAdminService {
@@ -34,13 +33,13 @@ public class CommunityAdminService {
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
     private final CommunityReportRepository communityReportRepository;
-    private final NotificationRepository notificationRepository;
-    private final UserRepository userRepository;
+    private final CommunityNotificationRepository notificationRepository;
+    private final CommonUserRepository userRepository;
 
     public CommunityAdminService(PostRepository postRepository, CommentRepository commentRepository,
                                  CommunityReportRepository communityReportRepository,
-                                 NotificationRepository notificationRepository,
-                                 UserRepository userRepository) {
+                                 CommunityNotificationRepository notificationRepository,
+                                 CommonUserRepository userRepository) {
         this.postRepository = postRepository;
         this.commentRepository = commentRepository;
         this.communityReportRepository = communityReportRepository;

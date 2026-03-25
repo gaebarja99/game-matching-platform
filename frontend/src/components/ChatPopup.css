@@ -1,0 +1,465 @@
+/* 공통 팝업 규격 — 랜덤채팅 등 모든 모드가 동일한 셸 사용 */
+
+/* 세로로 긴 메모장형 비율 — 좁은 폭, 화면 높이의 대부분 */
+.chat-popup-container {
+  width: 380px;
+  max-width: min(380px, calc(100vw - 120px));
+  height: min(68vh, 720px);
+  min-height: 440px;
+  max-height: calc(100vh - 96px);
+  display: flex;
+  flex-direction: column;
+  background: #1a1a1a;
+  border: 1px solid #ffffff;
+  border-radius: 14px;
+  box-shadow: 0 12px 48px rgba(0, 0, 0, 0.65), 0 0 1px rgba(255, 255, 255, 0.15);
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.chat-popup-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  background: #141414;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  flex-shrink: 0;
+}
+
+.chat-popup-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.chat-popup-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: #fff;
+  cursor: pointer;
+  border-radius: 8px;
+}
+
+.chat-popup-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.chat-popup-body {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  background: #1a1a1a;
+  color: #e5e7eb;
+}
+
+/* 스크롤 영역 — 위젯 내부 콘텐츠가 이 클래스를 직접 쓰거나, 자식이 overflow 시 부모 기준 */
+.chat-popup-body > * {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 커스텀 스크롤바 (WebKit) */
+.chat-popup-body::-webkit-scrollbar,
+.chat-popup-scroll::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.chat-popup-body::-webkit-scrollbar-track,
+.chat-popup-scroll::-webkit-scrollbar-track {
+  background: #0d0d0d;
+  border-radius: 4px;
+}
+
+.chat-popup-body::-webkit-scrollbar-thumb,
+.chat-popup-scroll::-webkit-scrollbar-thumb {
+  background: #4a4a52;
+  border-radius: 4px;
+}
+
+.chat-popup-body::-webkit-scrollbar-thumb:hover,
+.chat-popup-scroll::-webkit-scrollbar-thumb:hover {
+  background: #5c5c66;
+}
+
+/* Firefox */
+.chat-popup-body,
+.chat-popup-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #4a4a52 #0d0d0d;
+}
+
+/* 랜덤 매칭 폼 라벨 — 참고 디자인(피치/오렌지) */
+.chat-popup-body .random-match-chat-label {
+  color: #ffb08a;
+}
+
+/* 랜덤 매칭 본문 — 다크 팝업 안에서 가독성 */
+.chat-popup-random-wrap {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  padding: 0 4px 8px;
+}
+
+.chat-popup-random-wrap .random-match-chat-modal-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* 플로팅 랜덤채팅: 1:1과 동일 탭 + 스크롤 영역 */
+.chat-popup-random-wrap .random-match-chat-embed-tabbed {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.chat-popup-random-wrap .random-match-chat-embed-tabbed .floating-chat-widget-dm-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px 10px;
+}
+
+.random-match-chat-embed-session {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.random-match-chat-embed-session .match-chat-panel-embedded {
+  flex: 1;
+  min-height: 0;
+}
+
+.chat-popup-random-wrap .random-match-chat-modal-body {
+  background: transparent;
+  color: #e5e7eb;
+}
+
+.chat-popup-random-wrap .random-match-chat-modal-toolbar-hint,
+.chat-popup-random-wrap .random-match-chat-form-note,
+.chat-popup-random-wrap .random-match-chat-waiting-desc {
+  color: #9ca3af;
+}
+
+.chat-popup-random-wrap .random-match-chat-input,
+.chat-popup-random-wrap .random-match-chat-cancel-queue {
+  background: #252528 !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+  color: #fff !important;
+}
+
+.chat-popup-random-wrap select.random-match-chat-input option {
+  background: #252528;
+  color: #fff;
+}
+
+.chat-popup-random-wrap select.random-match-chat-input option:disabled {
+  opacity: 0.55;
+  color: #8a8a8f;
+  background: #1f222a;
+}
+
+.chat-popup-random-wrap .random-match-chat-form-error {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ff5252;
+}
+
+.chat-popup-random-wrap .random-match-chat-form-warn {
+  margin-top: 10px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #ffcc66;
+}
+
+.chat-popup-random-wrap .random-match-chat-session-link {
+  color: inherit;
+}
+
+.chat-popup-random-wrap .random-match-chat-session-name {
+  color: #fff;
+}
+
+.chat-popup-random-wrap .random-match-chat-session-date {
+  color: #9ca3af;
+}
+
+.chat-popup-random-wrap .random-match-chat-form-heading {
+  color: #fff;
+}
+
+/* 임베드 매칭 채팅 — 전역 group-chat-room-page 높이 보정 */
+.chat-popup-body .match-chat-panel-embedded.group-chat-room-page {
+  height: 100%;
+  min-height: 0 !important;
+  max-height: 100%;
+}
+
+.chat-popup-body .match-chat-panel-embedded .group-chat-room-header {
+  padding: 8px 12px;
+}
+
+.chat-popup-body .match-chat-panel-embedded .group-chat-room-title {
+  font-size: 0.82rem;
+}
+
+.chat-popup-body .match-chat-panel-embedded .group-chat-members {
+  width: 100px;
+  min-width: 100px;
+  padding: 8px;
+}
+
+.chat-popup-body .match-chat-panel-embedded .group-chat-members h3 {
+  font-size: 0.75rem;
+}
+
+.chat-popup-body .match-chat-panel-embedded .group-chat-member-item {
+  font-size: 0.78rem;
+  padding: 4px 0;
+}
+
+.chat-popup-body .match-chat-panel-embedded .group-chat-messages {
+  padding: 8px 10px;
+}
+
+.chat-popup-body .match-chat-panel-embedded .group-chat-send-form {
+  padding: 8px 10px;
+}
+
+.chat-popup-body .match-chat-panel-embedded .group-chat-send-input {
+  padding: 8px 10px;
+  font-size: 0.85rem;
+}
+
+.match-chat-panel-login-msg,
+.match-chat-panel-error {
+  margin: 0 0 12px;
+  text-align: center;
+  color: #9ca3af;
+  font-size: 0.9rem;
+}
+
+.match-chat-panel-loading {
+  padding: 32px 16px;
+  text-align: center;
+  color: #9ca3af;
+}
+
+.match-chat-panel-login-btn {
+  display: block;
+  margin: 0 auto;
+  padding: 8px 20px;
+  border: none;
+  border-radius: 8px;
+  background: #00e676;
+  color: #0d0d0f;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+@media (max-width: 520px) {
+  .chat-popup-container {
+    width: 100%;
+    max-width: 100%;
+    min-height: 320px;
+    height: min(65vh, 640px);
+    max-height: calc(100vh - 88px);
+  }
+}
+
+/* 라이트 모드 — 플로팅 채팅 팝업(ThemeWrapper .theme-light 하위) */
+.theme-light .chat-popup-container {
+  background: #ffffff;
+  border: 1px solid #dee2e6;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.12), 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.theme-light .chat-popup-header {
+  background: #f8f9fa;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.theme-light .chat-popup-title {
+  color: #212529;
+}
+
+.theme-light .chat-popup-close {
+  color: #495057;
+}
+
+.theme-light .chat-popup-close:hover {
+  background: rgba(0, 0, 0, 0.06);
+}
+
+.theme-light .chat-popup-body {
+  background: #ffffff;
+  color: #212529;
+}
+
+.theme-light .chat-popup-body::-webkit-scrollbar-track,
+.theme-light .chat-popup-scroll::-webkit-scrollbar-track {
+  background: #f1f3f5;
+}
+
+.theme-light .chat-popup-body::-webkit-scrollbar-thumb,
+.theme-light .chat-popup-scroll::-webkit-scrollbar-thumb {
+  background: #ced4da;
+}
+
+.theme-light .chat-popup-body::-webkit-scrollbar-thumb:hover,
+.theme-light .chat-popup-scroll::-webkit-scrollbar-thumb:hover {
+  background: #adb5bd;
+}
+
+.theme-light .chat-popup-body,
+.theme-light .chat-popup-scroll {
+  scrollbar-color: #ced4da #f1f3f5;
+}
+
+.theme-light .chat-popup-body .random-match-chat-label {
+  color: #c2410c;
+}
+
+.theme-light .chat-popup-random-wrap .random-match-chat-modal-body {
+  color: #212529;
+}
+
+.theme-light .chat-popup-random-wrap .random-match-chat-modal-toolbar-hint,
+.theme-light .chat-popup-random-wrap .random-match-chat-form-note,
+.theme-light .chat-popup-random-wrap .random-match-chat-waiting-desc {
+  color: #6c757d;
+}
+
+.theme-light .chat-popup-random-wrap .random-match-chat-input,
+.theme-light .chat-popup-random-wrap .random-match-chat-cancel-queue {
+  background: #fff !important;
+  border-color: #ced4da !important;
+  color: #212529 !important;
+}
+
+.theme-light .chat-popup-random-wrap select.random-match-chat-input option {
+  background: #ffffff;
+  color: #212529;
+}
+
+.theme-light .chat-popup-random-wrap select.random-match-chat-input option:disabled {
+  opacity: 0.6;
+  background: #f3f4f6;
+  color: #6c757d;
+}
+
+.theme-light .chat-popup-random-wrap .random-match-chat-session-name {
+  color: #212529;
+}
+
+.theme-light .chat-popup-random-wrap .random-match-chat-session-date {
+  color: #6c757d;
+}
+
+.theme-light .chat-popup-random-wrap .random-match-chat-form-heading {
+  color: #212529;
+}
+
+.theme-light .match-chat-panel-login-msg,
+.theme-light .match-chat-panel-error {
+  color: #6c757d;
+}
+
+.theme-light .match-chat-panel-loading {
+  color: #6c757d;
+}
+
+/* PUBG 플랫폼·시점 (랜덤 매칭 위젯) */
+.random-match-chat-hint {
+  margin: 4px 0 10px;
+  font-size: 0.78rem;
+  line-height: 1.45;
+  color: rgba(255, 255, 255, 0.55);
+}
+.random-match-chat-modal .random-match-chat-hint {
+  color: rgba(255, 255, 255, 0.55);
+}
+.chat-popup-random-wrap .pubg-radio-group,
+.random-match-chat-modal .pubg-radio-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+.chat-popup-random-wrap .pubg-radio-pill,
+.random-match-chat-modal .pubg-radio-pill {
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: #252525;
+  color: #e8e8ec;
+  transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+}
+.chat-popup-random-wrap .pubg-radio-pill input,
+.random-match-chat-modal .pubg-radio-pill input {
+  position: absolute;
+  opacity: 0;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+}
+.chat-popup-random-wrap .pubg-radio-pill:hover,
+.random-match-chat-modal .pubg-radio-pill:hover {
+  background: #2e2e32;
+}
+.chat-popup-random-wrap .pubg-radio-pill.active,
+.random-match-chat-modal .pubg-radio-pill.active {
+  border-color: #00e676;
+  background: rgba(0, 230, 118, 0.12);
+  box-shadow: 0 0 0 1px rgba(0, 230, 118, 0.35);
+}
+.theme-light .chat-popup-random-wrap .random-match-chat-hint,
+.theme-light .random-match-chat-modal .random-match-chat-hint {
+  color: #6c757d;
+}
+.theme-light .chat-popup-random-wrap .pubg-radio-pill,
+.theme-light .random-match-chat-modal .pubg-radio-pill {
+  background: #fff;
+  border-color: #ced4da;
+  color: #212529;
+}
+.theme-light .chat-popup-random-wrap .pubg-radio-pill:hover,
+.theme-light .random-match-chat-modal .pubg-radio-pill:hover {
+  background: #f3f4f6;
+}
+.theme-light .chat-popup-random-wrap .pubg-radio-pill.active,
+.theme-light .random-match-chat-modal .pubg-radio-pill.active {
+  border-color: #00c853;
+  background: rgba(0, 200, 100, 0.12);
+}

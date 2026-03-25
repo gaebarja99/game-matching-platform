@@ -1,14 +1,14 @@
 package com.gamematcher.constant.community;
 
 /**
- * 알림 유형
+ * Notification type.
  */
 public enum NotificationType {
-    COMMENT("댓글"),
-    REPLY("대댓글"),
-    LIKE("좋아요"),
-    REPORT_RESOLVED("신고 처리 완료"),
-    POST_DELETED("게시글 삭제");
+    COMMENT("Comment"),
+    REPLY("Reply"),
+    LIKE("Like"),
+    REPORT_RESOLVED("Report resolved"),
+    POST_DELETED("Post deleted");
 
     private final String displayName;
 

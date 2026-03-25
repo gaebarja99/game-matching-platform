@@ -1,0 +1,36 @@
+/* Layout: data-theme on html */
+[data-theme='dark'] { --bg: #0d0d0f; --bg-header: #0d0d0f; --border: #252528; --text: #e5e5e5; --text-muted: #9e9ea6; --card-bg: #1e1e21; --input-bg: #2c2c2e; --hover: #2c2c2e; }
+[data-theme='light'] { --bg: #f0f0f2; --bg-header: #fff; --border: #e5e5e7; --text: #1a1a1d; --text-muted: #53535a; --card-bg: #fff; --input-bg: #f5f5f7; --hover: #f0f0f2; }
+
+.app-layout { min-height: 100vh; background: var(--bg); color: var(--text); display: flex; flex-direction: column; }
+.app-header { height: 52px; border-bottom: 1px solid var(--border); display: flex; align-items: center; padding: 0 24px; position: sticky; top: 0; z-index: 100; background: var(--bg-header); }
+.app-header .logo { font-weight: 800; font-size: 1.5rem; color: #00e676; letter-spacing: -0.03em; margin-right: 32px; text-decoration: none; }
+.app-header .logo:hover { color: #33eb91; }
+.app-nav { display: flex; gap: 24px; align-items: center; }
+.app-nav a { font-size: 0.9rem; font-weight: 500; color: var(--text-muted); text-decoration: none; }
+.app-nav a:hover, .app-nav a.active { color: var(--text); }
+.app-header .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+.app-header .btn-theme { width: 40px; height: 40px; border-radius: 8px; border: 1px solid var(--border); background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; color: var(--text-muted); }
+.app-header .btn-theme:hover { color: #00e676; background: var(--hover); }
+.app-header .btn-login { padding: 0.4rem 1rem; border: 1px solid var(--border); border-radius: 6px; font-size: 0.9rem; font-weight: 500; background: transparent; cursor: pointer; color: var(--text-muted); text-decoration: none; }
+.app-header .btn-login:hover { color: var(--text); }
+.app-header .header-profile-wrap { position: relative; }
+.app-header .header-profile-avatar { position: relative; width: 40px; height: 40px; border-radius: 50%; border: 2px solid #00e676; cursor: pointer; display: flex; align-items: center; justify-content: center; overflow: hidden; background: var(--input-bg); padding: 0; }
+.app-header .header-profile-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.app-header .profile-dropdown { display: none; position: absolute; top: calc(100% + 8px); right: 0; min-width: 260px; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); z-index: 1001; background: var(--card-bg); border: 1px solid var(--border); }
+.app-header .profile-dropdown.show { display: block; }
+.app-header .profile-dropdown .dropdown-info { display: flex; align-items: center; gap: 12px; padding: 16px; border-bottom: 1px solid var(--border); }
+.app-header .profile-dropdown .dropdown-avatar { position: relative; width: 48px; height: 48px; border-radius: 50%; overflow: hidden; background: var(--input-bg); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.app-header .profile-dropdown .dropdown-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; }
+.app-header .profile-dropdown .dropdown-name { font-size: 1rem; font-weight: 700; color: var(--text); }
+.app-header .profile-dropdown .dropdown-menu { padding: 8px 0; }
+.app-header .profile-dropdown .dropdown-menu a, .app-header .profile-dropdown .dropdown-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 0.9rem; text-align: left; text-decoration: none; font-family: inherit; color: var(--text); }
+.app-header .profile-dropdown .dropdown-menu a:hover, .app-header .profile-dropdown .dropdown-menu button:hover { background: var(--hover); }
+
+.page-body { display: flex; flex: 1; min-height: 0; }
+.page-main { flex: 1; min-width: 0; padding: 24px; }
+.friend-sidebar { width: 280px; min-width: 280px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--card-bg); display: flex; flex-direction: column; }
+.friend-sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 1rem; color: var(--text); }
+.friend-sidebar-login { padding: 24px 16px; text-align: center; font-size: 0.9rem; color: var(--text-muted); }
+.friend-sidebar-login .btn-login-side { margin-top: 12px; padding: 8px 16px; background: #00e676; color: #0d0d0f; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; text-decoration: none; display: inline-block; }
+.friend-sidebar-login .btn-login-side:hover { background: #33eb91; }

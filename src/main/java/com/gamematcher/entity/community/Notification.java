@@ -9,7 +9,7 @@ import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-@Entity
+@Entity(name = "CommunityNotification")
 @Table(name = "community_notifications", indexes = {
         @Index(name = "idx_notification_user", columnList = "user_id"),
         @Index(name = "idx_notification_read", columnList = "is_read"),
@@ -29,7 +29,7 @@ public class Notification {
     private User user;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length = 30)
+    @Column(nullable = false, length = 50)
     private NotificationType type;
 
     @Column(length = 500)

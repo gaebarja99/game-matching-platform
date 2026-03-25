@@ -9,9 +9,10 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
- * 커뮤니티 업로드 파일 정적 리소스 제공
+ * 커뮤니티 업로드 파일 정적 리소스 제공.
+ * 빈 이름을 {@code com.gamematcher.config.WebMvcConfig}와 겹치지 않게 지정함.
  */
-@Configuration
+@Configuration("communityWebMvcConfig")
 public class WebMvcConfig implements WebMvcConfigurer {
 
     @Value("${community.upload.path:./uploads/community}")

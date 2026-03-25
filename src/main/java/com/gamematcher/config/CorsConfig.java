@@ -1,23 +1,44 @@
 package com.gamematcher.config;
 
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.List;
 
 /**
- * CORS 전역 설정
- * - HTML 파일을 file:// 로 열었을 때도 API 호출 가능하게 허용
+ * 분리형 아키텍처: React 등 별도 프론트엔드에서 API 호출 시 CORS 허용.
+ * app.frontend.url 이 설정된 경우에만 해당 Origin 허용 및 credentials 허용.
  */
 @Configuration
-public class CorsConfig implements WebMvcConfigurer {
+public class CorsConfig {
 
-    @Override
-    public void addCorsMappings(CorsRegistry registry) {
-        registry.addMapping("/api/**")
-                .allowedOriginPatterns("*")   // file://, http://localhost:* 전부 허용
-                .allowedMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-                .allowedHeaders("*")
-                .allowCredentials(false)
-                .maxAge(3600);
+    @Value("${app.frontend.url:}")
+    private String frontendUrl;
+
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration config = new CorsConfiguration();
+        if (frontendUrl != null && !frontendUrl.isBlank()) {
+            List<String> origins = java.util.Arrays.stream(frontendUrl.split(","))
+                    .map(s -> s.trim().replaceAll("/+$", ""))
+                    .filter(s -> !s.isEmpty())
+                    .toList();
+            if (!origins.isEmpty()) {
+                config.setAllowedOrigins(origins);
+            }
+        }
+        if (config.getAllowedOrigins() != null && !config.getAllowedOrigins().isEmpty()) {
+            config.setAllowCredentials(true);
+            config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+            config.setAllowedHeaders(List.of("*"));
+            config.setMaxAge(3600L);
+        }
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", config);
+        return source;
     }
 }

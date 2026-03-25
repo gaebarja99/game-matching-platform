@@ -1,0 +1,56 @@
+package com.gamematcher.config;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
+import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.oauth2.client.web.OAuth2AuthorizationRequestRedirectFilter;
+
+@Configuration
+@EnableWebSecurity
+public class SecurityConfig {
+
+    private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
+    private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
+    private final OAuth2RedirectOriginFilter oauth2RedirectOriginFilter;
+    private final OAuth2KakaoNotConfiguredFilter oauth2KakaoNotConfiguredFilter;
+    private final OAuth2NaverNotConfiguredFilter oauth2NaverNotConfiguredFilter;
+
+    @Autowired(required = false)
+    private ClientRegistrationRepository clientRegistrationRepository;
+
+    public SecurityConfig(OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler,
+                          OAuth2LoginFailureHandler oAuth2LoginFailureHandler,
+                          OAuth2RedirectOriginFilter oauth2RedirectOriginFilter,
+                          OAuth2KakaoNotConfiguredFilter oauth2KakaoNotConfiguredFilter,
+                          OAuth2NaverNotConfiguredFilter oauth2NaverNotConfiguredFilter) {
+        this.oAuth2LoginSuccessHandler = oAuth2LoginSuccessHandler;
+        this.oAuth2LoginFailureHandler = oAuth2LoginFailureHandler;
+        this.oauth2RedirectOriginFilter = oauth2RedirectOriginFilter;
+        this.oauth2KakaoNotConfiguredFilter = oauth2KakaoNotConfiguredFilter;
+        this.oauth2NaverNotConfiguredFilter = oauth2NaverNotConfiguredFilter;
+    }
+
+    @Bean
+    public SecurityFilterChain filterChain(HttpSecurity http, org.springframework.web.cors.CorsConfigurationSource corsConfigurationSource) throws Exception {
+        http
+            .cors(cors -> cors.configurationSource(corsConfigurationSource))
+            .csrf(csrf -> csrf.disable())
+            .authorizeHttpRequests(auth -> auth.anyRequest().permitAll())
+            .sessionManagement(s -> s.sessionFixation().changeSessionId())
+            .addFilterBefore(oauth2RedirectOriginFilter, UsernamePasswordAuthenticationFilter.class)
+            .addFilterBefore(oauth2KakaoNotConfiguredFilter, OAuth2AuthorizationRequestRedirectFilter.class)
+            .addFilterBefore(oauth2NaverNotConfiguredFilter, OAuth2AuthorizationRequestRedirectFilter.class);
+        if (clientRegistrationRepository != null) {
+            http.oauth2Login(oauth2 -> oauth2
+                .successHandler(oAuth2LoginSuccessHandler)
+                .failureHandler(oAuth2LoginFailureHandler)
+            );
+        }
+        return http.build();
+    }
+}

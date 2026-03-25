@@ -1,0 +1,11 @@
+.streams-page { max-width: 100%; }
+.streams-title { margin: 0 0 24px 0; font-size: 1.5rem; font-weight: 700; color: var(--text); }
+.streams-loading, .streams-empty { color: var(--text-muted); }
+.streams-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+.stream-card { display: block; background: var(--card-bg); border: 1px solid var(--border); border-radius: 8px; overflow: hidden; text-decoration: none; color: var(--text); }
+.stream-card:hover { border-color: #00e676; }
+.stream-card-thumb { aspect-ratio: 16/9; background: var(--input-bg); }
+.stream-card-info { padding: 12px 16px; display: flex; flex-direction: column; gap: 4px; }
+.stream-card-title { font-weight: 600; font-size: 1rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.stream-card-broadcaster { font-size: 0.9rem; color: var(--text-muted); }
+.stream-card-viewers { font-size: 0.85rem; color: var(--text-muted); }

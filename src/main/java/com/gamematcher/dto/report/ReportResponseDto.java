@@ -2,6 +2,7 @@ package com.gamematcher.dto.report;
 
 import com.gamematcher.constant.ReportReason;
 import com.gamematcher.constant.ReportStatus;
+import com.gamematcher.constant.UserStatus;
 import com.gamematcher.entity.Report;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -19,11 +20,14 @@ public class ReportResponseDto {
     private String reporterUsername;
     private Long reportedUserId;
     private String reportedUsername;
+    private UserStatus reportedUserStatus;
     private ReportReason reason;
     private String description;
     private ReportStatus status;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     private LocalDateTime resolvedAt;
+    private String adminNote;
 
     public static ReportResponseDto from(Report report) {
         ReportResponseDto dto = new ReportResponseDto();
@@ -32,11 +36,14 @@ public class ReportResponseDto {
         dto.setReporterUsername(report.getReporter().getUsername());
         dto.setReportedUserId(report.getReportedUser().getId());
         dto.setReportedUsername(report.getReportedUser().getUsername());
+        dto.setReportedUserStatus(report.getReportedUser().getStatus());
         dto.setReason(report.getReason());
         dto.setDescription(report.getDescription());
         dto.setStatus(report.getStatus());
         dto.setCreatedAt(report.getCreatedAt());
+        dto.setUpdatedAt(report.getUpdatedAt());
         dto.setResolvedAt(report.getResolvedAt());
+        dto.setAdminNote(report.getAdminNote());
         return dto;
     }
 }

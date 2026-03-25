@@ -1,50 +1,1475 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>GameMatcher</title>
-  <style>
-    body {
-      font-family: 'Segoe UI', 'Malgun Gothic', sans-serif;
-      background: #0f0f12;
-      color: #e4e4e7;
-      min-height: 100vh;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0;
-    }
-    .card {
-      background: #18181b;
-      padding: 48px;
-      border-radius: 16px;
-      text-align: center;
-      border: 1px solid #27272a;
-    }
-    h1 { font-size: 2rem; margin-bottom: 24px; }
-    a {
-      display: inline-block;
-      padding: 14px 28px;
-      background: #6366f1;
-      color: white;
-      text-decoration: none;
-      border-radius: 8px;
-      font-weight: 500;
-      margin-top: 16px;
-      margin-right: 12px;
-    }
-    a:hover { background: #4f46e5; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GameMatcher - 듀오·팀 매칭</title>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/css/typography-glitch.css">
+    <script src="/js/alert-popup.js"></script>
+    <script src="/js/error-messages-ko.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@1.4.12"></script>
+    <script type="module" src="/js/firebase-init.js"></script>
+    <script type="module" src="/js/firebase-recaptcha.js"></script>
+    <script type="module" src="/js/firebase-phone-auth.js"></script>
+    <style>
+        * { box-sizing: border-box; }
+        body { margin: 0; font-family: 'Noto Sans KR', 'Malgun Gothic', sans-serif; min-height: 100vh; transition: background 0.2s, color 0.2s; }
+        body.theme-dark { background: #0d0d0f; color: #e5e5e5; }
+        body.theme-light { background: #f0f0f2; color: #1a1a1d; }
+        a { color: inherit; text-decoration: none; }
+        a:hover { color: #00e676; }
+
+        /* 헤더 */
+        .main-header { height: 52px; border-bottom: 1px solid; display: flex; align-items: center; padding: 0 24px; position: sticky; top: 0; z-index: 100; transition: background 0.2s, border-color 0.2s; }
+        body.theme-dark .main-header { background: #0d0d0f; border-color: #252528; }
+        body.theme-light .main-header { background: #fff; border-color: #e5e5e7; }
+        .main-header .logo { font-weight: 800; font-size: 1.5rem; color: #00e676; letter-spacing: -0.03em; margin-right: 32px; }
+        .main-header .logo:hover { color: #33eb91; }
+        .main-nav { display: flex; gap: 24px; align-items: center; }
+        .main-nav a { font-size: 0.9rem; font-weight: 500; }
+        body.theme-dark .main-nav a { color: #9e9ea6; }
+        body.theme-dark .main-nav a:hover, .main-nav a.active { color: #fff; }
+        body.theme-light .main-nav a { color: #53535a; }
+        body.theme-light .main-nav a:hover, .main-nav a.active { color: #1a1a1d; }
+        .main-header .header-right { margin-left: auto; display: flex; align-items: center; gap: 12px; }
+        .main-header .btn-login { padding: 0.4rem 1rem; border: 1px solid; border-radius: 6px; font-size: 0.9rem; font-weight: 500; background: transparent; cursor: pointer; }
+        body.theme-dark .main-header .btn-login { color: #b0b0b5; border-color: #3a3a3d; }
+        body.theme-dark .main-header .btn-login:hover { color: #fff; border-color: #53535a; }
+        body.theme-light .main-header .btn-login { color: #53535a; border-color: #d0d0d2; }
+        body.theme-light .main-header .btn-login:hover { color: #1a1a1d; border-color: #b0b0b5; }
+        .main-header .btn-theme { width: 40px; height: 40px; border-radius: 8px; border: 1px solid; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+        .main-header .btn-theme .theme-icon svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2; }
+        .main-header .btn-theme .icon-sun { display: none; }
+        .main-header .btn-theme .icon-moon { display: none; }
+        body.theme-dark .main-header .btn-theme { border-color: #3a3a3d; color: #b0b0b5; }
+        body.theme-dark .main-header .btn-theme:hover { color: #fff; background: #252528; }
+        body.theme-dark .main-header .btn-theme .icon-sun { display: block; }
+        body.theme-light .main-header .btn-theme { border-color: #d0d0d2; color: #53535a; }
+        body.theme-light .main-header .btn-theme:hover { color: #1a1a1d; background: #e5e5e7; }
+        body.theme-light .main-header .btn-theme .icon-moon { display: block; }
+        .main-header .header-profile-wrap { position: relative; }
+        .main-header .header-profile-avatar { width: 40px; height: 40px; border-radius: 50%; border: 2px solid #00e676; cursor: pointer; display: flex; align-items: center; justify-content: center; overflow: hidden; background: #2c2c2e; }
+        body.theme-light .main-header .header-profile-avatar { background: #e5e5e7; }
+        .main-header .header-profile-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .main-header .header-profile-avatar .avatar-placeholder { width: 24px; height: 24px; color: #6b6b70; }
+        .main-header .header-profile-dropdown { display: none; position: absolute; top: calc(100% + 8px); right: 0; min-width: 260px; max-height: 80vh; overflow-y: auto; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3); z-index: 1001; }
+        body.theme-dark .main-header .header-profile-dropdown { background: #1e1e21; border: 1px solid #2c2c2e; }
+        body.theme-light .main-header .header-profile-dropdown { background: #fff; border: 1px solid #e5e5e7; }
+        .main-header .header-profile-dropdown.show { display: block; }
+        .main-header .dropdown-profile-info { display: flex; align-items: center; gap: 12px; padding: 16px; border-bottom: 1px solid; }
+        body.theme-dark .main-header .dropdown-profile-info { border-color: #2c2c2e; }
+        body.theme-light .main-header .dropdown-profile-info { border-color: #e5e5e7; }
+        .main-header .dropdown-profile-info .dropdown-avatar { width: 48px; height: 48px; border-radius: 50%; overflow: hidden; background: #2c2c2e; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+        .main-header .dropdown-profile-info .dropdown-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .main-header .dropdown-profile-label { font-size: 0.75rem; margin-bottom: 2px; }
+        body.theme-dark .main-header .dropdown-profile-label { color: #00e676; }
+        body.theme-light .main-header .dropdown-profile-label { color: #00a858; }
+        .main-header .dropdown-profile-name { font-size: 1rem; font-weight: 700; }
+        body.theme-dark .main-header .dropdown-profile-name { color: #fff; }
+        body.theme-light .main-header .dropdown-profile-name { color: #1a1a1d; }
+        .main-header .dropdown-menu { padding: 8px 0; }
+        .main-header .dropdown-menu a, .main-header .dropdown-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 0.9rem; text-align: left; text-decoration: none; font-family: inherit; color: inherit; }
+        body.theme-dark .main-header .dropdown-menu a:hover, body.theme-dark .main-header .dropdown-menu button:hover { background: #2c2c2e; }
+        body.theme-light .main-header .dropdown-menu a:hover, body.theme-light .main-header .dropdown-menu button:hover { background: #f0f0f2; }
+        .main-header .dropdown-menu .menu-icon { width: 20px; height: 20px; flex-shrink: 0; stroke: currentColor; fill: none; stroke-width: 2; }
+
+        /* 게임 필터 탭 */
+        .game-tabs { background: #151518; border-bottom: 1px solid #252528; padding: 0 24px; display: flex; gap: 4px; flex-wrap: wrap; transition: background 0.2s, border-color 0.2s; }
+        body.theme-light .game-tabs { background: #fff; border-color: #e5e5e7; }
+        .game-tabs a { padding: 12px 16px; font-size: 0.9rem; font-weight: 500; }
+        body.theme-dark .game-tabs a { color: #9e9ea6; }
+        body.theme-dark .game-tabs a:hover { color: #fff; }
+        body.theme-light .game-tabs a { color: #53535a; }
+        body.theme-light .game-tabs a:hover { color: #1a1a1d; }
+        .game-tabs a.active { color: #00e676; border-bottom: 2px solid #00e676; margin-bottom: -1px; }
+
+        /* 페이지 레이아웃: 메인 + 우측 친구 사이드바 */
+        .page-layout { display: flex; width: 100%; min-height: calc(100vh - 52px - 49px); }
+        .main-container { flex: 1; min-width: 0; padding: 24px; }
+        .friend-sidebar { width: 280px; min-width: 280px; flex-shrink: 0; border-left: 1px solid; display: flex; flex-direction: column; transition: background 0.2s, border-color 0.2s; }
+        body.theme-dark .friend-sidebar { background: #151517; border-color: #252528; }
+        body.theme-light .friend-sidebar { background: #fff; border-color: #e5e5e7; }
+        .friend-sidebar-header { padding: 16px; border-bottom: 1px solid; font-weight: 700; font-size: 1rem; }
+        body.theme-dark .friend-sidebar-header { border-color: #252528; color: #fff; }
+        body.theme-light .friend-sidebar-header { border-color: #e5e5e7; color: #1a1a1d; }
+        .friend-sidebar-tabs { display: flex; border-bottom: 1px solid; }
+        body.theme-dark .friend-sidebar-tabs { border-color: #252528; }
+        body.theme-light .friend-sidebar-tabs { border-color: #e5e5e7; }
+        .friend-sidebar-tabs button { flex: 1; padding: 10px 12px; font-size: 0.85rem; font-weight: 500; border: none; background: none; cursor: pointer; font-family: inherit; }
+        body.theme-dark .friend-sidebar-tabs button { color: #9e9ea6; }
+        body.theme-dark .friend-sidebar-tabs button:hover { color: #fff; background: #1e1e21; }
+        body.theme-dark .friend-sidebar-tabs button.active { color: #00e676; border-bottom: 2px solid #00e676; margin-bottom: -1px; background: #1a1a1d; }
+        body.theme-light .friend-sidebar-tabs button { color: #53535a; }
+        body.theme-light .friend-sidebar-tabs button:hover { color: #1a1a1d; background: #f0f0f2; }
+        body.theme-light .friend-sidebar-tabs button.active { color: #00a858; border-bottom: 2px solid #00e676; margin-bottom: -1px; background: #f0fdf4; }
+        .friend-sidebar-panel { display: none; flex: 1; flex-direction: column; min-height: 0; padding: 12px; overflow: hidden; }
+        .friend-sidebar-panel.active { display: flex; }
+        .friend-search-wrap { display: flex; gap: 8px; margin-bottom: 12px; flex-shrink: 0; }
+        .friend-search-wrap input { flex: 1; min-width: 0; padding: 8px 12px; border-radius: 8px; font-size: 0.9rem; border: 1px solid; }
+        body.theme-dark .friend-search-wrap input { background: #1e1e21; border-color: #2c2c2e; color: #fff; }
+        body.theme-light .friend-search-wrap input { background: #f5f5f7; border-color: #e5e5e7; color: #1a1a1d; }
+        .friend-search-wrap input:focus { outline: none; border-color: #00e676; }
+        .friend-search-wrap button { padding: 8px 12px; background: #00e676; color: #0d0d0f; border: none; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; }
+        .friend-search-wrap button:hover { background: #33eb91; }
+        .friend-list { list-style: none; margin: 0; padding: 0; }
+        .friend-list-section { margin-bottom: 16px; }
+        .friend-list-section:last-child { margin-bottom: 0; }
+        .friend-list-section-title { font-size: 0.75rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; padding: 4px 0 8px 12px; }
+        body.theme-dark .friend-list-section-title { color: #8b8b90; }
+        body.theme-light .friend-list-section-title { color: #53535a; }
+        .friend-list-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; margin-bottom: 4px; transition: background 0.2s; }
+        body.theme-dark .friend-list-item { color: #e5e5e5; }
+        body.theme-dark .friend-list-item:hover { background: #1e1e21; }
+        body.theme-light .friend-list-item { color: #1a1a1d; }
+        body.theme-light .friend-list-item:hover { background: #f0f0f2; }
+        .friend-list-item .friend-avatar-wrap { position: relative; width: 36px; height: 36px; flex-shrink: 0; }
+        .friend-list-item .friend-avatar { width: 36px; height: 36px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 700; overflow: hidden; box-sizing: border-box; }
+        .friend-list-item .friend-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .friend-list-item .friend-avatar .friend-avatar-fallback { display: none; align-items: center; justify-content: center; width: 100%; height: 100%; }
+        body.theme-dark .friend-list-item .friend-avatar { background: #2c2c2e; color: #6b6b70; }
+        body.theme-light .friend-list-item .friend-avatar { background: #e5e5e7; color: #53535a; }
+        .friend-list-item .friend-status-dot { display: none; position: absolute; bottom: 0; right: 0; width: 10px; height: 10px; border-radius: 50%; background: #43b581; border: 2px solid #18181b; box-sizing: border-box; }
+        body.theme-light .friend-list-item .friend-status-dot { border-color: #f0f0f2; }
+        .friend-list-item.friend-online .friend-status-dot { display: block; }
+        .friend-list-item.friend-offline .friend-avatar { opacity: 0.65; }
+        .friend-list-item.friend-offline .friend-name { opacity: 0.85; }
+        body.theme-dark .friend-list-item.friend-offline { color: #9e9ea6; }
+        body.theme-light .friend-list-item.friend-offline { color: #53535a; }
+        body.theme-dark .friend-list-item.friend-offline .friend-status { color: #6b6b70; }
+        body.theme-light .friend-list-item.friend-offline .friend-status { color: #8b8b90; }
+        .friend-list-wrap { flex: 1; min-height: 0; overflow-y: auto; }
+        .friend-list-item .friend-meta { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+        .friend-list-item .friend-name { font-weight: 600; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .friend-list-item .friend-status { font-size: 0.75rem; }
+        body.theme-dark .friend-list-item .friend-status { color: #6b6b70; }
+        body.theme-light .friend-list-item .friend-status { color: #6b6b70; }
+        .friend-list-item .friend-actions { margin-left: auto; display: flex; gap: 4px; flex-shrink: 0; }
+        .friend-list-item .btn-friend-action { width: 32px; height: 32px; border: none; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+        body.theme-dark .friend-list-item .btn-friend-action { background: #2c2c2e; color: #b0b0b5; }
+        body.theme-dark .friend-list-item .btn-friend-action:hover { background: #3a3a3d; color: #00e676; }
+        body.theme-light .friend-list-item .btn-friend-action { background: #e5e5e7; color: #53535a; }
+        body.theme-light .friend-list-item .btn-friend-action:hover { background: #00e676; color: #0d0d0f; }
+        .friend-list-item .friend-meta-wrap { flex: 1; min-width: 0; display: flex; align-items: center; gap: 8px; }
+        .friend-list-item .friend-meta-wrap .friend-meta { flex: 1; min-width: 0; }
+        .friend-empty { padding: 24px 12px; text-align: center; font-size: 0.9rem; }
+        /* 친구 1:1 채팅 패널 */
+        .dm-panel-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 1100; display: none; align-items: center; justify-content: center; padding: 20px; box-sizing: border-box; }
+        .dm-panel { width: 100%; max-width: 380px; max-height: 85vh; background: var(--main-bg, #18181b); border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.4); display: flex; flex-direction: column; overflow: hidden; border: 1px solid; }
+        body.theme-dark .dm-panel { border-color: #2c2c2e; }
+        body.theme-light .dm-panel { background: #fff; border-color: #e5e5e7; }
+        .dm-panel-header { padding: 12px 16px; border-bottom: 1px solid; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        body.theme-dark .dm-panel-header { border-color: #2c2c2e; color: #fff; }
+        body.theme-light .dm-panel-header { border-color: #e5e5e7; color: #1a1a1d; }
+        .dm-panel-header .dm-panel-title { font-weight: 600; font-size: 1rem; }
+        .dm-panel-header .dm-panel-close { width: 32px; height: 32px; border: none; background: none; cursor: pointer; font-size: 1.4rem; line-height: 1; color: #8b8b90; border-radius: 6px; padding: 0; }
+        .dm-panel-header .dm-panel-close:hover { background: #2c2c2e; color: #fff; }
+        .dm-messages { list-style: none; margin: 0; padding: 12px; flex: 1; min-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; }
+        body.theme-light .dm-messages { background: #f7f7f8; }
+        .dm-msg { max-width: 85%; padding: 8px 12px; border-radius: 12px; font-size: 0.9rem; word-break: break-word; }
+        .dm-msg.mine { align-self: flex-end; background: #00e676; color: #0d0d0f; }
+        .dm-msg.theirs { align-self: flex-start; background: #2c2c2e; color: #e5e5e5; }
+        body.theme-light .dm-msg.theirs { background: #e5e5e7; color: #1a1a1d; }
+        .dm-msg-time { font-size: 0.7rem; margin-top: 2px; opacity: 0.8; }
+        .dm-panel-input-wrap { padding: 12px; border-top: 1px solid; display: flex; gap: 8px; flex-shrink: 0; }
+        body.theme-dark .dm-panel-input-wrap { border-color: #2c2c2e; }
+        body.theme-light .dm-panel-input-wrap { border-color: #e5e5e7; }
+        .dm-panel-input-wrap input { flex: 1; min-width: 0; padding: 10px 12px; border-radius: 8px; border: 1px solid; font-size: 0.9rem; }
+        body.theme-dark .dm-panel-input-wrap input { background: #1e1e21; border-color: #2c2c2e; color: #fff; }
+        body.theme-light .dm-panel-input-wrap input { background: #fff; border-color: #e5e5e7; color: #1a1a1d; }
+        .dm-panel-input-wrap button { padding: 10px 16px; background: #00e676; color: #0d0d0f; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
+        .dm-panel-input-wrap button:hover { background: #33eb91; }
+        body.theme-dark .friend-empty { color: #6b6b70; }
+        body.theme-light .friend-empty { color: #6b6b70; }
+        .friend-request-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; border: 1px solid; }
+        body.theme-dark .friend-request-item { background: #1e1e21; border-color: #2c2c2e; }
+        body.theme-light .friend-request-item { background: #f5f5f7; border-color: #e5e5e7; }
+        .friend-request-item .req-actions { margin-left: auto; display: flex; gap: 6px; }
+        .friend-request-item .req-btn { padding: 6px 12px; font-size: 0.8rem; border-radius: 6px; border: none; cursor: pointer; font-weight: 500; }
+        .friend-request-item .req-btn.accept { background: #00e676; color: #0d0d0f; }
+        .friend-request-item .req-btn.accept:hover { background: #33eb91; }
+        .friend-request-item .req-btn.reject { background: transparent; }
+        body.theme-dark .friend-request-item .req-btn.reject { color: #9e9ea6; border: 1px solid #3a3a3d; }
+        body.theme-light .friend-request-item .req-btn.reject { color: #53535a; border: 1px solid #d0d0d2; }
+        .friend-sidebar-login-msg { padding: 24px 16px; text-align: center; font-size: 0.9rem; }
+        body.theme-dark .friend-sidebar-login-msg { color: #6b6b70; }
+        body.theme-light .friend-sidebar-login-msg { color: #6b6b70; }
+        .friend-sidebar-login-msg .btn-login-sidebar { margin-top: 12px; padding: 8px 16px; background: #00e676; color: #0d0d0f; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; }
+        .friend-sidebar-login-msg .btn-login-sidebar:hover { background: #33eb91; }
+        .friend-sidebar-tabs button .friend-request-badge { display: none; margin-left: 4px; padding: 0 6px; min-width: 18px; height: 18px; border-radius: 9px; font-size: 0.7rem; font-weight: 700; line-height: 18px; text-align: center; vertical-align: middle; }
+        .friend-sidebar-tabs button .friend-request-badge.show { display: inline-block; }
+        body.theme-dark .friend-sidebar-tabs button .friend-request-badge { background: #e91916; color: #fff; }
+        body.theme-light .friend-sidebar-tabs button .friend-request-badge { background: #e91916; color: #fff; }
+        @media (max-width: 1100px) { .friend-sidebar { display: none; } }
+        .main-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); padding: 12px 24px; border-radius: 8px; font-size: 0.9rem; font-weight: 500; z-index: 1100; opacity: 0; transition: opacity 0.3s; pointer-events: none; }
+        body.theme-dark .main-toast { background: #2c2c2e; color: #fff; }
+        body.theme-light .main-toast { background: #1a1a1d; color: #fff; }
+        .main-toast.show { opacity: 1; }
+
+        /* 지금 라이브 - 스트리밍 사이트와 동일 컨셉, 라이트 모드 시인성 */
+        .live-section { background: #18181b; border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px solid #252528; transition: background 0.2s, border-color 0.2s; }
+        body.theme-light .live-section { background: #fff; border-color: #e5e5e7; }
+        .live-section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+        .live-section-title { display: flex; align-items: center; gap: 8px; font-size: 1.1rem; font-weight: 700; }
+        body.theme-dark .live-section-title { color: #fff; }
+        body.theme-light .live-section-title { color: #1a1a1d; }
+        .live-section-title .icon { font-size: 1.2rem; color: #00e676; }
+        .live-section-header .link-all { font-size: 0.9rem; color: #00e676; font-weight: 500; }
+        .live-section-header .link-all:hover { text-decoration: underline; }
+        .live-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px; }
+        .live-card { border-radius: 10px; overflow: hidden; border: 1px solid; transition: border-color 0.2s, background 0.2s; }
+        body.theme-dark .live-card { background: #1e1e21; border-color: #2c2c2e; }
+        body.theme-light .live-card { background: #fff; border-color: #e5e5e7; }
+        .live-card:hover { border-color: #00e676; }
+        .live-card a { display: block; color: inherit; }
+        .live-card-thumb { position: relative; aspect-ratio: 16/9; overflow: hidden; }
+        body.theme-dark .live-card-thumb { background: #0d0d0f; }
+        body.theme-light .live-card-thumb { background: #f0f0f2; }
+        .live-card-thumb-inner { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
+        .live-card-thumb-inner video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: contain; opacity: 0; pointer-events: none; }
+        .live-card-thumb-inner .thumb-canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; display: block; object-fit: contain; }
+        .live-card-thumb .thumb-placeholder { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 0.85rem; text-align: center; }
+        body.theme-dark .live-card-thumb .thumb-placeholder { background: linear-gradient(180deg, #1a1a1d 0%, #0d0d0f 100%); color: #6b6b70; }
+        body.theme-light .live-card-thumb .thumb-placeholder { background: linear-gradient(180deg, #e8e8ea 0%, #f0f0f2 100%); color: #6b6b70; }
+        .live-card-thumb .live-badge { position: absolute; top: 10px; left: 10px; background: #00e676; color: #0d0d0f; padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 800; z-index: 2; }
+        .live-card-thumb .watching { position: absolute; bottom: 10px; left: 10px; background: rgba(0,0,0,0.75); color: #fff; padding: 0.25rem 0.6rem; border-radius: 6px; font-size: 0.8rem; font-weight: 500; z-index: 2; }
+        .live-card-info { padding: 12px; display: flex; align-items: center; gap: 10px; transition: background 0.2s; }
+        body.theme-dark .live-card-info { background: #1e1e21; }
+        body.theme-light .live-card-info { background: #fff; }
+        .live-card-avatar { width: 36px; height: 36px; border-radius: 50%; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; font-weight: 700; }
+        body.theme-dark .live-card-avatar { background: #2c2c2e; color: #6b6b70; }
+        body.theme-light .live-card-avatar { background: #e5e5e7; color: #53535a; }
+        .live-card-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; min-width: 0; min-height: 0; }
+        .live-card-meta { min-width: 0; }
+        .live-card-name { font-weight: 700; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        body.theme-dark .live-card-name { color: #fff; }
+        body.theme-light .live-card-name { color: #1a1a1d; }
+        .live-card-game { font-size: 0.8rem; margin-top: 4px; }
+        .live-card-category { display: inline-block; font-size: 0.75rem; padding: 0.2rem 0.5rem; border-radius: 6px; margin-top: 2px; }
+        body.theme-dark .live-card-category { background: #2c2c2e; color: #9e9ea6; }
+        body.theme-light .live-card-category { background: #e5e5e7; color: #53535a; }
+        .live-empty { padding: 40px; text-align: center; color: #6b6b70; font-size: 0.95rem; }
+
+        /* 듀오 구인글 영역 */
+        .duo-section { background: #151518; border-radius: 12px; border: 1px solid #252528; overflow: visible; transition: background 0.2s, border-color 0.2s; }
+        body.theme-light .duo-section { background: #fff; border-color: #e5e5e7; }
+        .duo-section-header { padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+        body.theme-dark .duo-section-header { border-bottom: 1px solid #252528; }
+        body.theme-light .duo-section-header { border-bottom: 1px solid #e5e5e7; }
+        .duo-section-title { font-size: 1rem; font-weight: 700; }
+        body.theme-dark .duo-section-title { color: #fff; }
+        body.theme-light .duo-section-title { color: #1a1a1d; }
+        .duo-stats { font-size: 0.85rem; color: #9e9ea6; }
+        .duo-filters { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+        .duo-filters select { padding: 8px 12px; background: #1e1e21; border: 1px solid #2c2c2e; border-radius: 6px; color: #e5e5e5; font-size: 0.85rem; }
+        body.theme-light .duo-filters select { background: #fff; border-color: #e5e5e7; color: #1a1a1d; }
+        .duo-select-wrap { position: relative; z-index: 10; }
+        .duo-select-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 8px 12px; min-width: 120px; border-radius: 6px; font-size: 0.85rem; cursor: pointer; border: 1px solid; font-family: inherit; text-align: left; }
+        body.theme-dark .duo-select-btn { background: #1e1e21; border-color: #2c2c2e; color: #e5e5e5; }
+        body.theme-light .duo-select-btn { background: #fff; border-color: #e5e5e7; color: #1a1a1d; }
+        .duo-select-btn::after { content: ''; width: 0; height: 0; border-left: 4px solid transparent; border-right: 4px solid transparent; border-top: 5px solid currentColor; flex-shrink: 0; }
+        .duo-select-list { display: none; position: absolute; top: 100%; left: 0; margin-top: 4px; min-width: 100%; max-height: 280px; overflow-y: auto; border-radius: 6px; border: 1px solid; z-index: 100; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+        .duo-select-list.open { display: block; }
+        body.theme-dark .duo-select-list { background: #1e1e21; border-color: #2c2c2e; }
+        body.theme-light .duo-select-list { background: #fff; border-color: #e5e5e7; }
+        .duo-select-option { display: block; width: 100%; padding: 8px 12px; font-size: 0.85rem; cursor: pointer; border: none; background: none; font-family: inherit; text-align: left; }
+        body.theme-dark .duo-select-option { color: #e5e5e5; }
+        body.theme-dark .duo-select-option:hover { background: #2c2c2e; }
+        body.theme-dark .duo-select-option.selected { background: #252528; color: #00e676; }
+        body.theme-light .duo-select-option { color: #1a1a1d; }
+        body.theme-light .duo-select-option:hover { background: #f0f0f2; }
+        body.theme-light .duo-select-option.selected { background: #e8f5e9; color: #00a858; }
+        .duo-filters .duo-filter-verified { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; }
+        body.theme-dark .duo-filters .duo-filter-verified { color: #9e9ea6; }
+        body.theme-light .duo-filters .duo-filter-verified { color: #53535a; }
+        .duo-filters .btn-write { padding: 8px 16px; background: #00e676; color: #0d0d0f; border: none; border-radius: 6px; font-size: 0.9rem; font-weight: 600; cursor: pointer; }
+        .duo-filters .btn-write:hover { background: #33eb91; }
+        .duo-sub-nav { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 16px; }
+        .duo-sub-nav a, .duo-sub-nav button { padding: 8px 14px; font-size: 0.9rem; font-weight: 500; border-radius: 6px; border: none; background: none; cursor: pointer; font-family: inherit; text-decoration: none; }
+        body.theme-dark .duo-sub-nav a, body.theme-dark .duo-sub-nav button { color: #9e9ea6; }
+        body.theme-dark .duo-sub-nav a:hover, body.theme-dark .duo-sub-nav button:hover { color: #fff; background: #252528; }
+        body.theme-dark .duo-sub-nav a.active { color: #00e676; background: rgba(0,230,118,0.12); }
+        body.theme-light .duo-sub-nav a, body.theme-light .duo-sub-nav button { color: #53535a; }
+        body.theme-light .duo-sub-nav a:hover, body.theme-light .duo-sub-nav button:hover { color: #1a1a1d; background: #e5e5e7; }
+        body.theme-light .duo-sub-nav a.active { color: #00a858; background: rgba(0,230,118,0.12); }
+        .duo-table { width: 100%; border-collapse: collapse; }
+        .duo-table th, .duo-table td { padding: 14px 20px; text-align: left; font-size: 0.9rem; }
+        body.theme-dark .duo-table th, body.theme-dark .duo-table td { border-bottom: 1px solid #252528; }
+        body.theme-light .duo-table th, body.theme-light .duo-table td { border-bottom: 1px solid #e5e5e7; }
+        .duo-table th { font-weight: 600; }
+        body.theme-dark .duo-table th { background: #1a1a1d; color: #9e9ea6; }
+        body.theme-light .duo-table th { background: #f5f5f7; color: #53535a; }
+        body.theme-dark .duo-table td { color: #e5e5e5; }
+        body.theme-light .duo-table td { color: #1a1a1d; }
+        body.theme-dark .duo-table tr:hover td { background: #1a1a1d; }
+        body.theme-light .duo-table tr:hover td { background: #f0f0f2; }
+        .duo-empty { padding: 48px 20px; text-align: center; color: #6b6b70; font-size: 0.95rem; }
+
+        /* 로그인/회원가입 모달 - 메인 다크 테마 */
+        .main-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.7); z-index: 1000; display: none; align-items: center; justify-content: center; }
+        .main-modal-backdrop.show { display: flex; }
+        .main-modal-box { width: 100%; max-width: 400px; border-radius: 12px; padding: 24px; transition: background 0.2s, border-color 0.2s; }
+        body.theme-dark .main-modal-box { background: #1e1e21; border: 1px solid #2c2c2e; }
+        body.theme-light .main-modal-box { background: #fff; border: 1px solid #e5e5e7; }
+        .main-modal-box .modal-title { font-size: 1.2rem; font-weight: 700; margin: 0 0 20px 0; }
+        body.theme-dark .main-modal-box .modal-title { color: #fff; }
+        body.theme-light .main-modal-box .modal-title { color: #1a1a1d; }
+        .main-modal-box .modal-field { margin-bottom: 14px; }
+        .main-modal-box .modal-field label { display: block; font-size: 0.85rem; color: #9e9ea6; margin-bottom: 6px; }
+        .main-modal-box .modal-field input { width: 100%; height: 42px; padding: 0 12px; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; transition: background 0.2s, border-color 0.2s, color 0.2s; }
+        body.theme-dark .main-modal-box .modal-field input { border: 1px solid #3a3a3d; background: #2c2c2e; color: #fff; }
+        body.theme-light .main-modal-box .modal-field input { border: 1px solid #e0e0e2; background: #f5f5f7; color: #1a1a1d; }
+        .main-modal-box .modal-field input:focus { outline: none; border-color: #00e676; }
+        .main-modal-box .modal-field select { width: 100%; height: 42px; padding: 0 12px; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; }
+        body.theme-dark .main-modal-box .modal-field select { border: 1px solid #3a3a3d; background: #2c2c2e; color: #fff; }
+        body.theme-light .main-modal-box .modal-field select { border: 1px solid #e0e0e2; background: #f5f5f7; color: #1a1a1d; }
+        .main-modal-box .modal-field-row { display: flex; gap: 8px; margin-top: 4px; }
+        .main-modal-box .modal-field-row input { flex: 1; min-width: 0; }
+        .main-modal-box .modal-error { color: #e91916; font-size: 0.85rem; margin: 8px 0 0; }
+        .main-modal-box .modal-actions { display: flex; gap: 10px; margin-top: 20px; }
+        .main-modal-box .btn-primary { flex: 1; padding: 12px; background: #00e676; color: #0d0d0f; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.95rem; }
+        .main-modal-box .btn-primary:hover { background: #33eb91; }
+        body.theme-dark .main-modal-box .btn-secondary { background: #3a3a3d; color: #e5e5e5; }
+        body.theme-dark .main-modal-box .btn-secondary:hover { background: #53535a; }
+        body.theme-light .main-modal-box .btn-secondary { background: #e5e5e7; color: #1a1a1d; }
+        body.theme-light .main-modal-box .btn-secondary:hover { background: #d0d0d2; }
+        .main-modal-box .btn-secondary { padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; font-size: 0.9rem; }
+        .main-modal-box .btn-check { padding: 0 14px; height: 42px; border-radius: 8px; border: 1px solid #00e676; background: transparent; color: #00e676; font-size: 0.85rem; cursor: pointer; flex-shrink: 0; }
+        .main-modal-box .btn-check:hover { background: rgba(0,230,118,0.1); }
+        .main-modal-box .modal-footer { margin-top: 16px; font-size: 0.9rem; color: #9e9ea6; }
+        .main-modal-box .modal-footer a { color: #00e676; }
+        .main-modal-box .check-msg { font-size: 0.8rem; margin-top: 4px; }
+        .main-modal-box .check-msg.ok { color: #00e676; }
+        .main-modal-box .check-msg.fail { color: #e91916; }
+        .main-modal-box .login-divider { display: flex; align-items: center; gap: 12px; margin: 16px 0; font-size: 0.85rem; color: #6b6b70; }
+        .main-modal-box .login-divider::before, .main-modal-box .login-divider::after { content: ''; flex: 1; height: 1px; background: #3a3a3d; }
+        body.theme-light .main-modal-box .login-divider::before, body.theme-light .main-modal-box .login-divider::after { background: #e0e0e2; }
+        .main-modal-box .btn-google { display: flex; align-items: center; justify-content: center; gap: 10px; width: 100%; padding: 12px; border: 1px solid #3a3a3d; border-radius: 8px; background: #fff; color: #1a1a1d; font-size: 0.95rem; font-weight: 500; cursor: pointer; text-decoration: none; box-sizing: border-box; transition: background 0.2s, border-color 0.2s; }
+        .main-modal-box .btn-google:hover { background: #f5f5f7; border-color: #d0d0d2; }
+        .main-modal-box .btn-google svg { width: 20px; height: 20px; flex-shrink: 0; }
+        .header-right .no-auth { display: inline-block; }
+        .header-right .auth-only { display: none; }
+        body.logged-in .header-right .no-auth { display: none; }
+        body.logged-in .header-right .auth-only { display: inline-flex !important; }
+        /* 친구 사이드바: 로그인 시 목록 표시, 비로그인 시 로그인 유도 문구 */
+        .friend-sidebar .friend-sidebar-body.auth-only { display: none; }
+        .friend-sidebar .friend-sidebar-login-msg.no-auth { display: block; }
+        body.logged-in .friend-sidebar .friend-sidebar-body.auth-only { display: flex !important; flex-direction: column; min-height: 0; }
+        body.logged-in .friend-sidebar .friend-sidebar-login-msg.no-auth { display: none !important; }
+        .header-icon-wrap .header-icon-btn:hover { color: #efeff1; background: #2c2c2e; }
+        /* 알림 빨간불: 미확인 알림 있을 때 벨에 빨간 점 표시 */
+        #header-alarm-wrap.has-unread::before { content: ''; position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; background: #e91916; border-radius: 50%; z-index: 1; pointer-events: none; }
+        .notification-dropdown .notification-item { display: block; padding: 12px 16px; border-bottom: 1px solid #2c2c2e; color: #e0e0e0; font-size: 0.9rem; text-decoration: none; cursor: pointer; text-align: left; }
+        .notification-dropdown .notification-item:hover { background: #2c2c2e; }
+        .notification-dropdown .notification-item.unread { background: rgba(0,230,118,0.08); }
+        .notification-dropdown .notification-item .notification-time { font-size: 0.75rem; color: #6b6b70; margin-top: 4px; }
+    </style>
 </head>
 <body>
-  <div class="card">
-    <h1>GameMatcher</h1>
-    <p>전적 검색과 커뮤니티</p>
-    <a href="/stats/index.html">전적 검색 →</a>
-    <a href="/community/index.html">커뮤니티 →</a>
-    <a href="/profile/profile.html">프로필 (정적) →</a>
-    <a href="http://localhost:5173/">React 앱 (dev) →</a>
-  </div>
+    <header class="main-header">
+        <a href="/" class="logo">GameMatcher</a>
+        <nav class="main-nav">
+            <a href="/streams.html">전체 방송</a>
+            <a href="/">전적</a>
+            <a href="/#matching" class="active" id="nav-matching">Matching</a>
+            <a href="/">이스포츠</a>
+            <a href="/">커뮤니티</a>
+        </nav>
+        <div class="header-right">
+            <button type="button" class="btn-theme" id="btn-theme" title="테마 전환" aria-label="테마 전환"><span class="theme-icon"><svg class="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></svg><svg class="icon-moon" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg></span></button>
+            <span class="header-icon-wrap auth-only" id="header-alarm-wrap" title="알림" style="position:relative;display:inline-flex;">
+                <button type="button" class="header-icon-btn auth-only" id="header-icon-alarm" style="width:40px;height:40px;border:none;border-radius:8px;background:transparent;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#8b8b90;">
+                    <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2" width="22" height="22"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+                </button>
+                <span class="notification-badge" id="notification-badge" style="display:none;position:absolute;top:2px;right:2px;min-width:16px;height:16px;padding:0 4px;border-radius:8px;background:#e91916;color:#fff;font-size:0.7rem;font-weight:700;align-items:center;justify-content:center;">0</span>
+                <div class="notification-dropdown" id="notification-dropdown" style="display:none;position:absolute;top:100%;right:0;margin-top:8px;min-width:300px;max-width:90vw;max-height:360px;overflow-y:auto;border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,0.3);z-index:1001;background:#1e1e21;border:1px solid #2c2c2e;">
+                    <div style="padding:12px 16px;border-bottom:1px solid #2c2c2e;display:flex;align-items:center;justify-content:space-between;">
+                        <strong style="color:#fff;">알림</strong>
+                        <button type="button" id="notification-read-all" style="padding:4px 10px;font-size:0.8rem;border:1px solid #3a3a3d;background:transparent;color:#b0b0b5;border-radius:6px;cursor:pointer;">전체 읽음</button>
+                    </div>
+                    <div id="notification-list" style="padding:8px 0;"></div>
+                    <div class="notification-empty" id="notification-empty" style="display:none;padding:24px 16px;text-align:center;color:#6b6b70;font-size:0.9rem;">알림이 없습니다.</div>
+                </div>
+            </span>
+            <button type="button" class="btn-login no-auth" id="btn-login">로그인</button>
+            <div class="header-profile-wrap auth-only" id="header-profile-wrap">
+                <button type="button" class="header-profile-avatar" id="header-profile-btn" aria-label="프로필 메뉴">
+                    <img id="header-profile-img" src="" alt="" style="display:none;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                    <svg class="avatar-placeholder" style="display:block;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                </button>
+                <div class="header-profile-dropdown" id="header-profile-dropdown">
+                    <div class="dropdown-profile-info">
+                        <div class="dropdown-avatar">
+                            <img id="dropdown-profile-img" src="" alt="" style="display:none;" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                            <svg class="avatar-placeholder" style="display:block; width:32px; height:32px; margin:8px;" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"/></svg>
+                        </div>
+                        <div>
+                            <div class="dropdown-profile-label">GameMatcher 프로필</div>
+                            <div class="dropdown-profile-name" id="dropdown-profile-name">—</div>
+                        </div>
+                    </div>
+                    <div class="dropdown-menu">
+                        <a href="/profile.html"><svg class="menu-icon" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> 내 프로필</a>
+                        <a href="/studio.html"><svg class="menu-icon" viewBox="0 0 24 24" stroke="currentColor" fill="none" stroke-width="2"><rect x="2" y="4" width="14" height="14" rx="2"/><path d="M17 8v8l5-4z"/></svg> 스튜디오</a>
+                        <a href="/streams.html"><svg class="menu-icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> 방송 보기</a>
+                        <button type="button" id="dropdown-logout"><svg class="menu-icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> 로그아웃</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="game-tabs" id="matching">
+        <a href="/#matching-lol" data-game="LEAGUE_OF_LEGENDS">리그 오브 레전드</a>
+        <a href="/#matching-tft" data-game="TFT">전략적 팀 전투</a>
+        <a href="/#matching-valorant" data-game="VALORANT">발로란트</a>
+        <a href="/#matching-pubg" data-game="PUBG">배틀그라운드</a>
+        <a href="/#matching-steam" data-game="STEAM">스팀</a>
+        <a href="/#matching-palworld" data-game="PALWORLD">팰월드</a>
+        <a href="/#matching-overwatch" data-game="OVERWATCH">오버워치2</a>
+        <a href="/#matching-others" data-game="OTHERS">기타</a>
+    </div>
+
+    <div class="page-layout">
+    <div class="main-container" id="matching-content">
+        <!-- 지금 라이브 (낙원 광고판 자리 → 누가 방송 중인지) -->
+        <section class="live-section" aria-label="지금 라이브">
+            <div class="live-section-header">
+                <h2 class="live-section-title"><span class="icon">♪</span> 지금 라이브</h2>
+                <a href="/streams.html" class="link-all">전체보기</a>
+            </div>
+            <div class="live-cards" id="live-cards"></div>
+            <div class="live-empty" id="live-empty" style="display:none;">현재 라이브 방송이 없습니다. <a href="/streams.html">방송 페이지</a>에서 더 보기</div>
+        </section>
+
+        <!-- 듀오 구인글 (DUO.OP.GG 스타일) -->
+        <section class="duo-section">
+            <div class="duo-sub-nav">
+                <a href="/#matching" class="active" id="duo-nav-duo">듀오찾기</a>
+                <button type="button" class="duo-nav-btn" data-feature="트롤신고">트롤신고</button>
+                <button type="button" class="duo-nav-btn" data-feature="클랜찾기">클랜찾기</button>
+                <button type="button" class="duo-nav-btn" data-feature="내전 찾기">내전 찾기</button>
+            </div>
+            <div class="duo-section-header">
+                <h2 class="duo-section-title">GameMatcher 구인글</h2>
+                <span class="duo-stats">현재 접속중 <strong id="duo-online">0</strong> · GameMatcher 구인글 <strong id="duo-posts">0</strong></span>
+                <div class="duo-filters">
+                    <div class="duo-select-wrap" id="duo-mode-wrap">
+                        <button type="button" class="duo-select-btn" id="duo-mode-btn" aria-haspopup="listbox" aria-expanded="false">솔로랭크</button>
+                        <div class="duo-select-list" id="duo-mode-list" role="listbox">
+                            <button type="button" class="duo-select-option selected" data-value="SOLO" role="option">솔로랭크</button>
+                            <button type="button" class="duo-select-option" data-value="FLEX" role="option">자유랭크</button>
+                            <button type="button" class="duo-select-option" data-value="QUICK" role="option">신속 대전</button>
+                            <button type="button" class="duo-select-option" data-value="CROSS" role="option">교차 선택</button>
+                            <button type="button" class="duo-select-option" data-value="CHAOS" role="option">초토화모드</button>
+                            <button type="button" class="duo-select-option" data-value="ARAM_MAYHEM" role="option">칼바람 나락: 아수라장</button>
+                            <button type="button" class="duo-select-option" data-value="ARAM" role="option">칼바람 나락</button>
+                        </div>
+                    </div>
+                    <div class="duo-select-wrap" id="duo-tier-wrap">
+                        <button type="button" class="duo-select-btn" id="duo-tier-btn" aria-haspopup="listbox" aria-expanded="false">티어 전체</button>
+                        <div class="duo-select-list" id="duo-tier-list" role="listbox">
+                            <button type="button" class="duo-select-option selected" data-value="" role="option">티어 전체</button>
+                            <button type="button" class="duo-select-option" data-value="UNRANKED" role="option">언랭크</button>
+                            <button type="button" class="duo-select-option" data-value="IRON" role="option">아이언</button>
+                            <button type="button" class="duo-select-option" data-value="BRONZE" role="option">브론즈</button>
+                            <button type="button" class="duo-select-option" data-value="SILVER" role="option">실버</button>
+                            <button type="button" class="duo-select-option" data-value="GOLD" role="option">골드</button>
+                            <button type="button" class="duo-select-option" data-value="PLATINUM" role="option">플래티넘</button>
+                            <button type="button" class="duo-select-option" data-value="EMERALD" role="option">에메랄드</button>
+                            <button type="button" class="duo-select-option" data-value="DIAMOND" role="option">다이아</button>
+                            <button type="button" class="duo-select-option" data-value="MASTER" role="option">마스터</button>
+                        </div>
+                    </div>
+                    <div class="duo-select-wrap" id="duo-region-wrap">
+                        <button type="button" class="duo-select-btn" id="duo-region-btn" aria-haspopup="listbox" aria-expanded="false">Korea</button>
+                        <div class="duo-select-list" id="duo-region-list" role="listbox">
+                            <button type="button" class="duo-select-option" data-value="North America" role="option">North America</button>
+                            <button type="button" class="duo-select-option" data-value="Europe West" role="option">Europe West</button>
+                            <button type="button" class="duo-select-option" data-value="Europe Nordic &amp; East" role="option">Europe Nordic &amp; East</button>
+                            <button type="button" class="duo-select-option" data-value="Oceania" role="option">Oceania</button>
+                            <button type="button" class="duo-select-option" data-value="Middle East" role="option">Middle East</button>
+                            <button type="button" class="duo-select-option" data-value="LAS" role="option">LAS</button>
+                            <button type="button" class="duo-select-option" data-value="LAN" role="option">LAN</button>
+                            <button type="button" class="duo-select-option selected" data-value="Korea" role="option">Korea</button>
+                            <button type="button" class="duo-select-option" data-value="Japan" role="option">Japan</button>
+                            <button type="button" class="duo-select-option" data-value="Brazil" role="option">Brazil</button>
+                            <button type="button" class="duo-select-option" data-value="Russia" role="option">Russia</button>
+                            <button type="button" class="duo-select-option" data-value="Türkiye" role="option">Türkiye</button>
+                            <button type="button" class="duo-select-option" data-value="Singapore" role="option">Singapore</button>
+                            <button type="button" class="duo-select-option" data-value="Philippines" role="option">Philippines</button>
+                            <button type="button" class="duo-select-option" data-value="Taiwan" role="option">Taiwan</button>
+                            <button type="button" class="duo-select-option" data-value="Vietnam" role="option">Vietnam</button>
+                            <button type="button" class="duo-select-option" data-value="Thailand" role="option">Thailand</button>
+                        </div>
+                    </div>
+                    <label class="duo-filter-verified"><input type="checkbox" id="duo-verified"> 인증된 소환사만</label>
+                    <button type="button" class="btn-write">글쓰기</button>
+                </div>
+            </div>
+            <table class="duo-table">
+                <thead>
+                    <tr>
+                        <th>소환사 이름</th>
+                        <th>주 포지션</th>
+                        <th>찾는 포지션</th>
+                        <th>티어</th>
+                        <th>메모</th>
+                        <th>등록일시</th>
+                    </tr>
+                </thead>
+                <tbody id="duo-tbody">
+                    <tr>
+                        <td colspan="6" class="duo-empty">등록된 구인글이 없습니다. &quot;글쓰기&quot;로 첫 글을 올려보세요.</td>
+                    </tr>
+                </tbody>
+            </table>
+            </section>
+    </div>
+    <aside class="friend-sidebar" id="friend-sidebar">
+        <div class="friend-sidebar-header">친구</div>
+        <div class="friend-sidebar-body auth-only" id="friend-sidebar-body">
+            <div class="friend-sidebar-tabs">
+                <button type="button" class="active" data-tab="friends" aria-selected="true">친구 목록</button>
+                <button type="button" data-tab="requests">요청 <span class="friend-request-badge" id="friend-request-badge" aria-label="받은 친구 요청 수">0</span></button>
+                <button type="button" data-tab="search">친구 찾기</button>
+            </div>
+            <div class="friend-sidebar-panel active" id="panel-friends" role="tabpanel">
+                <div class="friend-list-wrap" id="friend-list-wrap" style="display:none;">
+                    <div class="friend-list-section">
+                        <div class="friend-list-section-title" id="friend-online-title">온라인 — 0</div>
+                        <ul class="friend-list" id="friend-list-online"></ul>
+                    </div>
+                    <div class="friend-list-section">
+                        <div class="friend-list-section-title" id="friend-offline-title">오프라인 — 0</div>
+                        <ul class="friend-list" id="friend-list-offline"></ul>
+                    </div>
+                </div>
+                <div class="friend-empty" id="friend-list-empty">등록된 친구가 없습니다.<br>친구 찾기에서 추가해 보세요.</div>
+            </div>
+            <div class="friend-sidebar-panel" id="panel-requests" role="tabpanel">
+                <ul class="friend-list" id="friend-request-list"></ul>
+                <div class="friend-empty" id="friend-request-empty">받은 친구 요청이 없습니다.</div>
+            </div>
+            <div class="friend-sidebar-panel" id="panel-search" role="tabpanel">
+                <div class="friend-search-wrap">
+                    <input type="text" id="friend-search-input" placeholder="닉네임 또는 아이디 검색" maxlength="30">
+                    <button type="button" id="friend-search-btn">검색</button>
+                </div>
+                <ul class="friend-list" id="friend-search-result"></ul>
+                <div class="friend-empty" id="friend-search-empty">검색어를 입력한 뒤 검색해 주세요.</div>
+            </div>
+        </div>
+        <div class="friend-sidebar-login-msg no-auth" id="friend-sidebar-login-msg">
+            로그인하면 친구 목록과<br>친구 요청을 확인할 수 있습니다.
+            <button type="button" class="btn-login-sidebar" id="btn-login-sidebar">로그인</button>
+        </div>
+    </aside>
+    </div>
+    <div class="main-toast" id="main-toast" aria-live="polite"></div>
+
+    <!-- 친구 1:1 채팅 패널 -->
+    <div id="dm-panel-backdrop" class="dm-panel-backdrop" aria-hidden="true">
+        <div class="dm-panel">
+            <div class="dm-panel-header">
+                <span id="dm-panel-title" class="dm-panel-title">채팅</span>
+                <button type="button" id="dm-panel-close" class="dm-panel-close" aria-label="닫기">×</button>
+            </div>
+            <ul id="dm-messages" class="dm-messages"></ul>
+            <div class="dm-panel-input-wrap">
+                <input type="text" id="dm-input" placeholder="메시지 입력..." maxlength="2000" autocomplete="off">
+                <button type="button" id="dm-send">전송</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 로그인 모달 -->
+    <div class="main-modal-backdrop" id="modal-login">
+        <div class="main-modal-box">
+            <h2 class="modal-title">로그인</h2>
+            <form id="form-login">
+                <div class="modal-field"><label for="main-login-id">아이디</label><input type="text" id="main-login-id" name="loginId" required autocomplete="username"></div>
+                <div class="modal-field"><label for="main-login-pw">비밀번호</label><input type="password" id="main-login-pw" name="password" required autocomplete="current-password"></div>
+                <p class="modal-error" id="main-login-error"></p>
+                <div class="modal-actions"><button type="submit" class="btn-primary">로그인</button><button type="button" class="btn-secondary" id="modal-login-close">취소</button></div>
+                <div class="login-divider">또는</div>
+                <a href="/oauth2/authorization/google" class="btn-google" id="btn-google-login">
+                    <svg viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/><path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/></svg>
+                    Google로 로그인
+                </a>
+            </form>
+            <p class="modal-footer">계정이 없으신가요? <a href="/register.html" id="link-register">회원가입</a></p>
+        </div>
+    </div>
+
+    <!-- 회원가입 모달 -->
+    <div class="main-modal-backdrop" id="modal-register">
+        <div class="main-modal-box">
+            <h2 class="modal-title">회원가입</h2>
+            <form id="form-register">
+                <div class="modal-field"><label>아이디</label><div class="modal-field-row"><input type="text" id="main-reg-loginId" required minlength="5" placeholder=""><button type="button" class="btn-check" id="main-btn-check-loginId">중복확인</button></div><p class="check-msg" id="main-msg-loginId"></p></div>
+                <div class="modal-field"><label>비밀번호</label><input type="password" id="main-reg-password" required minlength="8" placeholder="8자 이상"></div>
+                <div class="modal-field"><label>비밀번호 확인</label><input type="password" id="main-reg-password2" required minlength="8" placeholder="비밀번호 재입력"><p class="check-msg" id="main-msg-password2"></p></div>
+                <div class="modal-field"><label>이름</label><input type="text" id="main-reg-username" required></div>
+                <div class="modal-field"><label>닉네임</label><input type="text" id="main-reg-nickname" placeholder="표시될 이름"></div>
+                <div class="modal-field"><label>이메일</label><input type="email" id="main-reg-email" required placeholder="이메일"></div>
+                <div class="modal-field"><label>전화번호</label><div class="modal-field-row" style="gap:8px;"><span style="align-self:center;color:#9e9ea6;">+82</span><input type="tel" id="main-reg-phone" placeholder="010-0000-0000" style="flex:1;min-width:0;"><button type="button" class="btn-check" id="main-reg-phone-send">문자 인증</button></div></div>
+                <div class="modal-field" id="main-reg-phone-code-wrap" style="display:none;"><label>인증 코드</label><div class="modal-field-row" style="gap:8px;"><input type="text" id="main-reg-phone-code" placeholder="SMS 6자리 코드" inputmode="numeric" maxlength="6" style="flex:1;min-width:0;"><button type="button" class="btn-check" id="main-reg-phone-confirm">인증 완료</button></div></div>
+                <p class="modal-error" id="main-reg-phone-error"></p>
+                <p class="modal-error" id="main-register-error"></p>
+                <div class="modal-actions"><button type="submit" class="btn-primary">가입하기</button><button type="button" class="btn-secondary" id="modal-register-close">취소</button></div>
+            </form>
+            <p class="modal-footer">이미 계정이 있으신가요? <a href="#" id="link-login">로그인</a></p>
+        </div>
+    </div>
+
+    <!-- 구인글 글쓰기 모달 -->
+    <div class="main-modal-backdrop" id="modal-recruit-write">
+        <div class="main-modal-box" style="max-width: 480px;">
+            <h2 class="modal-title">구인글 작성</h2>
+            <form id="form-recruit-write">
+                <div class="modal-field"><label for="recruit-summoner">소환사 이름 *</label><input type="text" id="recruit-summoner" required maxlength="100" placeholder="게임 내 닉네임"></div>
+                <div class="modal-field"><label for="recruit-main-pos">주 포지션</label><input type="text" id="recruit-main-pos" maxlength="50" placeholder="예: 탑, 미드"></div>
+                <div class="modal-field"><label for="recruit-find-pos">찾는 포지션</label><input type="text" id="recruit-find-pos" maxlength="50" placeholder="예: 정글"></div>
+                <div class="modal-field"><label for="recruit-tier">티어</label><select id="recruit-tier">
+                    <option value="">티어 전체</option>
+                    <option value="UNRANKED">언랭크</option>
+                    <option value="IRON">아이언</option>
+                    <option value="BRONZE">브론즈</option>
+                    <option value="SILVER">실버</option>
+                    <option value="GOLD">골드</option>
+                    <option value="PLATINUM">플래티넘</option>
+                    <option value="EMERALD">에메랄드</option>
+                    <option value="DIAMOND">다이아</option>
+                    <option value="MASTER">마스터</option>
+                </select></div>
+                <div class="modal-field"><label for="recruit-region">리전</label><select id="recruit-region">
+                    <option value="Korea">Korea</option>
+                    <option value="North America">North America</option>
+                    <option value="Europe West">Europe West</option>
+                    <option value="Japan">Japan</option>
+                </select></div>
+                <div class="modal-field"><label for="recruit-mode">모드</label><select id="recruit-mode">
+                    <option value="SOLO">솔로랭크</option>
+                    <option value="FLEX">자유랭크</option>
+                    <option value="ARAM">칼바람 나락</option>
+                </select></div>
+                <div class="modal-field"><label for="recruit-memo">메모</label><input type="text" id="recruit-memo" maxlength="500" placeholder="하고 싶은 말"></div>
+                <p class="modal-error" id="recruit-write-error"></p>
+                <div class="modal-actions"><button type="submit" class="btn-primary">등록</button><button type="button" class="btn-secondary" id="modal-recruit-write-close">취소</button></div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            var THEME_KEY = 'gamematcher-theme';
+            var body = document.body;
+            function applyTheme(theme) {
+                body.classList.remove('theme-dark', 'theme-light');
+                body.classList.add(theme === 'light' ? 'theme-light' : 'theme-dark');
+                try { localStorage.setItem(THEME_KEY, theme); } catch (e) {}
+            }
+            var saved = (function () { try { return localStorage.getItem(THEME_KEY); } catch (e) { return null; } })();
+            applyTheme(saved === 'light' ? 'light' : 'dark');
+            document.getElementById('btn-theme').addEventListener('click', function () {
+                applyTheme(body.classList.contains('theme-dark') ? 'light' : 'dark');
+            });
+
+            var currentUserId = null;
+            function setLoggedIn(user) {
+                body.classList.add('logged-in');
+                currentUserId = user ? (user.id != null ? user.id : null) : null;
+                var displayName = user ? (user.nickname || user.username || user.loginId) : '—';
+                var nameEl = document.getElementById('dropdown-profile-name');
+                if (nameEl) nameEl.textContent = displayName;
+                var img = document.getElementById('header-profile-img');
+                var dropImg = document.getElementById('dropdown-profile-img');
+                if (user && user.profileImageUrl) {
+                    if (img) { img.src = user.profileImageUrl; img.style.display = 'block'; img.nextElementSibling.style.display = 'none'; }
+                    if (dropImg) { dropImg.src = user.profileImageUrl; dropImg.style.display = 'block'; if (dropImg.nextElementSibling) dropImg.nextElementSibling.style.display = 'none'; }
+                } else {
+                    if (img) { img.style.display = 'none'; if (img.nextElementSibling) img.nextElementSibling.style.display = 'block'; }
+                    if (dropImg) { dropImg.style.display = 'none'; if (dropImg.nextElementSibling) dropImg.nextElementSibling.style.display = 'block'; }
+                }
+            }
+            function setLoggedOut() {
+                body.classList.remove('logged-in');
+                currentUserId = null;
+            }
+            fetch('/api/auth/me', { credentials: 'include' })
+                .then(function (r) { if (r.ok) return r.json(); setLoggedOut(); throw new Error(); })
+                .then(function (user) { setLoggedIn(user); })
+                .catch(function () {});
+
+            var modalLogin = document.getElementById('modal-login');
+            var modalRegister = document.getElementById('modal-register');
+            document.getElementById('btn-login').addEventListener('click', function () {
+                document.getElementById('main-login-error').textContent = '';
+                modalLogin.classList.add('show');
+            });
+            var btnLoginSidebar = document.getElementById('btn-login-sidebar');
+            if (btnLoginSidebar) btnLoginSidebar.addEventListener('click', function () {
+                document.getElementById('main-login-error').textContent = '';
+                modalLogin.classList.add('show');
+            });
+            var friendTabs = document.querySelectorAll('.friend-sidebar-tabs button');
+            var friendPanels = document.querySelectorAll('.friend-sidebar-panel');
+            function updateFriendRequestBadge(count) {
+                var badge = document.getElementById('friend-request-badge');
+                if (!badge) return;
+                badge.textContent = count > 99 ? '99+' : String(count);
+                badge.classList.toggle('show', count > 0);
+            }
+            function loadFriendList() {
+                var wrapEl = document.getElementById('friend-list-wrap');
+                var onlineListEl = document.getElementById('friend-list-online');
+                var offlineListEl = document.getElementById('friend-list-offline');
+                var onlineTitleEl = document.getElementById('friend-online-title');
+                var offlineTitleEl = document.getElementById('friend-offline-title');
+                var emptyEl = document.getElementById('friend-list-empty');
+                if (!onlineListEl || !offlineListEl || !emptyEl) return;
+                onlineListEl.innerHTML = '';
+                offlineListEl.innerHTML = '';
+                emptyEl.style.display = 'block';
+                if (wrapEl) wrapEl.style.display = 'none';
+                Promise.all([
+                    fetch('/api/friends/list', { credentials: 'include' }).then(function (r) { return r.ok ? r.json() : []; }),
+                    fetch('/api/friends/online-ids', { credentials: 'include' }).then(function (r) { return r.ok ? r.json() : []; })
+                ]).then(function (results) {
+                    var list = Array.isArray(results[0]) ? results[0] : [];
+                    var onlineIds = Array.isArray(results[1]) ? results[1] : [];
+                    var onlineSet = new Set(onlineIds.map(function (id) { return Number(id); }));
+                    if (list.length === 0) return;
+                    emptyEl.style.display = 'none';
+                    if (wrapEl) wrapEl.style.display = 'block';
+                    var online = [];
+                    var offline = [];
+                    list.forEach(function (user) {
+                        if (onlineSet.has(Number(user.id))) online.push(user); else offline.push(user);
+                    });
+                    function renderItem(user, isOnline) {
+                        var li = document.createElement('li');
+                        li.className = 'friend-list-item ' + (isOnline ? 'friend-online' : 'friend-offline');
+                        var displayName = user.nickname || user.loginId || '?';
+                        var initial = (displayName && displayName.charAt(0)) ? displayName.charAt(0).toUpperCase() : '?';
+                        var avatarHtml = user.profileImageUrl
+                            ? '<img src="' + (user.profileImageUrl || '').replace(/"/g, '&quot;') + '" alt="" onerror="this.style.display=\'none\'; if(this.nextElementSibling) this.nextElementSibling.style.display=\'flex\';"><span class="friend-avatar-fallback" style="display:none;">' + initial + '</span>'
+                            : initial;
+                        var safeName = (displayName || '').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+                        li.innerHTML = '<span class="friend-avatar-wrap"><span class="friend-avatar">' + avatarHtml + '</span><span class="friend-status-dot" aria-label="온라인"></span></span><div class="friend-meta-wrap"><div class="friend-meta"><span class="friend-name">' + safeName + '</span><span class="friend-status">' + (user.loginId ? '@' + user.loginId : '') + '</span></div><button type="button" class="btn-friend-action friend-chat-btn" data-user-id="' + (user.id || '') + '" data-user-name="' + safeName + '" title="채팅">💬</button></div>';
+                        return li;
+                    }
+                    online.forEach(function (user) { onlineListEl.appendChild(renderItem(user, true)); });
+                    offline.forEach(function (user) { offlineListEl.appendChild(renderItem(user, false)); });
+                    if (onlineTitleEl) onlineTitleEl.textContent = '온라인 — ' + online.length;
+                    if (offlineTitleEl) offlineTitleEl.textContent = '오프라인 — ' + offline.length;
+                }).catch(function () {});
+            }
+            function loadReceivedRequests() {
+                var listEl = document.getElementById('friend-request-list');
+                var emptyEl = document.getElementById('friend-request-empty');
+                if (!listEl || !emptyEl) return;
+                listEl.innerHTML = '';
+                emptyEl.style.display = 'block';
+                fetch('/api/friends/requests/received', { credentials: 'include' })
+                    .then(function (r) { return r.ok ? r.json() : { list: [] }; })
+                    .then(function (data) {
+                        var list = data.list || [];
+                        updateFriendRequestBadge(list.length);
+                        if (list.length === 0) return;
+                        emptyEl.style.display = 'none';
+                        list.forEach(function (req) {
+                            var li = document.createElement('li');
+                            li.className = 'friend-list-item friend-request-item';
+                            var displayName = req.nickname || req.loginId || '?';
+                            var initial = (displayName && displayName.charAt(0)) ? displayName.charAt(0).toUpperCase() : '?';
+                            var avatar = '<span class="friend-avatar">' + (req.profileImageUrl ? '<img src="' + (req.profileImageUrl || '').replace(/"/g, '&quot;') + '" alt="" onerror="this.style.display=\'none\'; if(this.nextElementSibling) this.nextElementSibling.style.display=\'flex\';"><span class="friend-avatar-fallback" style="display:none;">' + initial + '</span>' : initial) + '</span>';
+                            var meta = '<div class="friend-meta"><span class="friend-name">' + (displayName || '').replace(/</g, '&lt;') + '</span><span class="friend-status">' + (req.loginId ? '@' + req.loginId : '') + '</span></div>';
+                            var actions = '<div class="req-actions"><button type="button" class="req-btn accept" data-request-id="' + req.id + '">수락</button><button type="button" class="req-btn reject" data-request-id="' + req.id + '">거절</button></div>';
+                            li.innerHTML = avatar + meta + actions;
+                            listEl.appendChild(li);
+                        });
+                        listEl.querySelectorAll('.req-btn.accept').forEach(function (b) {
+                            b.addEventListener('click', function () {
+                                var id = b.getAttribute('data-request-id');
+                                if (!id) return;
+                                fetch('/api/friends/requests/' + id + '/accept', { method: 'POST', credentials: 'include' })
+                                    .then(function () { loadReceivedRequests(); loadFriendList(); });
+                            });
+                        });
+                        listEl.querySelectorAll('.req-btn.reject').forEach(function (b) {
+                            b.addEventListener('click', function () {
+                                var id = b.getAttribute('data-request-id');
+                                if (!id) return;
+                                fetch('/api/friends/requests/' + id + '/reject', { method: 'POST', credentials: 'include' })
+                                    .then(function () { loadReceivedRequests(); });
+                            });
+                        });
+                    })
+                    .catch(function () {});
+            }
+            friendTabs.forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    var tab = this.getAttribute('data-tab');
+                    friendTabs.forEach(function (b) { b.classList.remove('active'); b.setAttribute('aria-selected', 'false'); });
+                    this.classList.add('active'); this.setAttribute('aria-selected', 'true');
+                    friendPanels.forEach(function (p) {
+                        var isActive = (p.id === 'panel-friends' && tab === 'friends') || (p.id === 'panel-requests' && tab === 'requests') || (p.id === 'panel-search' && tab === 'search');
+                        p.classList.toggle('active', isActive);
+                    });
+                    if (tab === 'requests') loadReceivedRequests();
+                    if (tab === 'friends') loadFriendList();
+                });
+            });
+            loadFriendList();
+            setInterval(function () { if (document.body.classList.contains('logged-in')) loadFriendList(); }, 25000);
+
+            (function initDmPanel() {
+                var backdrop = document.getElementById('dm-panel-backdrop');
+                var titleEl = document.getElementById('dm-panel-title');
+                var messagesEl = document.getElementById('dm-messages');
+                var inputEl = document.getElementById('dm-input');
+                var sendBtn = document.getElementById('dm-send');
+                var closeBtn = document.getElementById('dm-panel-close');
+                var dmPollId = null;
+                var currentDmUserId = null;
+                function openDm(userId, userName) {
+                    currentDmUserId = userId;
+                    if (titleEl) titleEl.textContent = '채팅 — ' + (userName || '친구');
+                    if (messagesEl) messagesEl.innerHTML = '';
+                    if (inputEl) inputEl.value = '';
+                    if (backdrop) { backdrop.style.display = 'flex'; backdrop.setAttribute('aria-hidden', 'false'); }
+                    loadDmMessages();
+                    dmPollId = setInterval(loadDmMessages, 5000);
+                    if (inputEl) inputEl.focus();
+                }
+                window.openDmWithUser = openDm;
+                function closeDm() {
+                    currentDmUserId = null;
+                    if (dmPollId) { clearInterval(dmPollId); dmPollId = null; }
+                    if (backdrop) { backdrop.style.display = 'none'; backdrop.setAttribute('aria-hidden', 'true'); }
+                }
+                function loadDmMessages() {
+                    if (!currentDmUserId || !messagesEl) return;
+                    fetch('/api/dm?withUserId=' + encodeURIComponent(currentDmUserId) + '&limit=50', { credentials: 'include' })
+                        .then(function (r) { return r.ok ? r.json() : { items: [] }; })
+                        .then(function (data) {
+                            var items = (data.items || []).slice().reverse();
+                            var myId = currentUserId != null ? Number(currentUserId) : null;
+                            messagesEl.innerHTML = items.map(function (m) {
+                                var isMine = (m.fromUserId != null && Number(m.fromUserId) === myId);
+                                var time = (m.createdAt || '').replace('T', ' ').substring(0, 16);
+                                var text = (m.text || '').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+                                return '<li class="dm-msg ' + (isMine ? 'mine' : 'theirs') + '"><span class="dm-msg-text">' + text + '</span><div class="dm-msg-time">' + time + '</div></li>';
+                            }).join('');
+                            messagesEl.scrollTop = messagesEl.scrollHeight;
+                        })
+                        .catch(function () {});
+                }
+                function sendDm() {
+                    var text = inputEl ? inputEl.value.trim() : '';
+                    if (!text || !currentDmUserId) return;
+                    fetch('/api/dm', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ toUserId: currentDmUserId, text: text })
+                    })
+                        .then(function (r) { return r.ok ? r.json() : null; })
+                        .then(function (res) {
+                            if (res) {
+                                if (inputEl) inputEl.value = '';
+                                loadDmMessages();
+                            } else {
+                                if (typeof showToast === 'function') showToast('메시지 전송에 실패했습니다.');
+                            }
+                        })
+                        .catch(function () { if (typeof showToast === 'function') showToast('메시지 전송에 실패했습니다.'); });
+                }
+                document.addEventListener('click', function (e) {
+                    var chatBtn = e.target.closest('.friend-chat-btn');
+                    if (chatBtn) {
+                        e.preventDefault();
+                        var uid = chatBtn.getAttribute('data-user-id');
+                        var name = chatBtn.getAttribute('data-user-name') || '';
+                        if (uid && currentUserId) openDm(uid, name);
+                        else if (typeof showToast === 'function') showToast('로그인 후 채팅할 수 있습니다.');
+                        return;
+                    }
+                    if (e.target === backdrop) closeDm();
+                });
+                if (closeBtn) closeBtn.addEventListener('click', closeDm);
+                if (sendBtn) sendBtn.addEventListener('click', sendDm);
+                if (inputEl) inputEl.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); sendDm(); } });
+            })();
+
+            (function initNotifications() {
+                var alarmWrap = document.getElementById('header-alarm-wrap');
+                var alarmBtn = document.getElementById('header-icon-alarm');
+                var notificationBadge = document.getElementById('notification-badge');
+                var notificationDropdown = document.getElementById('notification-dropdown');
+                var notificationList = document.getElementById('notification-list');
+                var notificationEmpty = document.getElementById('notification-empty');
+                function updateNotificationCount() {
+                    if (!document.body.classList.contains('logged-in')) return;
+                    fetch('/api/notifications/count', { credentials: 'include' })
+                        .then(function (r) { return r.ok ? r.json() : { count: 0 }; })
+                        .then(function (d) {
+                            var c = d.count != null ? Number(d.count) : 0;
+                            if (notificationBadge) {
+                                notificationBadge.textContent = c > 99 ? '99+' : String(c);
+                                notificationBadge.style.display = c > 0 ? 'inline-flex' : 'none';
+                            }
+                            if (alarmWrap) alarmWrap.classList.toggle('has-unread', c > 0);
+                        })
+                        .catch(function () {});
+                }
+                function renderNotificationList(list) {
+                    if (!notificationList || !notificationEmpty) return;
+                    notificationList.innerHTML = '';
+                    if (!list || list.length === 0) {
+                        notificationEmpty.style.display = 'block';
+                        return;
+                    }
+                    notificationEmpty.style.display = 'none';
+                    list.forEach(function (n) {
+                        var a = document.createElement('a');
+                        a.className = 'notification-item' + (n.read ? '' : ' unread');
+                        a.href = n.type === 'NEW_DM' ? '#' : (n.streamId ? '/watch.html?streamId=' + n.streamId : '#');
+                        a.setAttribute('data-id', String(n.id));
+                        a.innerHTML = '<div>' + (n.message || '알림') + '</div><div class="notification-time">' + (n.createdAt ? new Date(n.createdAt).toLocaleString('ko-KR') : '') + '</div>';
+                        a.addEventListener('click', function (e) {
+                            e.preventDefault();
+                            if (n.id && !n.read) {
+                                fetch('/api/notifications/' + n.id + '/read', { method: 'PATCH', credentials: 'include' }).then(function () { updateNotificationCount(); });
+                            }
+                            if (notificationDropdown) notificationDropdown.style.display = 'none';
+                            if (n.type === 'NEW_DM' && n.actorUserId && typeof window.openDmWithUser === 'function') {
+                                window.openDmWithUser(n.actorUserId, n.actorNickname || '');
+                            }
+                        });
+                        notificationList.appendChild(a);
+                    });
+                }
+                if (alarmBtn && notificationDropdown) {
+                    alarmBtn.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        var isShow = notificationDropdown.style.display === 'block';
+                        notificationDropdown.style.display = isShow ? 'none' : 'block';
+                        if (!isShow && document.body.classList.contains('logged-in')) {
+                            fetch('/api/notifications?limit=30', { credentials: 'include' })
+                                .then(function (r) { return r.ok ? r.json() : { list: [] }; })
+                                .then(function (d) { renderNotificationList(d.list || []); })
+                                .catch(function () { renderNotificationList([]); });
+                        }
+                    });
+                }
+                document.addEventListener('click', function (e) {
+                    if (notificationDropdown && !e.target.closest('#header-alarm-wrap')) notificationDropdown.style.display = 'none';
+                });
+                if (document.getElementById('notification-read-all')) {
+                    document.getElementById('notification-read-all').addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        fetch('/api/notifications/read-all', { method: 'POST', credentials: 'include' })
+                            .then(function () { updateNotificationCount(); fetch('/api/notifications?limit=30', { credentials: 'include' }).then(function (r) { return r.ok ? r.json() : { list: [] }; }).then(function (d) { renderNotificationList(d.list || []); }); });
+                    });
+                }
+                setInterval(updateNotificationCount, 30000);
+                if (document.body.classList.contains('logged-in')) updateNotificationCount();
+            })();
+
+            var lastFriendRequestIds = {};
+            var friendRequestPollInitialized = false;
+            function pollFriendRequests() {
+                if (!document.body.classList.contains('logged-in')) return;
+                fetch('/api/friends/requests/received', { credentials: 'include' })
+                    .then(function (r) { return r.ok ? r.json() : { list: [] }; })
+                    .then(function (data) {
+                        var list = data.list || [];
+                        updateFriendRequestBadge(list.length);
+                        var newOnes = list.filter(function (req) { return !lastFriendRequestIds[req.id]; });
+                        list.forEach(function (req) { lastFriendRequestIds[req.id] = true; });
+                        if (friendRequestPollInitialized && newOnes.length > 0) {
+                            var name = (newOnes[0].nickname || newOnes[0].loginId || '누군가');
+                            var msg = newOnes.length === 1 ? (name + '님이 친구 요청을 보냈습니다.') : ('친구 요청이 ' + newOnes.length + '건 도착했습니다.');
+                            if (typeof showToast === 'function') showToast(msg);
+                        }
+                        friendRequestPollInitialized = true;
+                    })
+                    .catch(function () {});
+            }
+            setTimeout(pollFriendRequests, 2000);
+            setInterval(pollFriendRequests, 45000);
+            document.getElementById('friend-search-btn').addEventListener('click', function () {
+                var q = document.getElementById('friend-search-input').value.trim();
+                if (!q) return;
+                var resultList = document.getElementById('friend-search-result');
+                var emptyEl = document.getElementById('friend-search-empty');
+                resultList.innerHTML = '';
+                emptyEl.style.display = 'block';
+                fetch('/api/friends/search?q=' + encodeURIComponent(q), { credentials: 'include' })
+                    .then(function (r) { return r.ok ? r.json() : []; })
+                    .then(function (list) {
+                        emptyEl.style.display = list.length ? 'none' : 'block';
+                        emptyEl.textContent = list.length ? '' : '검색 결과가 없습니다.';
+                        list.forEach(function (user) {
+                            var li = document.createElement('li');
+                            li.className = 'friend-list-item';
+                            var displayName = user.nickname || user.username || user.loginId || '?';
+                            var initial = (displayName && displayName.charAt(0)) ? displayName.charAt(0).toUpperCase() : '?';
+                            var avatar = document.createElement('span');
+                            avatar.className = 'friend-avatar';
+                            if (user.profileImageUrl) {
+                                var img = document.createElement('img');
+                                img.src = user.profileImageUrl;
+                                img.alt = '';
+                                var fallback = document.createElement('span');
+                                fallback.className = 'friend-avatar-fallback';
+                                fallback.textContent = initial;
+                                img.onerror = function () { img.style.display = 'none'; fallback.style.display = 'flex'; };
+                                avatar.appendChild(img);
+                                avatar.appendChild(fallback);
+                            } else {
+                                avatar.textContent = initial;
+                            }
+                            var meta = document.createElement('div');
+                            meta.className = 'friend-meta';
+                            var nameSpan = document.createElement('span');
+                            nameSpan.className = 'friend-name';
+                            nameSpan.textContent = displayName;
+                            var statusSpan = document.createElement('span');
+                            statusSpan.className = 'friend-status';
+                            statusSpan.textContent = user.loginId ? '@' + user.loginId : '';
+                            meta.appendChild(nameSpan);
+                            meta.appendChild(statusSpan);
+                            var actions = document.createElement('div');
+                            actions.className = 'friend-actions';
+                            var btn = document.createElement('button');
+                            btn.type = 'button';
+                            btn.className = 'btn-friend-action';
+                            btn.title = '친구 요청';
+                            btn.setAttribute('data-user-id', String(user.id || ''));
+                            btn.textContent = '+';
+                            actions.appendChild(btn);
+                            li.appendChild(avatar);
+                            li.appendChild(meta);
+                            li.appendChild(actions);
+                            resultList.appendChild(li);
+                        });
+                    })
+                    .catch(function () { emptyEl.textContent = '검색할 수 없습니다. 나중에 다시 시도해 주세요.'; emptyEl.style.display = 'block'; });
+            });
+            // 친구 찾기 결과에서 '+' 버튼 클릭 시 팔로우(친구 요청) 요청
+            document.getElementById('friend-search-result').addEventListener('click', function (e) {
+                var btn = e.target.closest('.btn-friend-action');
+                if (!btn || btn.disabled) return;
+                var userId = btn.getAttribute('data-user-id');
+                if (!userId) return;
+                btn.disabled = true;
+                var originalText = btn.textContent;
+                btn.textContent = '…';
+                fetch('/api/friends/requests', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ userId: Number(userId) })
+                })
+                    .then(function (r) {
+                        if (r.status === 401) return r.json().then(function () { throw new Error('로그인이 필요합니다.'); });
+                        if (!r.ok) return r.json().then(function (d) { throw new Error((d && d.message) || '요청에 실패했습니다.'); });
+                        return r.json();
+                    })
+                    .then(function () {
+                        btn.textContent = '✓';
+                        btn.title = '요청됨';
+                        if (typeof alert === 'function') alert('친구 요청을 보냈습니다.');
+                    })
+                    .catch(function (err) {
+                        btn.disabled = false;
+                        btn.textContent = originalText;
+                        btn.title = '친구 요청';
+                        if (typeof alert === 'function') alert(window.toKoreanErrorMessage(err && err.message) || '친구 요청에 실패했습니다.');
+                    });
+            });
+            document.getElementById('modal-login-close').addEventListener('click', function () { modalLogin.classList.remove('show'); });
+            modalLogin.addEventListener('click', function (e) { if (e.target === modalLogin) modalLogin.classList.remove('show'); });
+            // 회원가입은 /register.html 페이지로 이동
+            var mainIdCheckedOk = false;
+            var mainPhoneVerified = false;
+            var mainPhoneVerifiedNumber = '';
+            document.getElementById('main-reg-loginId').addEventListener('input', function () { mainIdCheckedOk = false; document.getElementById('main-msg-loginId').textContent = ''; });
+            document.getElementById('main-btn-check-loginId').addEventListener('click', function () {
+                var v = document.getElementById('main-reg-loginId').value.trim();
+                var msg = document.getElementById('main-msg-loginId');
+                if (v.length < 5) { msg.textContent = '5자 이상 입력 후 중복확인해 주세요.'; msg.className = 'check-msg fail'; return; }
+                fetch('/api/auth/check/loginId?value=' + encodeURIComponent(v), { credentials: 'include' })
+                    .then(function (r) { return r.json(); })
+                    .then(function (d) { mainIdCheckedOk = d.available; msg.textContent = d.available ? '사용 가능한 아이디입니다.' : '이미 사용 중인 아이디입니다.'; msg.className = 'check-msg ' + (d.available ? 'ok' : 'fail'); })
+                    .catch(function () { msg.textContent = '확인할 수 없습니다.'; msg.className = 'check-msg fail'; });
+            });
+            (function initRegisterPhoneAuth() {
+                var sendBtn = document.getElementById('main-reg-phone-send');
+                var confirmBtn = document.getElementById('main-reg-phone-confirm');
+                var phoneInput = document.getElementById('main-reg-phone');
+                var codeWrap = document.getElementById('main-reg-phone-code-wrap');
+                var codeInput = document.getElementById('main-reg-phone-code');
+                var errEl = document.getElementById('main-reg-phone-error');
+                function showErr(m) { if (errEl) errEl.textContent = m || ''; }
+                if (sendBtn && phoneInput) sendBtn.addEventListener('click', function () {
+                    var raw = phoneInput.value.trim();
+                    showErr('');
+                    if (!raw) { showErr('휴대폰 번호를 입력해 주세요.'); return; }
+                    sendBtn.disabled = true;
+                    sendBtn.textContent = '발송 중...';
+                    if (!window.firebasePhoneAuth) { sendBtn.disabled = false; sendBtn.textContent = '문자 인증'; showErr('인증 기능을 불러오는 중입니다. 잠시 후 다시 시도해 주세요.'); return; }
+                    window.firebasePhoneAuth.sendPhoneVerificationCode(raw).then(function () {
+                        sendBtn.disabled = false;
+                        sendBtn.textContent = '문자 인증';
+                        if (codeWrap) codeWrap.style.display = 'block';
+                        if (codeInput) { codeInput.value = ''; codeInput.focus(); }
+                        mainPhoneVerifiedNumber = raw.replace(/\D/g, ''); if (mainPhoneVerifiedNumber.length === 10 && mainPhoneVerifiedNumber.startsWith('10')) mainPhoneVerifiedNumber = '82' + mainPhoneVerifiedNumber; else if (mainPhoneVerifiedNumber.length === 9) mainPhoneVerifiedNumber = '82' + mainPhoneVerifiedNumber; else if (mainPhoneVerifiedNumber.startsWith('0')) mainPhoneVerifiedNumber = '82' + mainPhoneVerifiedNumber.slice(1);
+                        showErr('');
+                    }).catch(function (err) {
+                        sendBtn.disabled = false;
+                        sendBtn.textContent = '문자 인증';
+                        showErr(window.toKoreanErrorMessage(err && err.message) || '인증번호 발송에 실패했습니다.');
+                    });
+                });
+                if (confirmBtn && codeInput) confirmBtn.addEventListener('click', function () {
+                    var code = codeInput.value.trim();
+                    showErr('');
+                    if (!code) { showErr('인증 코드를 입력해 주세요.'); return; }
+                    confirmBtn.disabled = true;
+                    confirmBtn.textContent = '확인 중...';
+                    if (!window.firebasePhoneAuth) { confirmBtn.disabled = false; confirmBtn.textContent = '인증 완료'; return; }
+                    window.firebasePhoneAuth.confirmPhoneCode(code).then(function () {
+                        mainPhoneVerified = true;
+                        confirmBtn.disabled = false;
+                        confirmBtn.textContent = '인증 완료';
+                        showErr('');
+                    }).catch(function (err) {
+                        confirmBtn.disabled = false;
+                        confirmBtn.textContent = '인증 완료';
+                        showErr(window.toKoreanErrorMessage(err && err.message) || '인증에 실패했습니다.');
+                    });
+                });
+            })();
+            document.getElementById('main-reg-password2').addEventListener('input', function () {
+                var m = document.getElementById('main-msg-password2');
+                if (!this.value) { m.textContent = ''; return; }
+                m.textContent = this.value === document.getElementById('main-reg-password').value ? '비밀번호가 일치합니다.' : '비밀번호가 일치하지 않습니다.';
+                m.className = 'check-msg ' + (this.value === document.getElementById('main-reg-password').value ? 'ok' : 'fail');
+            });
+            document.getElementById('form-login').addEventListener('submit', function (e) {
+                e.preventDefault();
+                var err = document.getElementById('main-login-error');
+                err.textContent = '';
+                fetch('/api/auth/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify({ loginId: document.getElementById('main-login-id').value, password: document.getElementById('main-login-pw').value }) })
+                    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+                    .then(function (res) {
+                        if (res.ok) { setLoggedIn(res.data); modalLogin.classList.remove('show'); document.getElementById('main-login-pw').value = ''; location.reload(); return; }
+                        else { err.textContent = window.toKoreanErrorMessage(res.data && res.data.message) || '로그인에 실패했습니다.'; }
+                    })
+                    .catch(function () { err.textContent = '로그인 요청이 실패했습니다.'; });
+            });
+            document.getElementById('modal-register-close').addEventListener('click', function () { modalRegister.classList.remove('show'); });
+            modalRegister.addEventListener('click', function (e) { if (e.target === modalRegister) modalRegister.classList.remove('show'); });
+            document.getElementById('link-login').addEventListener('click', function (e) { e.preventDefault(); modalRegister.classList.remove('show'); modalLogin.classList.add('show'); });
+            document.getElementById('form-register').addEventListener('submit', function (e) {
+                e.preventDefault();
+                var err = document.getElementById('main-register-error');
+                err.textContent = '';
+                var pw = document.getElementById('main-reg-password').value, pw2 = document.getElementById('main-reg-password2').value;
+                if (pw !== pw2) { err.textContent = '비밀번호가 일치하지 않습니다.'; return; }
+                if (!mainIdCheckedOk) { err.textContent = '아이디 중복확인을 해주세요.'; return; }
+                if (!mainPhoneVerified) { err.textContent = '휴대전화 인증을 완료해 주세요.'; return; }
+                var payload = { loginId: document.getElementById('main-reg-loginId').value.trim(), password: pw, username: document.getElementById('main-reg-username').value, nickname: (document.getElementById('main-reg-nickname') && document.getElementById('main-reg-nickname').value) || '', email: document.getElementById('main-reg-email').value.trim(), phone: (document.getElementById('main-reg-phone') && document.getElementById('main-reg-phone').value) || '' };
+                fetch('/api/auth/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload) })
+                    .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, data: d }; }); })
+                    .then(function (res) {
+                        if (res.ok) { setLoggedIn(res.data); modalRegister.classList.remove('show'); modalLogin.classList.remove('show'); location.reload(); return; }
+                        else { err.textContent = window.toKoreanErrorMessage(res.data && res.data.message) || '회원가입에 실패했습니다.'; }
+                    })
+                    .catch(function () { err.textContent = '회원가입 요청이 실패했습니다.'; });
+            });
+            var profileWrap = document.getElementById('header-profile-wrap');
+            var profileDropdown = document.getElementById('header-profile-dropdown');
+            if (document.getElementById('header-profile-btn')) {
+                document.getElementById('header-profile-btn').addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    profileDropdown.classList.toggle('show');
+                });
+            }
+            document.addEventListener('click', function () { if (profileDropdown) profileDropdown.classList.remove('show'); });
+            if (profileWrap) profileWrap.addEventListener('click', function (e) { e.stopPropagation(); });
+            if (document.getElementById('dropdown-logout')) {
+                document.getElementById('dropdown-logout').addEventListener('click', function () {
+                    fetch('/api/auth/logout', { method: 'POST', credentials: 'include' }).then(function () { setLoggedOut(); if (profileDropdown) profileDropdown.classList.remove('show'); });
+                });
+            }
+            function updateOnlineCount() {
+                fetch('/api/stats/online', { credentials: 'include' })
+                    .then(function (r) { return r.ok ? r.json() : null; })
+                    .then(function (data) {
+                        var el = document.getElementById('duo-online');
+                        if (el && data && typeof data.online === 'number') el.textContent = data.online;
+                    })
+                    .catch(function () {});
+            }
+            updateOnlineCount();
+            setInterval(updateOnlineCount, 30000);
+            function showToast(msg) {
+                var t = document.getElementById('main-toast');
+                if (!t) return;
+                t.textContent = msg;
+                t.classList.add('show');
+                setTimeout(function () { t.classList.remove('show'); }, 2500);
+            }
+            (function () {
+                var params = new URLSearchParams(window.location.search);
+                if (params.get('oauth2_error') === 'not_configured') {
+                    showToast('소셜 로그인이 설정되지 않았습니다. 관리자에게 문의하세요.');
+                    if (window.history && window.history.replaceState) {
+                        params.delete('oauth2_error');
+                        var qs = params.toString();
+                        var url = window.location.pathname + (qs ? '?' + qs : '') + window.location.hash;
+                        window.history.replaceState({}, '', url);
+                    }
+                }
+            })();
+            document.querySelectorAll('.duo-nav-btn').forEach(function (btn) {
+                btn.addEventListener('click', function () { showToast('준비 중인 기능입니다.'); });
+            });
+            var hashToGame = { 'matching-lol': 'LEAGUE_OF_LEGENDS', 'matching-tft': 'TFT', 'matching-valorant': 'VALORANT', 'matching-pubg': 'PUBG', 'matching-steam': 'STEAM', 'matching-palworld': 'PALWORLD', 'matching-overwatch': 'OVERWATCH', 'matching-others': 'OTHERS' };
+            var gameToHash = { 'LEAGUE_OF_LEGENDS': 'matching-lol', 'TFT': 'matching-tft', 'VALORANT': 'matching-valorant', 'PUBG': 'matching-pubg', 'STEAM': 'matching-steam', 'PALWORLD': 'matching-palworld', 'OVERWATCH': 'matching-overwatch', 'OTHERS': 'matching-others' };
+            function getGameFromHash() {
+                var hash = (window.location.hash || '').replace(/^#/, '') || 'matching-lol';
+                if (hash === 'matching') hash = 'matching-lol';
+                return hashToGame[hash] || 'LEAGUE_OF_LEGENDS';
+            }
+            function syncGameTab() {
+                var game = getGameFromHash();
+                document.querySelectorAll('.game-tabs a').forEach(function (a) {
+                    if (a.getAttribute('data-game') === game) {
+                        a.classList.add('active');
+                        a.setAttribute('href', '#' + gameToHash[game]);
+                    } else {
+                        a.classList.remove('active');
+                        a.setAttribute('href', '#' + gameToHash[a.getAttribute('data-game')] || '#matching-lol');
+                    }
+                });
+                if (typeof loadRecruitList === 'function') loadRecruitList(game);
+            }
+            window.addEventListener('hashchange', syncGameTab);
+            document.querySelectorAll('.game-tabs a').forEach(function (a) {
+                a.addEventListener('click', function (e) {
+                    e.preventDefault();
+                    var game = this.getAttribute('data-game');
+                    window.location.hash = gameToHash[game] || 'matching-lol';
+                });
+            });
+            syncGameTab();
+            function initDuoSelect(wrapId, btnId, listId) {
+                var wrap = document.getElementById(wrapId);
+                var btn = document.getElementById(btnId);
+                var list = document.getElementById(listId);
+                if (!wrap || !btn || !list) return;
+                btn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    var isOpen = list.classList.toggle('open');
+                    btn.setAttribute('aria-expanded', isOpen);
+                    document.querySelectorAll('.duo-select-list.open').forEach(function (openList) {
+                        if (openList !== list) { openList.classList.remove('open'); openList.previousElementSibling.setAttribute('aria-expanded', 'false'); }
+                    });
+                });
+                list.querySelectorAll('.duo-select-option').forEach(function (opt) {
+                    opt.addEventListener('click', function (e) {
+                        e.stopPropagation();
+                        list.querySelectorAll('.duo-select-option').forEach(function (o) { o.classList.remove('selected'); });
+                        this.classList.add('selected');
+                        btn.textContent = this.textContent;
+                        list.classList.remove('open');
+                        btn.setAttribute('aria-expanded', 'false');
+                    });
+                });
+                document.addEventListener('click', function () {
+                    list.classList.remove('open');
+                    btn.setAttribute('aria-expanded', 'false');
+                });
+            }
+            initDuoSelect('duo-mode-wrap', 'duo-mode-btn', 'duo-mode-list');
+            initDuoSelect('duo-tier-wrap', 'duo-tier-btn', 'duo-tier-list');
+            initDuoSelect('duo-region-wrap', 'duo-region-btn', 'duo-region-list');
+
+            function loadRecruitList(game) {
+                var tbody = document.getElementById('duo-tbody');
+                var postsEl = document.getElementById('duo-posts');
+                if (!tbody) return;
+                fetch('/api/recruit?game=' + encodeURIComponent(game || 'LEAGUE_OF_LEGENDS'), { credentials: 'include' })
+                    .then(function (r) { return r.ok ? r.json() : { list: [] }; })
+                    .then(function (data) {
+                        var list = data.list || [];
+                        if (postsEl) postsEl.textContent = list.length;
+                        if (list.length === 0) {
+                            tbody.innerHTML = '<tr><td colspan="6" class="duo-empty">등록된 구인글이 없습니다. &quot;글쓰기&quot;로 첫 글을 올려보세요.</td></tr>';
+                            return;
+                        }
+                        function tierLabel(t) {
+                            var m = { 'UNRANKED': '언랭크', 'IRON': '아이언', 'BRONZE': '브론즈', 'SILVER': '실버', 'GOLD': '골드', 'PLATINUM': '플래티넘', 'EMERALD': '에메랄드', 'DIAMOND': '다이아', 'MASTER': '마스터' };
+                            return (t && m[t]) ? m[t] : (t || '-');
+                        }
+                        function formatDate(d) {
+                            if (!d) return '-';
+                            var dt = new Date(d);
+                            return isNaN(dt.getTime()) ? '-' : dt.toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+                        }
+                        tbody.innerHTML = list.map(function (p) {
+                            return '<tr><td>' + (p.summonerName || '-') + '</td><td>' + (p.mainPosition || '-') + '</td><td>' + (p.findPosition || '-') + '</td><td>' + tierLabel(p.tier) + '</td><td>' + (p.memo || '-') + '</td><td>' + formatDate(p.createdAt) + '</td></tr>';
+                        }).join('');
+                    })
+                    .catch(function () {
+                        if (postsEl) postsEl.textContent = '0';
+                        tbody.innerHTML = '<tr><td colspan="6" class="duo-empty">목록을 불러올 수 없습니다.</td></tr>';
+                    });
+            }
+
+            var modalRecruit = document.getElementById('modal-recruit-write');
+            var formRecruit = document.getElementById('form-recruit-write');
+            var recruitError = document.getElementById('recruit-write-error');
+            document.querySelectorAll('.duo-filters .btn-write').forEach(function (btn) {
+                btn.addEventListener('click', function () {
+                    if (!document.body.classList.contains('logged-in')) {
+                        showToast('로그인 후 글을 작성할 수 있습니다.');
+                        return;
+                    }
+                    if (recruitError) recruitError.textContent = '';
+                    if (formRecruit) formRecruit.reset();
+                    if (modalRecruit) modalRecruit.classList.add('show');
+                });
+            });
+            if (document.getElementById('modal-recruit-write-close')) {
+                document.getElementById('modal-recruit-write-close').addEventListener('click', function () {
+                    if (modalRecruit) modalRecruit.classList.remove('show');
+                });
+            }
+            if (modalRecruit) modalRecruit.addEventListener('click', function (e) { if (e.target === modalRecruit) modalRecruit.classList.remove('show'); });
+            if (formRecruit) {
+                formRecruit.addEventListener('submit', function (e) {
+                    e.preventDefault();
+                    if (recruitError) recruitError.textContent = '';
+                    var game = getGameFromHash();
+                    var payload = {
+                        game: game,
+                        summonerName: (document.getElementById('recruit-summoner') && document.getElementById('recruit-summoner').value) || '',
+                        mainPosition: (document.getElementById('recruit-main-pos') && document.getElementById('recruit-main-pos').value) || '',
+                        findPosition: (document.getElementById('recruit-find-pos') && document.getElementById('recruit-find-pos').value) || '',
+                        tier: (document.getElementById('recruit-tier') && document.getElementById('recruit-tier').value) || '',
+                        region: (document.getElementById('recruit-region') && document.getElementById('recruit-region').value) || '',
+                        mode: (document.getElementById('recruit-mode') && document.getElementById('recruit-mode').value) || '',
+                        memo: (document.getElementById('recruit-memo') && document.getElementById('recruit-memo').value) || ''
+                    };
+                    fetch('/api/recruit', { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'include', body: JSON.stringify(payload) })
+                        .then(function (r) { return r.json().then(function (data) { return { ok: r.ok, data: data }; }); })
+                        .then(function (res) {
+                            if (res.ok) {
+                                if (modalRecruit) modalRecruit.classList.remove('show');
+                                showToast('등록되었습니다.');
+                                loadRecruitList(game);
+                            } else {
+                                if (recruitError) recruitError.textContent = window.toKoreanErrorMessage(res.data && res.data.message) || '등록에 실패했습니다.';
+                            }
+                        })
+                        .catch(function () {
+                            if (recruitError) recruitError.textContent = '등록에 실패했습니다.';
+                        });
+                });
+            }
+            loadRecruitList(getGameFromHash());
+        })();
+    </script>
+    <script>
+        (function () {
+            var liveCards = document.getElementById('live-cards');
+            var liveEmpty = document.getElementById('live-empty');
+
+            function gameDisplayName(game) {
+                if (!game) return '게임';
+                var map = { 'LEAGUE_OF_LEGENDS': '리그 오브 레전드', 'VALORANT': '발로란트', 'PUBG': 'PUBG', 'OVERWATCH': '오버워치', 'COUNTER_STRIKE_2': 'CS2', 'APEX_LEGENDS': '에이펙스', 'OTHERS': '기타' };
+                return map[game] || game;
+            }
+            function initLiveThumbnails(container) {
+                if (typeof Hls === 'undefined') return;
+                var inners = container.querySelectorAll('.live-card-thumb-inner');
+                inners.forEach(function (inner) {
+                    var video = inner.querySelector('video[data-playback-url]');
+                    var canvas = inner.querySelector('.thumb-canvas');
+                    if (!video || !canvas) return;
+                    var url = video.getAttribute('data-playback-url');
+                    if (!url) return;
+                    function drawFrame() {
+                        if (video.readyState >= 2 && video.videoWidth > 0) {
+                            var w = inner.offsetWidth;
+                            var h = inner.offsetHeight;
+                            if (w && h) {
+                                canvas.width = w;
+                                canvas.height = h;
+                                var ctx = canvas.getContext('2d');
+                                if (ctx) ctx.drawImage(video, 0, 0, w, h);
+                            }
+                        }
+                    }
+                    if (Hls.isSupported()) {
+                        var hls = new Hls();
+                        hls.loadSource(url);
+                        hls.attachMedia(video);
+                        hls.on(Hls.Events.MANIFEST_PARSED, function () { setTimeout(drawFrame, 500); });
+                        hls.on(Hls.Events.ERROR, function () {});
+                    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+                        video.src = url;
+                        video.addEventListener('loadeddata', function () { setTimeout(drawFrame, 500); });
+                    }
+                    video.addEventListener('loadeddata', function () { setTimeout(drawFrame, 500); });
+                    video.addEventListener('playing', drawFrame);
+                    setInterval(drawFrame, 5000);
+                });
+            }
+
+            fetch('/api/streams/live', { credentials: 'include' })
+                .then(function (r) { return r.ok ? r.json() : []; })
+                .then(function (list) {
+                    if (!list || list.length === 0) {
+                        liveEmpty.style.display = 'block';
+                        return;
+                    }
+                    liveCards.innerHTML = list.slice(0, 8).map(function (s) {
+                        var watchUrl = '/watch.html?streamId=' + encodeURIComponent(s.id);
+                        if (s.externalUrl) watchUrl = '/watch.html?streamId=' + encodeURIComponent(s.id);
+                        var name = (s.broadcasterNickname || '방송자').substring(0, 1).toUpperCase();
+                        var game = gameDisplayName(s.game);
+                        var avatarHtml = (s.broadcasterProfileImageUrl)
+                            ? '<img src="' + (s.broadcasterProfileImageUrl || '').replace(/"/g, '&quot;').replace(/</g, '&lt;') + '" alt="" onerror="this.style.display=\'none\'; this.nextElementSibling && (this.nextElementSibling.style.display=\'inline\');"><span style="display:none;font-size:0.9rem;font-weight:700;">' + name + '</span>'
+                            : name;
+                        var thumbHtml = (s.playbackUrl)
+                            ? '<div class="live-card-thumb-inner"><video muted playsinline autoplay data-playback-url="' + (s.playbackUrl || '').replace(/"/g, '&quot;') + '"></video><canvas class="thumb-canvas"></canvas></div>'
+                            : '<div class="thumb-placeholder">방송 중</div>';
+                        return '<div class="live-card"><a href="' + watchUrl + '">' +
+                            '<div class="live-card-thumb">' +
+                            '<span class="live-badge">LIVE</span><span class="watching">' + (s.viewerCount != null ? s.viewerCount : 0) + '명 시청 중</span>' + thumbHtml +
+                            '</div>' +
+                            '<div class="live-card-info">' +
+                            '<div class="live-card-avatar">' + avatarHtml + '</div>' +
+                            '<div class="live-card-meta">' +
+                            '<div class="live-card-name">' + (s.broadcasterNickname || '방송자') + '</div>' +
+                            '<div class="live-card-category">' + game + '</div>' +
+                            '</div></div></a></div>';
+                    }).join('');
+                    initLiveThumbnails(liveCards);
+                })
+                .catch(function () {
+                    liveEmpty.style.display = 'block';
+                });
+        })();
+    </script>
 </body>
 </html>

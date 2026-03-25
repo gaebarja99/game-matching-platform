@@ -5,7 +5,7 @@ import com.gamematcher.entity.Report;
 import com.gamematcher.entity.User;
 import com.gamematcher.exception.GameApiException;
 import com.gamematcher.repository.common.ReportRepository;
-import com.gamematcher.repository.common.UserRepository;
+import com.gamematcher.repository.common.CommonUserRepository;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -17,9 +17,9 @@ import java.util.List;
 public class ReportService {
 
     private final ReportRepository reportRepository;
-    private final UserRepository userRepository;
+    private final CommonUserRepository userRepository;
 
-    public ReportService(ReportRepository reportRepository, UserRepository userRepository) {
+    public ReportService(ReportRepository reportRepository, CommonUserRepository userRepository) {
         this.reportRepository = reportRepository;
         this.userRepository = userRepository;
     }

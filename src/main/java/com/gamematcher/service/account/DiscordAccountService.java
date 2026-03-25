@@ -4,7 +4,7 @@ import com.gamematcher.entity.User;
 import com.gamematcher.entity.account.DiscordAccount;
 import com.gamematcher.exception.GameApiException;
 import com.gamematcher.repository.account.DiscordAccountRepository;
-import com.gamematcher.repository.common.UserRepository;
+import com.gamematcher.repository.common.CommonUserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class DiscordAccountService {
 
     private final DiscordAccountRepository discordAccountRepository;
-    private final UserRepository userRepository;
+    private final CommonUserRepository userRepository;
 
     @Transactional
     public DiscordAccount linkDiscordAccount(Long userId, String discordId, String username, String avatar) {

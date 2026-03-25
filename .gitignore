@@ -23,7 +23,50 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+<<<<<<< HEAD
 =======
 frontend/node_modules/
 frontend/dist/
 >>>>>>> gamematcher/main
+=======
+
+# Local secrets / environment-specific props
+application-oauth-local.properties
+src/main/resources/application-oauth-local.properties
+application-portone-local.properties
+src/main/resources/application-portone-local.properties
+application-mysql-local.properties
+src/main/resources/application-mysql-local.properties
+
+# IDE / tooling
+.idea/
+.vscode/
+.codex_tmp/
+
+# Node / Vite build
+**/node_modules/
+dist/
+**/dist/
+frontend/dist/
+gamematcher-frontend/dist/
+
+# Java build outputs
+target/
+**/target/
+
+# Local/generated / uploads / secrets (runtime)
+uploads/
+secrets/
+temp_git_branching/
+ffmpeg-*/
+
+# Logs
+*.log
+
+# Environment files (do not commit secrets)
+.env
+.env.*
+**/.env
+**/.env.*
+frontend/.env
+>>>>>>> origin/main

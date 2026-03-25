@@ -4,7 +4,7 @@ import com.gamematcher.entity.User;
 import com.gamematcher.entity.account.SteamAccount;
 import com.gamematcher.exception.GameApiException;
 import com.gamematcher.repository.account.SteamAccountRepository;
-import com.gamematcher.repository.common.UserRepository;
+import com.gamematcher.repository.common.CommonUserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 public class SteamAccountService {
 
     private final SteamAccountRepository steamAccountRepository;
-    private final UserRepository userRepository;
+    private final CommonUserRepository userRepository;
 
     @Transactional
     public SteamAccount linkSteamAccount(Long userId, String steamId, String personaName, String avatar) {

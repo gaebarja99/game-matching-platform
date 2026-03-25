@@ -13,4 +13,6 @@ public interface SteamAccountRepository extends JpaRepository<SteamAccount, Long
     boolean existsBySteamId(String steamId);
 
     List<SteamAccount> findByUserId(Long userId);
+
+    Optional<SteamAccount> findFirstByUserId(Long userId);
 }

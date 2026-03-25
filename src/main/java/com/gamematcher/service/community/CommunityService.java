@@ -3,15 +3,15 @@ package com.gamematcher.service.community;
 import com.gamematcher.constant.Role;
 import com.gamematcher.constant.ReportStatus;
 import com.gamematcher.constant.community.*;
+import com.gamematcher.constant.profile.ProfileImageConstants;
 import com.gamematcher.dto.community.*;
 import com.gamematcher.entity.User;
 import com.gamematcher.entity.community.*;
-import com.gamematcher.exception.GameApiException;
-import com.gamematcher.constant.profile.ProfileImageConstants;
 import com.gamematcher.entity.profile.UserProfile;
-import com.gamematcher.repository.common.UserRepository;
-import com.gamematcher.repository.profile.UserProfileRepository;
+import com.gamematcher.exception.GameApiException;
+import com.gamematcher.repository.common.CommonUserRepository;
 import com.gamematcher.repository.community.*;
+import com.gamematcher.repository.profile.UserProfileRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -40,8 +40,8 @@ public class CommunityService {
     private final HashtagRepository hashtagRepository;
     private final PostHashtagRepository postHashtagRepository;
     private final CommunityReportRepository communityReportRepository;
-    private final NotificationRepository notificationRepository;
-    private final UserRepository userRepository;
+    private final CommunityNotificationRepository notificationRepository;
+    private final CommonUserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
     private final FileStorageService fileStorageService;
 
@@ -51,8 +51,8 @@ public class CommunityService {
                             PostAttachmentRepository postAttachmentRepository,
                             HashtagRepository hashtagRepository, PostHashtagRepository postHashtagRepository,
                             CommunityReportRepository communityReportRepository,
-                            NotificationRepository notificationRepository,
-                            UserRepository userRepository,
+                            CommunityNotificationRepository notificationRepository,
+                            CommonUserRepository userRepository,
                             UserProfileRepository userProfileRepository,
                             FileStorageService fileStorageService) {
         this.postRepository = postRepository;
@@ -79,6 +79,10 @@ public class CommunityService {
         // 공지사항은 관리자만
         if (request.isNotice() && author.getRole() != Role.ADMIN) {
             throw new GameApiException(HttpStatus.FORBIDDEN, "공지사항 작성 권한이 없습니다.");
+        }
+
+        if (request.getBoardCategory() == BoardCategory.NOTICE && author.getRole() != Role.ADMIN) {
+            throw new GameApiException(HttpStatus.FORBIDDEN, "공지 게시판은 관리자만 작성할 수 있습니다.");
         }
 
         Post post = new Post();
@@ -175,6 +179,9 @@ public class CommunityService {
     public Post updatePost(Long postId, Long userId, PostUpdateRequestDto request) {
         Post post = getPost(postId);
         validateAuthor(post, userId);
+        if (post.getBoardCategory() == BoardCategory.NOTICE && !isAdmin(userId)) {
+            throw new GameApiException(HttpStatus.FORBIDDEN, "공지 게시판은 관리자만 수정할 수 있습니다.");
+        }
 
         if (!VISIBLE_STATUSES.contains(post.getStatus())) {
             throw new GameApiException(HttpStatus.BAD_REQUEST, "수정할 수 없는 게시글입니다.");
