@@ -1,5 +1,12 @@
 import { apiUrl } from './client';
 
+export type ProfileVisibilityDto = {
+  bio: boolean;
+  bannerImage: boolean;
+  profileImage: boolean;
+  preferredGames: boolean;
+};
+
 export type ProfileDto = {
   userId: number;
   username: string;
@@ -7,6 +14,8 @@ export type ProfileDto = {
   profileImageUrl: string | null;
   bannerImageUrl: string | null;
   preferredGames: string | null;
+  /** 본인 조회 시에만 포함 */
+  visibility?: ProfileVisibilityDto | null;
 };
 
 export type ProfilePatchBody = Partial<{
@@ -15,6 +24,10 @@ export type ProfilePatchBody = Partial<{
   profileImageUrl: string | null;
   bannerImageUrl: string | null;
   preferredGames: string | null;
+  bioVisible: boolean;
+  bannerImageVisible: boolean;
+  profileImageVisible: boolean;
+  preferredGamesVisible: boolean;
 }>;
 
 /** 닉네임 검색 목록 행 */

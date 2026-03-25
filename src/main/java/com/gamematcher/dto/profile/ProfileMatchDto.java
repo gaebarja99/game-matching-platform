@@ -21,8 +21,15 @@ public class ProfileMatchDto {
         ProfileMatchDto dto = new ProfileMatchDto();
         dto.userId = user.getId();
         dto.username = user.getUsername();
-        dto.profileImageUrl = ProfileImageConstants.resolveProfileImageUrl(
-                profile != null ? profile.getProfileImageUrl() : null);
+        boolean imagePublic = profile == null
+                || profile.getPublicProfileImageVisible() == null
+                || profile.getPublicProfileImageVisible();
+        if (imagePublic) {
+            dto.profileImageUrl = ProfileImageConstants.resolveProfileImageUrl(
+                    profile != null ? profile.getProfileImageUrl() : null);
+        } else {
+            dto.profileImageUrl = ProfileImageConstants.DEFAULT_PROFILE_IMAGE_URL;
+        }
         return dto;
     }
 }

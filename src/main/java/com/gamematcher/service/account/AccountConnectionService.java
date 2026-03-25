@@ -13,7 +13,6 @@ import com.gamematcher.repository.account.BlizzardAccountRepository;
 import com.gamematcher.repository.account.DiscordAccountRepository;
 import com.gamematcher.repository.account.RiotAccountRepository;
 import com.gamematcher.repository.account.SteamAccountRepository;
-import com.gamematcher.service.auth.CurrentUserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
@@ -34,7 +33,6 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AccountConnectionService {
 
-    private final CurrentUserService currentUserService;
     private final DiscordAccountRepository discordAccountRepository;
     private final SteamAccountRepository steamAccountRepository;
     private final BlizzardAccountRepository blizzardAccountRepository;
@@ -66,37 +64,34 @@ public class AccountConnectionService {
     @Value("${steam.api.key:}")
     private String steamApiKey;
 
-    public AccountConnectionsResponseDto getConnections(String authToken) {
-        User user = currentUserService.requireUser(authToken);
+    public AccountConnectionsResponseDto getConnections(Long userId) {
         List<AccountConnectionStatusDto> connections = new ArrayList<>();
-        connections.add(buildDiscordStatus(user.getId()));
-        connections.add(buildSteamStatus(user.getId()));
-        connections.add(buildBlizzardStatus(user.getId()));
-        connections.add(buildRiotStatus(user.getId()));
-        return new AccountConnectionsResponseDto(user.getId(), connections);
+        connections.add(buildDiscordStatus(userId));
+        connections.add(buildSteamStatus(userId));
+        connections.add(buildBlizzardStatus(userId));
+        connections.add(buildRiotStatus(userId));
+        return new AccountConnectionsResponseDto(userId, connections);
     }
 
     @Transactional
-    public void unlink(String authToken, String provider) {
-        User user = currentUserService.requireUser(authToken);
+    public void unlink(Long userId, String provider) {
         switch (provider.toLowerCase()) {
-            case "discord" -> discordAccountRepository.findFirstByUserId(user.getId())
+            case "discord" -> discordAccountRepository.findFirstByUserId(userId)
                     .ifPresent(discordAccountRepository::delete);
-            case "steam" -> steamAccountRepository.findFirstByUserId(user.getId())
+            case "steam" -> steamAccountRepository.findFirstByUserId(userId)
                     .ifPresent(steamAccountRepository::delete);
-            case "blizzard" -> blizzardAccountRepository.findFirstByUserId(user.getId())
+            case "blizzard" -> blizzardAccountRepository.findFirstByUserId(userId)
                     .ifPresent(blizzardAccountRepository::delete);
-            case "riot" -> riotAccountRepository.findFirstByUserId(user.getId())
+            case "riot" -> riotAccountRepository.findFirstByUserId(userId)
                     .ifPresent(riotAccountRepository::delete);
             default -> throw new GameApiException(HttpStatus.BAD_REQUEST, "지원하지 않는 연동 제공자입니다: " + provider);
         }
     }
 
-    public OAuthStartResponseDto startDiscord(String authToken) {
-        User user = currentUserService.requireUser(authToken);
+    public OAuthStartResponseDto startDiscord(Long userId) {
         requireConfigured(discordClientId, "Discord OAuth Client ID");
         requireConfigured(discordClientSecret, "Discord OAuth Client Secret");
-        String state = oAuthLinkStateService.createState(user.getId(), "discord");
+        String state = oAuthLinkStateService.createState(userId, "discord");
         String callback = backendBaseUrl + "/api/account-links/oauth/discord/callback";
         String url = "https://discord.com/oauth2/authorize"
                 + "?response_type=code"
@@ -107,11 +102,10 @@ public class AccountConnectionService {
         return new OAuthStartResponseDto("discord", url);
     }
 
-    public OAuthStartResponseDto startBlizzard(String authToken) {
-        User user = currentUserService.requireUser(authToken);
+    public OAuthStartResponseDto startBlizzard(Long userId) {
         requireConfigured(blizzardClientId, "Blizzard OAuth Client ID");
         requireConfigured(blizzardClientSecret, "Blizzard OAuth Client Secret");
-        String state = oAuthLinkStateService.createState(user.getId(), "blizzard");
+        String state = oAuthLinkStateService.createState(userId, "blizzard");
         String callback = backendBaseUrl + "/api/account-links/oauth/blizzard/callback";
         String url = "https://oauth.battle.net/authorize"
                 + "?response_type=code"
@@ -122,9 +116,8 @@ public class AccountConnectionService {
         return new OAuthStartResponseDto("blizzard", url);
     }
 
-    public OAuthStartResponseDto startSteam(String authToken) {
-        User user = currentUserService.requireUser(authToken);
-        String state = oAuthLinkStateService.createState(user.getId(), "steam");
+    public OAuthStartResponseDto startSteam(Long userId) {
+        String state = oAuthLinkStateService.createState(userId, "steam");
         String callback = backendBaseUrl + "/api/account-links/oauth/steam/callback";
         String realm = backendBaseUrl;
         String url = "https://steamcommunity.com/openid/login"

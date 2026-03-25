@@ -37,22 +37,30 @@ public class ProfileService {
 
     @Transactional(readOnly = true)
     public ProfilePublicResponseDto getProfile(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GameApiException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
-        return userProfileRepository.findById(userId)
-                .map(p -> ProfilePublicResponseDto.from(user, p))
-                .orElseGet(() -> ProfilePublicResponseDto.from(user, null));
+        return getProfile(userId, null);
     }
 
     @Transactional(readOnly = true)
-    public ProfilePublicResponseDto getProfileByUsername(String username) {
+    public ProfilePublicResponseDto getProfile(Long userId, Long viewerUserId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GameApiException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
+        UserProfile profile = userProfileRepository.findById(userId).orElse(null);
+        boolean owner = viewerUserId != null && viewerUserId.equals(userId);
+        if (owner) {
+            return ProfilePublicResponseDto.buildOwner(user, profile);
+        }
+        return ProfilePublicResponseDto.buildPublic(user, profile);
+    }
+
+    @Transactional(readOnly = true)
+    public ProfilePublicResponseDto getProfileByUsername(String username, Long viewerUserId) {
         if (username == null || username.isBlank()) {
             throw new GameApiException(HttpStatus.BAD_REQUEST, "닉네임을 입력하세요.");
         }
         String trimmed = username.trim();
         User user = userRepository.findFirstByUsernameContainingIgnoreCaseOrderByIdAsc(trimmed)
                 .orElseThrow(() -> new GameApiException(HttpStatus.NOT_FOUND, "검색 조건에 맞는 사용자를 찾을 수 없습니다."));
-        return getProfile(user.getId());
+        return getProfile(user.getId(), viewerUserId);
     }
 
     /**
@@ -83,10 +91,12 @@ public class ProfileService {
         boolean patchUsername = body.has("username");
         boolean mentionsProfileField = body.has("bio") || body.has("profileImageUrl")
                 || body.has("bannerImageUrl") || body.has("preferredGames");
+        boolean mentionsVisibility = body.has("bioVisible") || body.has("bannerImageVisible")
+                || body.has("profileImageVisible") || body.has("preferredGamesVisible");
 
         UserProfile profile = userProfileRepository.findById(userId).orElse(null);
-        if (!patchUsername && !mentionsProfileField) {
-            return ProfilePublicResponseDto.from(user, profile);
+        if (!patchUsername && !mentionsProfileField && !mentionsVisibility) {
+            return ProfilePublicResponseDto.buildOwner(user, profile);
         }
 
         if (patchUsername) {
@@ -94,19 +104,27 @@ public class ProfileService {
             userRepository.save(user);
         }
 
-        if (mentionsProfileField) {
+        if (mentionsProfileField || mentionsVisibility) {
             if (profile == null) {
                 profile = createProfile(user);
             }
-            applyStringField(body, "bio", profile::setBio, BIO_MAX_LEN);
-            applyStringField(body, "profileImageUrl", profile::setProfileImageUrl, IMAGE_URL_MAX_LEN);
-            applyStringField(body, "bannerImageUrl", profile::setBannerImageUrl, IMAGE_URL_MAX_LEN);
-            applyStringField(body, "preferredGames", profile::setPreferredGames, PREFERRED_GAMES_MAX_LEN);
+            if (mentionsProfileField) {
+                applyStringField(body, "bio", profile::setBio, BIO_MAX_LEN);
+                applyStringField(body, "profileImageUrl", profile::setProfileImageUrl, IMAGE_URL_MAX_LEN);
+                applyStringField(body, "bannerImageUrl", profile::setBannerImageUrl, IMAGE_URL_MAX_LEN);
+                applyStringField(body, "preferredGames", profile::setPreferredGames, PREFERRED_GAMES_MAX_LEN);
+            }
+            if (mentionsVisibility) {
+                applyVisibilityBoolean(body, "bioVisible", profile::setPublicBioVisible);
+                applyVisibilityBoolean(body, "bannerImageVisible", profile::setPublicBannerVisible);
+                applyVisibilityBoolean(body, "profileImageVisible", profile::setPublicProfileImageVisible);
+                applyVisibilityBoolean(body, "preferredGamesVisible", profile::setPublicPreferredGamesVisible);
+            }
             userProfileRepository.save(profile);
         }
 
         profile = userProfileRepository.findById(userId).orElse(null);
-        return ProfilePublicResponseDto.from(user, profile);
+        return ProfilePublicResponseDto.buildOwner(user, profile);
     }
 
     /** {@code username} 키가 있을 때만 반영. null·빈 문자열은 불가(DB NOT NULL). */
@@ -161,5 +179,21 @@ public class ProfileService {
                     jsonName + "은(는) " + maxLen + "자를 넘을 수 없습니다.");
         }
         entitySetter.accept(raw);
+    }
+
+    /** 공개 여부: 키가 있을 때만 반영. null이면 다시 공개(true)로 저장 */
+    private void applyVisibilityBoolean(ObjectNode body, String jsonName, Consumer<Boolean> entitySetter) {
+        if (!body.has(jsonName)) {
+            return;
+        }
+        JsonNode node = body.get(jsonName);
+        if (node.isNull()) {
+            entitySetter.accept(true);
+            return;
+        }
+        if (!node.isBoolean()) {
+            throw new GameApiException(HttpStatus.BAD_REQUEST, jsonName + "은(는) true/false 여야 합니다.");
+        }
+        entitySetter.accept(node.booleanValue());
     }
 }

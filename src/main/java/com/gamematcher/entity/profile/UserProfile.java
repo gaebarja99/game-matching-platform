@@ -36,6 +36,19 @@ public class UserProfile {
     @Column(name = "preferred_games", length = 500)
     private String preferredGames;
 
+    /** null이면 공개로 간주(기존 데이터 호환) */
+    @Column(name = "public_bio_visible")
+    private Boolean publicBioVisible;
+
+    @Column(name = "public_banner_visible")
+    private Boolean publicBannerVisible;
+
+    @Column(name = "public_profile_image_visible")
+    private Boolean publicProfileImageVisible;
+
+    @Column(name = "public_preferred_games_visible")
+    private Boolean publicPreferredGamesVisible;
+
     @Column(name = "profile_updated_at")
     private LocalDateTime profileUpdatedAt;
 

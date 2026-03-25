@@ -13,6 +13,7 @@ import {
   serializePreferredGames,
 } from '../constants/games';
 import { DEFAULT_PROFILE_IMAGE_URL, effectiveCustomProfileUrl } from '../constants/profile';
+import { effectiveVisibility } from '../lib/profileVisibility';
 import './ProfilePage.css';
 
 const LS_USER_ID = 'communityUserId';
@@ -69,6 +70,10 @@ export default function ProfilePage() {
   const [selectedGames, setSelectedGames] = useState<string[]>([]);
   const [gamesModalOpen, setGamesModalOpen] = useState(false);
   const [modalGameDraft, setModalGameDraft] = useState<string[]>([]);
+  const [vPublicBio, setVPublicBio] = useState(true);
+  const [vPublicBanner, setVPublicBanner] = useState(true);
+  const [vPublicProfileImg, setVPublicProfileImg] = useState(true);
+  const [vPublicPreferredGames, setVPublicPreferredGames] = useState(true);
 
   const bioTextareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -78,6 +83,11 @@ export default function ProfilePage() {
     setFProfileUrl(effectiveCustomProfileUrl(p.profileImageUrl));
     setFBannerUrl(p.bannerImageUrl ?? '');
     setSelectedGames(parsePreferredGamesToSelected(p.preferredGames));
+    const ev = effectiveVisibility(p.visibility);
+    setVPublicBio(ev.bio);
+    setVPublicBanner(ev.bannerImage);
+    setVPublicProfileImg(ev.profileImage);
+    setVPublicPreferredGames(ev.preferredGames);
   }, []);
 
   const cancelGamesModal = useCallback(() => setGamesModalOpen(false), []);
@@ -250,6 +260,10 @@ export default function ProfilePage() {
         profileImageUrl: fProfileUrl.trim() === '' ? null : fProfileUrl.trim(),
         bannerImageUrl: fBannerUrl.trim() === '' ? null : fBannerUrl.trim(),
         preferredGames: serializePreferredGames(selectedGames),
+        bioVisible: vPublicBio,
+        bannerImageVisible: vPublicBanner,
+        profileImageVisible: vPublicProfileImg,
+        preferredGamesVisible: vPublicPreferredGames,
       });
       setProfile(next);
       syncFormFromProfile(next);
@@ -329,10 +343,19 @@ export default function ProfilePage() {
 
         {profile && !editOpen && (
           <>
+            {(() => {
+              const vis = effectiveVisibility(profile.visibility);
+              const showBanner = vis.bannerImage && Boolean(profile.bannerImageUrl?.trim());
+              const showProfileImg = vis.profileImage;
+              const avatarSrc = showProfileImg
+                ? profile.profileImageUrl ?? DEFAULT_PROFILE_IMAGE_URL
+                : DEFAULT_PROFILE_IMAGE_URL;
+              return (
+                <>
             <div
-              className={`profile-banner${profile.bannerImageUrl ? ' has-image' : ''}`}
+              className={`profile-banner${showBanner ? ' has-image' : ''}`}
               style={
-                profile.bannerImageUrl
+                showBanner && profile.bannerImageUrl
                   ? { backgroundImage: `url(${JSON.stringify(profile.bannerImageUrl)})` }
                   : undefined
               }
@@ -340,7 +363,7 @@ export default function ProfilePage() {
             <div className="profile-card">
               <div className="profile-avatar-wrap">
                 <div className="profile-avatar">
-                  <img src={profile.profileImageUrl ?? DEFAULT_PROFILE_IMAGE_URL} alt="" />
+                  <img src={avatarSrc} alt="" />
                 </div>
                 <div>
                   <div className="profile-username">{profile.username}</div>
@@ -350,14 +373,18 @@ export default function ProfilePage() {
 
               <div className="profile-section">
                 <h3>소개</h3>
-                <div className={`profile-bio${profile.bio ? '' : ' empty'}`}>
-                  {profile.bio ?? '소개가 없습니다.'}
+                <div className={`profile-bio${profile.bio && vis.bio ? '' : ' empty'}`}>
+                  {!vis.bio
+                    ? '비공개로 설정된 소개입니다.'
+                    : profile.bio ?? '소개가 없습니다.'}
                 </div>
               </div>
 
               <div className="profile-section">
                 <h3>선호 게임</h3>
-                <div className="profile-games">{profile.preferredGames ?? '—'}</div>
+                <div className="profile-games">
+                  {!vis.preferredGames ? '비공개로 설정되었습니다.' : profile.preferredGames ?? '—'}
+                </div>
               </div>
 
               <div className="profile-toolbar">
@@ -366,6 +393,9 @@ export default function ProfilePage() {
                 </button>
               </div>
             </div>
+                </>
+              );
+            })()}
           </>
         )}
 
@@ -454,6 +484,42 @@ export default function ProfilePage() {
                 >
                   선호 게임 선택
                 </button>
+              </div>
+              <div className="profile-field">
+                <span className="profile-field-heading">공개 프로필 표시</span>
+                <p className="hint">체크 해제 시 해당 항목은 다른 사용자에게 보이지 않습니다.</p>
+                <label className="profile-visibility-check">
+                  <input
+                    type="checkbox"
+                    checked={vPublicBio}
+                    onChange={(e) => setVPublicBio(e.target.checked)}
+                  />
+                  소개 공개
+                </label>
+                <label className="profile-visibility-check">
+                  <input
+                    type="checkbox"
+                    checked={vPublicBanner}
+                    onChange={(e) => setVPublicBanner(e.target.checked)}
+                  />
+                  배너 공개
+                </label>
+                <label className="profile-visibility-check">
+                  <input
+                    type="checkbox"
+                    checked={vPublicProfileImg}
+                    onChange={(e) => setVPublicProfileImg(e.target.checked)}
+                  />
+                  프로필 이미지 공개
+                </label>
+                <label className="profile-visibility-check">
+                  <input
+                    type="checkbox"
+                    checked={vPublicPreferredGames}
+                    onChange={(e) => setVPublicPreferredGames(e.target.checked)}
+                  />
+                  선호 게임 공개
+                </label>
               </div>
               <div className="profile-toolbar profile-edit-actions">
                 <button

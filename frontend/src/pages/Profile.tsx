@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { checkNicknameAvailable } from '../api/auth';
 import { apiUrl, resolveProfileImageUrl } from '../api/client';
@@ -10,6 +10,15 @@ import {
   serializePreferredGames,
 } from '../constants/games';
 import { formatActivityPeriod } from '../lib/activityPeriod';
+import { effectiveVisibility } from '../lib/profileVisibility';
+import { fetchAccountConnections, type AccountConnectionStatus } from '../api/accountLinks';
+
+const LINKED_PROVIDER_LABELS: Record<string, string> = {
+  discord: 'Discord',
+  steam: 'Steam',
+  blizzard: 'Blizzard',
+  riot: 'Riot',
+};
 
 function resolveBannerStyleUrl(url: string | null | undefined): string | null {
   if (!url?.trim()) return null;
@@ -28,6 +37,22 @@ function computeExtDirty(
   const g0 = serializePreferredGames(parsePreferredGamesToSelected(publicProfile?.preferredGames)) ?? '';
   const g1 = serializePreferredGames(selectedGames) ?? '';
   return b0 !== b1 || g0 !== g1;
+}
+
+function computeVisibilityDirty(
+  publicProfile: ProfileDto | null,
+  bio: boolean,
+  banner: boolean,
+  profileImg: boolean,
+  preferredGames: boolean
+): boolean {
+  const cur = effectiveVisibility(publicProfile?.visibility);
+  return (
+    cur.bio !== bio ||
+    cur.bannerImage !== banner ||
+    cur.profileImage !== profileImg ||
+    cur.preferredGames !== preferredGames
+  );
 }
 
 export default function Profile() {
@@ -54,6 +79,26 @@ export default function Profile() {
   const [selectedGames, setSelectedGames] = useState<string[]>([]);
   const [gamesModalOpen, setGamesModalOpen] = useState(false);
   const [modalGameDraft, setModalGameDraft] = useState<string[]>([]);
+  const [linkedAccounts, setLinkedAccounts] = useState<AccountConnectionStatus[]>([]);
+  /** 공개 프로필에서 타인에게 보일지(체크 = 공개) */
+  const [vPublicBio, setVPublicBio] = useState(true);
+  const [vPublicBanner, setVPublicBanner] = useState(true);
+  const [vPublicProfileImg, setVPublicProfileImg] = useState(true);
+  const [vPublicPreferredGames, setVPublicPreferredGames] = useState(true);
+
+  const loadLinkedAccounts = useCallback(async () => {
+    if (!user?.id) return;
+    try {
+      const { ok, data } = await fetchAccountConnections();
+      if (ok && data?.connections) {
+        setLinkedAccounts(data.connections.filter((c) => c.connected));
+      } else {
+        setLinkedAccounts([]);
+      }
+    } catch {
+      setLinkedAccounts([]);
+    }
+  }, [user?.id]);
 
   const loadPublicProfile = useCallback(async () => {
     if (!user?.id) return;
@@ -73,6 +118,10 @@ export default function Profile() {
   useEffect(() => {
     void loadPublicProfile();
   }, [loadPublicProfile]);
+
+  useEffect(() => {
+    void loadLinkedAccounts();
+  }, [loadLinkedAccounts]);
 
   useEffect(() => {
     if (!editOpen) setGamesModalOpen(false);
@@ -97,7 +146,14 @@ export default function Profile() {
     const hasImage = profileImageFile !== null;
     const mainDirty = nickChanged || bioChanged || hasImage;
     const extDirty = computeExtDirty(publicProfile, fBannerUrl, selectedGames);
-    const hasChanges = mainDirty || extDirty;
+    const visDirty = computeVisibilityDirty(
+      publicProfile,
+      vPublicBio,
+      vPublicBanner,
+      vPublicProfileImg,
+      vPublicPreferredGames
+    );
+    const hasChanges = mainDirty || extDirty || visDirty;
     return nicknameOk && hasChanges;
   }, [
     editNickname,
@@ -110,16 +166,24 @@ export default function Profile() {
     publicProfile,
     fBannerUrl,
     selectedGames,
+    vPublicBio,
+    vPublicBanner,
+    vPublicProfileImg,
+    vPublicPreferredGames,
   ]);
 
   const pangBalance = user?.pangBalance ?? 0;
-  const bannerDisplaySrc = publicProfile ? resolveBannerStyleUrl(publicProfile.bannerImageUrl) : null;
+  const cardVisibility = effectiveVisibility(publicProfile?.visibility);
+  const bannerDisplaySrc =
+    publicProfile && cardVisibility.bannerImage ? resolveBannerStyleUrl(publicProfile.bannerImageUrl) : null;
   const gameTagsDisplay = parsePreferredGamesToSelected(publicProfile?.preferredGames);
   const gamesPreview = (
     <>
       <div className="phe-section-label">선호 게임</div>
       <div className="phe-games-row">
-        {gameTagsDisplay.length === 0 ? (
+        {!cardVisibility.preferredGames ? (
+          <span className="phe-games-empty">다른 사용자에게는 표시하지 않도록 설정했습니다.</span>
+        ) : gameTagsDisplay.length === 0 ? (
           <span className="phe-games-empty">선택된 게임이 없습니다. 프로필 편집에서 추가해 보세요.</span>
         ) : (
           gameTagsDisplay.map((g) => (
@@ -220,6 +284,13 @@ export default function Profile() {
     const hasImage = profileImageFile !== null;
     const mainDirty = nickChanged || bioChanged || hasImage;
     const extDirty = computeExtDirty(publicProfile, fBannerUrl, selectedGames);
+    const visDirty = computeVisibilityDirty(
+      publicProfile,
+      vPublicBio,
+      vPublicBanner,
+      vPublicProfileImg,
+      vPublicPreferredGames
+    );
 
     setSaveLoading(true);
     try {
@@ -239,9 +310,18 @@ export default function Profile() {
         }
       }
       const patchBody: ProfilePatchBody = {};
-      if (extDirty) {
+      /** PUT만 하고 PATCH를 건너뛰면 user_profiles(배너·선호 게임)가 비는 경우가 있어, 메인/확장/공개설정/이미지 경로 중 하나라도 저장할 때 동기화 */
+      const needsUserProfilePatch =
+        extDirty || mainDirty || visDirty || uploadedPublicImagePath !== undefined;
+      if (needsUserProfilePatch) {
         patchBody.bannerImageUrl = fBannerUrl.trim() === '' ? null : fBannerUrl.trim();
         patchBody.preferredGames = serializePreferredGames(selectedGames);
+      }
+      if (visDirty) {
+        patchBody.bioVisible = vPublicBio;
+        patchBody.bannerImageVisible = vPublicBanner;
+        patchBody.profileImageVisible = vPublicProfileImg;
+        patchBody.preferredGamesVisible = vPublicPreferredGames;
       }
       if (uploadedPublicImagePath !== undefined) {
         patchBody.profileImageUrl = uploadedPublicImagePath;
@@ -252,6 +332,7 @@ export default function Profile() {
       }
       await refreshUser();
       await loadPublicProfile();
+      await loadLinkedAccounts();
       setEditOpen(false);
       navigate('/profile', { replace: true });
     } catch (err) {
@@ -314,7 +395,7 @@ export default function Profile() {
       <div className="phe-wrap">
         <h2 className="phe-title">공개 프로필</h2>
         <p className="phe-hint">
-          다른 사용자에게 보이는 카드입니다. 닉네임·자기소개·프로필 사진·배너 URL·선호 게임은 모두 「프로필 편집」에서 설정할 수 있습니다.
+          다른 사용자에게 보이는 카드입니다. 내용은 「프로필 편집」에서 수정하고, 항목별로 공개 여부를 지정할 수 있습니다.
         </p>
         {publicLoading ? <div className="phe-loading">불러오는 중…</div> : null}
         {!publicLoading && publicErr ? (
@@ -341,6 +422,53 @@ export default function Profile() {
           </>
         ) : null}
       </div>
+
+      {linkedAccounts.length > 0 ? (
+        <section className="profile-linked-section" aria-label="연동된 외부 계정">
+          <h2 className="phe-title">연동된 계정</h2>
+          <p className="phe-hint profile-linked-hint">
+            추가·해제는{' '}
+            <Link to="/profile/account-links" className="profile-linked-inline-link">
+              외부 계정 연동
+            </Link>
+            에서 할 수 있습니다.
+          </p>
+          <ul className="profile-linked-list">
+            {linkedAccounts.map((c) => {
+              const key = (c.provider ?? '').toLowerCase();
+              const label = LINKED_PROVIDER_LABELS[key] ?? c.provider;
+              const avatarSrc =
+                c.avatarUrl && (c.avatarUrl.startsWith('http') || c.avatarUrl.startsWith('/'))
+                  ? resolveProfileImageUrl(c.avatarUrl) ?? c.avatarUrl
+                  : null;
+              const showSub = Boolean(c.secondaryValue) && key !== 'riot';
+              return (
+                <li key={key} className="profile-linked-row">
+                  <div className="profile-linked-row-main">
+                    {avatarSrc ? (
+                      <img
+                        className="profile-linked-avatar"
+                        src={avatarSrc}
+                        alt=""
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = 'none';
+                        }}
+                      />
+                    ) : (
+                      <span className="profile-linked-avatar-fallback" aria-hidden />
+                    )}
+                    <div className="profile-linked-text">
+                      <span className="profile-linked-provider">{label}</span>
+                      <span className="profile-linked-display">{c.displayName?.trim() || '—'}</span>
+                      {showSub ? <span className="profile-linked-secondary">{c.secondaryValue}</span> : null}
+                    </div>
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ) : null}
 
       {/* 프로필 편집 모달 */}
       <div className={`modal-backdrop ${editOpen ? 'show' : ''}`} onClick={() => setEditOpen(false)} role="dialog" aria-modal="true">
@@ -447,6 +575,46 @@ export default function Profile() {
               >
                 선호 게임 선택
               </button>
+            </div>
+            <div className="profile-edit-field">
+              <span style={{ display: 'block', fontSize: '0.9rem', fontWeight: 500, marginBottom: 8 }}>
+                공개 프로필에 표시 (다른 사용자에게)
+              </span>
+              <p className="profile-edit-msg" style={{ margin: '0 0 10px', fontSize: '0.8rem', opacity: 0.85 }}>
+                체크 해제 시 해당 항목은 전적·커뮤니티 등 공개 프로필 조회에서 숨겨집니다. 본인에게는 항상 편집 내용이 보입니다.
+              </p>
+              <label className="profile-visibility-row">
+                <input
+                  type="checkbox"
+                  checked={vPublicBio}
+                  onChange={(e) => setVPublicBio(e.target.checked)}
+                />
+                <span>소개(자기소개) 공개</span>
+              </label>
+              <label className="profile-visibility-row">
+                <input
+                  type="checkbox"
+                  checked={vPublicBanner}
+                  onChange={(e) => setVPublicBanner(e.target.checked)}
+                />
+                <span>배너 이미지 공개</span>
+              </label>
+              <label className="profile-visibility-row">
+                <input
+                  type="checkbox"
+                  checked={vPublicProfileImg}
+                  onChange={(e) => setVPublicProfileImg(e.target.checked)}
+                />
+                <span>프로필 사진 공개</span>
+              </label>
+              <label className="profile-visibility-row">
+                <input
+                  type="checkbox"
+                  checked={vPublicPreferredGames}
+                  onChange={(e) => setVPublicPreferredGames(e.target.checked)}
+                />
+                <span>선호 게임 공개</span>
+              </label>
             </div>
             <div className="profile-edit-actions">
               <button type="submit" className="btn-save-profile" disabled={!canSave || saveLoading}>

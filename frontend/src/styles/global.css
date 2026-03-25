@@ -1506,6 +1506,61 @@ a.msg-conversation-item { text-decoration: none; color: inherit; }
 .theme-dark .profile-page .phe-modal-desc { color: #71717a; }
 .theme-light .profile-page .phe-modal-desc { color: #52525b; }
 
+/* 프로필 홈 — 연동된 외부 계정 */
+.profile-page .profile-linked-section { margin-top: 36px; max-width: 900px; }
+.profile-page .profile-linked-hint { margin-bottom: 14px; }
+.profile-page .profile-linked-inline-link { font-weight: 600; text-decoration: none; }
+.theme-dark .profile-page .profile-linked-inline-link { color: #86efac; }
+.theme-dark .profile-page .profile-linked-inline-link:hover { text-decoration: underline; color: #bbf7d0; }
+.theme-light .profile-page .profile-linked-inline-link { color: #059669; }
+.theme-light .profile-page .profile-linked-inline-link:hover { text-decoration: underline; color: #047857; }
+.profile-page .profile-linked-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.profile-page .profile-linked-row {
+  border: 1px solid;
+  border-radius: 12px;
+  padding: 14px 16px;
+}
+.theme-dark .profile-page .profile-linked-row { border-color: #2c2c2e; background: #17171a; }
+.theme-light .profile-page .profile-linked-row { border-color: #e5e5e7; background: #fafafb; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
+.profile-page .profile-linked-row-main { display: flex; align-items: center; gap: 14px; }
+.profile-page .profile-linked-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  flex-shrink: 0;
+  background: #27272a;
+}
+.profile-page .profile-linked-avatar-fallback {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: linear-gradient(135deg, #3f3f46, #52525b);
+}
+.profile-page .profile-linked-text { display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+.profile-page .profile-linked-provider {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.theme-dark .profile-page .profile-linked-provider { color: #71717a; }
+.theme-light .profile-page .profile-linked-provider { color: #64748b; }
+.profile-page .profile-linked-display {
+  font-size: 0.95rem;
+  font-weight: 600;
+  word-break: break-word;
+}
+.theme-dark .profile-page .profile-linked-display { color: #f4f4f5; }
+.theme-light .profile-page .profile-linked-display { color: #18181b; }
+.profile-page .profile-linked-secondary {
+  font-size: 0.8rem;
+  word-break: break-all;
+}
+.theme-dark .profile-page .profile-linked-secondary { color: #a1a1aa; }
+.theme-light .profile-page .profile-linked-secondary { color: #64748b; }
+
 .profile-page .pang-history-section { margin-top: 32px; }
 .profile-page .pang-history-section .section-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
 .theme-dark .profile-page .pang-history-section .section-title { color: #fff; }
@@ -1690,6 +1745,19 @@ a.msg-conversation-item { text-decoration: none; color: inherit; }
 .profile-page .profile-edit-field textarea { border: 2px solid; font-family: inherit; }
 .theme-dark .profile-page .profile-edit-field textarea { background: #2c2c2e; border-color: #3a3a3d; color: #fff; }
 .theme-light .profile-page .profile-edit-field textarea { background: #f5f5f7; border-color: #e0e0e2; color: #1a1a1d; }
+.profile-page label.profile-visibility-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+  font-weight: 400;
+  cursor: pointer;
+}
+.profile-page label.profile-visibility-row input[type="checkbox"] {
+  width: auto;
+  margin: 0;
+  flex-shrink: 0;
+}
 .profile-page .profile-edit-actions { display: flex; gap: 10px; margin-top: 24px; }
 .profile-page .btn-save-profile { padding: 10px 20px; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; border: none; font-family: inherit; background: #00e676; color: #0d0d0f; }
 .profile-page .btn-cancel-profile { padding: 10px 20px; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; border: 1px solid; font-family: inherit; background: transparent; }
