@@ -2,15 +2,13 @@ package com.gamematcher.service;
 
 import com.gamematcher.dto.search.PlayerSearchRequest;
 import com.gamematcher.dto.search.PlayerSearchResponse;
-import com.gamematcher.service.apex.ApexApiService;
-import com.gamematcher.service.blizzard.BlizzardApiService;
-import com.gamematcher.service.cs2.Cs2ApiService;
-import com.gamematcher.service.lol.LolApiService;
-import com.gamematcher.service.overwatch.OverwatchApiService;
-import com.gamematcher.service.pubg.PubgApiService;
-import com.gamematcher.service.steam.SteamApiService;
-import com.gamematcher.service.tft.TftApiService;
-import com.gamematcher.service.valorant.ValorantApiService;
+import com.gamematcher.service.search.ApexSearchService;
+import com.gamematcher.service.search.Cs2SearchService;
+import com.gamematcher.service.search.LolSearchService;
+import com.gamematcher.service.search.OverwatchSearchService;
+import com.gamematcher.service.search.PubgSearchService;
+import com.gamematcher.service.search.TftSearchService;
+import com.gamematcher.service.search.ValorantSearchService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -27,23 +25,17 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
-/**
- * PlayerSearchService 리팩터링 검증
- * SearchService → ApiService 통합 후 각 게임별 라우팅 동작 확인
- */
 @ExtendWith(MockitoExtension.class)
 @MockitoSettings(strictness = Strictness.LENIENT)
 class PlayerSearchServiceTest {
 
-    @Mock LolApiService lolApiService;
-    @Mock TftApiService tftApiService;
-    @Mock ValorantApiService valorantApiService;
-    @Mock SteamApiService steamApiService;
-    @Mock BlizzardApiService blizzardApiService;
-    @Mock PubgApiService pubgApiService;
-    @Mock OverwatchApiService overwatchApiService;
-    @Mock Cs2ApiService cs2ApiService;
-    @Mock ApexApiService apexApiService;
+    @Mock LolSearchService lolSearchService;
+    @Mock TftSearchService tftSearchService;
+    @Mock ValorantSearchService valorantSearchService;
+    @Mock PubgSearchService pubgSearchService;
+    @Mock OverwatchSearchService overwatchSearchService;
+    @Mock ApexSearchService apexSearchService;
+    @Mock Cs2SearchService cs2SearchService;
 
     @InjectMocks
     PlayerSearchService playerSearchService;
@@ -58,23 +50,21 @@ class PlayerSearchServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(lolApiService.search(any())).thenReturn(mockSuccessResponse("lol"));
-        when(tftApiService.search(any())).thenReturn(mockSuccessResponse("tft"));
-        when(valorantApiService.search(any())).thenReturn(mockSuccessResponse("valorant"));
-        when(steamApiService.search(any())).thenReturn(mockSuccessResponse("steam"));
-        when(blizzardApiService.search(any())).thenReturn(mockSuccessResponse("blizzard"));
-        when(pubgApiService.search(any())).thenReturn(mockSuccessResponse("pubg"));
-        when(overwatchApiService.search(any())).thenReturn(mockSuccessResponse("overwatch"));
-        when(cs2ApiService.search(any())).thenReturn(mockSuccessResponse("cs2"));
-        when(apexApiService.search(any())).thenReturn(mockSuccessResponse("apex"));
+        when(lolSearchService.search(any())).thenReturn(mockSuccessResponse("lol"));
+        when(tftSearchService.search(any())).thenReturn(mockSuccessResponse("tft"));
+        when(valorantSearchService.search(any())).thenReturn(mockSuccessResponse("valorant"));
+        when(pubgSearchService.search(any())).thenReturn(mockSuccessResponse("pubg"));
+        when(overwatchSearchService.search(any())).thenReturn(mockSuccessResponse("overwatch"));
+        when(apexSearchService.search(any())).thenReturn(mockSuccessResponse("apex"));
+        when(cs2SearchService.search(any())).thenReturn(mockSuccessResponse("cs2"));
     }
 
     @Nested
-    @DisplayName("게임별 ApiService 라우팅 검증")
+    @DisplayName("Game routing")
     class GameRoutingTest {
 
         @Test
-        void lol_검색시_LolApiService_호출() {
+        void routes_lol_requests() {
             PlayerSearchRequest req = new PlayerSearchRequest();
             req.setGame("lol");
             req.setGameName("test");
@@ -82,13 +72,13 @@ class PlayerSearchServiceTest {
 
             PlayerSearchResponse response = playerSearchService.searchPlayer(req);
 
-            verify(lolApiService).search(any());
+            verify(lolSearchService).search(any());
             assertThat(response.isSuccess()).isTrue();
             assertThat(response.getGame()).isEqualTo("lol");
         }
 
         @Test
-        void tft_검색시_TftApiService_호출() {
+        void routes_tft_requests() {
             PlayerSearchRequest req = new PlayerSearchRequest();
             req.setGame("tft");
             req.setGameName("test");
@@ -96,12 +86,12 @@ class PlayerSearchServiceTest {
 
             PlayerSearchResponse response = playerSearchService.searchPlayer(req);
 
-            verify(tftApiService).search(any());
+            verify(tftSearchService).search(any());
             assertThat(response.getGame()).isEqualTo("tft");
         }
 
         @Test
-        void valorant_검색시_ValorantApiService_호출() {
+        void routes_valorant_requests() {
             PlayerSearchRequest req = new PlayerSearchRequest();
             req.setGame("valorant");
             req.setGameName("test");
@@ -109,89 +99,65 @@ class PlayerSearchServiceTest {
 
             PlayerSearchResponse response = playerSearchService.searchPlayer(req);
 
-            verify(valorantApiService).search(any());
+            verify(valorantSearchService).search(any());
             assertThat(response.getGame()).isEqualTo("valorant");
         }
 
         @Test
-        void steam_검색시_SteamApiService_호출() {
-            PlayerSearchRequest req = new PlayerSearchRequest();
-            req.setGame("steam");
-            req.setSteamId("76561198000000000");
-
-            PlayerSearchResponse response = playerSearchService.searchPlayer(req);
-
-            verify(steamApiService).search(any());
-            assertThat(response.getGame()).isEqualTo("steam");
-        }
-
-        @Test
-        void blizzard_검색시_BlizzardApiService_호출() {
-            PlayerSearchRequest req = new PlayerSearchRequest();
-            req.setGame("blizzard");
-            req.setGameName("test");
-
-            PlayerSearchResponse response = playerSearchService.searchPlayer(req);
-
-            verify(blizzardApiService).search(any());
-            assertThat(response.getGame()).isEqualTo("blizzard");
-        }
-
-        @Test
-        void pubg_검색시_PubgApiService_호출() {
+        void routes_pubg_requests() {
             PlayerSearchRequest req = new PlayerSearchRequest();
             req.setGame("pubg");
             req.setGameName("test");
 
             PlayerSearchResponse response = playerSearchService.searchPlayer(req);
 
-            verify(pubgApiService).search(any());
+            verify(pubgSearchService).search(any());
             assertThat(response.getGame()).isEqualTo("pubg");
         }
 
         @Test
-        void overwatch_검색시_OverwatchApiService_호출() {
+        void routes_overwatch_requests() {
             PlayerSearchRequest req = new PlayerSearchRequest();
             req.setGame("overwatch");
             req.setGameName("test");
 
             PlayerSearchResponse response = playerSearchService.searchPlayer(req);
 
-            verify(overwatchApiService).search(any());
+            verify(overwatchSearchService).search(any());
             assertThat(response.getGame()).isEqualTo("overwatch");
         }
 
         @Test
-        void cs2_검색시_Cs2ApiService_호출() {
+        void routes_cs2_requests() {
             PlayerSearchRequest req = new PlayerSearchRequest();
             req.setGame("cs2");
-            req.setGameName("76561198000000000");
+            req.setGameName("test");
 
             PlayerSearchResponse response = playerSearchService.searchPlayer(req);
 
-            verify(cs2ApiService).search(any());
+            verify(cs2SearchService).search(any());
             assertThat(response.getGame()).isEqualTo("cs2");
         }
 
         @Test
-        void apex_검색시_ApexApiService_호출() {
+        void routes_apex_requests() {
             PlayerSearchRequest req = new PlayerSearchRequest();
             req.setGame("apex");
             req.setGameName("test");
 
             PlayerSearchResponse response = playerSearchService.searchPlayer(req);
 
-            verify(apexApiService).search(any());
+            verify(apexSearchService).search(any());
             assertThat(response.getGame()).isEqualTo("apex");
         }
     }
 
     @Nested
-    @DisplayName("지원하지 않는 게임")
+    @DisplayName("Unsupported game")
     class UnsupportedGameTest {
 
         @Test
-        void 미지원_게임_검색시_에러_응답() {
+        void returns_error_for_unknown_game() {
             PlayerSearchRequest req = new PlayerSearchRequest();
             req.setGame("unknown_game");
             req.setGameName("test");

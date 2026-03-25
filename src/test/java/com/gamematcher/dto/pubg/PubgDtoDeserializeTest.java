@@ -23,15 +23,15 @@ class PubgDtoDeserializeTest {
 
         assertThat(response).isNotNull();
         assertThat(response.getData()).isNotNull();
-        assertThat(response.getData().getId()).isEqualTo("04192032-7e46-4d3a-a430-28817c8c5bcc");
+        assertThat(response.getData().getId()).isEqualTo("a9b6c96f-eea9-4b9e-9195-39272dae2314");
         assertThat(response.getData().getType()).isEqualTo("match");
 
         PubgMatchAttributesDto attrs = response.getData().getAttributes();
         assertThat(attrs).isNotNull();
-        assertThat(attrs.getGameMode()).isEqualTo("tdm");
-        assertThat(attrs.getMapName()).isEqualTo("Tiger_Main");
-        assertThat(attrs.getDuration()).isEqualTo(303);
-        assertThat(attrs.getCreatedAt()).isEqualTo("2026-03-16T15:42:19Z");
+        assertThat(attrs.getGameMode()).isEqualTo("squad-fpp");
+        assertThat(attrs.getMapName()).isEqualTo("Neon_Main");
+        assertThat(attrs.getDuration()).isEqualTo(1665);
+        assertThat(attrs.getCreatedAt()).isEqualTo("2026-03-16T13:51:49Z");
 
         assertThat(response.getIncluded()).isNotEmpty();
         List<PubgIncludedItemDto> included = response.getIncluded();
@@ -41,15 +41,15 @@ class PubgDtoDeserializeTest {
                 .filter(PubgParticipantIncludedDto.class::isInstance)
                 .map(PubgParticipantIncludedDto.class::cast)
                 .filter(p -> p.getAttributes() != null && p.getAttributes().getStats() != null)
-                .filter(p -> "HeZ1HeZ1_-".equals(p.getAttributes().getStats().getName()))
+                .filter(p -> "8ink-".equals(p.getAttributes().getStats().getName()))
                 .findFirst()
                 .orElseThrow();
         PubgParticipantStatsDto stats = participant.getAttributes().getStats();
-        assertThat(stats.getKills()).isEqualTo(11);
-        assertThat(stats.getDBNOs()).isEqualTo(0);
-        assertThat(stats.getDamageDealt()).isEqualTo(1223.7267);
+        assertThat(stats.getKills()).isEqualTo(4);
+        assertThat(stats.getDBNOs()).isEqualTo(2);
+        assertThat(stats.getDamageDealt()).isEqualTo(853.1866);
         assertThat(stats.getWinPlace()).isEqualTo(1);
-        assertThat(stats.getPlayerId()).isEqualTo("account.a87ceb7c124d486a95375069d712f7b8");
+        assertThat(stats.getPlayerId()).isEqualTo("account.fe1027e418594343bafd39e9685239e2");
 
         // roster 검증
         PubgRosterIncludedDto roster = included.stream()

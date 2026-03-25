@@ -27,9 +27,9 @@ class PubgJsonServiceTest {
 
         assertThat(response).isNotNull();
         assertThat(response.getData()).isNotNull();
-        assertThat(response.getData().getId()).isEqualTo("04192032-7e46-4d3a-a430-28817c8c5bcc");
-        assertThat(response.getData().getAttributes().getGameMode()).isEqualTo("tdm");
-        assertThat(response.getIncluded()).hasSize(5);
+        assertThat(response.getData().getId()).isEqualTo("a9b6c96f-eea9-4b9e-9195-39272dae2314");
+        assertThat(response.getData().getAttributes().getGameMode()).isEqualTo("squad-fpp");
+        assertThat(response.getIncluded()).hasSize(77);
     }
 
     @Test
@@ -55,7 +55,7 @@ class PubgJsonServiceTest {
 
         assertThat(events).isNotEmpty();
         assertThat(events.get(0).getType()).isEqualTo("LogMatchDefinition");
-        assertThat(events.get(0).getTimestamp()).isEqualTo("2026-03-16T15:42:19.2863143Z");
+        assertThat(events.get(0).getTimestamp()).isEqualTo("2026-03-16T13:51:49.233317Z");
         assertThat(events.get(0).getAdditional()).containsKey("MatchId");
 
         PubgTelemetryEventDto loginEvent = events.stream()
