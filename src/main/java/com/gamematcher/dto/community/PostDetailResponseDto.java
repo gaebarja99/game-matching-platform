@@ -21,8 +21,6 @@ public class PostDetailResponseDto {
     private String content;
     private Long authorId;
     private String authorUsername;
-    /** 프로필 미설정 시 null — 클라이언트에서 기본 이미지 사용 */
-    private String authorProfileImageUrl;
     private int viewCount;
     private int likeCount;
     private int recommendCount;
@@ -37,8 +35,7 @@ public class PostDetailResponseDto {
     private boolean bookmarked;
     private Integer myRecommend; // 1: 추천, -1: 비추천, null: 없음
 
-    public static PostDetailResponseDto from(Post post, boolean liked, boolean bookmarked, Integer myRecommend,
-                                             String authorProfileImageUrl) {
+    public static PostDetailResponseDto from(Post post, boolean liked, boolean bookmarked, Integer myRecommend) {
         PostDetailResponseDto dto = new PostDetailResponseDto();
         dto.id = post.getId();
         dto.boardCategory = post.getBoardCategory();
@@ -46,7 +43,6 @@ public class PostDetailResponseDto {
         dto.content = post.getContent();
         dto.authorId = post.getAuthor().getId();
         dto.authorUsername = post.getAuthor().getUsername();
-        dto.authorProfileImageUrl = authorProfileImageUrl;
         dto.viewCount = post.getViewCount();
         dto.likeCount = post.getLikeCount();
         dto.recommendCount = post.getRecommendCount();

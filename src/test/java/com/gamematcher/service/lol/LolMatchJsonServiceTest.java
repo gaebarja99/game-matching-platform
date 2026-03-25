@@ -34,7 +34,7 @@ class LolMatchJsonServiceTest {
             String matchJson = Files.readString(Paths.get("src/test/resources/samples/lol/lol_match_sample.json"));
             LolMatchDetailDto dto = service.parseMatchDetail(matchJson);
 
-            assertThat(dto.getMetadata().getMatchId()).isEqualTo("KR_8136533346");
+            assertThat(dto.getMetadata().getMatchId()).isEqualTo("KR_8121193767");
             assertThat(dto.getInfo().getParticipants()).hasSize(10);
         }
 
@@ -59,7 +59,7 @@ class LolMatchJsonServiceTest {
             String timelineJson = Files.readString(Paths.get("src/test/resources/samples/lol/lol_timeline_sample.json"));
             LolMatchTimelineDetailDto dto = service.parseTimelineDetail(timelineJson);
 
-            assertThat(dto.getMetadata().getMatchId()).isEqualTo("KR_8136533346");
+            assertThat(dto.getMetadata().getMatchId()).isEqualTo("KR_8121193767");
             assertThat(dto.getInfo().getFrameInterval()).isEqualTo(60000);
             assertThat(dto.getInfo().getFrames()).isNotEmpty();
         }
@@ -76,7 +76,7 @@ class LolMatchJsonServiceTest {
             LolMatchDetailDto dto = service.parseFirstMatch(matchJson);
 
             assertThat(dto).isNotNull();
-            assertThat(dto.getMetadata().getMatchId()).isEqualTo("KR_8136533346");
+            assertThat(dto.getMetadata().getMatchId()).isEqualTo("KR_8121193767");
             assertThat(dto.getInfo().getParticipants()).hasSize(10);
         }
 
@@ -87,7 +87,7 @@ class LolMatchJsonServiceTest {
             String wrapped = "{\"matches\":[" + matchJson + "]}";
             LolMatchDetailDto dto = service.parseFirstMatch(wrapped);
 
-            assertThat(dto.getMetadata().getMatchId()).isEqualTo("KR_8136533346");
+            assertThat(dto.getMetadata().getMatchId()).isEqualTo("KR_8121193767");
         }
 
         @Test
@@ -97,7 +97,7 @@ class LolMatchJsonServiceTest {
             String wrapped = "{\"data\":[" + matchJson + "]}";
             LolMatchDetailDto dto = service.parseFirstMatch(wrapped);
 
-            assertThat(dto.getMetadata().getMatchId()).isEqualTo("KR_8136533346");
+            assertThat(dto.getMetadata().getMatchId()).isEqualTo("KR_8121193767");
         }
 
         @Test
@@ -120,7 +120,7 @@ class LolMatchJsonServiceTest {
             LolMatchTimelineDetailDto dto = service.parseFirstTimeline(timelineJson);
 
             assertThat(dto).isNotNull();
-            assertThat(dto.getMetadata().getMatchId()).isEqualTo("KR_8136533346");
+            assertThat(dto.getMetadata().getMatchId()).isEqualTo("KR_8121193767");
             assertThat(dto.getInfo().getFrames()).isNotEmpty();
         }
 
@@ -131,7 +131,7 @@ class LolMatchJsonServiceTest {
             String wrapped = "{\"timelines\":[" + timelineJson + "]}";
             LolMatchTimelineDetailDto dto = service.parseFirstTimeline(wrapped);
 
-            assertThat(dto.getMetadata().getMatchId()).isEqualTo("KR_8136533346");
+            assertThat(dto.getMetadata().getMatchId()).isEqualTo("KR_8121193767");
         }
     }
 
@@ -147,7 +147,7 @@ class LolMatchJsonServiceTest {
             var list = service.parseMatchesFromApiResponse(wrapped);
 
             assertThat(list).hasSize(1);
-            assertThat(list.get(0).getMetadata().getMatchId()).isEqualTo("KR_8136533346");
+            assertThat(list.get(0).getMetadata().getMatchId()).isEqualTo("KR_8121193767");
         }
 
         @Test
@@ -173,9 +173,9 @@ class LolMatchJsonServiceTest {
             var result = service.splitAndParse(combined);
 
             assertThat(result.match()).isNotNull();
-            assertThat(result.match().getMetadata().getMatchId()).isEqualTo("KR_8136533346");
+            assertThat(result.match().getMetadata().getMatchId()).isEqualTo("KR_8121193767");
             assertThat(result.timeline()).isNotNull();
-            assertThat(result.timeline().getMetadata().getMatchId()).isEqualTo("KR_8136533346");
+            assertThat(result.timeline().getMetadata().getMatchId()).isEqualTo("KR_8121193767");
         }
 
         @Test

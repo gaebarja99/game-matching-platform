@@ -1,4 +1,5 @@
-import { FormEvent, KeyboardEvent, useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import type { FormEvent, KeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { sendChatMessage } from '../api/chat';

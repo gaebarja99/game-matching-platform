@@ -1,3 +1,4 @@
+import type { ApplicationVerifier, Auth, ConfirmationResult } from 'firebase/auth';
 import { getAuth } from '../firebase';
 
 /** 한국 휴대폰 번호를 E.164 형식으로 변환 (예: 01012345678 → +821012345678) */
@@ -34,7 +35,7 @@ export function clearRecaptchaVerifier(containerId: string, existingVerifier: un
  * 이전에 사용한 검증기가 있으면 clearRecaptchaVerifier()로 먼저 제거하세요.
  * 컨테이너는 반드시 DOM에 있고, 최소 크기(1x1 이상)를 가져야 reCAPTCHA가 초기화됩니다.
  */
-export async function getRecaptchaVerifier(containerId: string): Promise<unknown> {
+export async function getRecaptchaVerifier(containerId: string): Promise<ApplicationVerifier> {
   const auth = await getAuth();
   if (!auth) throw new Error('Firebase가 설정되지 않았습니다. .env에 VITE_FIREBASE_* 값을 넣어 주세요.');
   const { RecaptchaVerifier } = await import('firebase/auth');
@@ -52,13 +53,13 @@ export async function getRecaptchaVerifier(containerId: string): Promise<unknown
 /**
  * 휴대폰으로 인증 코드 발송.
  */
-export async function sendVerificationCode(phoneNumber: string, recaptchaVerifier: unknown) {
+export async function sendVerificationCode(phoneNumber: string, recaptchaVerifier: ApplicationVerifier) {
   const auth = await getAuth();
   if (!auth) throw new Error('Firebase가 설정되지 않았습니다.');
   return sendVerificationCodeInner(auth, phoneNumber, recaptchaVerifier);
 }
 
-async function sendVerificationCodeInner(auth: unknown, phoneNumber: string, recaptchaVerifier: unknown) {
+async function sendVerificationCodeInner(auth: Auth, phoneNumber: string, recaptchaVerifier: ApplicationVerifier) {
   const { signInWithPhoneNumber } = await import('firebase/auth');
   const number = phoneNumber.startsWith('+') ? phoneNumber : toE164(phoneNumber);
   return signInWithPhoneNumber(auth, number, recaptchaVerifier);
@@ -67,9 +68,9 @@ async function sendVerificationCodeInner(auth: unknown, phoneNumber: string, rec
 /**
  * 사용자가 입력한 인증 코드로 휴대폰 인증 완료.
  */
-export async function confirmVerificationCode(confirmationResult: unknown, code: string) {
+export async function confirmVerificationCode(confirmationResult: ConfirmationResult, code: string) {
   const { signOut } = await import('firebase/auth');
-  const cred = await (confirmationResult as { confirm: (code: string) => Promise<unknown> }).confirm(code);
+  const cred = await confirmationResult.confirm(code);
   const auth = await getAuth();
   if (auth) await signOut(auth);
   return cred;

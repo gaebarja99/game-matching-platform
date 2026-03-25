@@ -48,13 +48,16 @@ export async function apiFetch<T = unknown>(
   init?: RequestInit
 ): Promise<{ ok: boolean; status: number; data?: T; message?: string }> {
   const url = apiUrl(path);
+  const isFormData = typeof FormData !== 'undefined' && init?.body instanceof FormData;
+  const headers = new Headers(init?.headers || undefined);
+  if (!isFormData && !headers.has('Content-Type')) {
+    headers.set('Content-Type', 'application/json');
+  }
+
   const res = await fetch(url, {
     ...init,
     credentials: 'include',
-    headers: {
-      'Content-Type': 'application/json',
-      ...init?.headers,
-    },
+    headers,
   });
   let data: T | { message?: string } | null = null;
   const ct = res.headers.get('content-type');

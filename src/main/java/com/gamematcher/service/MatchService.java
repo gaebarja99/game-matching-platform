@@ -17,11 +17,7 @@ import java.util.stream.Collectors;
 public class MatchService {
 
     private static final DateTimeFormatter ISO = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-    private static final int DEFAULT_MATCH_GROUP_SIZE = 2;
-    /** LoL·발로란트·오버워치2·CS2 단순 랜덤 매칭 (FIFO 5인) */
-    private static final int FIVE_PERSON_QUEUE_SIZE = 5;
-    /** PUBG 플랫폼별 단순 랜덤 매칭 (FIFO 4인) */
-    private static final int FOUR_PERSON_QUEUE_SIZE = 4;
+    private static final int MAX_MATCH_GROUP_SIZE = 2;
     private static final int MAX_TEXT_LENGTH = 2000;
 
     private final MatchQueueEntryRepository queueRepository;
@@ -30,85 +26,12 @@ public class MatchService {
     private final MatchChatMessageRepository matchChatMessageRepository;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
-    private final ProfanityFilterService profanityFilterService;
 
-    private static boolean isSimpleFivePersonQueueGame(String game) {
-        return game != null
-                && ("LEAGUE_OF_LEGENDS".equals(game) || "VALORANT".equals(game) || "OVERWATCH".equals(game)
-                        || "COUNTER_STRIKE_2".equals(game));
-    }
-
-    private static boolean isPubgPlatformQueueGame(String game) {
-        return game != null && (game.equals("PUBG_STEAM") || game.equals("PUBG_KAKAO"));
-    }
-
-    private static String sessionGameForQueueKey(String queueGame) {
-        if (isPubgPlatformQueueGame(queueGame)) return "PUBG";
-        return queueGame;
-    }
-
-    public int requiredMatchSizeForGame(String game) {
-        if (isSimpleFivePersonQueueGame(game)) return FIVE_PERSON_QUEUE_SIZE;
-        if (isPubgPlatformQueueGame(game)) return FOUR_PERSON_QUEUE_SIZE;
-        return DEFAULT_MATCH_GROUP_SIZE;
-    }
-
-    /**
-     * PUBG 단순 큐: 플랫폼(스팀/카카오)별로 대기열이 분리되고, 4명이 모이면 매칭.
-     * DB에는 game = PUBG_STEAM | PUBG_KAKAO 로 저장하고, 세션에는 game = PUBG 로 저장한다.
-     */
-    @Transactional
-    public Map<String, Object> joinPubgSimpleQueue(Long userId, String platformRaw, String preferredMapRaw) {
-        if (userId == null) throw new IllegalArgumentException("로그인이 필요합니다.");
-        String platform = platformRaw != null ? platformRaw.trim().toUpperCase() : "";
-        if (!"STEAM".equals(platform) && !"KAKAO".equals(platform)) {
-            throw new IllegalArgumentException("플랫폼은 STEAM 또는 KAKAO여야 합니다.");
-        }
-        String preferredMap = preferredMapRaw != null && !preferredMapRaw.isBlank()
-                ? preferredMapRaw.trim().toUpperCase()
-                : "ALL";
-
-        String queueKey = "PUBG_" + platform;
-        queueRepository.findByUserId(userId).ifPresent(queueRepository::delete);
-
-        MatchQueueEntry entry = new MatchQueueEntry();
-        entry.setUserId(userId);
-        entry.setGame(queueKey);
-        entry.setTier(null);
-        entry.setPosition(preferredMap);
-        queueRepository.save(entry);
-
-        tryMatch(queueKey);
-
-        Map<String, Object> result = new LinkedHashMap<>();
-        result.put("game", "PUBG");
-        result.put("platform", platform);
-        result.put("preferredMap", preferredMap);
-        boolean stillQueued = queueRepository.existsByUserId(userId);
-        result.put("inQueue", stillQueued);
-        if (stillQueued) {
-            result.put("lobbyCount", queueRepository.countByGame(queueKey));
-            result.put("targetSize", requiredMatchSizeForGame(queueKey));
-        }
-        return result;
-    }
-
-    /** 대기열 참가 → 매칭 시도 (게임별 필요 인원이 모이면 매칭 생성 후 알림) */
+    /** 대기열 참가 → 매칭 시도 (2명 이상이면 매칭 생성 후 알림) */
     @Transactional
     public Map<String, Object> joinQueue(Long userId, String game, String tier, String position) {
         if (userId == null) throw new IllegalArgumentException("로그인이 필요합니다.");
         if (game == null || game.isBlank()) game = "LEAGUE_OF_LEGENDS";
-        if ("PUBG".equalsIgnoreCase(game)) {
-            throw new IllegalArgumentException("PUBG는 platform·preferredMap을 포함한 단순 큐 요청을 사용해 주세요.");
-        }
-
-        if (isSimpleFivePersonQueueGame(game)) {
-            if (position == null || position.isBlank()) {
-                throw new IllegalArgumentException(
-                        "VALORANT".equals(game) ? "역할군을 선택해 주세요." : "포지션을 선택해 주세요.");
-            }
-            tier = null;
-        }
 
         queueRepository.findByUserId(userId).ifPresent(queueRepository::delete);
 
@@ -119,54 +42,43 @@ public class MatchService {
         entry.setPosition(position != null && !position.isBlank() ? position : null);
         queueRepository.save(entry);
 
-        tryMatch(game);
-
         Map<String, Object> result = new LinkedHashMap<>();
+        result.put("inQueue", true);
         result.put("game", game);
-        boolean stillQueued = queueRepository.existsByUserId(userId);
-        result.put("inQueue", stillQueued);
-        if (stillQueued) {
-            result.put("lobbyCount", queueRepository.countByGame(game));
-            result.put("targetSize", requiredMatchSizeForGame(game));
-        }
+
+        tryMatch(game);
         return result;
     }
 
-    /** 같은 게임 대기열에서 필요 인원이 모이면 매칭 생성 후 알림 (FIFO, 반복) */
+    /** 같은 게임 대기열에서 2명 이상이면 매칭 생성 후 알림 */
     @Transactional
     protected void tryMatch(String game) {
-        int need = requiredMatchSizeForGame(game);
-        while (true) {
-            List<MatchQueueEntry> entries = queueRepository.findByGameOrderByJoinedAtAsc(game);
-            if (entries.size() < need) return;
+        List<MatchQueueEntry> entries = queueRepository.findByGameOrderByJoinedAtAsc(game);
+        if (entries.size() < MAX_MATCH_GROUP_SIZE) return;
 
-            List<MatchQueueEntry> toMatch = new ArrayList<>(entries.subList(0, need));
-            MatchSession session = new MatchSession();
-            session.setGame(sessionGameForQueueKey(game));
-            session = sessionRepository.save(session);
+        List<MatchQueueEntry> toMatch = entries.subList(0, MAX_MATCH_GROUP_SIZE);
+        MatchSession session = new MatchSession();
+        session.setGame(game);
+        session = sessionRepository.save(session);
 
-            List<Long> userIds = new ArrayList<>();
-            for (MatchQueueEntry e : toMatch) {
-                queueRepository.delete(e);
-                MatchSessionMember m = new MatchSessionMember();
-                m.setSessionId(session.getId());
-                m.setUserId(e.getUserId());
-                if (e.getPosition() != null && !e.getPosition().isBlank()) {
-                    m.setAssignedLane(e.getPosition());
-                }
-                sessionMemberRepository.save(m);
-                userIds.add(e.getUserId());
-            }
+        List<Long> userIds = new ArrayList<>();
+        for (MatchQueueEntry e : toMatch) {
+            queueRepository.delete(e);
+            MatchSessionMember m = new MatchSessionMember();
+            m.setSessionId(session.getId());
+            m.setUserId(e.getUserId());
+            sessionMemberRepository.save(m);
+            userIds.add(e.getUserId());
+        }
 
-            Map<String, Object> payload = new LinkedHashMap<>();
-            payload.put("type", "MATCH_COMPLETE");
-            payload.put("sessionId", session.getId());
-            payload.put("game", session.getGame());
-            payload.put("memberUserIds", userIds);
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("type", "MATCH_COMPLETE");
+        payload.put("sessionId", session.getId());
+        payload.put("game", session.getGame());
+        payload.put("memberUserIds", userIds);
 
-            for (Long uid : userIds) {
-                messagingTemplate.convertAndSend("/topic/user/" + uid, payload);
-            }
+        for (Long uid : userIds) {
+            messagingTemplate.convertAndSend("/topic/user/" + uid, payload);
         }
     }
 
@@ -183,24 +95,6 @@ public class MatchService {
     /** 대기열 상태 */
     public boolean isInQueue(Long userId) {
         return userId != null && queueRepository.existsByUserId(userId);
-    }
-
-    /** 대기열 여부 + 같은 게임 로비 인원(대기 중일 때만 유효) */
-    public Map<String, Object> getQueueStatus(Long userId) {
-        Map<String, Object> map = new LinkedHashMap<>();
-        if (userId == null) {
-            map.put("inQueue", false);
-            return map;
-        }
-        Optional<MatchQueueEntry> opt = queueRepository.findByUserId(userId);
-        boolean inQueue = opt.isPresent();
-        map.put("inQueue", inQueue);
-        if (inQueue) {
-            String g = opt.get().getGame();
-            map.put("lobbyCount", queueRepository.countByGame(g));
-            map.put("targetSize", requiredMatchSizeForGame(g));
-        }
-        return map;
     }
 
     /** 매칭 세션 조회 (참가자만) */
@@ -280,7 +174,6 @@ public class MatchService {
         String trimmed = text != null ? text.trim() : "";
         if (trimmed.isEmpty()) throw new IllegalArgumentException("메시지를 입력해 주세요.");
         if (trimmed.length() > MAX_TEXT_LENGTH) trimmed = trimmed.substring(0, MAX_TEXT_LENGTH);
-        trimmed = profanityFilterService.moderateChat(userId, trimmed).getSanitizedText();
 
         MatchChatMessage msg = new MatchChatMessage();
         msg.setSessionId(sessionId);

@@ -406,42 +406,6 @@
   border-color: rgba(0, 230, 118, 0.35);
 }
 
-.floating-chat-widget-list-row {
-  display: flex;
-  gap: 8px;
-  align-items: stretch;
-}
-
-.floating-chat-widget-list-btn--grow {
-  margin-bottom: 0;
-  flex: 1;
-}
-
-.floating-chat-widget-list-delete {
-  align-self: center;
-  height: 36px;
-  padding: 0 12px;
-  border-radius: 8px;
-  border: 1px solid rgba(255, 120, 120, 0.4);
-  background: rgba(255, 82, 82, 0.12);
-  color: #ff9f9f;
-  font-size: 0.78rem;
-  font-weight: 700;
-  cursor: pointer;
-  font-family: inherit;
-  flex-shrink: 0;
-}
-
-.floating-chat-widget-list-delete:hover:not(:disabled) {
-  background: rgba(255, 82, 82, 0.2);
-  border-color: rgba(255, 120, 120, 0.7);
-}
-
-.floating-chat-widget-list-delete:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-
 .floating-chat-widget-list-title {
   font-weight: 700;
   font-size: 0.9rem;
@@ -798,17 +762,6 @@
 .theme-light .floating-chat-widget-list-btn:hover {
   background: #e8f5e9;
   border-color: rgba(46, 157, 92, 0.45);
-}
-
-.theme-light .floating-chat-widget-list-delete {
-  border-color: #f3b5b5;
-  background: #fff1f1;
-  color: #c92a2a;
-}
-
-.theme-light .floating-chat-widget-list-delete:hover:not(:disabled) {
-  background: #ffe3e3;
-  border-color: #e89a9a;
 }
 
 .theme-light .floating-chat-widget-list-sub {

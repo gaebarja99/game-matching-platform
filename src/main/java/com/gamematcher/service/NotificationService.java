@@ -26,8 +26,6 @@ public class NotificationService {
     public static final String TYPE_FRIEND_REQUEST = "FRIEND_REQUEST";
     public static final String TYPE_PAYMENT_COMPLETED = "PAYMENT_COMPLETED";
     public static final String TYPE_PAYMENT_REFUNDED = "PAYMENT_REFUNDED";
-    public static final String TYPE_ADMIN_STREAM_NOTICE = "ADMIN_STREAM_NOTICE";
-    public static final String TYPE_ADMIN_PANG_GIFT = "ADMIN_PANG_GIFT";
 
     private final NotificationRepository notificationRepository;
     private final FollowRepository followRepository;
@@ -115,41 +113,6 @@ public class NotificationService {
         sendPaymentSms(userId, "[GameMatcher] 환불 완료: " + body);
     }
 
-    @Transactional
-    public void createAdminStreamNotice(Long toUserId, Long adminUserId, String text) {
-        if (toUserId == null || adminUserId == null) return;
-        String safe = text != null ? text.trim() : "";
-        if (safe.isEmpty()) {
-            safe = "운영자 안내가 도착했습니다.";
-        }
-
-        Notification n = new Notification();
-        n.setUserId(toUserId);
-        n.setType(TYPE_ADMIN_STREAM_NOTICE);
-        n.setActorUserId(adminUserId);
-        n.setBody(safe);
-        notificationRepository.save(n);
-
-        pushToUser(toUserId, "운영 안내", safe, "/notifications");
-    }
-
-    @Transactional
-    public void createForAdminPangGift(Long toUserId, Long adminUserId, int pangAmount, String customMessage) {
-        if (toUserId == null || adminUserId == null || pangAmount <= 0) return;
-
-        String extra = customMessage != null ? customMessage.trim() : "";
-        String body = "운영자가 " + pangAmount + "팡을 지급했습니다." + (extra.isEmpty() ? "" : " " + extra);
-
-        Notification n = new Notification();
-        n.setUserId(toUserId);
-        n.setType(TYPE_ADMIN_PANG_GIFT);
-        n.setActorUserId(adminUserId);
-        n.setBody(body);
-        notificationRepository.save(n);
-
-        pushToUser(toUserId, "팡 지급", body, "/profile/pang");
-    }
-
     public long getUnreadCount(Long userId) {
         if (userId == null) return 0;
         long total = notificationRepository.countByUserIdAndReadAtIsNull(userId);
@@ -187,10 +150,6 @@ public class NotificationService {
                         message = "팡 충전 결제가 완료되었습니다.";
                     } else if (TYPE_PAYMENT_REFUNDED.equals(n.getType())) {
                         message = "팡 환불이 완료되었습니다.";
-                    } else if (TYPE_ADMIN_STREAM_NOTICE.equals(n.getType())) {
-                        message = (n.getBody() != null && !n.getBody().isBlank()) ? n.getBody() : "운영자 안내";
-                    } else if (TYPE_ADMIN_PANG_GIFT.equals(n.getType())) {
-                        message = (n.getBody() != null && !n.getBody().isBlank()) ? n.getBody() : "운영자 팡 지급";
                     } else {
                         message = "알림";
                     }

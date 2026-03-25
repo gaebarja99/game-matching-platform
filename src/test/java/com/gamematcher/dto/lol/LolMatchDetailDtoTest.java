@@ -21,11 +21,11 @@ class LolMatchDetailDtoTest {
         LolMatchDetailDto dto = objectMapper.readValue(matchJson, LolMatchDetailDto.class);
 
         assertThat(dto.getMetadata()).isNotNull();
-        assertThat(dto.getMetadata().getMatchId()).isEqualTo("KR_8136533346");
+        assertThat(dto.getMetadata().getMatchId()).isEqualTo("KR_8121193767");
         assertThat(dto.getMetadata().getParticipants()).hasSize(10);
 
         assertThat(dto.getInfo()).isNotNull();
-        assertThat(dto.getInfo().getGameId()).isEqualTo(8136533346L);
+        assertThat(dto.getInfo().getGameId()).isEqualTo(8121193767L);
         assertThat(dto.getInfo().getGameMode()).isEqualTo("CLASSIC");
         assertThat(dto.getInfo().getQueueId()).isEqualTo(420);
         assertThat(dto.getInfo().getParticipants()).hasSize(10);

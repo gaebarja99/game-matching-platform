@@ -27,22 +27,22 @@ class PubgMatchMapperTest {
         PubgMatch match = mapper.toEntity(response);
 
         assertThat(match).isNotNull();
-        assertThat(match.getMatchId()).isEqualTo("04192032-7e46-4d3a-a430-28817c8c5bcc");
-        assertThat(match.getGameMode()).isEqualTo("tdm");
-        assertThat(match.getMapName()).isEqualTo("Tiger_Main");
-        assertThat(match.getDuration()).isEqualTo(303);
+        assertThat(match.getMatchId()).isEqualTo("a9b6c96f-eea9-4b9e-9195-39272dae2314");
+        assertThat(match.getGameMode()).isEqualTo("squad-fpp");
+        assertThat(match.getMapName()).isEqualTo("Neon_Main");
+        assertThat(match.getDuration()).isEqualTo(1665);
 
-        assertThat(match.getParticipants()).hasSize(2);
+        assertThat(match.getParticipants()).hasSize(60);
 
         PubgMatchParticipant first = match.getParticipants().stream()
-                .filter(p -> "HeZ1HeZ1_-".equals(p.getName()))
+                .filter(p -> "8ink-".equals(p.getName()))
                 .findFirst()
                 .orElseThrow();
-        assertThat(first.getKills()).isEqualTo(11);
-        assertThat(first.getDamageDealt()).isEqualTo(1223.7267);
+        assertThat(first.getKills()).isEqualTo(4);
+        assertThat(first.getDamageDealt()).isEqualTo(853.1866);
         assertThat(first.getWinPlace()).isEqualTo(1);
         assertThat(first.isWin()).isTrue();
-        assertThat(first.getPlayerId()).isEqualTo("account.a87ceb7c124d486a95375069d712f7b8");
+        assertThat(first.getPlayerId()).isEqualTo("account.fe1027e418594343bafd39e9685239e2");
     }
 
     @Test

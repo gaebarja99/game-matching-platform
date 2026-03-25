@@ -4,7 +4,6 @@ import com.gamematcher.dto.chat.ChatMessageDto;
 import com.gamematcher.entity.User;
 import com.gamematcher.service.ChatService;
 import com.gamematcher.service.LevelService;
-import com.gamematcher.service.ProfanityFilterService;
 import com.gamematcher.service.StreamChatSettingsService;
 import com.gamematcher.repository.LiveStreamRepository;
 import com.gamematcher.repository.UserRepository;
@@ -30,7 +29,6 @@ public class LiveChatController {
     private final LiveStreamRepository liveStreamRepository;
     private final ChatService chatService;
     private final StreamChatSettingsService streamChatSettingsService;
-    private final ProfanityFilterService profanityFilterService;
 
     @MessageMapping("/chat/{streamId}")
     @SendTo("/topic/stream/{streamId}")
@@ -44,14 +42,6 @@ public class LiveChatController {
         Long userId = (Long) uidObj;
         String trimmed = text != null ? text.trim() : "";
         if (trimmed.isEmpty() || trimmed.length() > MAX_TEXT_LENGTH) {
-            return null;
-        }
-        try {
-            trimmed = profanityFilterService.moderateChat(userId, trimmed).getSanitizedText();
-        } catch (IllegalArgumentException ex) {
-            return null;
-        }
-        if (trimmed.isEmpty()) {
             return null;
         }
         boolean isStreamer = liveStreamRepository.findById(streamId)

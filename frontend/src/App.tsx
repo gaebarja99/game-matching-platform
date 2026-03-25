@@ -11,6 +11,7 @@ import Streams from './pages/Streams';
 import Watch from './pages/Watch';
 import Profile from './pages/Profile';
 import ProfileMyInfo from './pages/ProfileMyInfo';
+import ProfileAccountLinks from './pages/ProfileAccountLinks';
 import ProfilePang from './pages/ProfilePang';
 import ProfileMileageShop from './pages/ProfileMileageShop';
 import ProfileAdFree from './pages/ProfileAdFree';
@@ -27,14 +28,6 @@ import StudioViewersSubscribers from './pages/StudioViewersSubscribers';
 import StudioViewersBlocklist from './pages/StudioViewersBlocklist';
 import StudioRevenue from './pages/StudioRevenue';
 import StudioAdminStreamers from './pages/StudioAdminStreamers';
-import Admin from './pages/Admin';
-import AdminReports from './pages/AdminReports';
-import AdminMembers from './pages/AdminMembers';
-import AdminSettlements from './pages/AdminSettlements';
-import AdminRevenue from './pages/AdminRevenue';
-import AdminCommunity from './pages/AdminCommunity';
-import AdminMatchRooms from './pages/AdminMatchRooms';
-import AdminBroadcasts from './pages/AdminBroadcasts';
 import Following from './pages/Following';
 import History from './pages/History';
 import Channel from './pages/Channel';
@@ -86,6 +79,7 @@ function App() {
               <Route path="/profile" element={<ProfileLayout />}>
                 <Route index element={<Profile />} />
                 <Route path="my-info" element={<ProfileMyInfo />} />
+                <Route path="account-links" element={<ProfileAccountLinks />} />
                 <Route path="pang" element={<ProfilePang />} />
                 <Route path="mileage-shop" element={<ProfileMileageShop />} />
                 <Route path="adfree" element={<ProfileAdFree />} />
@@ -102,16 +96,7 @@ function App() {
               <Route path="/studio/viewers/subscribers" element={<StudioViewersSubscribers />} />
               <Route path="/studio/viewers/blocklist" element={<StudioViewersBlocklist />} />
               <Route path="/studio/revenue" element={<StudioRevenue />} />
-              <Route path="/studio/admin/streamers" element={<Navigate to="/admin/streamers" replace />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/admin/streamers" element={<StudioAdminStreamers />} />
-              <Route path="/admin/broadcasts" element={<AdminBroadcasts />} />
-              <Route path="/admin/community" element={<AdminCommunity />} />
-              <Route path="/admin/match-rooms" element={<AdminMatchRooms />} />
-              <Route path="/admin/reports" element={<AdminReports />} />
-              <Route path="/admin/members" element={<AdminMembers />} />
-              <Route path="/admin/settlements" element={<AdminSettlements />} />
-              <Route path="/admin/revenue" element={<AdminRevenue />} />
+              <Route path="/studio/admin/streamers" element={<StudioAdminStreamers />} />
               <Route path="/following" element={<Following />} />
               <Route path="/history" element={<History />} />
               <Route path="/channel" element={<Channel />} />

@@ -24,7 +24,6 @@ export function useMatchCompleteNotification(userId: number | undefined) {
             const d = JSON.parse(message.body) as { type?: string; sessionId?: number };
             if (d.type === 'MATCH_COMPLETE' && d.sessionId != null) {
               clearRandomMatchPending();
-              window.alert('매칭 성공!');
               navigate('/match-chat/' + d.sessionId);
             }
           } catch {

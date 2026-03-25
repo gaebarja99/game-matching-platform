@@ -111,7 +111,7 @@ class LolApiPersistenceFlowTest {
         LolMatch saved = persistenceService.saveMatchWithTimeline(matchDto, timelineDto);
 
         assertThat(saved).isNotNull();
-        assertThat(saved.getMatchId()).isEqualTo("KR_8136533346");
+        assertThat(saved.getMatchId()).isEqualTo("KR_8121193767");
         assertThat(saved.getParticipants()).hasSize(10);
         assertThat(saved.getTimeline()).isNotNull();
         assertThat(saved.getTimeline().getFrameInterval()).isEqualTo(60000);

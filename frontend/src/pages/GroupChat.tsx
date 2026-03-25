@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
-import { apiUrl, resolveProfileImageUrl } from '../api/client';
+import { apiUrl } from '../api/client';
 
 interface RoomItem {
   id: number;

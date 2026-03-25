@@ -22,33 +22,37 @@ export default function LiveThumb({ playbackUrl, className = 'card-thumb-preview
     const canvas = canvasRef.current;
     const inner = innerRef.current;
     if (!video || !canvas || !inner || !playbackUrl) return;
+    const videoEl = video;
+    const canvasEl = canvas;
+    const innerEl = inner;
 
     function drawFrame() {
-      if (video.readyState >= 2 && video.videoWidth > 0 && inner) {
-        const w = inner.offsetWidth;
-        const h = inner.offsetHeight;
+      if (videoEl.readyState >= 2 && videoEl.videoWidth > 0) {
+        const w = innerEl.offsetWidth;
+        const h = innerEl.offsetHeight;
         if (w && h) {
-          canvas.width = w;
-          canvas.height = h;
-          const ctx = canvas.getContext('2d');
-          if (ctx) ctx.drawImage(video, 0, 0, w, h);
+          canvasEl.width = w;
+          canvasEl.height = h;
+          const ctx = canvasEl.getContext('2d');
+          if (ctx) ctx.drawImage(videoEl, 0, 0, w, h);
         }
       }
     }
+
+    const handleLoadedData = () => setTimeout(drawFrame, 500);
 
     if (Hls.isSupported()) {
       const hls = new Hls();
       hlsRef.current = hls;
       hls.loadSource(playbackUrl);
-      hls.attachMedia(video);
-      hls.on(Hls.Events.MANIFEST_PARSED, () => setTimeout(drawFrame, 500));
+      hls.attachMedia(videoEl);
+      hls.on(Hls.Events.MANIFEST_PARSED, handleLoadedData);
       hls.on(Hls.Events.ERROR, () => {});
-    } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = playbackUrl;
-      video.addEventListener('loadeddata', () => setTimeout(drawFrame, 500));
+    } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+      videoEl.src = playbackUrl;
     }
-    video.addEventListener('loadeddata', () => setTimeout(drawFrame, 500));
-    video.addEventListener('playing', drawFrame);
+    videoEl.addEventListener('loadeddata', handleLoadedData);
+    videoEl.addEventListener('playing', drawFrame);
     drawIntervalRef.current = setInterval(drawFrame, THUMB_DRAW_INTERVAL_MS);
 
     return () => {
@@ -60,8 +64,10 @@ export default function LiveThumb({ playbackUrl, className = 'card-thumb-preview
         hlsRef.current.destroy();
         hlsRef.current = null;
       }
-      video.removeAttribute('src');
-      video.load();
+      videoEl.removeEventListener('loadeddata', handleLoadedData);
+      videoEl.removeEventListener('playing', drawFrame);
+      videoEl.removeAttribute('src');
+      videoEl.load();
     };
   }, [playbackUrl]);
 

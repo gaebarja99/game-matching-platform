@@ -40,13 +40,11 @@ class PubgMapConfigLoaderTest {
     @Test
     @DisplayName("에란겔 지역 설정 로드")
     void getRegionConfig_erangel() {
-        Optional<PubgMapRegionConfig> config = loader.getRegionConfig("Erangel_Main");
+        Optional<PubgMapRegionConfig> config = loader.getRegionConfig("Baltic_Main");
 
         assertThat(config).isPresent();
         assertThat(config.get().getMapName()).isEqualTo("Erangel");
-        assertThat(config.get().getGridCols()).isEqualTo(8);
-        assertThat(config.get().getGridRows()).isEqualTo(8);
-        assertThat(config.get().getCells()).isNotEmpty();
+        assertThat(config.get().getPois()).isNotEmpty();
     }
 
     @Test

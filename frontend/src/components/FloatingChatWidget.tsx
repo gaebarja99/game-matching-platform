@@ -97,14 +97,13 @@ function IconChatbot() {
   );
 }
 
-type GroupRoom = { id: number; name: string; memberCount: number; createdByUserId: number };
+type GroupRoom = { id: number; name: string; memberCount: number };
 
 function FloatingGroupPanel({ onRoomNavigate }: { onRoomNavigate?: () => void }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [rooms, setRooms] = useState<GroupRoom[]>([]);
   const [loading, setLoading] = useState(false);
-  const [deletingRoomId, setDeletingRoomId] = useState<number | null>(null);
 
   const load = useCallback(() => {
     if (!user) return;
@@ -115,26 +114,6 @@ function FloatingGroupPanel({ onRoomNavigate }: { onRoomNavigate?: () => void })
       .catch(() => setRooms([]))
       .finally(() => setLoading(false));
   }, [user]);
-
-  const handleDeleteRoom = useCallback((room: GroupRoom) => {
-    if (deletingRoomId != null) return;
-    if (!window.confirm(`"${room.name}" 단체 채팅방을 삭제할까요?`)) return;
-    setDeletingRoomId(room.id);
-    fetch(apiUrl(`api/group-chat/rooms/${room.id}`), {
-      method: 'DELETE',
-      credentials: 'include',
-    })
-      .then(async (r) => {
-        const d = (await r.json().catch(() => ({}))) as { message?: string };
-        if (!r.ok) {
-          window.alert(d.message || '채팅방 삭제에 실패했습니다.');
-          return;
-        }
-        setRooms((prev) => prev.filter((it) => it.id !== room.id));
-      })
-      .catch(() => window.alert('채팅방 삭제 중 오류가 발생했습니다.'))
-      .finally(() => setDeletingRoomId(null));
-  }, [deletingRoomId]);
 
   useEffect(() => {
     if (!user) return;
@@ -163,30 +142,17 @@ function FloatingGroupPanel({ onRoomNavigate }: { onRoomNavigate?: () => void })
         <ul className="floating-chat-widget-list">
           {rooms.map((r) => (
             <li key={r.id}>
-              <div className="floating-chat-widget-list-row">
-                <button
-                  type="button"
-                  className="floating-chat-widget-list-btn floating-chat-widget-list-btn--grow"
-                  onClick={() => {
-                    navigate(`/group-chat/room/${r.id}`);
-                    onRoomNavigate?.();
-                  }}
-                >
-                  <span className="floating-chat-widget-list-title">{r.name}</span>
-                  <span className="floating-chat-widget-list-sub">{r.memberCount}명</span>
-                </button>
-                {user?.id === r.createdByUserId ? (
-                  <button
-                    type="button"
-                    className="floating-chat-widget-list-delete"
-                    onClick={() => handleDeleteRoom(r)}
-                    disabled={deletingRoomId === r.id}
-                    title="채팅방 삭제"
-                  >
-                    {deletingRoomId === r.id ? '…' : '삭제'}
-                  </button>
-                ) : null}
-              </div>
+              <button
+                type="button"
+                className="floating-chat-widget-list-btn"
+                onClick={() => {
+                  navigate(`/group-chat/room/${r.id}`);
+                  onRoomNavigate?.();
+                }}
+              >
+                <span className="floating-chat-widget-list-title">{r.name}</span>
+                <span className="floating-chat-widget-list-sub">{r.memberCount}명</span>
+              </button>
             </li>
           ))}
         </ul>
@@ -665,11 +631,7 @@ export default function FloatingChatWidget() {
                 className={`floating-chat-widget-fab ${activeMode === key ? 'is-active' : ''}`}
                 aria-label={label}
                 aria-pressed={activeMode === key}
-                onClick={() => {
-                  // 채팅창이 떠있는 상태에서는(오른쪽 4개 버튼 클릭) 왼쪽 채팅창을 닫는다.
-                  if (panelOpen) closePanel();
-                  else openMode(key);
-                }}
+                onClick={() => openMode(key)}
               >
                 <Icon />
               </button>

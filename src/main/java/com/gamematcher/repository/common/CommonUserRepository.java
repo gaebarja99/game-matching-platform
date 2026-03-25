@@ -14,11 +14,11 @@ public interface CommonUserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByAuthToken(String authToken);
 
-    boolean existsByLoginId(String loginId);
-
-    boolean existsByEmail(String email);
-
     Optional<User> findFirstByUsernameContainingIgnoreCaseOrderByIdAsc(String username);
 
     List<User> findTop50ByUsernameContainingIgnoreCaseOrderByIdAsc(String username);
+
+    boolean existsByLoginId(String loginId);
+
+    boolean existsByEmail(String email);
 }

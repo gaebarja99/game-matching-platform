@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { useAuth } from '../contexts/AuthContext';
@@ -6,10 +6,12 @@ import { useAlert } from '../contexts/AlertContext';
 import {
   BOARD_CATEGORIES,
   BOARD_LABELS,
-  type BoardCategory,
+  addPostAttachment,
   createPostJson,
+  createPostMultipart,
   fetchPostDetailForUser,
   parseHashtagInput,
+  type BoardCategory,
   updatePost,
 } from '../api/community';
 
@@ -26,11 +28,15 @@ export default function CommunityWrite() {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [hashtagsRaw, setHashtagsRaw] = useState('');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const [saving, setSaving] = useState(false);
   const [loadErr, setLoadErr] = useState<string | null>(null);
 
   const isAdmin = (user?.role || '').toUpperCase() === 'ADMIN';
-  const allowedCategories = BOARD_CATEGORIES.filter((c) => isAdmin || c !== 'NOTICE');
+  const allowedCategories = useMemo(
+    () => BOARD_CATEGORIES.filter((category) => isAdmin || category !== 'NOTICE'),
+    [isAdmin],
+  );
 
   useEffect(() => {
     if (authLoading) return;
@@ -43,7 +49,7 @@ export default function CommunityWrite() {
     (async () => {
       const { ok, data, message } = await fetchPostDetailForUser(user.id, postId);
       if (!ok || !data) {
-        setLoadErr(message || '게시글을 불러올 수 없습니다.');
+        setLoadErr(message || '게시글을 불러오지 못했습니다.');
         return;
       }
       if (data.authorId !== user.id) {
@@ -53,48 +59,67 @@ export default function CommunityWrite() {
       setBoardCategory(data.boardCategory);
       setTitle(data.title);
       setContent(data.content);
-      setHashtagsRaw((data.hashtags || []).map((h) => `#${h}`).join(' '));
+      setHashtagsRaw((data.hashtags || []).map((tag) => `#${tag}`).join(' '));
     })();
   }, [authLoading, user, isEdit, postId, navigate]);
 
-  const onSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
     if (!user) return;
-    const t = title.trim();
-    const c = content.trim();
-    if (!t || !c) {
+
+    const trimmedTitle = title.trim();
+    const trimmedContent = content.trim();
+    if (!trimmedTitle || !trimmedContent) {
       showAlert('제목과 내용을 입력해 주세요.');
       return;
     }
+
     setSaving(true);
     try {
+      const hashtags = parseHashtagInput(hashtagsRaw);
+
       if (isEdit) {
-        const hashtags = parseHashtagInput(hashtagsRaw);
-        const { ok, message } = await updatePost(user.id, postId, {
-          title: t,
-          content: c,
+        const updated = await updatePost(user.id, postId, {
+          title: trimmedTitle,
+          content: trimmedContent,
           hashtags: hashtags.length ? hashtags : undefined,
         });
-        if (!ok) {
-          showAlert(message || '수정에 실패했습니다.');
+
+        if (!updated.ok) {
+          showAlert(updated.message || '게시글 수정에 실패했습니다.');
           return;
         }
+
+        for (const file of selectedFiles) {
+          const attachment = await addPostAttachment(user.id, postId, file);
+          if (!attachment.ok) {
+            showAlert(attachment.message || '이미지 업로드에 실패했습니다.');
+            return;
+          }
+        }
+
         navigate(`/community/posts/${postId}`, { replace: true });
-      } else {
-        const hashtags = parseHashtagInput(hashtagsRaw);
-        const { ok, data, message } = await createPostJson(user.id, {
-          boardCategory,
-          title: t,
-          content: c,
-          isNotice: false,
-          hashtags: hashtags.length ? hashtags : undefined,
-        });
-        if (!ok || !data) {
-          showAlert(message || '등록에 실패했습니다.');
-          return;
-        }
-        navigate(`/community/posts/${data.id}`, { replace: true });
+        return;
       }
+
+      const payload = {
+        boardCategory,
+        title: trimmedTitle,
+        content: trimmedContent,
+        isNotice: false,
+        hashtags: hashtags.length ? hashtags : undefined,
+      };
+
+      const created = selectedFiles.length
+        ? await createPostMultipart(user.id, payload, selectedFiles)
+        : await createPostJson(user.id, payload);
+
+      if (!created.ok || !created.data) {
+        showAlert(created.message || '게시글 등록에 실패했습니다.');
+        return;
+      }
+
+      navigate(`/community/posts/${created.data.id}`, { replace: true });
     } finally {
       setSaving(false);
     }
@@ -104,7 +129,7 @@ export default function CommunityWrite() {
     return (
       <Layout>
         <p className="community-muted" style={{ padding: 24 }}>
-          확인 중…
+          확인 중...
         </p>
       </Layout>
     );
@@ -127,7 +152,7 @@ export default function CommunityWrite() {
         <div className="community-page-head">
           <h1 className="community-page-title">{isEdit ? '글 수정' : '글쓰기'}</h1>
           <Link to="/community" className="community-link-back">
-            ← 목록
+            목록으로
           </Link>
         </div>
 
@@ -135,13 +160,10 @@ export default function CommunityWrite() {
           {!isEdit && (
             <label className="community-field">
               <span>게시판</span>
-              <select
-                value={boardCategory}
-                onChange={(e) => setBoardCategory(e.target.value as BoardCategory)}
-              >
-                {allowedCategories.map((c) => (
-                  <option key={c} value={c}>
-                    {BOARD_LABELS[c]}
+              <select value={boardCategory} onChange={(event) => setBoardCategory(event.target.value as BoardCategory)}>
+                {allowedCategories.map((category) => (
+                  <option key={category} value={category}>
+                    {BOARD_LABELS[category]}
                   </option>
                 ))}
               </select>
@@ -150,26 +172,53 @@ export default function CommunityWrite() {
 
           <label className="community-field">
             <span>제목</span>
-            <input value={title} onChange={(e) => setTitle(e.target.value)} maxLength={200} required />
+            <input value={title} onChange={(event) => setTitle(event.target.value)} maxLength={200} required />
           </label>
 
           <label className="community-field">
             <span>내용</span>
-            <textarea value={content} onChange={(e) => setContent(e.target.value)} rows={16} maxLength={10000} required />
+            <textarea
+              value={content}
+              onChange={(event) => setContent(event.target.value)}
+              rows={16}
+              maxLength={10000}
+              required
+            />
           </label>
 
           <label className="community-field">
-            <span>해시태그 (선택, 공백·쉼표로 구분)</span>
+            <span>이미지 업로드</span>
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(event) => setSelectedFiles(Array.from(event.target.files || []))}
+            />
+            {selectedFiles.length ? (
+              <div className="community-upload-list">
+                {selectedFiles.map((file) => (
+                  <span key={`${file.name}-${file.size}`} className="community-upload-chip">
+                    {file.name}
+                  </span>
+                ))}
+              </div>
+            ) : (
+              <p className="community-muted">JPG, PNG, GIF 같은 이미지 파일을 여러 장 올릴 수 있습니다.</p>
+            )}
+          </label>
+
+          <label className="community-field">
+            <span>해시태그 (선택)</span>
             <input
               value={hashtagsRaw}
-              onChange={(e) => setHashtagsRaw(e.target.value)}
-              placeholder="#롤 #듀오"
+              onChange={(event) => setHashtagsRaw(event.target.value)}
+              placeholder="#롤 #질문 #팁"
             />
           </label>
 
           <div className="community-form-actions">
             <button type="submit" className="community-btn-primary" disabled={saving}>
-              {saving ? '처리 중…' : isEdit ? '수정하기' : '등록하기'}
+              {saving ? '처리 중...' : isEdit ? '수정하기' : '등록하기'}
             </button>
             <Link to="/community" className="community-btn-ghost">
               취소

@@ -191,12 +191,6 @@ export default function DirectMessages() {
     setSearchParams({});
   };
 
-  const selectFriend = (f: FriendRow) => {
-    if (!user || isDmWithSelf(user.id, f.id)) return;
-    setSelected(f);
-    setSearchParams({});
-  };
-
   const handleSend = () => {
     if (!user || !selected || sending) return;
     if (isDmWithSelf(user.id, selected.id)) return;

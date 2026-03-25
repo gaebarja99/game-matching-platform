@@ -1,11 +1,9 @@
 package com.gamematcher.controller.account;
 
 import com.gamematcher.dto.account.ValorantSyncRequestDto;
-import com.gamematcher.dto.valorant.ValorantAiEvaluationResponseDto;
 import com.gamematcher.dto.valorant.ValorantMatchApiResponse;
 import com.gamematcher.dto.valorant.ValorantMatchDetailDto;
 import com.gamematcher.entity.match.valorant.ValorantMatch;
-import com.gamematcher.service.valorant.ValorantAiEvaluationService;
 import com.gamematcher.service.valorant.ValorantApiService;
 import com.gamematcher.service.valorant.ValorantMatchJsonService;
 import com.gamematcher.service.valorant.ValorantMatchService;
@@ -21,16 +19,13 @@ public class ValorantController {
     private final ValorantApiService valorantApiService;
     private final ValorantMatchJsonService valorantMatchJsonService;
     private final ValorantMatchService valorantMatchService;
-    private final ValorantAiEvaluationService valorantAiEvaluationService;
 
     public ValorantController(ValorantApiService valorantApiService,
                              ValorantMatchJsonService valorantMatchJsonService,
-                             ValorantMatchService valorantMatchService,
-                             ValorantAiEvaluationService valorantAiEvaluationService) {
+                             ValorantMatchService valorantMatchService) {
         this.valorantApiService = valorantApiService;
         this.valorantMatchJsonService = valorantMatchJsonService;
         this.valorantMatchService = valorantMatchService;
-        this.valorantAiEvaluationService = valorantAiEvaluationService;
     }
 
     /** Valorant 최근 5경기 DB 동기화 (Henrik API로 gameName+tagLine → puuid 조회 후 매치 저장) */

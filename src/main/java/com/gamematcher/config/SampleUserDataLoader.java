@@ -4,7 +4,7 @@ import com.gamematcher.constant.Role;
 import com.gamematcher.constant.UserStatus;
 import com.gamematcher.entity.User;
 import com.gamematcher.entity.profile.UserProfile;
-import com.gamematcher.repository.UserRepository;
+import com.gamematcher.repository.common.CommonUserRepository;
 import com.gamematcher.repository.profile.UserProfileRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,10 +33,10 @@ public class SampleUserDataLoader implements ApplicationRunner {
     /** 로컬 전용 placeholder 비밀번호 (인코딩 미적용) */
     private static final String DEMO_PASSWORD = "demo1234";
 
-    private final UserRepository userRepository;
+    private final CommonUserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
 
-    public SampleUserDataLoader(UserRepository userRepository, UserProfileRepository userProfileRepository) {
+    public SampleUserDataLoader(CommonUserRepository userRepository, UserProfileRepository userProfileRepository) {
         this.userRepository = userRepository;
         this.userProfileRepository = userProfileRepository;
     }

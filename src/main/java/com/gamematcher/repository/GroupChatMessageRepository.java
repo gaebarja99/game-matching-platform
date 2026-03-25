@@ -9,6 +9,4 @@ import java.util.List;
 public interface GroupChatMessageRepository extends JpaRepository<GroupChatMessage, Long> {
 
     List<GroupChatMessage> findByRoomIdOrderByCreatedAtDesc(Long roomId, Pageable pageable);
-
-    List<GroupChatMessage> findByRoomId(Long roomId);
 }

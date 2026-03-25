@@ -240,11 +240,10 @@ class ValorantPlayerMatchStatsOutputTest {
         if (result.isPresent()) {
             LlmEvaluationResponseDTO dto = result.get();
             content.append("[요약]\n").append(dto.getSummary()).append("\n\n");
-            String comment = dto.getDetailedComment();
-            content.append("[상세 코멘트]\n").append(comment != null ? comment.replace("\\n", "\n") : "").append("\n");
+            content.append("[상세 코멘트]\n").append(dto.getDetailedComment() != null ? dto.getDetailedComment() : "").append("\n");
         } else {
-            content.append("AI_API_KEY 또는 OPENAI_API_KEY가 설정되지 않았거나 API 호출에 실패했습니다.\n");
-            content.append("환경변수를 설정하고 테스트를 다시 실행하세요.\n");
+            content.append("AI_API_KEY가 설정되지 않았거나 API 호출에 실패했습니다.\n");
+            content.append("환경변수 AI_API_KEY를 설정하고 테스트를 다시 실행하세요.\n");
         }
 
         Path txtPath = outDir.resolve("valorant_llm_api_response.txt");
@@ -253,7 +252,7 @@ class ValorantPlayerMatchStatsOutputTest {
     }
 
     @Test
-    @DisplayName("LLM API 응답 (gpt-5.2 고급 모델)을 텍스트 파일로 저장 (AI_API_KEY 또는 OPENAI_API_KEY 환경변수 필요)")
+    @DisplayName("LLM API 응답 (gpt-4o 고급 모델)을 텍스트 파일로 저장 (AI_API_KEY 환경변수 필요)")
     void outputLlmApiResponseWithAdvancedModel() throws Exception {
         Path outDir = Paths.get(OUTPUT_DIR);
         Files.createDirectories(outDir);
@@ -288,22 +287,21 @@ class ValorantPlayerMatchStatsOutputTest {
         var result = valorantLlmService.evaluate(single);
 
         StringBuilder content = new StringBuilder();
-        content.append("=== LLM API 평가 결과 (gpt-5.2) ===\n");
+        content.append("=== LLM API 평가 결과 (gpt-4o) ===\n");
         content.append("플레이어: ").append(single.getPlayerDisplayName()).append(" | 에이전트: ").append(single.getAgent()).append("\n\n");
 
         if (result.isPresent()) {
             LlmEvaluationResponseDTO dto = result.get();
             content.append("[요약]\n").append(dto.getSummary()).append("\n\n");
-            String comment = dto.getDetailedComment();
-            content.append("[상세 코멘트]\n").append(comment != null ? comment.replace("\\n", "\n") : "").append("\n");
+            content.append("[상세 코멘트]\n").append(dto.getDetailedComment() != null ? dto.getDetailedComment() : "").append("\n");
         } else {
-            content.append("AI_API_KEY 또는 OPENAI_API_KEY가 설정되지 않았거나 API 호출에 실패했습니다.\n");
-            content.append("환경변수를 설정하고 테스트를 다시 실행하세요.\n");
+            content.append("AI_API_KEY가 설정되지 않았거나 API 호출에 실패했습니다.\n");
+            content.append("환경변수 AI_API_KEY를 설정하고 테스트를 다시 실행하세요.\n");
         }
 
-        Path txtPath = outDir.resolve("valorant_llm_api_response_gpt52.txt");
+        Path txtPath = outDir.resolve("valorant_llm_api_response_gpt4o.txt");
         Files.writeString(txtPath, content);
-        System.out.println("LLM API 응답 출력 (gpt-5.2): " + txtPath.toAbsolutePath());
+        System.out.println("LLM API 응답 출력 (gpt-4o): " + txtPath.toAbsolutePath());
     }
 
     private static ObjectMapper createOutputObjectMapper() {

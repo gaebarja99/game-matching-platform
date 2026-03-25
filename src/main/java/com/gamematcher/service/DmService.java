@@ -30,7 +30,6 @@ public class DmService {
     private final NotificationService notificationService;
     private final SimpMessagingTemplate messagingTemplate;
     private final UserRepository userRepository;
-    private final ProfanityFilterService profanityFilterService;
 
     /** 친구인지 확인 */
     public boolean areFriends(Long userId, Long otherUserId) {
@@ -48,7 +47,6 @@ public class DmService {
         String trimmed = text != null ? text.trim() : "";
         if (trimmed.isEmpty()) throw new IllegalArgumentException("메시지를 입력해 주세요.");
         if (trimmed.length() > MAX_TEXT_LENGTH) trimmed = trimmed.substring(0, MAX_TEXT_LENGTH);
-        trimmed = profanityFilterService.moderateChat(fromUserId, trimmed).getSanitizedText();
         DmMessage msg = new DmMessage();
         msg.setFromUserId(fromUserId);
         msg.setToUserId(toUserId);

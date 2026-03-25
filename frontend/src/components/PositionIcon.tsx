@@ -7,7 +7,6 @@ import { getPositionImagePath } from '../utils/positionImages';
 import { apiUrl } from '../api/client';
 
 const POSITION_ICONS: Record<string, string> = {
-  FILL: '✱',
   TOP: '⬆️',
   JUNGLE: '🌲',
   MID: '⚔️',
@@ -40,7 +39,6 @@ const POSITION_ICONS: Record<string, string> = {
 };
 
 const POSITION_LABELS: Record<string, string> = {
-  FILL: '채우기',
   TOP: '탑',
   JUNGLE: '정글',
   MID: '미드',
@@ -51,9 +49,9 @@ const POSITION_LABELS: Record<string, string> = {
   SUP: '서포터',
   CONTROLLER: '컨트롤러',
   DUELIST: '타격대',
-  SCOUT: '척후병',
-  STRATEGIST: '전략가',
-  WATCHER: '감시자',
+  SCOUT: '척후대',
+  STRATEGIST: '감시자',
+  WATCHER: '전략가',
   INITIATOR: '이니시에이터',
   SENTINEL: '센티넬',
   ASSAULT: '어썰트',

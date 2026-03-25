@@ -625,7 +625,7 @@ export default function Watch() {
                   style={{ display: playerError ? 'none' : 'block' }}
                 />
                 {isLive && <div className="player-live-badge show">LIVE</div>}
-                <div className="player-controls-bar">
+                <div className={`player-controls-bar ${controlsVisible || isPaused ? 'is-visible' : ''}`}>
                   <button type="button" className="btn-control" onClick={onPlayPause} title="재생/일시정지" aria-label="재생 일시정지">
                     {isPaused ? (
                       <svg className="icon-play" viewBox="0 0 24 24">
@@ -764,6 +764,7 @@ export default function Watch() {
           </div>
           <div className={`chat-weekly-rank ${weeklyRankView}`}>
             <button type="button" className="chat-weekly-rank-header" onClick={() => setWeeklyRankView((v) => (v === 'collapsed' ? 'expanded' : 'collapsed'))} aria-expanded={weeklyRankView !== 'collapsed'}>
+              {weeklyTotal != null && <span className="chat-weekly-rank-total">{weeklyTotal.toLocaleString()} P</span>}
               <span className="chat-weekly-rank-title">주간 후원 랭킹</span>
               <span className="chat-weekly-rank-toggle-icon" aria-hidden="true">
                 {weeklyRankView === 'collapsed' ? (

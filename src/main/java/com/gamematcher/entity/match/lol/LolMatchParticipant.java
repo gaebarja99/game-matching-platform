@@ -28,7 +28,7 @@ public class LolMatchParticipant {
     @Column(name = "participant_id", nullable = false)
     private Integer participantId;
 
-    @Column(nullable = false, length = 36)
+    @Column(nullable = false, length = 120)
     private String puuid;
 
     @Column(name = "summoner_id", length = 100)

@@ -11,14 +11,15 @@
         <relativePath/>
     </parent>
 
-    <groupId>com.gamematcher</groupId>
-    <artifactId>gamematcher</artifactId>
+    <groupId>com.shop</groupId>
+    <artifactId>shop</artifactId>
     <version>0.0.1-SNAPSHOT</version>
-    <name>GameMatcher</name>
-    <description>Game Matcher Application</description>
+    <name>shop</name>
+    <description>Shop Application</description>
 
     <properties>
         <java.version>17</java.version>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <lombok.version>1.18.42</lombok.version>
         <!-- QueryDSL Q-type 패치 스크립트는 Python 필요. PATH에 없으면 compile 실패하므로 기본은 스킵. 패치 필요 시: mvn compile -Dexec.skip=false -->
         <exec.skip>true</exec.skip>
@@ -81,11 +82,13 @@
             <artifactId>firebase-admin</artifactId>
             <version>9.4.2</version>
         </dependency>
+        <!-- Merged from GameMatcher (2): LLM / OpenAI client used by imported services -->
         <dependency>
             <groupId>com.theokanning.openai-gpt3-java</groupId>
             <artifactId>service</artifactId>
             <version>0.18.2</version>
         </dependency>
+        <!-- 명시: IDE가 QueryDSL 타입 경로를 잡기 쉽게 (querydsl-jpa가 전이로도 가져옴) -->
         <dependency>
             <groupId>com.querydsl</groupId>
             <artifactId>querydsl-core</artifactId>

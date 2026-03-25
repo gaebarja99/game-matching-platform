@@ -12,8 +12,6 @@ export interface GameRoomItem {
   closed: boolean;
   createdAt: string;
   memberCount: number;
-  currentParticipants?: number;
-  maxParticipants?: number;
   isMember?: boolean;
   isHost?: boolean;
 }
@@ -67,9 +65,9 @@ export async function createGameRoom(body: {
   return { ok: true, id: data.id, title: data.title, game: data.game, groupChatRoomId };
 }
 
-export async function joinGameRoom(roomId: number): Promise<{ ok: boolean; message?: string }> {
-  const { ok, data, message } = await apiFetch<{ message?: string }>(`/api/game-rooms/${roomId}/join`, { method: 'POST' });
-  return { ok, message: data?.message ?? message };
+export async function joinGameRoom(roomId: number): Promise<boolean> {
+  const { ok } = await apiFetch(`/api/game-rooms/${roomId}/join`, { method: 'POST' });
+  return ok;
 }
 
 export async function leaveGameRoom(roomId: number): Promise<{ ok: boolean; message?: string }> {

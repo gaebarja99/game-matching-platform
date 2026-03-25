@@ -115,7 +115,7 @@ public class ValorantSearchService {
             }
 
             // 3) 최근 매치 (by-puuid → region 필요)
-            int count = Math.min(req.getCount() != null ? req.getCount() : 5, 20);
+            int count = Math.min(req.getCount() != null ? req.getCount() : 20, 20);
             String matchUrl = String.format(
                     "https://api.henrikdev.xyz/valorant/v3/by-puuid/matches/%s/%s?size=%d",
                     region, puuid, count);

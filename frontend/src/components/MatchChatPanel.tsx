@@ -113,6 +113,7 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
               createdAt?: string;
             };
             if (d.type === 'MESSAGE' && d.text != null) {
+              const text = d.text;
               setMessages((prev) => {
                 if (prev.some((m) => m.id === d.id)) return prev;
                 const msg: MatchChatMessageType = {
@@ -121,7 +122,7 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
                   fromUserId: d.fromUserId!,
                   fromNickname: d.fromNickname ?? '',
                   fromProfileImageUrl: d.fromProfileImageUrl,
-                  text: d.text,
+                  text,
                   createdAt: d.createdAt ?? '',
                 };
                 return [...prev, msg];

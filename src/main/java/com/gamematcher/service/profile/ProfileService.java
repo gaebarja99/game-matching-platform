@@ -7,7 +7,7 @@ import com.gamematcher.dto.profile.ProfilePublicResponseDto;
 import com.gamematcher.entity.User;
 import com.gamematcher.entity.profile.UserProfile;
 import com.gamematcher.exception.GameApiException;
-import com.gamematcher.repository.UserRepository;
+import com.gamematcher.repository.common.CommonUserRepository;
 import com.gamematcher.repository.profile.UserProfileRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -27,10 +27,10 @@ public class ProfileService {
     private static final int PREFERRED_GAMES_MAX_LEN = 500;
     private static final int USERNAME_MAX_LEN = 50;
 
-    private final UserRepository userRepository;
+    private final CommonUserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
 
-    public ProfileService(UserRepository userRepository, UserProfileRepository userProfileRepository) {
+    public ProfileService(CommonUserRepository userRepository, UserProfileRepository userProfileRepository) {
         this.userRepository = userRepository;
         this.userProfileRepository = userProfileRepository;
     }
