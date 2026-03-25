@@ -15,6 +15,7 @@ export interface StreamItem {
   startedAt?: string;
   endedAt?: string | null;
   createdAt?: string;
+  partner?: boolean;
 }
 
 export async function fetchLiveStreams(): Promise<StreamItem[]> {

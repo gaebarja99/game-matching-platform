@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import StreamsLayout from '../components/StreamsLayout';
 import LiveThumb from '../components/LiveThumb';
@@ -12,177 +12,75 @@ type CategoryCard = {
   id: string;
   group: CategoryGroup;
   title: string;
-  subtitle: string;
-  viewersLabel: string;
-  liveCountLabel: string;
-  badge?: string;
-  accent: string;
   imageUrl?: string;
+  accent: string;
   routeGame?: string;
+  queryGame?: string;
 };
 
 const GAME_LABELS: Record<string, string> = {
   LEAGUE_OF_LEGENDS: '리그 오브 레전드',
   VALORANT: '발로란트',
-  OVERWATCH: '오버워치 2',
+  OVERWATCH: '오버워치2',
   PUBG: 'PUBG',
   COUNTER_STRIKE_2: '카운터 스트라이크 2',
-  APEX_LEGENDS: '에이펙스 레전드',
-  OTHERS: '기타',
+  APEX_LEGENDS: '에이팩스',
+  OTHERS: '기타 게임',
 };
 
 const CATEGORY_CARDS: CategoryCard[] = [
   {
-    id: 'black-desert',
-    group: 'GAME',
-    title: '붉은사막',
-    subtitle: '액션 RPG',
-    viewersLabel: '1.3만명',
-    liveCountLabel: '라이브 155개',
-    badge: '드롭스',
-    accent: 'desert',
-    imageUrl: '/images/14_11_42__5ad9768e2e94b[H800-].jpg',
-    routeGame: 'OTHERS',
-  },
-  {
-    id: 'talk',
-    group: 'ENT',
-    title: 'talk',
-    subtitle: '토크 / 소통',
-    viewersLabel: '1.2만명',
-    liveCountLabel: '라이브 198개',
-    accent: 'talk',
-  },
-  {
     id: 'league',
     group: 'GAME',
     title: '리그 오브 레전드',
-    subtitle: 'MOBA',
-    viewersLabel: '6,690명',
-    liveCountLabel: '라이브 154개',
     accent: 'league',
-    imageUrl: '/images/16bd752dfb349cacf.jpg',
+    imageUrl: '/images/league-of-legends-card.png',
     routeGame: 'LEAGUE_OF_LEGENDS',
+    queryGame: 'LEAGUE_OF_LEGENDS',
   },
   {
-    id: 'slay-the-spire-2',
+    id: 'valorant',
     group: 'GAME',
-    title: '슬레이 더 스파이어 2',
-    subtitle: '전략 카드',
-    viewersLabel: '2,549명',
-    liveCountLabel: '라이브 34개',
-    badge: 'NEW',
-    accent: 'spire',
-  },
-  {
-    id: 'lost-ark',
-    group: 'GAME',
-    title: '로스트아크',
-    subtitle: 'MMORPG',
-    viewersLabel: '2,178명',
-    liveCountLabel: '라이브 45개',
-    accent: 'ark',
-  },
-  {
-    id: 'eternal-return',
-    group: 'GAME',
-    title: '이터널 리턴',
-    subtitle: '배틀로얄',
-    viewersLabel: '1,948명',
-    liveCountLabel: '라이브 68개',
+    title: '발로란트',
+    imageUrl: '/images/valorant-card.png',
     accent: 'return',
+    routeGame: 'VALORANT',
+    queryGame: 'VALORANT',
   },
   {
-    id: 'mlb-show',
-    group: 'SPORTS',
-    title: 'MLB 더 쇼 26',
-    subtitle: '스포츠',
-    viewersLabel: '1,773명',
-    liveCountLabel: '라이브 17개',
-    accent: 'show',
-  },
-  {
-    id: 'diablo',
+    id: 'overwatch2',
     group: 'GAME',
-    title: '디아블로 II: 레저렉션',
-    subtitle: '액션 RPG',
-    viewersLabel: '1,576명',
-    liveCountLabel: '라이브 18개',
-    accent: 'diablo',
-  },
-  {
-    id: 'overwatch',
-    group: 'GAME',
-    title: '오버워치',
-    subtitle: '팀 슈터',
-    viewersLabel: '1,534명',
-    liveCountLabel: '라이브 72개',
-    accent: 'overwatch',
+    title: '오버워치2',
+    imageUrl: '/images/overwatch2-card.png',
+    accent: 'starrail',
     routeGame: 'OVERWATCH',
+    queryGame: 'OVERWATCH',
   },
   {
-    id: 'rimworld',
+    id: 'pubg',
     group: 'GAME',
-    title: '림월드',
-    subtitle: '시뮬레이션',
-    viewersLabel: '1,404명',
-    liveCountLabel: '라이브 12개',
-    accent: 'rimworld',
+    title: 'PUBG',
+    imageUrl: '/images/pubg-card.png',
+    accent: 'show',
+    routeGame: 'PUBG',
+    queryGame: 'PUBG',
   },
   {
-    id: 'music',
-    group: 'ENT',
-    title: '음악 / 노래',
-    subtitle: '뮤직',
-    viewersLabel: '1,045명',
-    liveCountLabel: '라이브 49개',
-    accent: 'music',
-  },
-  {
-    id: 'lobotomy',
+    id: 'apex',
     group: 'GAME',
-    title: '로보토미 코퍼레이션',
-    subtitle: '경영 / 전략',
-    viewersLabel: '1,004명',
-    liveCountLabel: '라이브 2개',
-    accent: 'lobotomy',
-  },
-  {
-    id: 'wow',
-    group: 'GAME',
-    title: '월드 오브 워크래프트',
-    subtitle: 'MMORPG',
-    viewersLabel: '875명',
-    liveCountLabel: '라이브 41개',
-    badge: '드롭스',
+    title: '에이팩스',
+    imageUrl: '/images/apex-card.jpg',
     accent: 'wow',
+    routeGame: 'APEX_LEGENDS',
+    queryGame: 'APEX_LEGENDS',
   },
   {
-    id: 'aion2',
+    id: 'other-games',
     group: 'GAME',
-    title: '아이온2',
-    subtitle: 'MMORPG',
-    viewersLabel: '777명',
-    liveCountLabel: '라이브 34개',
-    accent: 'aion',
-  },
-  {
-    id: 'wuthering-waves',
-    group: 'GAME',
-    title: '명조:워더링 웨이브',
-    subtitle: '오픈월드 액션',
-    viewersLabel: '714명',
-    liveCountLabel: '라이브 11개',
-    accent: 'waves',
-  },
-  {
-    id: 'path-of-exile',
-    group: 'GAME',
-    title: '패스 오브 엑자일',
-    subtitle: '핵앤슬래시',
-    viewersLabel: '601명',
-    liveCountLabel: '라이브 9개',
-    accent: 'poe',
+    title: '기타 게임',
+    imageUrl: '/images/other-games-card.png',
+    accent: 'composite',
+    queryGame: 'OTHERS',
   },
 ];
 
@@ -204,13 +102,29 @@ function formatViewerCount(count?: number) {
   return `${count.toLocaleString('ko-KR')}명 시청 중`;
 }
 
-function categoryImageStyle(card: CategoryCard) {
-  if (card.imageUrl) {
-    return {
-      backgroundImage: `linear-gradient(180deg, rgba(7, 10, 18, 0.08), rgba(7, 10, 18, 0.7)), url(${card.imageUrl})`,
-    };
+function formatCompactCount(count: number) {
+  if (count >= 10000) {
+    return `${(count / 10000).toFixed(1).replace('.0', '')}만명`;
   }
-  return undefined;
+  return `${count.toLocaleString('ko-KR')}명`;
+}
+
+const FEATURED_CATEGORY_GAMES = new Set(['LEAGUE_OF_LEGENDS', 'VALORANT', 'OVERWATCH', 'PUBG', 'APEX_LEGENDS']);
+
+function buildCategoryStats(card: CategoryCard, streams: StreamItem[]) {
+  const matched = streams.filter((stream) => {
+    if (!card.queryGame) return false;
+    if (card.queryGame === 'OTHERS') {
+      return !FEATURED_CATEGORY_GAMES.has(String(stream.game || ''));
+    }
+    return stream.game === card.queryGame;
+  });
+  const liveCount = matched.length;
+  const viewerCount = matched.reduce((sum, stream) => sum + (stream.viewerCount ?? 0), 0);
+  return {
+    liveCount,
+    viewerCount,
+  };
 }
 
 function StreamCard({ stream }: { stream: StreamItem }) {
@@ -225,14 +139,8 @@ function StreamCard({ stream }: { stream: StreamItem }) {
         ) : (
           <div className="stream-card-thumb-fallback">{gameLabel(stream.game)}</div>
         )}
-        {isLive ? (
-          <span className="stream-card-live-badge">LIVE</span>
-        ) : (
-          <span className="stream-card-ended-badge">종료</span>
-        )}
-        {stream.viewerCount != null && (
-          <span className="stream-card-viewers">{formatViewerCount(stream.viewerCount)}</span>
-        )}
+        {isLive ? <span className="stream-card-live-badge">LIVE</span> : <span className="stream-card-ended-badge">종료</span>}
+        {stream.viewerCount != null && <span className="stream-card-viewers">{formatViewerCount(stream.viewerCount)}</span>}
       </div>
       <div className="stream-card-info">
         <div className="stream-card-avatar">
@@ -240,7 +148,14 @@ function StreamCard({ stream }: { stream: StreamItem }) {
         </div>
         <div className="stream-card-meta">
           <strong className="stream-card-title">{stream.title || '방송 제목 없음'}</strong>
-          <span className="stream-card-broadcaster">{stream.broadcasterNickname || '스트리머'}</span>
+          <span className="stream-card-broadcaster">
+            {stream.broadcasterNickname || '스트리머'}
+            {stream.partner && (
+              <span className="stream-partner-badge" title="파트너 스트리머" aria-label="파트너 스트리머">
+                ✓
+              </span>
+            )}
+          </span>
           <span className="stream-card-game">{gameLabel(stream.game)}</span>
         </div>
       </div>
@@ -303,10 +218,9 @@ export default function Streams() {
   if (showCategoryHub) {
     return (
       <StreamsLayout>
-        <div className="streams-category-page">
-          <header className="streams-category-head">
+        <div className="streams-category-page streams-category-page-chzzk">
+          <header className="streams-category-head streams-category-head-chzzk">
             <div>
-              <p className="streams-category-kicker">GameMatcher Categories</p>
               <h1 className="streams-category-title">카테고리</h1>
             </div>
             <div className="streams-category-filters" role="tablist" aria-label="카테고리 그룹">
@@ -328,34 +242,32 @@ export default function Streams() {
             </div>
           </header>
 
-          <div className="streams-category-grid">
-            {filteredCategories.map((card) => (
-              <Link
-                key={card.id}
-                to={card.routeGame ? `/streams?game=${encodeURIComponent(card.routeGame)}` : '/streams'}
-                className={`streams-category-card accent-${card.accent}`}
-              >
-                <div className="streams-category-cover" style={categoryImageStyle(card)}>
-                  <div className="streams-category-overlay">
-                    <span className="streams-category-viewers">{card.viewersLabel}</span>
-                    {card.badge && <span className="streams-category-badge">{card.badge}</span>}
+          <div className="streams-category-grid streams-category-grid-chzzk">
+            {filteredCategories.map((card) => {
+              const stats = buildCategoryStats(card, liveStreams);
+              const href = card.routeGame ? `/streams?game=${encodeURIComponent(card.routeGame)}` : '/streams';
+              return (
+                <Link key={card.id} to={href} className={`streams-category-card streams-category-card-chzzk accent-${card.accent}`}>
+                  <div className="streams-category-cover streams-category-cover-chzzk" style={card.imageUrl ? { backgroundImage: `linear-gradient(180deg, rgba(5, 8, 16, 0.10), rgba(5, 8, 16, 0.48)), url(${card.imageUrl})` } : undefined}>
+                    <div className="streams-category-overlay streams-category-overlay-chzzk">
+                      <span className="streams-category-viewers">{formatCompactCount(stats.viewerCount)}</span>
+                    </div>
+                    {!card.imageUrl && <span className="streams-category-logo streams-category-logo-chzzk">{card.title}</span>}
                   </div>
-                  {!card.imageUrl && <span className="streams-category-logo">{card.title}</span>}
-                </div>
-                <div className="streams-category-copy">
-                  <strong>{card.title}</strong>
-                  <span>{card.liveCountLabel}</span>
-                  <small>{card.subtitle}</small>
-                </div>
-              </Link>
-            ))}
+                  <div className="streams-category-copy streams-category-copy-chzzk">
+                    <strong>{card.title}</strong>
+                    <span>라이브 {stats.liveCount}개</span>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         </div>
       </StreamsLayout>
     );
   }
 
-  const liveHeading = game ? `${gameLabel(game)} 라이브` : '지금 라이브';
+  const liveHeading = game ? `${gameLabel(game)} 라이브` : '현재 라이브';
   const recentHeading = game ? `${gameLabel(game)} 최근 방송` : '최근 방송';
 
   return (
@@ -363,7 +275,7 @@ export default function Streams() {
       <div className="streams-home">
         <section className="streams-section">
           <div className="streams-section-head">
-            <h1 className="streams-section-title">🎵 {liveHeading}</h1>
+            <h1 className="streams-section-title">{liveHeading}</h1>
             <Link to="/streams?section=categories" className="streams-section-link">
               카테고리 보기
             </Link>
@@ -383,7 +295,7 @@ export default function Streams() {
 
         <section className="streams-section">
           <div className="streams-section-head">
-            <h2 className="streams-section-title">📼 {recentHeading}</h2>
+            <h2 className="streams-section-title">{recentHeading}</h2>
             {game && (
               <Link to="/streams" className="streams-section-link">
                 전체 방송으로

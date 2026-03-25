@@ -231,7 +231,14 @@ public class LiveStreamService {
                 .map(s -> {
                     long fc = s.getUserId() != null ? followRepository.countByFollowingId(s.getUserId()) : 0L;
                     int vc = streamViewerCountService.getViewerCount(s.getId());
-                    return StreamResponse.from(s, getBroadcasterDisplayName(s.getUserId()), fc, vc, getBroadcasterProfileImageUrl(s.getUserId()));
+                    return StreamResponse.from(
+                            s,
+                            getBroadcasterDisplayName(s.getUserId()),
+                            fc,
+                            vc,
+                            getBroadcasterProfileImageUrl(s.getUserId()),
+                            getBroadcasterStreamerTier(s.getUserId())
+                    );
                 })
                 .collect(Collectors.toList());
     }
@@ -243,7 +250,14 @@ public class LiveStreamService {
                 .stream()
                 .map(s -> {
                     int vc = streamViewerCountService.getViewerCount(s.getId());
-                    return StreamResponse.from(s, name, null, vc, profileImageUrl);
+                    return StreamResponse.from(
+                            s,
+                            name,
+                            null,
+                            vc,
+                            profileImageUrl,
+                            getBroadcasterStreamerTier(s.getUserId())
+                    );
                 })
                 .collect(Collectors.toList());
     }
@@ -263,7 +277,14 @@ public class LiveStreamService {
                 .limit(limit)
                 .map(s -> {
                     int vc = streamViewerCountService.getViewerCount(s.getId());
-                    return StreamResponse.from(s, getBroadcasterDisplayName(s.getUserId()), null, vc, getBroadcasterProfileImageUrl(s.getUserId()));
+                    return StreamResponse.from(
+                            s,
+                            getBroadcasterDisplayName(s.getUserId()),
+                            null,
+                            vc,
+                            getBroadcasterProfileImageUrl(s.getUserId()),
+                            getBroadcasterStreamerTier(s.getUserId())
+                    );
                 })
                 .collect(Collectors.toList());
     }
@@ -274,7 +295,14 @@ public class LiveStreamService {
         return liveStreamRepository.findByUserIdInAndStatusAndEndedAtIsNullOrderByStartedAtDesc(userIds, StreamStatus.LIVE).stream()
                 .map(s -> {
                     int vc = streamViewerCountService.getViewerCount(s.getId());
-                    return StreamResponse.from(s, getBroadcasterDisplayName(s.getUserId()), null, vc, getBroadcasterProfileImageUrl(s.getUserId()));
+                    return StreamResponse.from(
+                            s,
+                            getBroadcasterDisplayName(s.getUserId()),
+                            null,
+                            vc,
+                            getBroadcasterProfileImageUrl(s.getUserId()),
+                            getBroadcasterStreamerTier(s.getUserId())
+                    );
                 })
                 .collect(Collectors.toList());
     }
@@ -287,7 +315,14 @@ public class LiveStreamService {
                 .limit(limit)
                 .map(s -> {
                     int vc = streamViewerCountService.getViewerCount(s.getId());
-                    return StreamResponse.from(s, getBroadcasterDisplayName(s.getUserId()), null, vc, getBroadcasterProfileImageUrl(s.getUserId()));
+                    return StreamResponse.from(
+                            s,
+                            getBroadcasterDisplayName(s.getUserId()),
+                            null,
+                            vc,
+                            getBroadcasterProfileImageUrl(s.getUserId()),
+                            getBroadcasterStreamerTier(s.getUserId())
+                    );
                 })
                 .collect(Collectors.toList());
     }

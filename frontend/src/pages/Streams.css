@@ -5,6 +5,10 @@
   gap: 28px;
 }
 
+.streams-category-page-chzzk {
+  gap: 24px;
+}
+
 .streams-section {
   display: flex;
   flex-direction: column;
@@ -212,6 +216,24 @@
 
 .stream-card-broadcaster {
   font-size: 0.92rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.stream-partner-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  background: #00d977;
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  line-height: 1;
+  box-shadow: 0 0 0 2px rgba(0, 217, 119, 0.16);
 }
 
 .theme-dark .stream-card-broadcaster,
@@ -230,6 +252,10 @@
   justify-content: space-between;
   gap: 18px;
   flex-wrap: wrap;
+}
+
+.streams-category-head-chzzk {
+  align-items: center;
 }
 
 .streams-category-kicker {
@@ -289,6 +315,11 @@
   gap: 22px;
 }
 
+.streams-category-grid-chzzk {
+  grid-template-columns: repeat(auto-fill, minmax(190px, 1fr));
+  gap: 18px;
+}
+
 .streams-category-card {
   border-radius: 26px;
   overflow: hidden;
@@ -314,6 +345,10 @@
   box-shadow: 0 18px 28px rgba(0, 0, 0, 0.12);
 }
 
+.streams-category-card-chzzk {
+  border-radius: 22px;
+}
+
 .streams-category-cover {
   position: relative;
   min-height: 250px;
@@ -324,6 +359,13 @@
   align-items: flex-end;
 }
 
+.streams-category-cover-chzzk {
+  min-height: 282px;
+  padding: 14px;
+  background-size: cover;
+  background-position: center;
+}
+
 .streams-category-overlay {
   position: absolute;
   inset: 16px 16px auto 16px;
@@ -331,6 +373,10 @@
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+
+.streams-category-overlay-chzzk {
+  inset: 12px 12px auto 12px;
 }
 
 .streams-category-viewers,
@@ -364,11 +410,21 @@
   text-shadow: 0 8px 24px rgba(0, 0, 0, 0.32);
 }
 
+.streams-category-logo-chzzk {
+  font-size: 1.9rem;
+  max-width: 88%;
+}
+
 .streams-category-copy {
   display: flex;
   flex-direction: column;
   gap: 6px;
   padding: 16px 18px 20px;
+}
+
+.streams-category-copy-chzzk {
+  gap: 4px;
+  padding: 14px 14px 18px;
 }
 
 .streams-category-copy strong {
@@ -393,13 +449,18 @@
 .accent-desert .streams-category-cover { background-color: #3c2e24; }
 .accent-talk .streams-category-cover { background-image: linear-gradient(135deg, #0b8a42, #14d585); }
 .accent-league .streams-category-cover { background-color: #203248; }
+.accent-composite .streams-category-cover { background-image: linear-gradient(135deg, #11188e, #283fd0); }
 .accent-spire .streams-category-cover { background-image: linear-gradient(135deg, #4d257d, #f29f32); }
 .accent-ark .streams-category-cover { background-image: linear-gradient(135deg, #7f5a2e, #d8a968); }
 .accent-return .streams-category-cover { background-image: linear-gradient(135deg, #351b48, #5867d8); }
 .accent-show .streams-category-cover { background-image: linear-gradient(135deg, #0c1b3b, #46a8ff); }
 .accent-diablo .streams-category-cover { background-image: linear-gradient(135deg, #190d0d, #6d1f0f); }
+.accent-hearthstone .streams-category-cover { background-image: linear-gradient(135deg, #4f3212, #c7922b); }
+.accent-starrail .streams-category-cover { background-image: linear-gradient(135deg, #6679df, #b9c5ff); }
+.accent-biohazard .streams-category-cover { background-image: linear-gradient(135deg, #2e353f, #8d98a9); }
 .accent-overwatch .streams-category-cover { background-image: linear-gradient(135deg, #ff7e4a, #f8d15a); }
 .accent-rimworld .streams-category-cover { background-image: linear-gradient(135deg, #363b46, #73859a); }
+.accent-basketball .streams-category-cover { background-image: linear-gradient(135deg, #ac6f12, #f2b048); }
 .accent-music .streams-category-cover { background-image: linear-gradient(135deg, #5d29c6, #9a54ff); }
 .accent-lobotomy .streams-category-cover { background-image: linear-gradient(135deg, #372214, #d2b253); }
 .accent-wow .streams-category-cover { background-image: linear-gradient(135deg, #0c2848, #6c56ff); }

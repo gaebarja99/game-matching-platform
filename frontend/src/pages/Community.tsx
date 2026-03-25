@@ -151,8 +151,8 @@ export default function Community() {
                         {post.title}
                       </span>
                       <span className="community-post-meta">
-                        {post.authorUsername} · 조회 {post.viewCount} · 댓글 {post.commentCount} · 버프 {post.recommendCount} ·{' '}
-                        {formatTime(post.createdAt)}
+                        {post.authorUsername} · 조회 {post.viewCount} · 댓글 {post.commentCount} · 추천{' '}
+                        {post.recommendCount} · {formatTime(post.createdAt)}
                       </span>
                     </Link>
                   </li>
@@ -185,7 +185,7 @@ export default function Community() {
                   <li key={post.id}>
                     <Link to={`/community/posts/${post.id}`}>{post.title}</Link>
                     <span className="community-popular-sub">
-                      {BOARD_LABELS[post.boardCategory]} · 버프 {post.recommendCount}
+                      {BOARD_LABELS[post.boardCategory]} · 추천 {post.recommendCount}
                     </span>
                   </li>
                 ))}
