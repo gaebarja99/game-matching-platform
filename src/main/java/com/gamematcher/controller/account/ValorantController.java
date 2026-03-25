@@ -1,9 +1,11 @@
 package com.gamematcher.controller.account;
 
 import com.gamematcher.dto.account.ValorantSyncRequestDto;
+import com.gamematcher.dto.valorant.ValorantAiEvaluationResponseDto;
 import com.gamematcher.dto.valorant.ValorantMatchApiResponse;
 import com.gamematcher.dto.valorant.ValorantMatchDetailDto;
 import com.gamematcher.entity.match.valorant.ValorantMatch;
+import com.gamematcher.service.valorant.ValorantAiEvaluationService;
 import com.gamematcher.service.valorant.ValorantApiService;
 import com.gamematcher.service.valorant.ValorantMatchJsonService;
 import com.gamematcher.service.valorant.ValorantMatchService;
@@ -12,6 +14,8 @@ import jakarta.validation.Valid;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/valorant")
 public class ValorantController {
@@ -19,13 +23,16 @@ public class ValorantController {
     private final ValorantApiService valorantApiService;
     private final ValorantMatchJsonService valorantMatchJsonService;
     private final ValorantMatchService valorantMatchService;
+    private final ValorantAiEvaluationService valorantAiEvaluationService;
 
     public ValorantController(ValorantApiService valorantApiService,
                              ValorantMatchJsonService valorantMatchJsonService,
-                             ValorantMatchService valorantMatchService) {
+                             ValorantMatchService valorantMatchService,
+                             ValorantAiEvaluationService valorantAiEvaluationService) {
         this.valorantApiService = valorantApiService;
         this.valorantMatchJsonService = valorantMatchJsonService;
         this.valorantMatchService = valorantMatchService;
+        this.valorantAiEvaluationService = valorantAiEvaluationService;
     }
 
     /** Valorant 최근 5경기 DB 동기화 (Henrik API로 gameName+tagLine → puuid 조회 후 매치 저장) */
@@ -91,7 +98,7 @@ public class ValorantController {
      * 필터가 없으면 매치 전원.
      */
     @PostMapping("/evaluations/match/{matchId}")
-    public ResponseEntity<java.util.List<ValorantAiEvaluationResponseDto>> evaluateMatch(
+    public ResponseEntity<List<ValorantAiEvaluationResponseDto>> evaluateMatch(
             @PathVariable String matchId,
             @RequestParam(required = false) String puuid,
             @RequestParam(required = false) String gameName,
