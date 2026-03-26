@@ -96,8 +96,10 @@ public class RecordsMatchDetailService {
         if (puuid == null || puuid.isBlank()) {
             return;
         }
-        Optional<ValorantMatchPlayer> playerOpt =
-                valorantMatchPlayerRepository.findByMatch_MatchIdAndPuuid(matchId, puuid.trim());
+        String pid = puuid.trim();
+        Optional<ValorantMatchPlayer> playerOpt = valorantMatchPlayerRepository
+                .findByMatch_MatchIdAndPuuidIgnoreCase(matchId, pid)
+                .or(() -> valorantMatchPlayerRepository.findByMatch_MatchIdAndPuuid(matchId, pid));
         if (playerOpt.isEmpty()) {
             return;
         }

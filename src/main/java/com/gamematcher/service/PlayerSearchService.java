@@ -33,7 +33,7 @@ public class PlayerSearchService {
 
     public PlayerSearchResponse searchPlayer(PlayerSearchRequest request) {
         request.normalize();
-        request.setCount(20);
+        // count는 프론트(5·10·15·20) 및 normalize() 기본값을 따른다. 강제 20은 외부 API·DB 부하만 키운다.
 
         String game = request.getGame();
         if (game == null || game.isBlank()) {

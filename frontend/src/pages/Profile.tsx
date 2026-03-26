@@ -455,7 +455,7 @@ export default function Profile() {
         const cur = c.publicProfileVisible !== false;
         const next = linkPublicDraft[key] ?? cur;
         if (cur !== next) {
-          patchBody[pk] = next;
+          (patchBody as Record<string, boolean | undefined>)[pk] = next;
         }
       }
       if (riotSnap && riotVisibilityDraft) {

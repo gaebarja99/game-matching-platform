@@ -16,6 +16,8 @@ import com.gamematcher.service.riot.RiotApiService;
 import com.gamematcher.dto.search.PlayerSearchRequest;
 import com.gamematcher.dto.search.PlayerSearchResponse;
 import com.gamematcher.dto.search.PlayerSearchResponse.*;
+import com.gamematcher.dto.search.ValorantSearchMmrRequest;
+import com.gamematcher.dto.search.ValorantSearchMmrResponse;
 import com.gamematcher.entity.match.valorant.ValorantMatch;
 import com.gamematcher.entity.match.valorant.ValorantMatchPlayer;
 import com.gamematcher.repository.match.ValorantMatchDetailRepository;
@@ -707,6 +709,33 @@ public class ValorantApiService {
                     errorMessage != null ? errorMessage : "발로란트 전적을 불러오지 못했습니다."
             );
         }
+    }
+
+    /**
+     * Records: 1차 검색에서 {@code deferValorantMmr} 로 티어를 미룬 뒤, Henrik MMR만 조회한다.
+     */
+    public ValorantSearchMmrResponse resolveMmrForSearch(ValorantSearchMmrRequest request) {
+        if (request.getPuuid() == null || request.getPuuid().isBlank()) {
+            return ValorantSearchMmrResponse.fail("puuid가 필요합니다.");
+        }
+        String puuid = request.getPuuid();
+        String regionInput = request.getRegion();
+        final String region = (regionInput == null || regionInput.isBlank()) ? "kr" : regionInput;
+        String mmrCacheKey = region + "|" + puuid;
+        HttpEntity<Void> entity = valorantHttpEntity();
+        if (Boolean.TRUE.equals(request.getForceRefresh())) {
+            valorantMmrSearchCache.remove(mmrCacheKey);
+        }
+        ValorantMmrTierSnapshot mmr = Optional.ofNullable(valorantMmrSearchCache.get(mmrCacheKey))
+                .filter(Cached::fresh)
+                .map(Cached::value)
+                .orElseGet(() -> {
+                    ValorantMmrTierSnapshot m = fetchValorantMmrForSearch(region, puuid, entity);
+                    valorantMmrSearchCache.put(mmrCacheKey,
+                            new Cached<>(m, System.currentTimeMillis() + VALORANT_SEARCH_API_CACHE_TTL_MS));
+                    return m;
+                });
+        return ValorantSearchMmrResponse.ok(mmr.displayTier());
     }
 
     private ValorantPuuidApiResponse.AccountData loadAccountForSearch(PlayerSearchRequest req) {
