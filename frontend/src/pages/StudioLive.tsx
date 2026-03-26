@@ -9,7 +9,6 @@ const GAME_OPTIONS = [
   { value: 'OVERWATCH', label: '오버워치' },
   { value: 'PUBG', label: 'PUBG' },
   { value: 'COUNTER_STRIKE_2', label: '카운터 스트라이크 2' },
-  { value: 'APEX_LEGENDS', label: '에이펙스 레전드' },
   { value: 'OTHERS', label: '기타' },
 ];
 

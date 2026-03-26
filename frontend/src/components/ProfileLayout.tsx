@@ -4,6 +4,10 @@ import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
 import { resolveProfileImageUrl } from '../api/client';
 
+function getDisplayName(user: ReturnType<typeof useAuth>['user']): string {
+  return user?.nickname?.trim() || user?.username?.trim() || user?.loginId?.trim() || '사용자';
+}
+
 export default function ProfileLayout() {
   const { toggleTheme } = useTheme();
   const { user, logout } = useAuth();
@@ -33,6 +37,7 @@ export default function ProfileLayout() {
   };
 
   const profileImage = resolveProfileImageUrl(user?.profileImageUrl);
+  const displayName = getDisplayName(user);
 
   if (!user) {
     return (
@@ -55,7 +60,7 @@ export default function ProfileLayout() {
           </div>
         </header>
         <div className="profile-login-msg">
-          <p>로그인 후 프로필과 계정 연동 설정을 사용할 수 있습니다.</p>
+          <p>로그인하면 프로필과 계정 연동 설정을 이용할 수 있습니다.</p>
           <Link to="/login">로그인하기</Link>
         </div>
       </div>
@@ -98,7 +103,7 @@ export default function ProfileLayout() {
                   </div>
                   <div>
                     <div className="dropdown-profile-label">GameMatcher 프로필</div>
-                    <div className="dropdown-profile-name">{user.nickname ?? user.username ?? user.loginId ?? '사용자'}</div>
+                    <div className="dropdown-profile-name">{displayName}</div>
                   </div>
                 </div>
                 <div className="dropdown-menu">

@@ -119,7 +119,6 @@ export default function AdminCommunity() {
             <option value="battleground">배그</option>
             <option value="overwatch">오버워치</option>
             <option value="cs2">CS2</option>
-            <option value="apex">에이펙스</option>
             <option value="blizzard">블리자드</option>
             <option value="steam">스팀</option>
           </select>

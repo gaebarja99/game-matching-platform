@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+﻿import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import Layout from '../components/Layout';
 import { searchPlayer, type PlayerSearchResponse } from '../api/search';
@@ -30,8 +30,8 @@ const GAMES: GameOption[] = [
     accent: '#5383e8',
     banner: 'banner-lol',
     eyebrow: 'Riot Games',
-    summary: '게임 이름과 태그를 입력해 최근 20매치 전적과 핵심 지표를 확인하세요.',
-    placeholders: { nickname: '게임 이름', tag: 'KR1' },
+    summary: '게임명과 태그를 입력하면 최근 20경기 전적을 확인할 수 있습니다.',
+    placeholders: { nickname: '게임명', tag: 'KR1' },
     tagLabel: '태그',
     needsTag: true,
   },
@@ -42,8 +42,8 @@ const GAMES: GameOption[] = [
     accent: '#8b5cf6',
     banner: 'banner-tft',
     eyebrow: 'Teamfight Tactics',
-    summary: '게임 이름과 태그를 입력해 최근 20매치와 순위 흐름을 확인하세요.',
-    placeholders: { nickname: '게임 이름', tag: 'KR1' },
+    summary: '게임명과 태그를 입력하면 최근 경기와 순위를 확인할 수 있습니다.',
+    placeholders: { nickname: '게임명', tag: 'KR1' },
     tagLabel: '태그',
     needsTag: true,
   },
@@ -54,8 +54,8 @@ const GAMES: GameOption[] = [
     accent: '#ff4655',
     banner: 'banner-valorant',
     eyebrow: 'Valorant',
-    summary: '플레이어 이름과 태그를 입력하면 최근 20매치 전적을 바로 불러옵니다.',
-    placeholders: { nickname: '플레이어 이름', tag: 'KR1' },
+    summary: '플레이어명과 태그를 입력하면 최근 20경기 전적을 확인할 수 있습니다.',
+    placeholders: { nickname: '플레이어명', tag: 'KR1' },
     tagLabel: '태그',
     needsTag: true,
     regionOptions: [
@@ -74,7 +74,7 @@ const GAMES: GameOption[] = [
     accent: '#f59e0b',
     banner: 'banner-pubg',
     eyebrow: 'Battlegrounds',
-    summary: '닉네임과 플랫폼 정보를 입력해 최근 20매치 기준 기록을 확인하세요.',
+    summary: '닉네임과 플랫폼을 입력하면 최근 전적을 확인할 수 있습니다.',
     placeholders: { nickname: 'Steam 또는 Kakao 닉네임' },
     platformOptions: [
       { value: 'steam', label: 'Steam' },
@@ -88,25 +88,10 @@ const GAMES: GameOption[] = [
     accent: '#f97316',
     banner: 'banner-overwatch',
     eyebrow: 'Overwatch 2',
-    summary: '배틀태그 이름과 숫자 태그를 입력해 최근 20개 기준 전적을 확인하세요.',
+    summary: '배틀태그 이름과 숫자 태그를 입력하면 최근 전적을 확인할 수 있습니다.',
     placeholders: { nickname: 'BattleTag 이름', tag: '1234' },
     tagLabel: '배틀태그',
     needsTag: true,
-  },
-  {
-    id: 'apex',
-    label: '에이펙스 레전드',
-    short: 'APEX',
-    accent: '#ef4444',
-    banner: 'banner-apex',
-    eyebrow: 'Apex Legends',
-    summary: '계정 이름과 플랫폼을 입력해 최근 20개 기준 대표 기록을 불러옵니다.',
-    placeholders: { nickname: 'EA 또는 Origin 닉네임' },
-    platformOptions: [
-      { value: 'origin', label: 'PC' },
-      { value: 'psn', label: 'PlayStation' },
-      { value: 'xbl', label: 'Xbox' },
-    ],
   },
   {
     id: 'cs2',
@@ -115,15 +100,15 @@ const GAMES: GameOption[] = [
     accent: '#22c55e',
     banner: 'banner-cs2',
     eyebrow: 'Counter-Strike 2',
-    summary: 'Steam64 ID 또는 Vanity URL을 입력해 최근 20개 기준 통계를 확인하세요.',
+    summary: 'Steam64 ID 또는 Vanity URL로 최근 전적을 확인할 수 있습니다.',
     placeholders: { nickname: 'Steam64 ID 또는 Vanity URL' },
   },
 ];
 
 const QUICK_HINTS = [
-  '닉네임과 태그를 정확히 입력해 주세요',
-  '게임마다 검색 조건이 조금씩 다릅니다',
-  '모든 게임은 최근 20매치 기준으로 표시됩니다',
+  '게임명과 태그를 정확히 입력해 주세요.',
+  '게임별 검색 조건이 조금씩 다를 수 있습니다.',
+  '최근 20경기 기준으로 결과를 보여줍니다.',
 ];
 
 function formatSearchError(gameLabel: string, message: string) {
@@ -131,9 +116,9 @@ function formatSearchError(gameLabel: string, message: string) {
 
   if (normalized.includes('Account not found')) {
     return {
-      title: `${gameLabel} 계정을 찾지 못했어요`,
-      summary: '입력한 이름이나 태그가 실제 계정 정보와 일치하지 않습니다.',
-      hints: ['게임 이름과 태그를 다시 확인해 주세요.', '공백이나 숫자 태그를 한 번 더 확인해 주세요.'],
+      title: `${gameLabel} 계정을 찾지 못했습니다`,
+      summary: '입력한 게임명이나 태그가 실제 계정 정보와 일치하지 않습니다.',
+      hints: ['게임명과 태그를 다시 확인해 주세요.', '공백과 숫자 태그를 정확히 입력해 주세요.'],
     };
   }
 
@@ -141,29 +126,29 @@ function formatSearchError(gameLabel: string, message: string) {
     return {
       title: '검색 결과가 없습니다',
       summary: '입력한 계정을 현재 API에서 찾지 못했습니다.',
-      hints: ['닉네임, 태그, 플랫폼, 지역 설정을 다시 확인해 주세요.'],
+      hints: ['이름, 태그, 지역 또는 플랫폼을 다시 확인해 주세요.'],
     };
   }
 
   if (normalized.includes('403')) {
     return {
-      title: '공개 설정이 필요합니다',
-      summary: '해당 게임 계정의 전적 또는 프로필이 비공개일 수 있습니다.',
-      hints: ['게임 프로필 공개 여부를 확인한 뒤 다시 시도해 주세요.'],
+      title: '공개 설정 확인이 필요합니다',
+      summary: '해당 계정의 전적 또는 프로필이 비공개일 수 있습니다.',
+      hints: ['게임 내 공개 설정을 확인한 뒤 다시 시도해 주세요.'],
     };
   }
 
   if (normalized.includes('429')) {
     return {
-      title: '요청이 잠시 몰렸어요',
-      summary: '외부 전적 API 요청 제한에 걸렸습니다.',
+      title: '요청이 잠시 많습니다',
+      summary: '전적 API 요청 제한에 걸렸습니다.',
       hints: ['잠시 후 다시 검색해 주세요.'],
     };
   }
 
   return {
     title: '검색에 실패했습니다',
-    summary: '전적을 불러오는 중 오류가 발생했습니다.',
+    summary: '전적 정보를 불러오는 중 오류가 발생했습니다.',
     hints: ['잠시 후 다시 시도해 주세요.', '같은 문제가 계속되면 입력값을 다시 확인해 주세요.'],
   };
 }
@@ -192,9 +177,7 @@ function getQueueCategory(gameMode?: string | null) {
   const mode = (gameMode || '').toUpperCase();
 
   if (mode.includes('RANKED')) return { label: '랭크', tone: 'ranked' as const };
-  if (mode.includes('NORMAL') || mode.includes('QUICKPLAY') || mode.includes('CLASSIC')) {
-    return { label: '일반', tone: 'normal' as const };
-  }
+  if (mode.includes('NORMAL') || mode.includes('QUICKPLAY') || mode.includes('CLASSIC')) return { label: '일반', tone: 'normal' as const };
   if (mode.includes('ARAM')) return { label: '칼바람', tone: 'aram' as const };
   if (mode.includes('CLASH')) return { label: '클래시', tone: 'clash' as const };
   return { label: gameMode || '기타', tone: 'other' as const };
@@ -205,15 +188,7 @@ function getInitials(name?: string | null) {
   return name.slice(0, 1).toUpperCase();
 }
 
-function SearchHitPanel({
-  result,
-  gameLabel,
-  accent,
-}: {
-  result: PlayerSearchResponse;
-  gameLabel: string;
-  accent: string;
-}) {
+function SearchHitPanel({ result, gameLabel, accent }: { result: PlayerSearchResponse; gameLabel: string; accent: string }) {
   const info = result.playerInfo ?? {};
   const name = info.gameName || result.nickname || '플레이어';
   const subline = [
@@ -221,14 +196,12 @@ function SearchHitPanel({
     info.tier ? `${info.tier} ${info.rank || ''}`.trim() : null,
     info.lp || null,
     info.summonerLevel ? `Lv.${info.summonerLevel}` : null,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  ].filter(Boolean).join(' • ');
 
   return (
     <section className="records-search-hit-panel" style={{ ['--records-accent' as string]: accent }}>
       <div className="records-search-hit-head">
-        <strong>Player Profiles</strong>
+        <strong>Player Profile</strong>
         <span>{gameLabel}</span>
       </div>
       <button type="button" className="records-search-hit-row">
@@ -239,7 +212,7 @@ function SearchHitPanel({
         )}
         <div className="records-search-hit-copy">
           <div className="records-search-hit-name">{name}</div>
-          <div className="records-search-hit-subline">{subline || '최근 20매치 전적 보기'}</div>
+          <div className="records-search-hit-subline">{subline || '최근 전적 보기'}</div>
         </div>
         <div className="records-search-hit-action">전적 보기</div>
       </button>
@@ -270,9 +243,7 @@ function MatchRow({ match }: { match: NonNullable<PlayerSearchResponse['matches'
       </div>
 
       <div className="records-opgg-match-score">
-        <strong>
-          {match.kills ?? 0} / {match.deaths ?? 0} / {match.assists ?? 0}
-        </strong>
+        <strong>{match.kills ?? 0} / {match.deaths ?? 0} / {match.assists ?? 0}</strong>
         <span>KDA {match.kda != null ? Number(match.kda).toFixed(2) : '-'}</span>
       </div>
 
@@ -280,9 +251,7 @@ function MatchRow({ match }: { match: NonNullable<PlayerSearchResponse['matches'
         {duration ? <span className="records-meta-chip">{duration}</span> : null}
         {match.cs != null ? <span className="records-meta-chip">CS {match.cs}</span> : null}
         {extras.map(([key, value]) => (
-          <span key={key} className="records-meta-chip">
-            {key}: {String(value)}
-          </span>
+          <span key={key} className="records-meta-chip">{key}: {String(value)}</span>
         ))}
       </div>
     </div>
@@ -301,9 +270,7 @@ function ResultPanel({ result, accent, title }: { result: PlayerSearchResponse; 
       if (key) acc[key] = (acc[key] || 0) + 1;
       return acc;
     }, {}),
-  )
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3);
+  ).sort((a, b) => b[1] - a[1]).slice(0, 3);
 
   return (
     <section className="records-result-panel records-opgg-result" style={{ ['--records-accent' as string]: accent }}>
@@ -330,25 +297,21 @@ function ResultPanel({ result, accent, title }: { result: PlayerSearchResponse; 
 
         <div className="records-opgg-overview">
           <div className="records-opgg-overview-card">
-            <span>최근 20매치</span>
-            <strong>
-              {wins}승 {losses}패
-            </strong>
+            <span>최근 20경기</span>
+            <strong>{wins}승 {losses}패</strong>
             <em>승률 {formatWinRate(matches.length ? wins / matches.length : 0)}</em>
           </div>
           <div className="records-opgg-overview-card">
             <span>평균 KDA</span>
             <strong>{stats.avgKda != null ? Number(stats.avgKda).toFixed(2) : '-'}</strong>
             <em>
-              {stats.avgKills != null ? Number(stats.avgKills).toFixed(1) : '-'} /{' '}
-              {stats.avgDeaths != null ? Number(stats.avgDeaths).toFixed(1) : '-'} /{' '}
-              {stats.avgAssists != null ? Number(stats.avgAssists).toFixed(1) : '-'}
+              {stats.avgKills != null ? Number(stats.avgKills).toFixed(1) : '-'} / {stats.avgDeaths != null ? Number(stats.avgDeaths).toFixed(1) : '-'} / {stats.avgAssists != null ? Number(stats.avgAssists).toFixed(1) : '-'}
             </em>
           </div>
           <div className="records-opgg-overview-card">
             <span>주요 픽</span>
             <strong>{stats.mostUsedChampionOrAgent || '-'}</strong>
-            <em>{topPicks.map(([name, count]) => `${name} ${count}회`).join(' · ') || '데이터 없음'}</em>
+            <em>{topPicks.map(([name, count]) => `${name} ${count}회`).join(' • ') || '데이터 없음'}</em>
           </div>
         </div>
       </div>
@@ -448,9 +411,7 @@ export default function Records() {
               <p className="records-description">{game.summary}</p>
               <div className="records-hint-list">
                 {QUICK_HINTS.map((hint) => (
-                  <span key={hint} className="records-hint-chip">
-                    {hint}
-                  </span>
+                  <span key={hint} className="records-hint-chip">{hint}</span>
                 ))}
               </div>
             </div>
@@ -459,44 +420,22 @@ export default function Records() {
               <div className={searchbarClassName}>
                 <label className="records-opgg-field records-opgg-field-game">
                   <span>게임</span>
-                  <select
-                    value={gameId}
-                    onChange={(event) => {
-                      setGameId(event.target.value);
-                      setResult(null);
-                      setError(null);
-                    }}
-                  >
+                  <select value={gameId} onChange={(event) => { setGameId(event.target.value); setResult(null); setError(null); }}>
                     {GAMES.map((item) => (
-                      <option key={item.id} value={item.id}>
-                        {item.label}
-                      </option>
+                      <option key={item.id} value={item.id}>{item.label}</option>
                     ))}
                   </select>
                 </label>
 
                 <label className="records-opgg-field records-opgg-field-name">
                   <span>검색</span>
-                  <input
-                    type="text"
-                    value={nickname}
-                    onChange={(event) => setNickname(event.target.value)}
-                    placeholder={game.placeholders.nickname}
-                    autoComplete="off"
-                    required
-                  />
+                  <input type="text" value={nickname} onChange={(event) => setNickname(event.target.value)} placeholder={game.placeholders.nickname} autoComplete="off" required />
                 </label>
 
                 {game.needsTag ? (
                   <label className="records-opgg-field records-opgg-field-tag">
                     <span>{game.tagLabel || '태그'}</span>
-                    <input
-                      type="text"
-                      value={tagLine}
-                      onChange={(event) => setTagLine(event.target.value)}
-                      placeholder={game.placeholders.tag || 'KR1'}
-                      autoComplete="off"
-                    />
+                    <input type="text" value={tagLine} onChange={(event) => setTagLine(event.target.value)} placeholder={game.placeholders.tag || 'KR1'} autoComplete="off" />
                   </label>
                 ) : null}
 
@@ -505,9 +444,7 @@ export default function Records() {
                     <span>지역</span>
                     <select value={region} onChange={(event) => setRegion(event.target.value)}>
                       {game.regionOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
+                        <option key={option.value} value={option.value}>{option.label}</option>
                       ))}
                     </select>
                   </label>
@@ -518,32 +455,19 @@ export default function Records() {
                     <span>플랫폼</span>
                     <select value={platform} onChange={(event) => setPlatform(event.target.value)}>
                       {game.platformOptions.map((option) => (
-                        <option key={option.value} value={option.value}>
-                          {option.label}
-                        </option>
+                        <option key={option.value} value={option.value}>{option.label}</option>
                       ))}
                     </select>
                   </label>
                 ) : null}
 
-                <button type="submit" className="records-opgg-submit" disabled={loading}>
-                  {loading ? '검색 중' : '검색'}
-                </button>
+                <button type="submit" className="records-opgg-submit" disabled={loading}>{loading ? '검색 중...' : '검색'}</button>
               </div>
 
               <div className="records-opgg-bottom">
                 <p className="records-inline-hint">{game.summary}</p>
                 {(nickname || tagLine || result || error) ? (
-                  <button
-                    type="button"
-                    className="records-clear-button"
-                    onClick={() => {
-                      setNickname('');
-                      setTagLine('');
-                      setError(null);
-                      setResult(null);
-                    }}
-                  >
+                  <button type="button" className="records-clear-button" onClick={() => { setNickname(''); setTagLine(''); setError(null); setResult(null); }}>
                     초기화
                   </button>
                 ) : null}
@@ -554,16 +478,7 @@ export default function Records() {
 
         <section className="records-game-tabs" aria-label="지원 게임">
           {GAMES.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => {
-                setGameId(item.id);
-                setResult(null);
-                setError(null);
-              }}
-              className={`records-game-pill ${item.id === gameId ? 'is-active' : ''}`}
-            >
+            <button key={item.id} type="button" onClick={() => { setGameId(item.id); setResult(null); setError(null); }} className={`records-game-pill ${item.id === gameId ? 'is-active' : ''}`}>
               <span className={`records-game-poster ${item.banner}`}>
                 <span className="records-game-overlay" />
                 <span className="records-game-short">{item.short}</span>
@@ -579,9 +494,7 @@ export default function Records() {
             <strong className="records-error-title">{formattedError?.title || '검색 실패'}</strong>
             <p className="records-error-summary">{formattedError?.summary}</p>
             {formattedError?.hints.map((line) => (
-              <p key={line} className="records-error-hint">
-                {line}
-              </p>
+              <p key={line} className="records-error-hint">{line}</p>
             ))}
           </section>
         ) : null}

@@ -39,6 +39,18 @@ public class RiotAccount {
     @Column(name = "tag_line", nullable = false, length = 10)
     private String tagLine;
 
+    @Column(name = "game_type", length = 20)
+    private String gameType;
+
+    @Column(name = "verification_method", length = 40)
+    private String verificationMethod;
+
+    @Column(name = "ownership_verified", nullable = false)
+    private boolean ownershipVerified;
+
+    @Column(name = "verified_at")
+    private LocalDateTime verifiedAt;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

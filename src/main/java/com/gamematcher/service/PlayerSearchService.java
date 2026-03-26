@@ -2,7 +2,6 @@ package com.gamematcher.service;
 
 import com.gamematcher.dto.search.PlayerSearchRequest;
 import com.gamematcher.dto.search.PlayerSearchResponse;
-import com.gamematcher.service.search.ApexSearchService;
 import com.gamematcher.service.search.Cs2SearchService;
 import com.gamematcher.service.search.LolSearchService;
 import com.gamematcher.service.search.OverwatchSearchService;
@@ -21,7 +20,6 @@ public class PlayerSearchService {
     private final ValorantSearchService valorantSearchService;
     private final PubgSearchService pubgSearchService;
     private final OverwatchSearchService overwatchSearchService;
-    private final ApexSearchService apexSearchService;
     private final Cs2SearchService cs2SearchService;
 
     public PlayerSearchResponse searchPlayer(PlayerSearchRequest request) {
@@ -39,7 +37,6 @@ public class PlayerSearchService {
             case "valorant" -> valorantSearchService.search(request);
             case "pubg" -> pubgSearchService.search(request);
             case "overwatch" -> overwatchSearchService.search(request);
-            case "apex" -> apexSearchService.search(request);
             case "cs2" -> cs2SearchService.search(request);
             default -> PlayerSearchResponse.error(game, request.getGameName(), "아직 지원하지 않는 게임입니다.");
         };

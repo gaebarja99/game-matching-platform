@@ -23,7 +23,6 @@ const GAME_OPTIONS: { key: string; label: string }[] = [
   { key: 'OVERWATCH', label: '오버워치2' },
   { key: 'PUBG', label: 'PUBG' },
   { key: 'COUNTER_STRIKE_2', label: 'CS2' },
-  { key: 'APEX_LEGENDS', label: '에이펙스' },
 ];
 
 export default function GameRooms() {

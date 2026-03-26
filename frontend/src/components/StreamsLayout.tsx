@@ -311,7 +311,6 @@ export default function StreamsLayout({ children, sidebarVariant = 'full' }: Str
                   <li><Link to="/streams?game=VALORANT" className="sidebar-item sidebar-item-sub">발로란트</Link></li>
                   <li><Link to="/streams?game=OVERWATCH" className="sidebar-item sidebar-item-sub">오버워치2</Link></li>
                   <li><Link to="/streams?game=PUBG" className="sidebar-item sidebar-item-sub">PUBG</Link></li>
-                  <li><Link to="/streams?game=APEX_LEGENDS" className="sidebar-item sidebar-item-sub">에이펙스</Link></li>
                 </ul>
               </div>
 

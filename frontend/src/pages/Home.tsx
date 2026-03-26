@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+﻿import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import LiveThumb from '../components/LiveThumb';
@@ -24,13 +24,11 @@ import {
   OVERWATCH_MODE_OPTIONS,
   PUBG_MODE_OPTIONS,
   PUBG_PLATFORM_OPTIONS,
-  APEX_MODE_OPTIONS,
   LEAGUE_PARTY_OPTIONS,
   VALORANT_PARTY_OPTIONS,
   OVERWATCH_PARTY_OPTIONS,
   PUBG_PARTY_OPTIONS,
   CS2_PARTY_OPTIONS,
-  APEX_PARTY_OPTIONS,
   GAME_OPTIONS,
   getMatchModeOptions,
   getControlledPartyOptions,
@@ -57,7 +55,6 @@ function parseGameOptions(s?: string | null): {
   position?: string;
   preferredMap?: string;
   preferredMethod?: string;
-  preferredLegend?: string;
   platform?: string;
   partySize?: string;
 } {
@@ -70,7 +67,6 @@ function parseGameOptions(s?: string | null): {
       position: o.position,
       preferredMap: o.preferredMap,
       preferredMethod: o.preferredMethod,
-      preferredLegend: o.preferredLegend,
       platform: o.platform,
       partySize: o.partySize,
     };
@@ -96,7 +92,6 @@ function formatDateForRoom(s: string) {
 function extraColumnValue(op: ReturnType<typeof parseGameOptions>, roomGame: string) {
   if (roomGame === 'PUBG') return op.platform ? (PUBG_PLATFORM_OPTIONS.find((x) => x.value === op.platform)?.label ?? op.platform) : '-';
   if (roomGame === 'COUNTER_STRIKE_2') return op.preferredMethod || '-';
-  if (roomGame === 'APEX_LEGENDS') return op.preferredLegend || '-';
   return '-';
 }
 
@@ -140,7 +135,6 @@ export default function Home() {
   const [createMode, setCreateMode] = useState('');
   const [createPreferredMap, setCreatePreferredMap] = useState('');
   const [createPreferredMethod, setCreatePreferredMethod] = useState('');
-  const [createPreferredLegend, setCreatePreferredLegend] = useState('');
   const [createPlatform, setCreatePlatform] = useState('');
   const [createPartySize, setCreatePartySize] = useState('');
   const [createPassword, setCreatePassword] = useState('');
@@ -311,7 +305,6 @@ export default function Home() {
       position: createPosition || undefined,
       preferredMap: createPreferredMap.trim() || undefined,
       preferredMethod: createPreferredMethod.trim() || undefined,
-      preferredLegend: createPreferredLegend.trim() || undefined,
       platform: createPlatform || undefined,
       partySize: createPartySize || undefined,
     });
@@ -331,7 +324,6 @@ export default function Home() {
       setCreateMode('');
       setCreatePreferredMap('');
       setCreatePreferredMethod('');
-      setCreatePreferredLegend('');
       setCreatePlatform('');
       setCreatePartySize('');
       setShowMatchingSidebar(false);
@@ -663,37 +655,6 @@ export default function Home() {
             </>
           )}
 
-          {createGame === 'APEX_LEGENDS' && (
-            <>
-              <label className="sidebar-form-label">모드</label>
-              <select className="sidebar-form-input" value={createMode} onChange={(e) => setCreateMode(e.target.value)}>
-                {APEX_MODE_OPTIONS.map((o) => (
-                  <option key={o.value || '_'} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-              {createFormShowTier('APEX_LEGENDS', createMode) && (
-                <>
-                  <label className="sidebar-form-label">티어</label>
-                  <select className="sidebar-form-input" value={createTier} onChange={(e) => setCreateTier(e.target.value)}>
-                    {TIER_OPTIONS.map((o) => (
-                      <option key={o.value || '_'} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
-                </>
-              )}
-              <label className="sidebar-form-label">인원</label>
-              <select className="sidebar-form-input" value={createPartySize} onChange={(e) => setCreatePartySize(e.target.value)}>
-                {APEX_PARTY_OPTIONS.map((o) => (
-                  <option key={o.value || '_'} value={o.value}>{o.label}</option>
-                ))}
-              </select>
-              <label className="sidebar-form-label">역할</label>
-              <PositionPicker value={createPosition} onChange={setCreatePosition} game={createGame} />
-              <label className="sidebar-form-label">선호 레전드</label>
-              <input type="text" className="sidebar-form-input" value={createPreferredLegend} onChange={(e) => setCreatePreferredLegend(e.target.value)} placeholder="예: 레이스, 패스파인더" maxLength={100} />
-            </>
-          )}
-
           <label className="sidebar-form-label">글 삭제용 비밀번호</label>
           <input type="password" className="sidebar-form-input" value={createPassword} onChange={(e) => setCreatePassword(e.target.value)} placeholder="삭제 시 입력할 비밀번호" />
 
@@ -702,7 +663,7 @@ export default function Home() {
             className="sidebar-form-input sidebar-form-textarea"
             value={createMemo}
             onChange={(e) => setCreateMemo(e.target.value)}
-            placeholder={createGame === 'APEX_LEGENDS' ? '없는 내용도 최고 짧게 소개해 주세요' : '찾는 조건이나 하고 싶은 말을 적어주세요'}
+            placeholder={'찾는 조건이나 하고 싶은 말을 적어주세요'}
             rows={3}
           />
 
@@ -721,7 +682,6 @@ export default function Home() {
                 setCreateMode('');
                 setCreatePreferredMap('');
                 setCreatePreferredMethod('');
-                setCreatePreferredLegend('');
                 setCreatePlatform('');
                 setCreatePartySize('');
                 setCreatePosition(null);
@@ -863,7 +823,7 @@ export default function Home() {
                         : '-';
                     let rankCell = '-';
                     if (r.game === 'LEAGUE_OF_LEGENDS') rankCell = rankLabel(op.mode ?? '');
-                    else if (['VALORANT', 'OVERWATCH', 'APEX_LEGENDS', 'PUBG'].includes(r.game)) rankCell = modeLabel(r.game, op.mode ?? '');
+                    else if (['VALORANT', 'OVERWATCH', 'PUBG'].includes(r.game)) rankCell = modeLabel(r.game, op.mode ?? '');
                     else rankCell = op.mode || '-';
                     let noteCell = extraColumnValue(op, r.game);
                     if (r.game === 'PUBG' && op.preferredMap) {
