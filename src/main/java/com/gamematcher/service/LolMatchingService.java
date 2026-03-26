@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -195,8 +197,21 @@ public class LolMatchingService {
         assign.forEach((uid, lane) -> lanesByUser.put(String.valueOf(uid), lane.name()));
         payload.put("assignedLanes", lanesByUser);
 
-        for (Long uid : userIds) {
-            messagingTemplate.convertAndSend("/topic/user/" + uid, payload);
+        List<Long> userIdsCopy = new ArrayList<>(userIds);
+        Map<String, Object> payloadCopy = new LinkedHashMap<>(payload);
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    for (Long uid : userIdsCopy) {
+                        messagingTemplate.convertAndSend("/topic/user/" + uid, payloadCopy);
+                    }
+                }
+            });
+        } else {
+            for (Long uid : userIdsCopy) {
+                messagingTemplate.convertAndSend("/topic/user/" + uid, payloadCopy);
+            }
         }
     }
 

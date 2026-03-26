@@ -65,9 +65,9 @@ export async function createGameRoom(body: {
   return { ok: true, id: data.id, title: data.title, game: data.game, groupChatRoomId };
 }
 
-export async function joinGameRoom(roomId: number): Promise<boolean> {
-  const { ok } = await apiFetch(`/api/game-rooms/${roomId}/join`, { method: 'POST' });
-  return ok;
+export async function joinGameRoom(roomId: number): Promise<{ ok: boolean; message?: string }> {
+  const { ok, message } = await apiFetch(`/api/game-rooms/${roomId}/join`, { method: 'POST' });
+  return { ok: !!ok, message };
 }
 
 export async function leaveGameRoom(roomId: number): Promise<{ ok: boolean; message?: string }> {

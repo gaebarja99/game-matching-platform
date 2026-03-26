@@ -50,6 +50,7 @@ import {
 } from '../utils/randomMatchHelpers';
 import { saveRandomMatchPending, clearRandomMatchPending } from '../utils/randomMatchPendingStorage';
 import { isHiddenGameRoomHost } from '../utils/gameRoomVisibility';
+import { getRoomCapacityMeta } from '../utils/gameRoomCapacity';
 import './Home.css';
 
 function parseGameOptions(s?: string | null): {
@@ -553,16 +554,23 @@ export default function Home() {
       return;
     }
     if (r.closed) return;
+    const { isFull } = getRoomCapacityMeta(r);
+    if (isFull) {
+      window.alert('이미 정원이 가득 찬 방입니다.');
+      return;
+    }
     setJoinRoomId(r.id);
-    const ok = await joinGameRoom(r.id);
+    const { ok, message } = await joinGameRoom(r.id);
     setJoinRoomId(null);
     if (ok) {
       const chatRoomId = await getGameRoomChatRoomId(r.id);
       if (chatRoomId != null) {
         navigate(`/group-chat/room/${chatRoomId}`, { state: { fromGameRoom: true, gameRoomId: r.id } });
       }
-      fetchRooms();
+    } else if (message) {
+      window.alert(message);
     }
+    fetchRooms();
   };
 
   /** Random-match sidebar panel (shared with fixed sidebar). */
@@ -1039,14 +1047,7 @@ export default function Home() {
                   ) : null}
                   {visibleRoomList.map((r) => {
                     const op = parseGameOptions(r.gameOptions);
-  const maxP =
-    (r.game === 'LEAGUE_OF_LEGENDS' || r.game === 'VALORANT' || r.game === 'OVERWATCH')
-      ? (op.maxPlayers ?? 5)
-      : r.game === 'PUBG'
-        ? (op.maxPlayers ?? (op.partySize === 'SQUAD' ? 4 : 2))
-        : r.game === 'COUNTER_STRIKE_2'
-          ? (op.maxPlayers ?? (op.mode === 'WINGMAN' ? 2 : 5))
-          : null;
+                    const { maxPlayers: maxP, isFull } = getRoomCapacityMeta(r);
                     const tierCell = modeHasNoTier(r.game, op.mode)
                       ? '-'
                       : op.tier
@@ -1111,12 +1112,16 @@ export default function Home() {
                           ) : (
                             <button
                               type="button"
-                              className="home-demo-room-join-btn home-demo-room-join-btn--live"
-                              title={user ? '참가' : '로그인 후 참가'}
-                              disabled={joinRoomId === r.id}
+                              className={
+                                isFull
+                                  ? 'home-demo-room-join-btn home-demo-room-join-btn--full'
+                                  : 'home-demo-room-join-btn home-demo-room-join-btn--live'
+                              }
+                              title={isFull ? '모집 완료' : user ? '참가' : '로그인 후 참가'}
+                              disabled={joinRoomId === r.id || isFull}
                               onClick={() => handleApiRoomButton(r)}
                             >
-                              {joinRoomId === r.id ? '참가 중…' : '참가'}
+                              {joinRoomId === r.id ? '참가 중…' : isFull ? '모집 완료' : '참가'}
                             </button>
                           )}
                         </td>

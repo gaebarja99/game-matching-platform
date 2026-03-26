@@ -7,6 +7,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -82,8 +84,21 @@ public class MatchService {
         payload.put("game", session.getGame());
         payload.put("memberUserIds", userIds);
 
-        for (Long uid : userIds) {
-            messagingTemplate.convertAndSend("/topic/user/" + uid, payload);
+        List<Long> userIdsCopy = new ArrayList<>(userIds);
+        Map<String, Object> payloadCopy = new LinkedHashMap<>(payload);
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    for (Long uid : userIdsCopy) {
+                        messagingTemplate.convertAndSend("/topic/user/" + uid, payloadCopy);
+                    }
+                }
+            });
+        } else {
+            for (Long uid : userIdsCopy) {
+                messagingTemplate.convertAndSend("/topic/user/" + uid, payloadCopy);
+            }
         }
     }
 

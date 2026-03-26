@@ -15,16 +15,7 @@ import {
   type GameRoomItem,
 } from '../api/gameRooms';
 import { isHiddenGameRoomHost } from '../utils/gameRoomVisibility';
-
-function parseMaxPlayers(s?: string | null): number | null {
-  if (!s || !s.trim()) return null;
-  try {
-    const o = JSON.parse(s) as { maxPlayers?: unknown };
-    return typeof o.maxPlayers === 'number' && Number.isFinite(o.maxPlayers) ? o.maxPlayers : null;
-  } catch {
-    return null;
-  }
-}
+import { getRoomCapacityMeta, resolveRoomMaxPlayers } from '../utils/gameRoomCapacity';
 
 function parsePlatformAndParty(s?: string | null): { platform?: string; partySize?: string } {
   if (!s || !s.trim()) return {};
@@ -78,6 +69,13 @@ export default function GameRooms() {
     fetchList();
   }, [fetchList]);
 
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      fetchList();
+    }, 4000);
+    return () => window.clearInterval(timer);
+  }, [fetchList]);
+
   const handleCreate = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) {
@@ -120,19 +118,25 @@ export default function GameRooms() {
     }
   };
 
-  const handleJoin = async (roomId: number) => {
+  const handleJoin = async (r: GameRoomItem) => {
     if (!user) {
       navigate('/login');
       return;
     }
-    setActionRoomId(roomId);
-    const ok = await joinGameRoom(roomId);
+    if (getRoomCapacityMeta(r).isFull) {
+      window.alert('이미 정원이 가득 찬 방입니다.');
+      return;
+    }
+    setActionRoomId(r.id);
+    const { ok, message } = await joinGameRoom(r.id);
     setActionRoomId(null);
     if (ok) {
-      const chatRoomId = await getGameRoomChatRoomId(roomId);
-      if (chatRoomId != null) navigate(`/group-chat/room/${chatRoomId}`, { state: { fromGameRoom: true, gameRoomId: roomId } });
-      fetchList();
+      const chatRoomId = await getGameRoomChatRoomId(r.id);
+      if (chatRoomId != null) navigate(`/group-chat/room/${chatRoomId}`, { state: { fromGameRoom: true, gameRoomId: r.id } });
+    } else if (message) {
+      window.alert(message);
     }
+    fetchList();
   };
 
   const handleLeave = async (roomId: number) => {
@@ -222,7 +226,10 @@ export default function GameRooms() {
           <div className="duo-empty">열린 방이 없습니다. &quot;방 만들기&quot;로 방을 만들어 보세요.</div>
         ) : (
           <div className="game-room-list">
-            {list.map((r) => (
+            {list.map((r) => {
+              const capMeta = getRoomCapacityMeta(r);
+              const maxCap = resolveRoomMaxPlayers(r);
+              return (
               <div key={r.id} className="game-room-card">
                 <div className="game-room-card-head">
                   <span className="game-room-title">{r.title}</span>
@@ -241,11 +248,7 @@ export default function GameRooms() {
                   <span>방장: {r.hostNickname ?? '—'}</span>
                   <span>
                     인원:{' '}
-                    {(r.game === 'LEAGUE_OF_LEGENDS' || r.game === 'VALORANT' || r.game === 'OVERWATCH' || r.game === 'COUNTER_STRIKE_2')
-                      ? `${r.memberCount}/${parseMaxPlayers(r.gameOptions) ?? 5}`
-                      : r.game === 'PUBG'
-                        ? `${r.memberCount}/${parseMaxPlayers(r.gameOptions) ?? 2}`
-                        : r.memberCount}
+                    {maxCap != null ? `${r.memberCount}/${maxCap}` : r.memberCount}
                   </span>
                   <span>{formatDate(r.createdAt)}</span>
                 </div>
@@ -279,11 +282,11 @@ export default function GameRooms() {
                     !r.closed && !r.isMember && (
                       <button
                         type="button"
-                        className="btn-room-join"
-                        onClick={() => handleJoin(r.id)}
-                        disabled={actionRoomId === r.id}
+                        className={`btn-room-join${capMeta.isFull ? ' btn-room-join--full' : ''}`}
+                        onClick={() => handleJoin(r)}
+                        disabled={actionRoomId === r.id || capMeta.isFull}
                       >
-                        참가
+                        {actionRoomId === r.id ? '처리 중…' : capMeta.isFull ? '모집 완료' : '참가'}
                       </button>
                     )
                   )}
@@ -299,7 +302,8 @@ export default function GameRooms() {
                   )}
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </section>
