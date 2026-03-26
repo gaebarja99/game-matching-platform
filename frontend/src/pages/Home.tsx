@@ -20,9 +20,6 @@ import {
   getMatchQueueStatusDetail,
   getLolMatchQueueStatus,
   leaveLolMatchQueue,
-  getMyMatchSessions,
-  deleteMatchSession,
-  type MatchSessionListItem,
 } from '../api/match';
 import {
   TIER_OPTIONS,
@@ -37,7 +34,6 @@ import {
   getControlledPartyOptions,
   tierOptionsForGame,
   createFormShowTier,
-  MATCH_GAME_LABELS,
   tierLabel,
   rankLabel,
   modeLabel,
@@ -114,7 +110,76 @@ function extraColumnValue(op: ReturnType<typeof parseGameOptions>, roomGame: str
   return '-';
 }
 
-type SidebarTab = 'random' | 'history' | 'create';
+type TeamPanelType = 'match' | 'create';
+
+/** 팀 찾기 테이블 게임 필터 (방 `game` 필드와 동일) */
+type TeamSearchGameId =
+  | 'LEAGUE_OF_LEGENDS'
+  | 'VALORANT'
+  | 'OVERWATCH'
+  | 'PUBG'
+  | 'COUNTER_STRIKE_2'
+  | 'APEX_LEGENDS';
+
+const TEAM_SEARCH_GAME_TABS: { id: TeamSearchGameId; label: string }[] = [
+  { id: 'LEAGUE_OF_LEGENDS', label: '리그오브레전드' },
+  { id: 'VALORANT', label: '발로란트' },
+  { id: 'OVERWATCH', label: '오버워치2' },
+  { id: 'PUBG', label: 'PUBG' },
+  { id: 'COUNTER_STRIKE_2', label: 'CS2' },
+  { id: 'APEX_LEGENDS', label: 'Apex 레전드' },
+];
+
+function TeamSearchGameTabIcon({ game }: { game: TeamSearchGameId }) {
+  const svgProps = { width: 22, height: 22, viewBox: '0 0 24 24' as const, 'aria-hidden': true as const };
+  switch (game) {
+    case 'LEAGUE_OF_LEGENDS':
+      return (
+        <svg {...svgProps}>
+          <circle cx="12" cy="12" r="10" fill="#C8AA6E" />
+          <path fill="#010A13" d="M8 7.5h3.2v8.4h4.8V17H8V7.5z" />
+        </svg>
+      );
+    case 'VALORANT':
+      return (
+        <svg {...svgProps}>
+          <path fill="#FF4655" d="M6 18 12 6h2.2L18 18h-2.6l-1.2-3.2H10.8L9.6 18H6zm5.7-5.5h2.6L13 9.8 11.7 12.5z" />
+        </svg>
+      );
+    case 'OVERWATCH':
+      return (
+        <svg {...svgProps}>
+          <circle cx="12" cy="12" r="9.5" fill="#FF9C23" opacity="0.95" />
+          <circle cx="12" cy="12" r="6" fill="#1a1a1d" />
+          <circle cx="12" cy="12" r="3" fill="#FF9C23" />
+        </svg>
+      );
+    case 'PUBG':
+      return (
+        <svg {...svgProps}>
+          <rect x="3" y="3" width="18" height="18" rx="3" fill="#E0BC5B" />
+          <circle cx="12" cy="11" r="2.4" fill="none" stroke="#2a1f0f" strokeWidth="1.8" />
+          <path stroke="#2a1f0f" strokeWidth="1.4" d="M12 8v6M9 11h6" strokeLinecap="round" />
+        </svg>
+      );
+    case 'COUNTER_STRIKE_2':
+      return (
+        <svg {...svgProps}>
+          <path fill="#4A90D9" d="M12 3 20 8v8l-8 5-8-5V8l8-5zm0 2.5L6 9v6l6 3.8L18 15V9l-6-3.5z" />
+          <path fill="#1e3a5f" d="m12 8.5 4 2.3V15l-4 2.5-4-2.5v-4.2l4-2.3z" />
+        </svg>
+      );
+    case 'APEX_LEGENDS':
+      return (
+        <svg {...svgProps}>
+          <path
+            fill="#DA292E"
+            d="M12 4 19 19h-3.2l-1.4-3.5H9.6L8.2 19H5L12 4zm0 4.2L10 14h4L12 8.2z"
+          />
+        </svg>
+      );
+  }
+}
 
 const HOME_QUICK_LINKS = [
   { to: '/records', eyebrow: '전적 검색', title: '연동된 게임 전적 확인', body: '지원 게임 전적을 검색하고 최근 플레이 흐름을 한곳에서 비교할 수 있습니다.' },
@@ -126,9 +191,9 @@ export default function Home() {
   const { user, loading: authLoading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const [sidebarTab, setSidebarTab] = useState<SidebarTab>('create');
-  /** Random match / history / create-room panel (same toggle as former Team Searching header). */
-  const [showMatchingSidebar, setShowMatchingSidebar] = useState(false);
+  /** 우측 팀 찾기 패널: 랜덤 매칭 / 방 만들기 */
+  const [isPanelOpen, setIsPanelOpen] = useState(false);
+  const [panelType, setPanelType] = useState<TeamPanelType>('match');
   const [matchInQueue, setMatchInQueue] = useState(false);
   const [matchJoining, setMatchJoining] = useState(false);
   const [matchGame, setMatchGame] = useState('LEAGUE_OF_LEGENDS');
@@ -151,9 +216,6 @@ export default function Home() {
   }, [matchGame, matchMode, matchPartySize]);
   const [liveStreams, setLiveStreams] = useState<StreamItem[]>([]);
   const [loadingLive, setLoadingLive] = useState(false);
-  const [matchHistoryList, setMatchHistoryList] = useState<MatchSessionListItem[]>([]);
-  const [matchHistoryLoading, setMatchHistoryLoading] = useState(false);
-  const [matchHistoryDeletingId, setMatchHistoryDeletingId] = useState<number | null>(null);
   const controlledPartyOptions = getControlledPartyOptions(matchGame, matchMode);
   const positionRequired = positionRequiredForRandomMatch(matchGame, matchMode);
   const positionDisabled = isLolAram(matchGame, matchMode);
@@ -182,6 +244,7 @@ export default function Home() {
   const [roomList, setRoomList] = useState<GameRoomItem[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [joinRoomId, setJoinRoomId] = useState<number | null>(null);
+  const [selectedGame, setSelectedGame] = useState<TeamSearchGameId>('LEAGUE_OF_LEGENDS');
 
   const fetchRooms = useCallback(() => {
     setLoadingRooms(true);
@@ -209,41 +272,17 @@ export default function Home() {
     [roomList],
   );
 
+  const filteredRoomList = useMemo(
+    () => visibleRoomList.filter((r) => r.game === selectedGame),
+    [visibleRoomList, selectedGame],
+  );
+
   useEffect(() => {
     if (searchParams.get('oauth2_error') === 'not_configured') {
       setSearchParams({}, { replace: true });
       navigate('/login?error=oauth_not_configured', { replace: true });
     }
   }, [searchParams, setSearchParams, navigate]);
-
-  const fetchMatchHistory = useCallback(() => {
-    if (!user) return;
-    setMatchHistoryLoading(true);
-    getMyMatchSessions()
-      .then(setMatchHistoryList)
-      .finally(() => setMatchHistoryLoading(false));
-  }, [user]);
-
-  useEffect(() => {
-    const open = sidebarTab === 'history';
-    if (open && user) fetchMatchHistory();
-  }, [sidebarTab, user, fetchMatchHistory]);
-
-  const formatHistoryTime = (createdAt: string) => {
-    try {
-      return new Date(createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit', hour12: true });
-    } catch {
-      return '';
-    }
-  };
-
-  const handleDeleteMatchHistory = async (sessionId: number) => {
-    if (matchHistoryDeletingId != null) return;
-    setMatchHistoryDeletingId(sessionId);
-    const ok = await deleteMatchSession(sessionId);
-    setMatchHistoryDeletingId(null);
-    if (ok) setMatchHistoryList((prev) => prev.filter((s) => s.id !== sessionId));
-  };
 
   useEffect(() => {
     if (authLoading) return;
@@ -536,7 +575,7 @@ export default function Home() {
       setCreatePreferredLegend('');
       setCreatePlatform('');
       setCreatePartySize('');
-      setShowMatchingSidebar(false);
+      setIsPanelOpen(false);
       fetchRooms();
     } else {
       setCreateError(res.message || '방 만들기에 실패했습니다.');
@@ -669,47 +708,6 @@ export default function Home() {
         )
       ) : (
         <Link to="/login" className="sidebar-btn primary">로그인하고 매칭</Link>
-      )}
-    </div>
-  );
-
-  const historyPanelContent = (
-    <div className="sidebar-panel history-panel">
-      <h3 className="sidebar-panel-title">랜덤 매칭 내역</h3>
-      <p className="sidebar-panel-desc">매칭 후 채팅방을 다시 볼 수 있습니다.</p>
-      {!user ? (
-        <Link to="/login" className="sidebar-btn primary">로그인하고 보기</Link>
-      ) : matchHistoryLoading ? (
-        <div className="duo-empty">로딩 중...</div>
-      ) : matchHistoryList.length === 0 ? (
-        <div className="duo-empty">아직 매칭 내역이 없습니다.</div>
-      ) : (
-        <ul className="match-history-list match-history-list-inline">
-          {matchHistoryList.map((s) => (
-            <li key={s.id} className="match-history-item">
-              <Link to={`/match-chat/${s.id}`} className="match-history-link" onClick={() => setShowMatchingSidebar(false)}>
-                <div className="match-history-avatar">
-                  <span className="match-history-avatar-initial">{(MATCH_GAME_LABELS[s.game] ?? s.game)[0]}</span>
-                </div>
-                <div className="match-history-content">
-                  <span className="match-history-name">{MATCH_GAME_LABELS[s.game] ?? s.game}</span>
-                  <span className="match-history-preview">채팅 보기</span>
-                </div>
-                <span className="match-history-time">{formatHistoryTime(s.createdAt)}</span>
-              </Link>
-              <button
-                type="button"
-                className="match-history-delete-btn"
-                onClick={(e) => { e.preventDefault(); handleDeleteMatchHistory(s.id); }}
-                disabled={matchHistoryDeletingId === s.id}
-                title="내역 삭제"
-                aria-label="내역 삭제"
-              >
-                {matchHistoryDeletingId === s.id ? '삭제 중...' : '삭제'}
-              </button>
-            </li>
-          ))}
-        </ul>
       )}
     </div>
   );
@@ -916,7 +914,7 @@ export default function Home() {
                 setCreatePlatform('');
                 setCreatePartySize('');
                 setCreatePosition(null);
-                setShowMatchingSidebar(false);
+                setIsPanelOpen(false);
               }}
             >
               취소
@@ -937,10 +935,10 @@ export default function Home() {
             이제 메인 `frontend` 기준으로 사용자 흐름이 정리되어, 실시간 방송 확인부터 방 생성, 매칭 기록, 보조 기능까지 하나의 동선으로 사용할 수 있습니다.
           </p>
           <div className="home-hero-actions">
-            <button type="button" className="home-hero-primary" onClick={() => { setSidebarTab('create'); setShowMatchingSidebar(true); }}>
+            <button type="button" className="home-hero-primary" onClick={() => { setPanelType('create'); setIsPanelOpen(true); }}>
               방 만들기
             </button>
-            <button type="button" className="home-hero-secondary" onClick={() => { setSidebarTab('random'); setShowMatchingSidebar(true); }}>
+            <button type="button" className="home-hero-secondary" onClick={() => { setPanelType('match'); setIsPanelOpen(true); }}>
               매칭 시작
             </button>
           </div>
@@ -998,28 +996,58 @@ export default function Home() {
         )}
       </section>
 
-      <div className={`main-matching-layout ${showMatchingSidebar ? 'matching-sidebar-visible' : ''}`}>
+      <div className={`main-matching-layout ${isPanelOpen ? 'matching-sidebar-visible' : ''}`}>
         <div className="home-matching-main">
-          <div className="section-card home-matching-toolbar">
-            <div className="home-matching-toolbar-actions">
-              <button type="button" className={`team-search-quick-btn ${showMatchingSidebar && sidebarTab === 'random' ? 'active' : ''}`} onClick={() => { if (showMatchingSidebar && sidebarTab === 'random') setShowMatchingSidebar(false); else { setSidebarTab('random'); setShowMatchingSidebar(true); } }}>
-                랜덤 매칭
-              </button>
-              <button type="button" className={`team-search-quick-btn ${showMatchingSidebar && sidebarTab === 'history' ? 'active' : ''}`} onClick={() => { if (showMatchingSidebar && sidebarTab === 'history') setShowMatchingSidebar(false); else { setSidebarTab('history'); setShowMatchingSidebar(true); } }}>
-                랜덤 매칭 내역
-              </button>
-              <button type="button" className={`team-search-quick-btn ${showMatchingSidebar && sidebarTab === 'create' ? 'active' : ''}`} onClick={() => { if (showMatchingSidebar && sidebarTab === 'create') setShowMatchingSidebar(false); else { setSidebarTab('create'); setShowMatchingSidebar(true); } }}>
-                방 만들기
-              </button>
-            </div>
-          </div>
           <section className="section-card home-demo-room-section" aria-labelledby="home-demo-room-heading">
             <div className="home-demo-room-header">
               <div>
                 <h2 id="home-demo-room-heading" className="home-demo-room-title">팀 찾기</h2>
                 <p className="home-demo-room-sub">팀 검색 조건 · 서버에 등록된 열린 방 목록</p>
               </div>
+              <div className="home-demo-room-header-actions">
+                <button
+                  type="button"
+                  className={`home-team-panel-btn ${isPanelOpen && panelType === 'match' ? 'home-team-panel-btn--open' : ''}`}
+                  onClick={() => {
+                    if (isPanelOpen && panelType === 'match') setIsPanelOpen(false);
+                    else {
+                      setPanelType('match');
+                      setIsPanelOpen(true);
+                    }
+                  }}
+                >
+                  랜덤 매칭
+                </button>
+                <button
+                  type="button"
+                  className={`home-team-panel-btn ${isPanelOpen && panelType === 'create' ? 'home-team-panel-btn--open' : ''}`}
+                  onClick={() => {
+                    if (isPanelOpen && panelType === 'create') setIsPanelOpen(false);
+                    else {
+                      setPanelType('create');
+                      setIsPanelOpen(true);
+                    }
+                  }}
+                >
+                  방 만들기
+                </button>
+              </div>
             </div>
+            <nav className="home-team-game-tabs" aria-label="게임별 방 목록 필터">
+              {TEAM_SEARCH_GAME_TABS.map((tab) => (
+                <button
+                  key={tab.id}
+                  type="button"
+                  className={`home-team-game-tab ${selectedGame === tab.id ? 'home-team-game-tab--active' : ''}`}
+                  onClick={() => setSelectedGame(tab.id)}
+                >
+                  <span className="home-team-game-tab-icon">
+                    <TeamSearchGameTabIcon game={tab.id} />
+                  </span>
+                  <span className="home-team-game-tab-label">{tab.label}</span>
+                </button>
+              ))}
+            </nav>
             <div className="home-demo-room-table-wrap">
               <table className="home-demo-room-table">
                 <thead>
@@ -1044,8 +1072,12 @@ export default function Home() {
                     <tr>
                       <td colSpan={9} className="home-demo-room-loading-cell">등록된 방이 없습니다.</td>
                     </tr>
+                  ) : filteredRoomList.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="home-demo-room-loading-cell">선택한 게임에 등록된 방이 없습니다.</td>
+                    </tr>
                   ) : null}
-                  {visibleRoomList.map((r) => {
+                  {filteredRoomList.map((r) => {
                     const op = parseGameOptions(r.gameOptions);
                     const { maxPlayers: maxP, isFull } = getRoomCapacityMeta(r);
                     const tierCell = modeHasNoTier(r.game, op.mode)
@@ -1134,17 +1166,11 @@ export default function Home() {
           </section>
         </div>
 
-        {showMatchingSidebar && (
-          <aside className="main-sidebar section-card sidebar-card matching-sidebar-panel">
-            <div className="sidebar-tabs">
-              <button type="button" className={sidebarTab === 'random' ? 'active' : ''} onClick={() => setSidebarTab('random')}>랜덤 매칭</button>
-              <button type="button" className={sidebarTab === 'history' ? 'active' : ''} onClick={() => setSidebarTab('history')}>랜덤 매칭 내역</button>
-              <button type="button" className={sidebarTab === 'create' ? 'active' : ''} onClick={() => setSidebarTab('create')}>방 만들기</button>
-            </div>
+        {isPanelOpen && (
+          <aside className="main-sidebar section-card sidebar-card matching-sidebar-panel" aria-label="팀 찾기 패널">
             <div className="sidebar-content">
-              {sidebarTab === 'random' && randomPanelContent}
-              {sidebarTab === 'history' && historyPanelContent}
-              {sidebarTab === 'create' && createPanelContent}
+              {panelType === 'match' && randomPanelContent}
+              {panelType === 'create' && createPanelContent}
             </div>
           </aside>
         )}
