@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -195,8 +197,21 @@ public class LolMatchingService {
         assign.forEach((uid, lane) -> lanesByUser.put(String.valueOf(uid), lane.name()));
         payload.put("assignedLanes", lanesByUser);
 
-        for (Long uid : userIds) {
-            messagingTemplate.convertAndSend("/topic/user/" + uid, payload);
+        List<Long> userIdsCopy = new ArrayList<>(userIds);
+        Map<String, Object> payloadCopy = new LinkedHashMap<>(payload);
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    for (Long uid : userIdsCopy) {
+                        messagingTemplate.convertAndSend("/topic/user/" + uid, payloadCopy);
+                    }
+                }
+            });
+        } else {
+            for (Long uid : userIdsCopy) {
+                messagingTemplate.convertAndSend("/topic/user/" + uid, payloadCopy);
+            }
         }
     }
 
@@ -205,6 +220,8 @@ public class LolMatchingService {
         Map<String, Object> map = new LinkedHashMap<>();
         if (userId == null) {
             map.put("inQueue", false);
+            map.put("currentParticipants", 0);
+            map.put("maxParticipants", TEAM_SIZE);
             return map;
         }
         return matchingQueueRepository.findByUserId(userId)
@@ -215,11 +232,16 @@ public class LolMatchingService {
                     m.put("tier", q.getTier().name());
                     m.put("position", q.getPosition().name());
                     m.put("createdAt", q.getCreatedAt() != null ? q.getCreatedAt().format(ISO) : "");
+                    long cnt = matchingQueueRepository.countWaitingByGameAndTier(q.getGameName(), q.getTier());
+                    m.put("currentParticipants", (int) Math.min(Integer.MAX_VALUE, cnt));
+                    m.put("maxParticipants", TEAM_SIZE);
                     return m;
                 })
                 .orElseGet(() -> {
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("inQueue", false);
+                    m.put("currentParticipants", 0);
+                    m.put("maxParticipants", TEAM_SIZE);
                     return m;
                 });
     }

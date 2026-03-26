@@ -22,7 +22,7 @@ export function useMatchCompleteNotification(userId: number | undefined) {
           if (!message?.body) return;
           try {
             const d = JSON.parse(message.body) as { type?: string; sessionId?: number };
-            if (d.type === 'MATCH_COMPLETE' && d.sessionId != null) {
+            if ((d.type === 'MATCH_COMPLETE' || d.type === 'MATCH_COMPLETE_LOL') && d.sessionId != null) {
               clearRandomMatchPending();
               navigate('/match-chat/' + d.sessionId);
             }

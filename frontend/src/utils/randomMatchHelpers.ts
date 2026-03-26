@@ -41,26 +41,28 @@ export const RANK_OPTIONS: { value: string; label: string }[] = [
   { value: '', label: '전체' },
   { value: 'SOLO', label: '솔로 랭크' },
   { value: 'FLEX', label: '자유 랭크' },
-  { value: 'QUICK', label: '빠른 대전' },
-  { value: 'ARAM', label: '칼바람 나락' },
+  { value: 'QUICK', label: '신속 대전' },
+];
+
+/** LoL 랜덤매칭 큐 타입 (요구사항: 솔로/자유/신속) */
+export const LOL_QUEUE_TYPE_OPTIONS: { value: string; label: string }[] = [
+  { value: 'FLEX', label: '자유랭크' },
+  { value: 'QUICK', label: '신속 대전' },
 ];
 
 export const VALORANT_MODE_OPTIONS: { value: string; label: string }[] = [
-  { value: '', label: '전체' },
   { value: 'COMPETITIVE', label: '경쟁전' },
   { value: 'UNRATED', label: '일반전' },
   { value: 'SPIKE_RUSH', label: '스파이크 돌격' },
 ];
 
 export const OVERWATCH_MODE_OPTIONS: { value: string; label: string }[] = [
-  { value: '', label: '전체' },
   { value: 'ROLE_QUEUE_COMP', label: '역할 고정 - 경쟁전' },
+  { value: 'OPEN_QUEUE_COMP', label: '자유 - 경쟁전' },
   { value: 'QUICK_PLAY', label: '빠른 대전' },
-  { value: 'OPEN_QUEUE', label: '자유 모드' },
 ];
 
 export const PUBG_MODE_OPTIONS: { value: string; label: string }[] = [
-  { value: '', label: '선택' },
   { value: 'NORMAL', label: '일반전' },
   { value: 'RANKED', label: '경쟁전' },
 ];
@@ -79,7 +81,6 @@ export const APEX_MODE_OPTIONS: { value: string; label: string }[] = [
 ];
 
 export const PUBG_PARTY_OPTIONS: { value: string; label: string }[] = [
-  { value: '', label: '선택' },
   { value: 'DUO', label: '듀오(2인)' },
   { value: 'SQUAD', label: '스쿼드(4인)' },
 ];
@@ -121,7 +122,6 @@ export const GAME_OPTIONS: { key: string; label: string }[] = [
   { key: 'OVERWATCH', label: '오버워치2' },
   { key: 'PUBG', label: 'PUBG' },
   { key: 'COUNTER_STRIKE_2', label: 'CS2' },
-  { key: 'APEX_LEGENDS', label: '에이펙스' },
 ];
 
 export const MATCH_GAME_LABELS: Record<string, string> = {
@@ -130,7 +130,6 @@ export const MATCH_GAME_LABELS: Record<string, string> = {
   OVERWATCH: '오버워치2',
   PUBG: 'PUBG',
   COUNTER_STRIKE_2: 'CS2',
-  APEX_LEGENDS: '에이펙스',
 };
 
 export function getSearchModeOptions(game: string): { value: string; label: string }[] {
@@ -139,7 +138,6 @@ export function getSearchModeOptions(game: string): { value: string; label: stri
     case 'VALORANT': return VALORANT_MODE_OPTIONS;
     case 'OVERWATCH': return OVERWATCH_MODE_OPTIONS;
     case 'PUBG': return [{ value: '', label: '전체' }, ...PUBG_MODE_OPTIONS.filter((o) => o.value).map((o) => ({ value: o.value, label: o.label }))];
-    case 'APEX_LEGENDS': return APEX_MODE_OPTIONS;
     case 'COUNTER_STRIKE_2': return [{ value: '', label: '전체' }];
     default: return RANK_OPTIONS;
   }
@@ -147,11 +145,10 @@ export function getSearchModeOptions(game: string): { value: string; label: stri
 
 export function getMatchModeOptions(game: string): { value: string; label: string }[] {
   switch (game) {
-    case 'LEAGUE_OF_LEGENDS': return RANK_OPTIONS;
+    case 'LEAGUE_OF_LEGENDS': return LOL_QUEUE_TYPE_OPTIONS;
     case 'VALORANT': return VALORANT_MODE_OPTIONS;
     case 'OVERWATCH': return OVERWATCH_MODE_OPTIONS;
     case 'PUBG': return PUBG_MODE_OPTIONS;
-    case 'APEX_LEGENDS': return APEX_MODE_OPTIONS;
     default: return [];
   }
 }
@@ -163,7 +160,6 @@ export function getMatchPartyOptions(game: string): { value: string; label: stri
     case 'OVERWATCH': return OVERWATCH_PARTY_OPTIONS;
     case 'PUBG': return PUBG_PARTY_OPTIONS;
     case 'COUNTER_STRIKE_2': return CS2_PARTY_OPTIONS;
-    case 'APEX_LEGENDS': return APEX_PARTY_OPTIONS;
     default: return [];
   }
 }
@@ -190,18 +186,22 @@ export function modeLabel(gameKey: string, v: string): string {
   if (!v) return '전체';
   if (gameKey === 'VALORANT') return VALORANT_MODE_OPTIONS.find((o) => o.value === v)?.label ?? v;
   if (gameKey === 'OVERWATCH') return OVERWATCH_MODE_OPTIONS.find((o) => o.value === v)?.label ?? v;
-  if (gameKey === 'APEX_LEGENDS') return APEX_MODE_OPTIONS.find((o) => o.value === v)?.label ?? v;
   if (gameKey === 'PUBG') return PUBG_MODE_OPTIONS.find((o) => o.value === v)?.label ?? v;
   return v;
 }
 
 export function modeHasNoTier(gameKey: string, mode: string | undefined): boolean {
+  // 요구사항: 발로란트 랜덤매칭은 티어 UI 제거 (모드 무관)
+  if (gameKey === 'VALORANT') return true;
+  // 요구사항: PUBG 랜덤매칭은 티어 UI 제거 (모드 무관)
+  if (gameKey === 'PUBG') return true;
+  // 요구사항: CS2 랜덤매칭은 티어 UI 제거
+  if (gameKey === 'COUNTER_STRIKE_2') return true;
   if (!mode) return false;
-  if (gameKey === 'LEAGUE_OF_LEGENDS' && (mode === 'QUICK' || mode === 'ARAM')) return true;
-  if (gameKey === 'VALORANT' && (mode === 'UNRATED' || mode === 'SPIKE_RUSH')) return true;
-  if (gameKey === 'OVERWATCH' && (mode === 'QUICK_PLAY' || mode === 'OPEN_QUEUE')) return true;
-  if (gameKey === 'PUBG' && mode === 'NORMAL') return true;
-  if (gameKey === 'APEX_LEGENDS' && (mode === 'BATTLE_ROYALE' || mode === 'ARENAS')) return true;
+  // 요구사항: LoL 솔로/자유/신속 모두 티어 입력 UI 제거
+  if (gameKey === 'LEAGUE_OF_LEGENDS' && (mode === 'SOLO' || mode === 'FLEX' || mode === 'QUICK')) return true;
+  // 요구사항: 오버워치2는 '자유 - 경쟁전'에서만 티어 노출
+  if (gameKey === 'OVERWATCH') return mode !== 'OPEN_QUEUE_COMP';
   return false;
 }
 
@@ -217,8 +217,8 @@ export function isLolFlexRank(game: string, mode: string): boolean {
   return game === 'LEAGUE_OF_LEGENDS' && mode === 'FLEX';
 }
 
-export function isLolAram(game: string, mode: string): boolean {
-  return game === 'LEAGUE_OF_LEGENDS' && mode === 'ARAM';
+export function isLolAram(_game: string, _mode: string): boolean {
+  return false;
 }
 
 export function positionRequiredForRandomMatch(game: string, mode: string): boolean {

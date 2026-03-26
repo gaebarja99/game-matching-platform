@@ -6,6 +6,8 @@ import {
   joinMatchQueue,
   leaveMatchQueue,
   getMatchQueueStatus,
+  getLolMatchQueueStatus,
+  leaveLolMatchQueue,
   getMyMatchSessions,
   deleteMatchSession,
   type MatchSessionListItem,
@@ -13,13 +15,11 @@ import {
 import {
   GAME_OPTIONS,
   getMatchModeOptions,
-  getControlledPartyOptions,
   tierOptionsForGame,
   createFormShowTier,
   MATCH_GAME_LABELS,
   describeRandomMatchSummary,
   isLolAram,
-  isLolSoloRank,
   positionRequiredForRandomMatch,
 } from '../utils/randomMatchHelpers';
 import {
@@ -65,16 +65,22 @@ export default function RandomMatchChatBody({ enabled, onClose, navigateInPlace,
   const [matchGame, setMatchGame] = useState('LEAGUE_OF_LEGENDS');
   const [matchMode, setMatchMode] = useState('');
   const [matchTier, setMatchTier] = useState('');
-  const [matchPartySize, setMatchPartySize] = useState('');
   const [matchPosition, setMatchPosition] = useState<string | null>(null);
+  const [myPosition, setMyPosition] = useState<string | null>(null);
+  const [partnerPosition, setPartnerPosition] = useState<string | null>(null);
+  const [primaryRole, setPrimaryRole] = useState<string | null>(null);
+  const [secondaryRole, setSecondaryRole] = useState<string | null>(null);
+  const [quickFindPosition, setQuickFindPosition] = useState<string | null>(null);
+
+  const [isMatching, setIsMatching] = useState(false);
+  const [currentParticipants, setCurrentParticipants] = useState(0);
+  const maxParticipants = 5;
 
   const [sessions, setSessions] = useState<MatchSessionListItem[]>([]);
   const [sessionsLoading, setSessionsLoading] = useState(false);
   const [deletingId, setDeletingId] = useState<number | null>(null);
-  const controlledPartyOptions = getControlledPartyOptions(matchGame, matchMode);
   const positionRequired = positionRequiredForRandomMatch(matchGame, matchMode);
   const positionDisabled = isLolAram(matchGame, matchMode);
-  const partySizeDisabled = isLolSoloRank(matchGame, matchMode);
 
   useEffect(() => {
     const modeOptions = getMatchModeOptions(matchGame);
@@ -87,16 +93,6 @@ export default function RandomMatchChatBody({ enabled, onClose, navigateInPlace,
   }, [matchGame, matchMode]);
 
   useEffect(() => {
-    const options = getControlledPartyOptions(matchGame, matchMode);
-    if (options.length === 0) {
-      if (matchPartySize !== '') setMatchPartySize('');
-      return;
-    }
-    const hasParty = options.some((o) => o.value === matchPartySize);
-    if (!hasParty) setMatchPartySize(options[0]?.value ?? '');
-  }, [matchGame, matchMode, matchPartySize]);
-
-  useEffect(() => {
     if (positionRequired) {
       if (!matchPosition) setMatchPosition('TOP');
       return;
@@ -104,10 +100,62 @@ export default function RandomMatchChatBody({ enabled, onClose, navigateInPlace,
     if (matchPosition != null) setMatchPosition(null);
   }, [positionRequired, matchPosition]);
 
+  useEffect(() => {
+    // LoL 전용 포지션 UI 기본값
+    if (matchGame !== 'LEAGUE_OF_LEGENDS') return;
+    if (matchMode === 'QUICK') {
+      if (!primaryRole) setPrimaryRole('TOP');
+      if (!secondaryRole) setSecondaryRole('JUNGLE');
+      if (!quickFindPosition) setQuickFindPosition('MID');
+      return;
+    }
+    if (!myPosition) setMyPosition('TOP');
+    if (!partnerPosition) setPartnerPosition('JUNGLE');
+  }, [matchGame, matchMode, myPosition, partnerPosition, primaryRole, secondaryRole, quickFindPosition]);
+
+  useEffect(() => {
+    // LoL 매칭은 tier가 필수라 기본값 세팅
+    if (matchGame !== 'LEAGUE_OF_LEGENDS') return;
+    if (!matchTier) setMatchTier('GOLD');
+  }, [matchGame, matchTier]);
+
   const refreshQueue = useCallback(() => {
     if (!user) return;
+    if (matchGame === 'LEAGUE_OF_LEGENDS') {
+      getLolMatchQueueStatus()
+        .then((s) => {
+          setMatchInQueue(Boolean(s.inQueue));
+          setIsMatching(Boolean(s.inQueue));
+          setCurrentParticipants(Number(s.currentParticipants ?? 0));
+        })
+        .catch(() => setMatchInQueue(false));
+      return;
+    }
     getMatchQueueStatus().then(setMatchInQueue);
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    if (!enabled) return;
+    if (matchGame !== 'LEAGUE_OF_LEGENDS') return;
+    if (!isMatching) return;
+
+    const timer = window.setInterval(() => {
+      getLolMatchQueueStatus()
+        .then((s) => {
+          setMatchInQueue(Boolean(s.inQueue));
+          setIsMatching(Boolean(s.inQueue));
+          const cnt = Number(s.currentParticipants ?? 0);
+          setCurrentParticipants(cnt);
+          if (cnt >= maxParticipants) {
+            // 실제 매칭 완료는 서버가 WebSocket으로 통지하지만, UI상 즉시 성공 피드백 제공
+            window.alert('매칭 성공!');
+          }
+        })
+        .catch(() => {});
+    }, 1200);
+    return () => window.clearInterval(timer);
+  }, [enabled, isMatching, matchGame, user]);
 
   const refreshSessions = useCallback(() => {
     if (!user) return;
@@ -129,30 +177,59 @@ export default function RandomMatchChatBody({ enabled, onClose, navigateInPlace,
 
   const handleRandomMatch = async () => {
     if (!user) return;
-    if (positionRequired && !matchPosition) {
+    if (matchGame === 'LEAGUE_OF_LEGENDS') {
+      if (!matchMode) {
+        window.alert('큐 타입을 선택해 주세요');
+        return;
+      }
+      if (!matchTier) {
+        window.alert('티어를 선택해 주세요');
+        return;
+      }
+      if (matchMode === 'QUICK') {
+        if (!primaryRole || !secondaryRole || !quickFindPosition) {
+          window.alert('포지션을 선택해 주세요');
+          return;
+        }
+      } else {
+        if (!myPosition || !partnerPosition) {
+          window.alert('포지션을 선택해 주세요');
+          return;
+        }
+      }
+    } else if (positionRequired && !matchPosition) {
       window.alert('포지션을 선택해 주세요');
       return;
     }
 
+    const lolPositionForQueue =
+      matchGame === 'LEAGUE_OF_LEGENDS'
+        ? (matchMode === 'QUICK' ? quickFindPosition : myPosition) ?? undefined
+        : undefined;
+
     const matchConfig = {
       game: matchGame,
       mode: matchMode || undefined,
-      partySize: matchPartySize || undefined,
-      position: positionRequired ? (matchPosition ?? undefined) : undefined,
+      position: matchGame === 'LEAGUE_OF_LEGENDS'
+        ? lolPositionForQueue
+        : positionRequired ? (matchPosition ?? undefined) : undefined,
       // 티어는 자유 매칭 기준에서 희망 타겟으로만 사용
-      targetTier: createFormShowTier(matchGame, matchMode) ? (matchTier.trim() || undefined) : undefined,
-      tierPolicy: 'ANY' as const,
+      targetTier: matchGame === 'LEAGUE_OF_LEGENDS'
+        ? (matchTier.trim() || undefined)
+        : createFormShowTier(matchGame, matchMode) ? (matchTier.trim() || undefined) : undefined,
+      tierPolicy: matchGame === 'LEAGUE_OF_LEGENDS' ? ('TARGET_ONLY' as const) : ('ANY' as const),
     };
 
     setMatchJoining(true);
     const res = await joinMatchQueue(matchConfig);
     setMatchInQueue(res.inQueue);
     if (res.inQueue) {
+      setIsMatching(true);
       saveRandomMatchPending({
         game: matchConfig.game,
         mode: matchConfig.mode ?? '',
         tier: matchConfig.targetTier ?? '',
-        partySize: matchConfig.partySize ?? '',
+        partySize: '',
         position: matchConfig.position ?? null,
       });
     }
@@ -160,9 +237,15 @@ export default function RandomMatchChatBody({ enabled, onClose, navigateInPlace,
   };
 
   const handleLeaveMatchQueue = async () => {
-    await leaveMatchQueue();
+    if (matchGame === 'LEAGUE_OF_LEGENDS') {
+      await leaveLolMatchQueue();
+    } else {
+      await leaveMatchQueue();
+    }
     clearRandomMatchPending();
     setMatchInQueue(false);
+    setIsMatching(false);
+    setCurrentParticipants(0);
   };
 
   const handleDeleteSession = async (sessionId: number) => {
@@ -234,6 +317,11 @@ export default function RandomMatchChatBody({ enabled, onClose, navigateInPlace,
             </li>
           ))}
         </ul>
+        {isMatching && (
+          <div className="random-match-chat-waiting-desc" style={{ marginTop: 10, fontWeight: 700 }}>
+            현재 인원: {currentParticipants}/{maxParticipants}
+          </div>
+        )}
         <button type="button" className="random-match-chat-cancel-queue" onClick={handleLeaveMatchQueue}>
           대기 취소
         </button>
@@ -252,7 +340,6 @@ export default function RandomMatchChatBody({ enabled, onClose, navigateInPlace,
           onChange={(e) => {
             setMatchGame(e.target.value);
             setMatchMode('');
-            setMatchPartySize('');
           }}
         >
           {GAME_OPTIONS.map((o) => (
@@ -263,7 +350,7 @@ export default function RandomMatchChatBody({ enabled, onClose, navigateInPlace,
         </select>
         {getMatchModeOptions(matchGame).length > 0 && (
           <>
-            <label className="random-match-chat-label">모드</label>
+            <label className="random-match-chat-label">큐 타입</label>
             <select className="random-match-chat-input" value={matchMode} onChange={(e) => setMatchMode(e.target.value)}>
               {getMatchModeOptions(matchGame).map((o) => (
                 <option key={o.value || '_'} value={o.value}>
@@ -273,11 +360,13 @@ export default function RandomMatchChatBody({ enabled, onClose, navigateInPlace,
             </select>
           </>
         )}
-        {createFormShowTier(matchGame, matchMode) && (
+        {(matchGame === 'LEAGUE_OF_LEGENDS' || createFormShowTier(matchGame, matchMode)) && (
           <>
             <label className="random-match-chat-label">티어</label>
             <select className="random-match-chat-input" value={matchTier} onChange={(e) => setMatchTier(e.target.value)}>
-              {tierOptionsForGame(matchGame).map((o) => (
+              {tierOptionsForGame(matchGame)
+                .filter((o) => matchGame !== 'LEAGUE_OF_LEGENDS' || o.value !== '')
+                .map((o) => (
                 <option key={o.value || '_'} value={o.value}>
                   {o.label}
                 </option>
@@ -285,24 +374,25 @@ export default function RandomMatchChatBody({ enabled, onClose, navigateInPlace,
             </select>
           </>
         )}
-        {controlledPartyOptions.length > 0 && (
-          <>
-            <label className="random-match-chat-label">인원</label>
-            <select
-              className="random-match-chat-input"
-              value={matchPartySize}
-              onChange={(e) => setMatchPartySize(e.target.value)}
-              disabled={partySizeDisabled}
-            >
-              {controlledPartyOptions.map((o) => (
-                <option key={o.value || '_'} value={o.value}>
-                  {o.label}
-                </option>
-              ))}
-            </select>
-          </>
-        )}
-        {matchGame !== 'PUBG' && (
+        {matchGame === 'LEAGUE_OF_LEGENDS' ? (
+          matchMode === 'QUICK' ? (
+            <>
+              <label className="random-match-chat-label">주 역할군</label>
+              <PositionPicker value={primaryRole} onChange={setPrimaryRole} game={matchGame} filterMode includeAllOption={false} className="random-match-chat-position" />
+              <label className="random-match-chat-label">부 역할군</label>
+              <PositionPicker value={secondaryRole} onChange={setSecondaryRole} game={matchGame} filterMode includeAllOption={false} className="random-match-chat-position" />
+              <label className="random-match-chat-label">찾는 포지션</label>
+              <PositionPicker value={quickFindPosition} onChange={setQuickFindPosition} game={matchGame} filterMode includeAllOption={false} className="random-match-chat-position" />
+            </>
+          ) : (
+            <>
+              <label className="random-match-chat-label">나의 포지션</label>
+              <PositionPicker value={myPosition} onChange={setMyPosition} game={matchGame} filterMode includeAllOption={false} className="random-match-chat-position" />
+              <label className="random-match-chat-label">찾는 포지션</label>
+              <PositionPicker value={partnerPosition} onChange={setPartnerPosition} game={matchGame} filterMode includeAllOption={false} className="random-match-chat-position" />
+            </>
+          )
+        ) : matchGame !== 'PUBG' ? (
           <div className={positionDisabled ? 'random-match-position-block disabled' : 'random-match-position-block'}>
             <label className="random-match-chat-label">포지션</label>
             <PositionPicker
@@ -315,7 +405,7 @@ export default function RandomMatchChatBody({ enabled, onClose, navigateInPlace,
               className="random-match-chat-position"
             />
           </div>
-        )}
+        ) : null}
         <button type="button" className="random-match-chat-start-btn" onClick={handleRandomMatch} disabled={matchJoining}>
           {matchJoining ? '참가 중...' : '매칭 시작'}
         </button>
