@@ -162,6 +162,10 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
       setSearchResults([]);
       return;
     }
+    if (q.length < 1) {
+      setSearchResults([]);
+      return;
+    }
     fetch(apiUrl(`api/friends/search?q=${encodeURIComponent(q)}`), { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : []))
       .then((list: FriendItem[]) => {
@@ -707,7 +711,17 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
 
               <div className={`friend-sidebar-panel ${activeFriendTab === 'find' ? 'active' : ''}`}>
                 <div className="friend-search-wrap">
-                  <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="아이디/닉네임 검색" />
+                  <input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSearchFriend();
+                      }
+                    }}
+                    placeholder="아이디/닉네임 검색"
+                  />
                   <button type="button" onClick={handleSearchFriend}>검색</button>
                 </div>
                 <div className="friend-list-wrap">

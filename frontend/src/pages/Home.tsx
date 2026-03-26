@@ -9,6 +9,7 @@ import { resolveProfileImageUrl } from '../api/client';
 import {
   createGameRoom,
   fetchGameRoomList,
+  deleteGameRoom,
   joinGameRoom,
   getGameRoomChatRoomId,
   type GameRoomItem,
@@ -250,6 +251,13 @@ export default function Home() {
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [joinRoomId, setJoinRoomId] = useState<number | null>(null);
   const [selectedGame, setSelectedGame] = useState<TeamSearchGameId>('ALL');
+
+  // 팀 찾기 테이블 컬럼 표시 규칙
+  // - PUBG 탭: 포지션 컬럼 숨김
+  // - 전체(ALL) 탭: 삭제 컬럼 숨김
+  const showPositionColumn = selectedGame !== 'PUBG';
+  const showDeleteColumn = selectedGame !== 'ALL';
+  const tableColumnCount = 7 + (showPositionColumn ? 1 : 0) + (showDeleteColumn ? 1 : 0);
 
   const fetchRooms = useCallback(() => {
     setLoadingRooms(true);
@@ -615,6 +623,37 @@ export default function Home() {
       window.alert(message);
     }
     fetchRooms();
+  };
+
+  const [deletingRoomId, setDeletingRoomId] = useState<number | null>(null);
+  const handleDeleteRoom = async (r: GameRoomItem) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    if (!r.isHost) {
+      window.alert('방장만 삭제할 수 있습니다.');
+      return;
+    }
+    const pw = window.prompt('방 삭제용 비밀번호를 입력해 주세요.');
+    if (pw == null) return;
+    const deletePassword = pw.trim();
+    if (!deletePassword) return;
+    if (!window.confirm('정말 이 방을 삭제할까요?')) return;
+
+    setDeletingRoomId(r.id);
+    try {
+      const { ok, message } = await deleteGameRoom(r.id, deletePassword);
+      if (!ok) {
+        window.alert(message || '삭제에 실패했습니다.');
+        return;
+      }
+      setRoomList((prev) => prev.filter((x) => x.id !== r.id));
+    } catch {
+      window.alert('삭제 중 오류가 발생했습니다.');
+    } finally {
+      setDeletingRoomId(null);
+    }
   };
 
   /** Random-match sidebar panel (shared with fixed sidebar). */
@@ -1033,26 +1072,27 @@ export default function Home() {
                   <tr>
                     <th>제목</th>
                     <th>랭크</th>
-                    <th>포지션</th>
+                    {showPositionColumn ? <th>포지션</th> : null}
                     <th>메모</th>
                     <th>인원</th>
                     <th>방장</th>
                     <th>등록일</th>
                     <th>참가</th>
+                    {showDeleteColumn ? <th>삭제</th> : null}
                   </tr>
                 </thead>
                 <tbody>
                   {loadingRooms && roomList.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="home-demo-room-loading-cell">방 목록 불러오는 중…</td>
+                      <td colSpan={tableColumnCount} className="home-demo-room-loading-cell">방 목록 불러오는 중…</td>
                     </tr>
                   ) : visibleRoomList.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="home-demo-room-loading-cell">등록된 방이 없습니다.</td>
+                      <td colSpan={tableColumnCount} className="home-demo-room-loading-cell">등록된 방이 없습니다.</td>
                     </tr>
                   ) : filteredRoomList.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="home-demo-room-loading-cell">선택한 게임에 등록된 방이 없습니다.</td>
+                      <td colSpan={tableColumnCount} className="home-demo-room-loading-cell">선택한 게임에 등록된 방이 없습니다.</td>
                     </tr>
                   ) : null}
                   {filteredRoomList.map((r) => {
@@ -1068,15 +1108,17 @@ export default function Home() {
                       <tr key={`api-${r.id}`} className={isFull ? 'home-demo-room-row home-demo-room-row--full' : 'home-demo-room-row'}>
                         <td>{r.title}</td>
                         <td>{rankCell}</td>
-                        <td>
-                          {showPos ? (
-                            <span className="home-demo-room-position">
-                              <PositionIcon position={op.position} game={r.game} showLabel />
-                            </span>
-                          ) : (
-                            '-'
-                          )}
-                        </td>
+                        {showPositionColumn ? (
+                          <td>
+                            {showPos ? (
+                              <span className="home-demo-room-position">
+                                <PositionIcon position={op.position} game={r.game} showLabel />
+                              </span>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
+                        ) : null}
                         <td className="home-demo-room-memo-cell" title={r.memo?.trim() ? r.memo : ''}>
                           {r.memo?.trim() ? r.memo : '-'}
                         </td>
@@ -1127,6 +1169,23 @@ export default function Home() {
                             </button>
                           )}
                         </td>
+                        {showDeleteColumn ? (
+                          <td>
+                            {r.isHost ? (
+                              <button
+                                type="button"
+                                className="home-demo-room-delete-btn"
+                                disabled={deletingRoomId === r.id}
+                                onClick={() => void handleDeleteRoom(r)}
+                                title="방 삭제"
+                              >
+                                {deletingRoomId === r.id ? '삭제 중…' : '삭제'}
+                              </button>
+                            ) : (
+                              <span className="home-demo-room-closed-label">-</span>
+                            )}
+                          </td>
+                        ) : null}
                       </tr>
                     );
                   })}
