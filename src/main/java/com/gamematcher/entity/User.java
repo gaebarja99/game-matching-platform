@@ -38,18 +38,21 @@ public class User {
     private String password;
 
     /**
-     * API ?ㅻ뜑 {@code X-Auth-Token} 議고쉶??蹂묓빀??GM2 ?먮쫫).
-     * 濡쒓렇?맞룰??끒텽Auth ?깃났 ??諛쒓툒; nullable? 留덉씠洹몃젅?댁뀡 吏곹썑 湲곗〈 ?됱슜.
+     * API 인증용 토큰이다. 세션 로그인과 별개로 사용할 수 있다.
      */
     @Column(name = "auth_token", length = 128, unique = true)
     private String authToken;
 
-    /** OAuth ?쒓났??(GOOGLE ??. null?대㈃ ?쇰컲 ?꾩씠??鍮꾨?踰덊샇 媛??*/
+    /**
+     * OAuth 제공자 정보. 일반 회원가입 사용자는 null 일 수 있다.
+     */
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     private Provider provider;
 
-    /** OAuth ?쒓났??履??ъ슜??怨좎쑀 ID (?? Google sub) */
+    /**
+     * OAuth 제공자의 고유 사용자 ID. 예: Google sub
+     */
     @Column(name = "provider_subject", length = 128)
     private String providerSubject;
 
@@ -59,7 +62,9 @@ public class User {
     @Column(name = "profile_image_url", length = 512)
     private String profileImageUrl;
 
-    /** ?먭린?뚭컻 (?꾨줈???몄쭛) */
+    /**
+     * 자기소개 문구
+     */
     @Column(length = 500)
     private String bio;
 
@@ -80,20 +85,28 @@ public class User {
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 
-    /** ???붿븸 (1??= 1.2?? */
+    /**
+     * 보유 중인 팡 잔액
+     */
     @Column(name = "pang_balance", nullable = false)
     private Long pangBalance = 0L;
 
-    /** 寃쏀뿕移?(0.1 ?⑥쐞 ??? 1 XP = 10, 0.1 XP = 1). ??1 援щℓ=1 XP, ?붾줈???꾩썝 諛?梨꾪똿 1媛?0.1 XP */
+    /**
+     * 총 경험치. 0.1 XP 단위로 저장한다.
+     */
     @Column(name = "total_experience_tenths", nullable = false)
     private Long totalExperienceTenths = 0L;
 
-    /** 留덉씪由ъ?(??. ??援щℓ ??寃곗젣 湲덉븸??10% ?곷┰ (1??1.2????0.12?? */
+    /**
+     * 마일리지. 결제 금액의 일부를 적립한다.
+     */
     @Column(name = "mileage", nullable = false)
     private Long mileage = 0L;
 
-    /** 愿묎퀬 ?쒓굅 留뚮즺?쇱떆 (null ?먮뒗 ?꾩옱 ?댁쟾?대㈃ 愿묎퀬 ?몄텧) */
-        @Column(name = "ad_free_until")
+    /**
+     * 광고 제거 만료 시각. null 이면 광고 제거 혜택이 없다.
+     */
+    @Column(name = "ad_free_until")
     private LocalDateTime adFreeUntil;
 
     @Column(name = "profanity_strike_count", nullable = false)
@@ -102,7 +115,9 @@ public class User {
     @Column(name = "chat_muted_until")
     private LocalDateTime chatMutedUntil;
 
-    /** ?ㅽ듃由щ㉧ 援щ텇: ?쇰컲(30% ?섏닔猷? / ?뚰듃??20% ?섏닔猷?. null?대㈃ ?쇰컲怨??숈씪 泥섎━ */
+    /**
+     * 스트리머 등급 정보. 일반 사용자는 null 일 수 있다.
+     */
     @Enumerated(EnumType.STRING)
     @Column(name = "streamer_tier", length = 20)
     private StreamerTier streamerTier;
@@ -118,4 +133,3 @@ public class User {
         updatedAt = LocalDateTime.now();
     }
 }
-

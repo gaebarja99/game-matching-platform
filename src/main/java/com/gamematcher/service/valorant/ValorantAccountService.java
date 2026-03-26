@@ -45,6 +45,15 @@ public class ValorantAccountService {
                 .map(mapper::toPuuidApiResponse);
     }
 
+    @Transactional(readOnly = true)
+    public Optional<ValorantPuuidApiResponse> findAnyCachedAccountResponse(String name, String tag) {
+        if (name == null || name.isBlank() || tag == null || tag.isBlank()) {
+            return Optional.empty();
+        }
+        return repository.findByNameIgnoreCaseAndTagIgnoreCase(name.trim(), tag.trim())
+                .map(mapper::toPuuidApiResponse);
+    }
+
     @Transactional
     public ValorantAccount saveAccount(ValorantPuuidApiResponse.AccountData dto) {
         ValorantAccount entity = mapper.toEntity(dto);

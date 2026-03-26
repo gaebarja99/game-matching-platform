@@ -6,6 +6,5 @@ public enum GameList {
     VALORANT,
     OVERWATCH,
     PUBG,
-    COUNTER_STRIKE_2,
-    APEX_LEGENDS
+    COUNTER_STRIKE_2
 }

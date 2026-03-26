@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import java.text.Normalizer;
 
 /**
  * 전적 검색 요청 DTO
@@ -119,7 +120,18 @@ public class PlayerSearchRequest {
         if (region == null || region.isEmpty()) region = "kr";
         // JSON에 count 생략 시 null → NPE 방지 (PUBG·APEX 등 count 필드 없는 전적 화면)
         if (count == null || count <= 0 || count > 20) count = 5;
+        if (nickname != null) nickname = normalizeText(nickname);
+        if (gameName != null) gameName = normalizeText(gameName);
+        if (tagLine != null) tagLine = normalizeText(tagLine);
         if (game != null) game = game.toLowerCase().trim();
         return this;
+    }
+
+    private String normalizeText(String value) {
+        String trimmed = value == null ? null : value.trim();
+        if (trimmed == null || trimmed.isEmpty()) {
+            return trimmed;
+        }
+        return Normalizer.normalize(trimmed, Normalizer.Form.NFC);
     }
 }

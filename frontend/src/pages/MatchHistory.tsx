@@ -40,7 +40,7 @@ export default function MatchHistory() {
     return (
       <Layout>
         <div className="duo-section">
-          <p>로그인하면 매칭 채팅 내역을 볼 수 있습니다.</p>
+          <p>로그인하면 매칭 채팅 이력을 볼 수 있습니다.</p>
           <Link to="/login" className="btn-write">로그인</Link>
         </div>
       </Layout>
@@ -51,14 +51,14 @@ export default function MatchHistory() {
     <Layout>
       <section className="duo-section">
         <div className="duo-section-header">
-          <h2 className="duo-section-title">랜덤 매칭 채팅 내역</h2>
-          <Link to="/" className="link-all">홈으로</Link>
+          <h2 className="duo-section-title">랜덤 매칭 채팅 이력</h2>
+          <Link to="/" className="link-all">메인으로</Link>
         </div>
-        <p className="duo-stats">매칭된 팀과의 채팅만 다시 볼 수 있습니다.</p>
+        <p className="duo-stats">매칭 후 나눈 채팅방을 다시 볼 수 있습니다.</p>
         {loading ? (
-          <div className="duo-empty">로딩 중…</div>
+          <div className="duo-empty">로딩 중...</div>
         ) : list.length === 0 ? (
-          <div className="duo-empty">아직 매칭 내역이 없습니다. 홈에서 랜덤 매칭을 시도해 보세요.</div>
+          <div className="duo-empty">아직 매칭 이력이 없습니다. 메인에서 랜덤 매칭을 시도해 보세요.</div>
         ) : (
           <ul className="match-history-list">
             {list.map((s) => (

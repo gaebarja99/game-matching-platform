@@ -26,6 +26,7 @@ import org.springframework.web.util.UriComponentsBuilder;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -34,9 +35,36 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class LolApiService {
 
+    private static final List<String> FALLBACK_PLATFORM_BASE_URLS = List.of(
+            "https://kr.api.riotgames.com",
+            "https://jp1.api.riotgames.com",
+            "https://na1.api.riotgames.com",
+            "https://euw1.api.riotgames.com",
+            "https://eun1.api.riotgames.com",
+            "https://br1.api.riotgames.com",
+            "https://la1.api.riotgames.com",
+            "https://la2.api.riotgames.com",
+            "https://oc1.api.riotgames.com",
+            "https://tr1.api.riotgames.com",
+            "https://ru.api.riotgames.com",
+            "https://ph2.api.riotgames.com",
+            "https://sg2.api.riotgames.com",
+            "https://th2.api.riotgames.com",
+            "https://tw2.api.riotgames.com",
+            "https://vn2.api.riotgames.com"
+    );
+
     private final RiotApiProperties riotApiProperties;
     private final MatchSummaryRepository matchSummaryRepository;
     private final RestTemplate restTemplate = new RestTemplate();
+    private final ObjectMapper objectMapper = new ObjectMapper();
+
+    public String resolvePlatformBaseUrl(String platform) {
+        if (platform == null || platform.isBlank()) {
+            return riotApiProperties.getPlatformBaseUrl();
+        }
+        return "https://" + platform.trim().toLowerCase() + ".api.riotgames.com";
+    }
 
     public RiotAccountResponseDto getAccountByRiotId(String gameName, String tagLine) {
         String url = UriComponentsBuilder
@@ -154,8 +182,12 @@ public class LolApiService {
     }
 
     public RiotSummonerResponseDto getSummonerByPuuid(String puuid) {
+        return getSummonerByPuuid(puuid, riotApiProperties.getPlatformBaseUrl());
+    }
+
+    public RiotSummonerResponseDto getSummonerByPuuid(String puuid, String platformBaseUrl) {
         String url = UriComponentsBuilder
-                .fromHttpUrl(riotApiProperties.getPlatformBaseUrl())
+                .fromHttpUrl(platformBaseUrl)
                 .path("/lol/summoner/v4/summoners/by-puuid/{puuid}")
                 .buildAndExpand(puuid)
                 .toUriString();
@@ -180,8 +212,12 @@ public class LolApiService {
     }
 
     public String getSummonerRawByPuuid(String puuid) {
+        return getSummonerRawByPuuid(puuid, riotApiProperties.getPlatformBaseUrl());
+    }
+
+    public String getSummonerRawByPuuid(String puuid, String platformBaseUrl) {
         String url = UriComponentsBuilder
-                .fromHttpUrl(riotApiProperties.getPlatformBaseUrl())
+                .fromHttpUrl(platformBaseUrl)
                 .path("/lol/summoner/v4/summoners/by-puuid/{puuid}")
                 .buildAndExpand(puuid)
                 .toUriString();
@@ -202,6 +238,150 @@ public class LolApiService {
             throw new RuntimeException("Riot Summoner Raw API 호출 실패: " + e.getStatusCode() + " / " + e.getResponseBodyAsString());
         } catch (Exception e) {
             throw new RuntimeException("Riot Summoner Raw API 호출 중 오류 발생: " + e.getMessage(), e);
+        }
+    }
+
+    public SummonerLookupResult findSummonerByPuuidAcrossPlatforms(String puuid) {
+        LinkedHashSet<String> candidates = new LinkedHashSet<>();
+        candidates.add(riotApiProperties.getPlatformBaseUrl());
+        candidates.addAll(FALLBACK_PLATFORM_BASE_URLS);
+
+        RuntimeException lastException = null;
+        for (String platformBaseUrl : candidates) {
+            try {
+                String raw = getSummonerRawByPuuid(puuid, platformBaseUrl);
+                if (raw == null || raw.isBlank()) {
+                    continue;
+                }
+
+                JsonNode root = objectMapper.readTree(raw);
+                JsonNode idNode = root.get("id");
+                String encryptedSummonerId = idNode == null || idNode.isNull() ? null : idNode.asText();
+                if (encryptedSummonerId == null || encryptedSummonerId.isBlank()) {
+                    encryptedSummonerId = getSummonerIdFromLeagueEntriesByPuuid(puuid, platformBaseUrl);
+                }
+                if (encryptedSummonerId != null && !encryptedSummonerId.isBlank()) {
+                    return new SummonerLookupResult(encryptedSummonerId, platformBaseUrl);
+                }
+            } catch (RuntimeException e) {
+                lastException = e;
+            } catch (Exception e) {
+                lastException = new RuntimeException("Riot Summoner ID 조회 중 오류 발생: " + e.getMessage(), e);
+            }
+        }
+
+        if (lastException != null) {
+            throw lastException;
+        }
+        return null;
+    }
+
+    public String getEncryptedSummonerIdByPuuid(String puuid) {
+        SummonerLookupResult result = findSummonerByPuuidAcrossPlatforms(puuid);
+        return result == null ? null : result.encryptedSummonerId();
+    }
+
+    public String getSummonerIdFromLeagueEntriesByPuuid(String puuid, String platformBaseUrl) {
+        String url = UriComponentsBuilder
+                .fromHttpUrl(platformBaseUrl)
+                .path("/lol/league/v4/entries/by-puuid/{puuid}")
+                .buildAndExpand(puuid)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Riot-Token", riotApiProperties.getApiKey());
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<List<RiotLeagueEntryResponseDto>> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    new ParameterizedTypeReference<List<RiotLeagueEntryResponseDto>>() {}
+            );
+            List<RiotLeagueEntryResponseDto> entries = response.getBody();
+            if (entries == null || entries.isEmpty()) {
+                return null;
+            }
+
+            for (RiotLeagueEntryResponseDto entry : entries) {
+                if (entry.getSummonerId() != null && !entry.getSummonerId().isBlank()) {
+                    return entry.getSummonerId();
+                }
+            }
+            return null;
+        } catch (HttpStatusCodeException e) {
+            if (e.getStatusCode().value() == 404) {
+                return null;
+            }
+            throw new RuntimeException("Riot League Entry API 호출 실패: " + e.getStatusCode() + " / " + e.getResponseBodyAsString());
+        } catch (Exception e) {
+            throw new RuntimeException("Riot League Entry API 호출 중 오류 발생: " + e.getMessage(), e);
+        }
+    }
+
+    public String getSummonerIdFromRecentMatchesByPuuid(String puuid) {
+        try {
+            List<String> matchIds = getMatchIdsByPuuid(puuid, 0, 5);
+            if (matchIds == null || matchIds.isEmpty()) {
+                return null;
+            }
+
+            for (String matchId : matchIds) {
+                String raw = getMatchRawByMatchId(matchId);
+                if (raw == null || raw.isBlank()) {
+                    continue;
+                }
+
+                JsonNode root = objectMapper.readTree(raw);
+                JsonNode participants = root.path("info").path("participants");
+                if (!participants.isArray()) {
+                    continue;
+                }
+
+                for (JsonNode participant : participants) {
+                    String participantPuuid = participant.path("puuid").asText(null);
+                    if (participantPuuid != null && participantPuuid.equals(puuid)) {
+                        String summonerId = participant.path("summonerId").asText(null);
+                        if (summonerId != null && !summonerId.isBlank()) {
+                            return summonerId;
+                        }
+                    }
+                }
+            }
+            return null;
+        } catch (Exception e) {
+            throw new RuntimeException("Riot Match Detail 기반 summonerId 조회 중 오류 발생: " + e.getMessage(), e);
+        }
+    }
+
+    public String getThirdPartyCodeBySummonerId(String encryptedSummonerId) {
+        return getThirdPartyCodeBySummonerId(encryptedSummonerId, riotApiProperties.getPlatformBaseUrl());
+    }
+
+    public String getThirdPartyCodeBySummonerId(String encryptedSummonerId, String platformBaseUrl) {
+        String url = UriComponentsBuilder
+                .fromHttpUrl(platformBaseUrl)
+                .path("/lol/platform/v4/third-party-code/by-summoner/{encryptedSummonerId}")
+                .buildAndExpand(encryptedSummonerId)
+                .toUriString();
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Riot-Token", riotApiProperties.getApiKey());
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    String.class
+            );
+            return response.getBody();
+        } catch (HttpStatusCodeException e) {
+            throw new RuntimeException("Riot Third Party Code API 호출 실패: " + e.getStatusCode() + " / " + e.getResponseBodyAsString());
+        } catch (Exception e) {
+            throw new RuntimeException("Riot Third Party Code API 호출 중 오류 발생: " + e.getMessage(), e);
         }
     }
 
@@ -278,9 +458,7 @@ public class LolApiService {
                     String.class
             );
 
-            ObjectMapper objectMapper = new ObjectMapper();
             JsonNode root = objectMapper.readTree(response.getBody());
-
             JsonNode info = root.get("info");
             JsonNode participants = info.get("participants");
 
@@ -316,18 +494,15 @@ public class LolApiService {
         }
 
         List<RiotMatchDetailResponseDto> results = new ArrayList<>();
-
         for (String matchId : matchIds) {
             RiotMatchDetailResponseDto detail = getMatchDetailByMatchId(matchId, puuid);
             results.add(detail);
         }
-
         return results;
     }
 
     public RiotStatsResponseDto getRecentStats(String puuid, String gameName, String tagLine) {
         List<RiotMatchDetailResponseDto> matches = getRecentMatchDetailsByPuuid(puuid, 5);
-
         int games = matches.size();
 
         if (games == 0) {
@@ -350,22 +525,16 @@ public class LolApiService {
         int kills = 0;
         int deaths = 0;
         int assists = 0;
-
         Map<String, Integer> championCount = new HashMap<>();
 
         for (RiotMatchDetailResponseDto match : matches) {
             if (match.isWin()) {
                 wins++;
             }
-
             kills += match.getKills();
             deaths += match.getDeaths();
             assists += match.getAssists();
-
-            championCount.put(
-                    match.getChampionName(),
-                    championCount.getOrDefault(match.getChampionName(), 0) + 1
-            );
+            championCount.put(match.getChampionName(), championCount.getOrDefault(match.getChampionName(), 0) + 1);
         }
 
         String mostPlayed = championCount.entrySet()
@@ -386,7 +555,6 @@ public class LolApiService {
         stats.setAvgDeaths(deaths / (double) games);
         stats.setAvgAssists(assists / (double) games);
         stats.setMostPlayedChampion(mostPlayed);
-
         return stats;
     }
 
@@ -429,14 +597,12 @@ public class LolApiService {
 
     public void syncRecentMatches(String puuid) {
         List<String> matchIds = getMatchIdsByPuuid(puuid, 0, 5);
-
         if (matchIds == null || matchIds.isEmpty()) {
             return;
         }
 
         for (String matchId : matchIds) {
             RiotMatchDetailResponseDto detail = getMatchDetailByMatchId(matchId, puuid);
-
             saveMatchSummary(
                     puuid,
                     detail.getMatchId(),
@@ -453,5 +619,8 @@ public class LolApiService {
                     System.currentTimeMillis()
             );
         }
+    }
+
+    public record SummonerLookupResult(String encryptedSummonerId, String platformBaseUrl) {
     }
 }

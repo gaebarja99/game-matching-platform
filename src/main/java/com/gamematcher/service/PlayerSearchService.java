@@ -6,12 +6,11 @@ import com.gamematcher.dto.search.PlayerSearchRequest;
 import com.gamematcher.dto.search.PlayerSearchResponse;
 import com.gamematcher.exception.GameApiException;
 import com.gamematcher.service.lol.LolApiService;
-import com.gamematcher.service.search.ApexSearchService;
 import com.gamematcher.service.search.Cs2SearchService;
 import com.gamematcher.service.search.OverwatchSearchService;
 import com.gamematcher.service.search.PubgSearchService;
 import com.gamematcher.service.search.TftSearchService;
-import com.gamematcher.service.valorant.ValorantApiService;
+import com.gamematcher.service.search.ValorantSearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -26,15 +25,15 @@ public class PlayerSearchService {
 
     private final LolApiService lolApiService;
     private final TftSearchService tftSearchService;
-    private final ValorantApiService valorantApiService;
+    private final ValorantSearchService valorantSearchService;
     private final PubgSearchService pubgSearchService;
     private final OverwatchSearchService overwatchSearchService;
-    private final ApexSearchService apexSearchService;
     private final Cs2SearchService cs2SearchService;
     private final ObjectMapper objectMapper;
 
     public PlayerSearchResponse searchPlayer(PlayerSearchRequest request) {
         request.normalize();
+        request.setCount(20);
 
         String game = request.getGame();
         if (game == null || game.isBlank()) {
@@ -44,18 +43,14 @@ public class PlayerSearchService {
         return switch (game) {
             case "lol" -> lolApiService.search(request);
             case "tft" -> tftSearchService.search(request);
-            case "valorant" -> valorantApiService.search(request);
+            case "valorant" -> valorantSearchService.search(request);
             case "pubg" -> pubgSearchService.search(request);
             case "overwatch" -> overwatchSearchService.search(request);
-            case "apex" -> apexSearchService.search(request);
             case "cs2" -> cs2SearchService.search(request);
             default -> PlayerSearchResponse.error(game, request.getGameName(), "아직 지원하지 않는 게임입니다.");
         };
     }
 
-    /**
-     * 업로드된 JSON 배열 파일로 배치 전적 검색
-     */
     public List<PlayerSearchResponse> batchSearchFromJson(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new GameApiException(HttpStatus.BAD_REQUEST, "JSON 파일을 선택해 주세요.");
@@ -63,16 +58,14 @@ public class PlayerSearchService {
         try {
             List<PlayerSearchRequest> requests = objectMapper.readValue(
                     file.getInputStream(),
-                    new TypeReference<List<PlayerSearchRequest>>() {});
+                    new TypeReference<List<PlayerSearchRequest>>() {}
+            );
             return batchSearch(requests);
-        } catch (IOException e) {
-            throw new GameApiException(HttpStatus.BAD_REQUEST, "JSON 형식이 올바르지 않습니다: " + e.getMessage());
+        } catch (IOException exception) {
+            throw new GameApiException(HttpStatus.BAD_REQUEST, "JSON 형식이 올바르지 않습니다: " + exception.getMessage());
         }
     }
 
-    /**
-     * 요청 DTO 목록으로 배치 전적 검색
-     */
     public List<PlayerSearchResponse> batchSearch(List<PlayerSearchRequest> requests) {
         if (requests == null || requests.isEmpty()) {
             return List.of();

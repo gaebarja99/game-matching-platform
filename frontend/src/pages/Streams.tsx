@@ -12,7 +12,6 @@ function gameLabel(game: string | undefined): string {
     OVERWATCH: '오버워치',
     PUBG: 'PUBG',
     COUNTER_STRIKE_2: '카운터 스트라이크 2',
-    APEX_LEGENDS: '에이펙스 레전드',
     OTHERS: '기타',
   };
   return game ? (map[game] ?? game) : '게임';
@@ -34,7 +33,7 @@ function StreamCard({ s, showLiveBadge = true }: { s: StreamItem; showLiveBadge?
           {showLivePreview ? (
             <LiveThumb playbackUrl={s.playbackUrl!} />
           ) : (
-            <div className="thumb-placeholder">{isLive ? '🔴 방송 중' : ''}</div>
+            <div className="thumb-placeholder">{isLive ? '생방송 중' : ''}</div>
           )}
         </div>
         {isLive && <span className="live-badge">LIVE</span>}
@@ -92,7 +91,7 @@ export default function Streams() {
     <StreamsLayout>
       <section className="section">
         <div className="section-head">
-          <h2 className="section-title"><span className="title-icon">🎵</span> 지금 라이브</h2>
+          <h2 className="section-title"><span className="title-icon">●</span> 지금 라이브</h2>
           <Link to="/streams" className="section-more">전체보기</Link>
         </div>
         {loadingLive ? (
@@ -110,7 +109,7 @@ export default function Streams() {
 
       <section className="section">
         <div className="section-head">
-          <h2 className="section-title"><span className="title-icon">📺</span> 최근 방송</h2>
+          <h2 className="section-title"><span className="title-icon">◌</span> 최근 방송</h2>
           <Link to="/streams" className="section-more">전체보기</Link>
         </div>
         {loadingRecent ? (

@@ -5,9 +5,13 @@ import com.gamematcher.dto.account.AccountLinkRefreshResponseDto;
 import com.gamematcher.dto.account.OAuthStartResponseDto;
 import com.gamematcher.dto.account.RiotAccountLinkResponseDto;
 import com.gamematcher.dto.account.RiotManualLinkRequestDto;
+import com.gamematcher.dto.account.RiotVerificationConfirmRequestDto;
+import com.gamematcher.dto.account.RiotVerificationStartRequestDto;
+import com.gamematcher.dto.account.RiotVerificationStartResponseDto;
 import com.gamematcher.exception.GameApiException;
 import com.gamematcher.service.account.AccountConnectionService;
 import com.gamematcher.service.account.RiotAccountService;
+import com.gamematcher.service.account.RiotOwnershipVerificationService;
 import com.gamematcher.service.auth.CurrentUserService;
 import com.gamematcher.entity.User;
 import jakarta.servlet.http.HttpServletResponse;
@@ -30,6 +34,7 @@ public class AccountConnectionController {
     private final AccountConnectionService accountConnectionService;
     private final CurrentUserService currentUserService;
     private final RiotAccountService riotAccountService;
+    private final RiotOwnershipVerificationService riotOwnershipVerificationService;
 
     @PostMapping("/{provider}/refresh")
     public AccountLinkRefreshResponseDto refreshLinkedProfile(
@@ -80,6 +85,22 @@ public class AccountConnectionController {
             @Valid @RequestBody RiotManualLinkRequestDto request) {
         User user = currentUserService.requireUserByTokenOrSession(authToken, session);
         return riotAccountService.linkAccount(user.getId(), request.getGameName(), request.getTagLine());
+    }
+
+    @PostMapping("/riot/verification/start")
+    public RiotVerificationStartResponseDto startRiotVerification(
+            @RequestHeader(value = "X-Auth-Token", required = false) String authToken,
+            @Valid @RequestBody RiotVerificationStartRequestDto request) {
+        Long userId = currentUserService.requireUser(authToken).getId();
+        return riotOwnershipVerificationService.startVerification(userId, request);
+    }
+
+    @PostMapping("/riot/verification/confirm")
+    public RiotAccountLinkResponseDto confirmRiotVerification(
+            @RequestHeader(value = "X-Auth-Token", required = false) String authToken,
+            @Valid @RequestBody RiotVerificationConfirmRequestDto request) {
+        Long userId = currentUserService.requireUser(authToken).getId();
+        return riotOwnershipVerificationService.confirmVerification(userId, request);
     }
 
     @GetMapping("/oauth/discord/callback")
@@ -184,7 +205,7 @@ public class AccountConnectionController {
                       <a class="primary" href="%s">연동 화면으로 이동</a>
                       <button class="secondary" type="button" onclick="window.close()">창 닫기</button>
                     </div>
-                    <p class="hint">팝업이 자동으로 닫히지 않으면 위 버튼으로 직접 돌아가면 됩니다.</p>
+                    <p class="hint">팝업이 자동으로 닫히지 않으면 버튼으로 직접 돌아가면 됩니다.</p>
                   </div>
                   <script>
                     const next = "%s";

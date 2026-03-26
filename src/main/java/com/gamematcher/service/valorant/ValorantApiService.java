@@ -1,19 +1,21 @@
 package com.gamematcher.service.valorant;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamematcher.config.api.ValorantApiProperties;
 import com.gamematcher.dto.valorant.ValorantLifetimeApiResponse;
 import com.gamematcher.dto.valorant.ValorantLifetimeDataItem;
+import com.gamematcher.dto.valorant.ValorantMatchApiResponse;
 import com.gamematcher.dto.valorant.ValorantMatchDetailDto;
 import com.gamematcher.dto.valorant.ValorantMmrApiResponse;
 import com.gamematcher.dto.valorant.ValorantMmrHistoryApiResponse;
+import com.gamematcher.dto.valorant.ValorantPlayerDto;
 import com.gamematcher.dto.valorant.ValorantPuuidApiResponse;
 import com.gamematcher.service.MatchApiCachePolicy;
+import com.gamematcher.service.riot.RiotApiService;
 import com.gamematcher.dto.search.PlayerSearchRequest;
 import com.gamematcher.dto.search.PlayerSearchResponse;
 import com.gamematcher.dto.search.PlayerSearchResponse.*;
-import com.gamematcher.dto.search.ValorantSearchMmrRequest;
-import com.gamematcher.dto.search.ValorantSearchMmrResponse;
 import com.gamematcher.entity.match.valorant.ValorantMatch;
 import com.gamematcher.entity.match.valorant.ValorantMatchPlayer;
 import com.gamematcher.repository.match.ValorantMatchDetailRepository;
@@ -35,9 +37,7 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 
 /**
@@ -50,6 +50,7 @@ import java.util.stream.Collectors;
 public class ValorantApiService {
 
     private final ValorantAccountService valorantAccountService;
+    private final RiotApiService riotApiService;
 
     private static final Map<String, String> REGION_MAP = new HashMap<>();
     static {
@@ -71,11 +72,9 @@ public class ValorantApiService {
 
     /**
      * 전적 검색 시 Henrik MMR / lifetime 응답을 잠깐 보관해 재검색·새로고침 시 외부 지연을 줄인다.
-     * MMR과 lifetime은 서로 독립이므로 캐시 미스 시 {@link ForkJoinPool#commonPool()} 로 병렬 호출한다.
+     * 병렬 API 호출은 레이트리밋에 걸리기 쉬워 순차 호출 + 캐시 조합을 쓴다.
      */
     private static final long VALORANT_SEARCH_API_CACHE_TTL_MS = Duration.ofMinutes(3).toMillis();
-
-    private static final Set<String> HENRIK_SHARDS = Set.of("ap", "na", "eu", "kr", "br", "latam");
 
     private final ConcurrentHashMap<String, Cached<ValorantMmrTierSnapshot>> valorantMmrSearchCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Cached<List<MatchInfo>>> valorantLifetimeSearchCache = new ConcurrentHashMap<>();
@@ -84,6 +83,43 @@ public class ValorantApiService {
         boolean fresh() {
             return System.currentTimeMillis() < expiresAtMs;
         }
+    }
+
+    private ValorantPuuidApiResponse getAccountByNameTagV2(String name, String tag) throws Exception {
+        String url = UriComponentsBuilder
+                .fromHttpUrl(valorantApiProperties.getBaseUrl())
+                .path("/valorant/v2/account/{name}/{tag}")
+                .queryParam("force", true)
+                .buildAndExpand(name, tag)
+                .encode()
+                .toUriString();
+        url = appendApiKey(url);
+
+        ResponseEntity<String> response = restTemplate.exchange(
+                url,
+                HttpMethod.GET,
+                valorantHttpEntity(),
+                String.class
+        );
+        return readAccountResponse(response.getBody());
+    }
+
+    private ValorantPuuidApiResponse getAccountByOfficialRiotId(String name, String tag, String fallbackRegion) {
+        var riotAccount = riotApiService.getAccountByRiotId(name, tag);
+        if (riotAccount == null || riotAccount.getPuuid() == null || riotAccount.getPuuid().isBlank()) {
+            throw new RuntimeException("Riot Account API returned no puuid.");
+        }
+
+        ValorantPuuidApiResponse.AccountData data = new ValorantPuuidApiResponse.AccountData();
+        data.setPuuid(riotAccount.getPuuid());
+        data.setName(riotAccount.getGameName());
+        data.setTag(riotAccount.getTagLine());
+        data.setRegion(fallbackRegion);
+
+        ValorantPuuidApiResponse response = new ValorantPuuidApiResponse();
+        response.setStatus(200);
+        response.setData(data);
+        return response;
     }
 
     /**
@@ -123,7 +159,19 @@ public class ValorantApiService {
         return REGION_MAP.getOrDefault(raw, "ap");
     }
 
-    /** Henrik MMR/매치 URL용 샤드 (ap, na, eu, kr, br, latam) */
+    private List<String> resolveCandidateRegions(PlayerSearchRequest req, String accountApiRegion) {
+        LinkedHashSet<String> candidates = new LinkedHashSet<>();
+        candidates.add(resolveShardRegion(req, accountApiRegion));
+        candidates.add("kr");
+        candidates.add("ap");
+        candidates.add("na");
+        candidates.add("eu");
+        candidates.add("latam");
+        candidates.add("br");
+        return new ArrayList<>(candidates);
+    }
+
+    /** Henrik MMR 조회용 샤드 (ap, na, eu, kr, br, latam). */
     public String mapAccountRegionToHenrikShard(String valorantAccountRegion) {
         if (valorantAccountRegion == null || valorantAccountRegion.isBlank()) {
             return "ap";
@@ -131,67 +179,9 @@ public class ValorantApiService {
         return REGION_MAP.getOrDefault(valorantAccountRegion.toLowerCase().trim(), "ap");
     }
 
-    /** 클라이언트가 넘긴 region 문자열을 Henrik 샤드로 정규화 */
-    public String normalizeHenrikShard(String region) {
-        if (region == null || region.isBlank()) {
-            return "ap";
-        }
-        String raw = region.toLowerCase(Locale.ROOT).trim();
-        if (HENRIK_SHARDS.contains(raw)) {
-            return raw;
-        }
-        return REGION_MAP.getOrDefault(raw, "ap");
-    }
-
     /**
-     * Records용: 1차 검색({@code deferValorantMmr}) 이후 티어만 조회.
-     */
-    public ValorantSearchMmrResponse resolveMmrForSearch(ValorantSearchMmrRequest r) {
-        String puuid = r.getPuuid();
-        if (puuid == null || puuid.isBlank()) {
-            return ValorantSearchMmrResponse.fail("puuid가 필요합니다.");
-        }
-        String shard = normalizeHenrikShard(r.getRegion());
-        String mmrCacheKey = shard + "|" + puuid.trim();
-        if (Boolean.TRUE.equals(r.getForceRefresh())) {
-            valorantMmrSearchCache.remove(mmrCacheKey);
-        }
-        HttpEntity<Void> entity = valorantHttpEntity();
-        Cached<ValorantMmrTierSnapshot> cached = valorantMmrSearchCache.get(mmrCacheKey);
-        ValorantMmrTierSnapshot snap;
-        if (cached != null && cached.fresh()) {
-            snap = cached.value();
-        } else {
-            snap = fetchMmrAndCache(mmrCacheKey, shard, puuid.trim(), entity);
-        }
-        return ValorantSearchMmrResponse.ok(snap.displayTier());
-    }
-
-    private ValorantMmrTierSnapshot fetchMmrAndCache(String mmrCacheKey, String region, String puuid,
-                                                     HttpEntity<Void> entity) {
-        ValorantMmrTierSnapshot m = fetchValorantMmrForSearch(region, puuid, entity);
-        valorantMmrSearchCache.put(mmrCacheKey,
-                new Cached<>(m, System.currentTimeMillis() + VALORANT_SEARCH_API_CACHE_TTL_MS));
-        return m;
-    }
-
-    private List<MatchInfo> fetchMatchesAndCache(String matchCacheKey, String region, String puuid, int count,
-                                                  HttpEntity<Void> entity, PlayerSearchRequest req) {
-        List<MatchInfo> list = fetchValorantMatchSummariesFromLifetime(region, puuid, count);
-        if (list == null) {
-            list = fetchValorantSummariesFromV3Fallback(region, puuid, count, entity, req);
-        }
-        if (list == null) {
-            list = List.of();
-        }
-        valorantLifetimeSearchCache.put(matchCacheKey,
-                new Cached<>(list, System.currentTimeMillis() + VALORANT_SEARCH_API_CACHE_TTL_MS));
-        return list;
-    }
-
-    /**
-     * Riot ID(닉·태그)로 Henrik 계정을 찾은 뒤, 그 응답의 puuid로 MMR을 조회한다.
-     * Riot Account API의 puuid(긴 문자열)와 Henrik MMR이 기대하는 puuid가 다를 수 있어 Henrik puuid만 사용한다.
+     * Riot ID(닉·태그)로 Henrik 계정을 찾은 뒤 Henrik puuid로 MMR을 조회한다.
+     * 프로필 연동 화면의 발로란트 티어 요약용.
      */
     public ValorantMmrApiResponse fetchMmrForRiotLinkedProfile(String gameName, String tag) {
         if (!valorantApiProperties.hasApiKey()) {
@@ -233,47 +223,61 @@ public class ValorantApiService {
     }
 
     public ValorantPuuidApiResponse getAccountByNameTag(String name, String tag, boolean forceRefresh) {
-        String n = name == null ? "" : name.trim();
-        String t = tag == null ? "" : tag.trim();
-        if (t.startsWith("#")) {
-            t = t.substring(1).trim();
-        }
         if (!forceRefresh) {
-            Optional<ValorantPuuidApiResponse> cached = valorantAccountService.findFreshCachedAccountResponse(n, t);
+            Optional<ValorantPuuidApiResponse> cached = valorantAccountService.findFreshCachedAccountResponse(name, tag);
             if (cached.isPresent()) {
                 return cached.get();
             }
         }
 
-        String url = UriComponentsBuilder
-                .fromHttpUrl(valorantApiProperties.getBaseUrl())
-                .path("/valorant/v1/account/{name}/{tag}")
-                .buildAndExpand(n, t)
-                .encode()
-                .toUriString();
-        url = appendApiKey(url);
-
         HttpEntity<Void> entity = valorantHttpEntity();
+        List<String> candidateUrls = List.of(
+                UriComponentsBuilder
+                        .fromHttpUrl(valorantApiProperties.getBaseUrl())
+                        .path("/valorant/v2/account/{name}/{tag}")
+                        .queryParam("force", true)
+                        .buildAndExpand(name, tag)
+                        .encode()
+                        .toUriString(),
+                UriComponentsBuilder
+                        .fromHttpUrl(valorantApiProperties.getBaseUrl())
+                        .path("/valorant/v1/account/{name}/{tag}")
+                        .queryParam("force", true)
+                        .buildAndExpand(name, tag)
+                        .encode()
+                        .toUriString()
+        );
 
-        try {
-            ResponseEntity<String> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    entity,
-                    String.class
-            );
-            ValorantPuuidApiResponse body = objectMapper.readValue(response.getBody(), ValorantPuuidApiResponse.class);
+        RuntimeException lastError = null;
+        for (String candidateUrl : candidateUrls) {
+            String url = appendApiKey(candidateUrl);
             try {
-                valorantAccountService.saveAccount(body);
+                ResponseEntity<String> response = restTemplate.exchange(
+                        url,
+                        HttpMethod.GET,
+                        entity,
+                        String.class
+                );
+                ValorantPuuidApiResponse body = readAccountResponse(response.getBody());
+                try {
+                    valorantAccountService.saveAccount(body);
+                } catch (Exception e) {
+                    log.warn("Valorant 계정 DB 저장 실패 (조회는 반환): {}", e.getMessage());
+                }
+                return body;
+            } catch (HttpStatusCodeException e) {
+                lastError = e.getStatusCode().value() == 404
+                        ? new RuntimeException("입력한 Riot ID로 발로란트 계정을 찾을 수 없습니다.", e)
+                        : new RuntimeException("발로란트 계정 조회에 실패했습니다: " + e.getStatusCode(), e);
             } catch (Exception e) {
-                log.warn("Valorant 계정 DB 저장 실패 (조회는 반환): {}", e.getMessage());
+                lastError = new RuntimeException("발로란트 계정 정보를 불러오지 못했습니다: " + e.getMessage(), e);
             }
-            return body;
-        } catch (HttpStatusCodeException e) {
-            throw new RuntimeException("Valorant 계정 API 호출 실패: " + e.getStatusCode() + " / " + e.getResponseBodyAsString());
-        } catch (Exception e) {
-            throw new RuntimeException("Valorant 계정 조회 오류: " + e.getMessage(), e);
         }
+
+        if (lastError != null) {
+            throw lastError;
+        }
+        throw new RuntimeException("발로란트 계정 정보를 불러오지 못했습니다.");
     }
 
     /**
@@ -286,6 +290,185 @@ public class ValorantApiService {
      * @param count  저장할 매치 수 (최대 100)
      * @param mode   게임 모드 필터 (competitive, unrated 등, null이면 전체)
      */
+    public ValorantPuuidApiResponse getAccountByPuuid(String puuid) {
+        List<String> candidateUrls = List.of(
+                UriComponentsBuilder.fromHttpUrl(valorantApiProperties.getBaseUrl())
+                        .path("/valorant/v2/account/{puuid}")
+                        .queryParam("force", true)
+                        .buildAndExpand(puuid)
+                        .toUriString(),
+                UriComponentsBuilder.fromHttpUrl(valorantApiProperties.getBaseUrl())
+                        .path("/valorant/v1/account/{puuid}")
+                        .queryParam("force", true)
+                        .buildAndExpand(puuid)
+                        .toUriString(),
+                UriComponentsBuilder.fromHttpUrl(valorantApiProperties.getBaseUrl())
+                        .path("/valorant/v2/by-puuid/account/{puuid}")
+                        .queryParam("force", true)
+                        .buildAndExpand(puuid)
+                        .toUriString(),
+                UriComponentsBuilder.fromHttpUrl(valorantApiProperties.getBaseUrl())
+                        .path("/valorant/v1/by-puuid/account/{puuid}")
+                        .queryParam("force", true)
+                        .buildAndExpand(puuid)
+                        .toUriString()
+        );
+
+        HttpEntity<Void> entity = valorantHttpEntity();
+        RuntimeException lastError = null;
+
+        for (String candidateUrl : candidateUrls) {
+            String url = appendApiKey(candidateUrl);
+            try {
+                ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+                return readAccountResponse(response.getBody());
+            } catch (HttpStatusCodeException e) {
+                lastError = new RuntimeException(
+                        "Valorant account-by-puuid API call failed: " + e.getStatusCode() + " / " + e.getResponseBodyAsString(),
+                        e
+                );
+            } catch (Exception e) {
+                lastError = new RuntimeException("Valorant account-by-puuid lookup failed: " + e.getMessage(), e);
+            }
+        }
+
+        throw lastError != null ? lastError : new RuntimeException("Valorant account-by-puuid lookup failed.");
+    }
+
+    public ValorantMatchApiResponse getRecentMatchesByPuuid(String region, String puuid, int size) {
+        List<String> candidateUrls = List.of(
+                UriComponentsBuilder.fromHttpUrl(valorantApiProperties.getBaseUrl())
+                        .path("/valorant/v3/by-puuid/matches/{region}/{puuid}")
+                        .queryParam("size", Math.min(Math.max(size, 1), 10))
+                        .buildAndExpand(region, puuid)
+                        .toUriString(),
+                UriComponentsBuilder.fromHttpUrl(valorantApiProperties.getBaseUrl())
+                        .path("/valorant/v2/by-puuid/matches/{region}/{puuid}")
+                        .queryParam("size", Math.min(Math.max(size, 1), 10))
+                        .buildAndExpand(region, puuid)
+                        .toUriString()
+        );
+
+        HttpEntity<Void> entity = valorantHttpEntity();
+        RuntimeException lastError = null;
+
+        for (String candidateUrl : candidateUrls) {
+            String url = appendApiKey(candidateUrl);
+            try {
+                ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, entity, String.class);
+                return objectMapper.readValue(response.getBody(), ValorantMatchApiResponse.class);
+            } catch (HttpStatusCodeException e) {
+                lastError = new RuntimeException(
+                        "Valorant recent matches API call failed: " + e.getStatusCode() + " / " + e.getResponseBodyAsString(),
+                        e
+                );
+            } catch (Exception e) {
+                lastError = new RuntimeException("Valorant recent matches lookup failed: " + e.getMessage(), e);
+            }
+        }
+
+        throw lastError != null ? lastError : new RuntimeException("Valorant recent matches lookup failed.");
+    }
+
+    public PlayerCardSnapshot getLatestPlayerCardFromRecentMatches(String region, String puuid) {
+        ValorantMatchApiResponse response = getRecentMatchesByPuuid(region, puuid, 5);
+        if (response == null || response.getData() == null || response.getData().isEmpty()) {
+            throw new RuntimeException("No recent matches returned.");
+        }
+
+        for (ValorantMatchDetailDto match : response.getData()) {
+            if (match == null || match.getPlayers() == null || match.getPlayers().getAllPlayers() == null) {
+                continue;
+            }
+
+            ValorantPlayerDto player = match.getPlayers().getAllPlayers().stream()
+                    .filter(candidate -> puuid.equals(candidate.getPuuid()))
+                    .findFirst()
+                    .orElse(null);
+            if (player == null) {
+                continue;
+            }
+
+            String cardId = player.getPlayerCard();
+            String cardImageUrl = player.getAssets() != null && player.getAssets().getCard() != null
+                    ? player.getAssets().getCard().getSmall()
+                    : null;
+
+            if (cardId == null || cardId.isBlank()) {
+                throw new RuntimeException("Recent matches found but player_card is empty.");
+            }
+
+            return new PlayerCardSnapshot(
+                    match.getMetadata() != null ? match.getMetadata().getMatchId() : null,
+                    cardId,
+                    cardImageUrl
+            );
+        }
+
+        throw new RuntimeException("Recent matches found but matching player was not present.");
+    }
+
+    private ValorantPuuidApiResponse readAccountResponse(String rawBody) throws Exception {
+        JsonNode root = objectMapper.readTree(rawBody);
+        return parseAccountResponse(root);
+    }
+
+    private ValorantPuuidApiResponse parseAccountResponse(JsonNode root) {
+        ValorantPuuidApiResponse response = new ValorantPuuidApiResponse();
+        response.setStatus(root.path("status").asInt(200));
+
+        JsonNode dataNode = root.path("data");
+        if (dataNode.isMissingNode() || dataNode.isNull()) {
+            return response;
+        }
+
+        ValorantPuuidApiResponse.AccountData accountData = new ValorantPuuidApiResponse.AccountData();
+        accountData.setPuuid(textOrNull(dataNode, "puuid"));
+        accountData.setRegion(textOrNull(dataNode, "region"));
+        accountData.setAccountLevel(dataNode.path("account_level").isNumber() ? dataNode.path("account_level").asInt() : null);
+        accountData.setName(textOrNull(dataNode, "name"));
+        accountData.setTag(textOrNull(dataNode, "tag"));
+        accountData.setLastUpdate(firstText(dataNode, "last_update", "updated_at"));
+        accountData.setLastUpdateRaw(dataNode.path("last_update_raw").isNumber() ? dataNode.path("last_update_raw").asLong() : null);
+
+        JsonNode cardNode = dataNode.has("card") ? dataNode.path("card") : dataNode.path("player_card");
+        if (!cardNode.isMissingNode() && !cardNode.isNull()) {
+            ValorantPuuidApiResponse.Card card = new ValorantPuuidApiResponse.Card();
+            if (cardNode.isTextual()) {
+                card.setId(cardNode.asText());
+            } else {
+                card.setId(textOrNull(cardNode, "id"));
+                card.setSmall(textOrNull(cardNode, "small"));
+                card.setLarge(textOrNull(cardNode, "large"));
+                card.setWide(textOrNull(cardNode, "wide"));
+            }
+            accountData.setCard(card);
+        }
+
+        response.setData(accountData);
+        return response;
+    }
+
+    private String textOrNull(JsonNode node, String fieldName) {
+        JsonNode value = node.path(fieldName);
+        if (value.isMissingNode() || value.isNull()) {
+            return null;
+        }
+        String text = value.asText();
+        return text == null || text.isBlank() ? null : text;
+    }
+
+    private String firstText(JsonNode node, String... fieldNames) {
+        for (String fieldName : fieldNames) {
+            String value = textOrNull(node, fieldName);
+            if (value != null) {
+                return value;
+            }
+        }
+        return null;
+    }
+
+
     public void syncValorantRecentMatches(String puuid, String region, int count, String mode) {
         String url = UriComponentsBuilder
                 .fromHttpUrl(valorantApiProperties.getBaseUrl())
@@ -351,14 +534,6 @@ public class ValorantApiService {
      * @param matchId 매치 고유 ID (lifetime에서 확보)
      * @return 매치 상세 DTO, 없으면 null
      */
-    private static final Object VALORANT_MATCH_DETAIL_THROTTLE = new Object();
-    private static volatile long valorantLastMatchDetailCallMs = 0L;
-    private static final long VALORANT_MATCH_DETAIL_MIN_INTERVAL_MS = 450L;
-    private static final int VALORANT_MATCH_DETAIL_MAX_429_RETRIES = 5;
-
-    /**
-     * Henrik 매치 상세(v2/match)는 분당 호출 제한이 빡빡해, 연속 호출 간 최소 간격 + 429 시 재시도한다.
-     */
     public ValorantMatchDetailDto getMatchDetail(String matchId) {
         if (matchId == null || matchId.isBlank()) {
             return null;
@@ -372,80 +547,22 @@ public class ValorantApiService {
         url = appendApiKey(url);
 
         HttpEntity<Void> entity = new HttpEntity<>(new HttpHeaders());
-        long backoffBaseMs = 1200L;
 
-        for (int attempt = 1; attempt <= VALORANT_MATCH_DETAIL_MAX_429_RETRIES; attempt++) {
-            throttleValorantMatchDetail();
-            try {
-                ResponseEntity<String> response = restTemplate.exchange(
-                        url,
-                        HttpMethod.GET,
-                        entity,
-                        String.class
-                );
-                return valorantMatchJsonService.parseFirstMatch(response.getBody());
-            } catch (HttpStatusCodeException e) {
-                if (e.getStatusCode().value() == 404) {
-                    return null;
-                }
-                if (e.getStatusCode().value() == 429 && attempt < VALORANT_MATCH_DETAIL_MAX_429_RETRIES) {
-                    long waitMs = parseRetryAfterDelayMs(e);
-                    if (waitMs < 0) {
-                        waitMs = Math.min(backoffBaseMs * attempt, 30_000L);
-                    }
-                    log.warn("Valorant 매치 상세 429, {}ms 후 재시도 ({}/{})", waitMs, attempt,
-                            VALORANT_MATCH_DETAIL_MAX_429_RETRIES);
-                    sleepUnchecked(waitMs);
-                    continue;
-                }
-                if (e.getStatusCode().value() == 429) {
-                    throw new RuntimeException(
-                            "Valorant 매치 상세 API 호출 한도에 걸렸습니다. 잠시 후 다시 시도해 주세요.");
-                }
-                throw new RuntimeException("Valorant 매치 상세 API 호출 실패: " + e.getStatusCode() + " / "
-                        + e.getResponseBodyAsString());
-            } catch (Exception e) {
-                throw new RuntimeException("Valorant 매치 상세 조회 오류: " + e.getMessage(), e);
-            }
-        }
-        throw new RuntimeException("Valorant 매치 상세 API 호출 한도에 걸렸습니다. 잠시 후 다시 시도해 주세요.");
-    }
-
-    private static void throttleValorantMatchDetail() {
-        synchronized (VALORANT_MATCH_DETAIL_THROTTLE) {
-            long now = System.currentTimeMillis();
-            long waitMs = valorantLastMatchDetailCallMs + VALORANT_MATCH_DETAIL_MIN_INTERVAL_MS - now;
-            if (waitMs > 0) {
-                sleepUnchecked(waitMs);
-            }
-            valorantLastMatchDetailCallMs = System.currentTimeMillis();
-        }
-    }
-
-    private static long parseRetryAfterDelayMs(HttpStatusCodeException e) {
-        if (e.getResponseHeaders() == null) {
-            return -1;
-        }
-        String v = e.getResponseHeaders().getFirst("Retry-After");
-        if (v == null || v.isBlank()) {
-            return -1;
-        }
         try {
-            long sec = Long.parseLong(v.trim());
-            return Math.min(Math.max(sec * 1000L, 500L), 120_000L);
-        } catch (NumberFormatException ex) {
-            return -1;
-        }
-    }
-
-    private static void sleepUnchecked(long ms) {
-        if (ms <= 0) {
-            return;
-        }
-        try {
-            Thread.sleep(ms);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
+            ResponseEntity<String> response = restTemplate.exchange(
+                    url,
+                    HttpMethod.GET,
+                    entity,
+                    String.class
+            );
+            return valorantMatchJsonService.parseFirstMatch(response.getBody());
+        } catch (HttpStatusCodeException e) {
+            if (e.getStatusCode().value() == 404) {
+                return null;
+            }
+            throw new RuntimeException("Valorant 매치 상세 API 호출 실패: " + e.getStatusCode() + " / " + e.getResponseBodyAsString());
+        } catch (Exception e) {
+            throw new RuntimeException("Valorant 매치 상세 조회 오류: " + e.getMessage(), e);
         }
     }
 
@@ -465,7 +582,7 @@ public class ValorantApiService {
                 .toUriString();
         url = appendApiKey(url);
 
-        HttpEntity<Void> entity = valorantHttpEntity();
+        HttpEntity<Void> entity = new HttpEntity<>(new HttpHeaders());
 
         try {
             ResponseEntity<String> response = restTemplate.exchange(
@@ -540,60 +657,33 @@ public class ValorantApiService {
             int count = Math.min(req.getCount() != null ? req.getCount() : 5, 20);
             String mmrCacheKey = region + "|" + puuid;
             String matchCacheKey = mmrCacheKey + "|" + count;
-
             if (Boolean.TRUE.equals(req.getForceRefresh())) {
                 valorantMmrSearchCache.remove(mmrCacheKey);
                 valorantLifetimeSearchCache.keySet().removeIf(k -> k.startsWith(mmrCacheKey + "|"));
             }
 
-            if (Boolean.TRUE.equals(req.getDeferValorantMmr())) {
-                List<MatchInfo> matches = resolveValorantMatchesForSearch(
-                        matchCacheKey, region, puuid, count, entity, req);
-                MatchStats stats = buildStats(matches);
-                Map<String, Object> raw = new LinkedHashMap<>();
-                raw.put("valorantRegion", region);
-                PlayerInfo playerInfo = PlayerInfo.builder()
-                        .puuid(puuid).gameName(req.getGameName()).tagLine(req.getTagLine())
-                        .tier("…")
-                        .avatarUrl(cardUrl)
-                        .rawData(raw)
-                        .build();
-                return PlayerSearchResponse.builder()
-                        .success(true).game("valorant").nickname(nickname)
-                        .valorantMmrPending(true)
-                        .playerInfo(playerInfo).matches(matches).stats(stats)
-                        .build();
-            }
-
-            Cached<ValorantMmrTierSnapshot> mmrCached = valorantMmrSearchCache.get(mmrCacheKey);
-            Cached<List<MatchInfo>> matCached = valorantLifetimeSearchCache.get(matchCacheKey);
-            boolean mmrFresh = !Boolean.TRUE.equals(req.getForceRefresh()) && mmrCached != null && mmrCached.fresh();
-            boolean matFresh = !Boolean.TRUE.equals(req.getForceRefresh()) && matCached != null && matCached.fresh();
-
-            ValorantMmrTierSnapshot mmr;
-            List<MatchInfo> matches;
-
-            if (mmrFresh && matFresh) {
-                mmr = mmrCached.value();
-                matches = List.copyOf(matCached.value());
-            } else if (mmrFresh) {
-                mmr = mmrCached.value();
-                matches = fetchMatchesAndCache(matchCacheKey, region, puuid, count, entity, req);
-            } else if (matFresh) {
-                matches = List.copyOf(matCached.value());
-                mmr = fetchMmrAndCache(mmrCacheKey, region, puuid, entity);
-            } else {
-                CompletableFuture<ValorantMmrTierSnapshot> mmrFut = CompletableFuture.supplyAsync(
-                        () -> fetchMmrAndCache(mmrCacheKey, region, puuid, entity), ForkJoinPool.commonPool());
-                CompletableFuture<List<MatchInfo>> matFut = CompletableFuture.supplyAsync(
-                        () -> fetchMatchesAndCache(matchCacheKey, region, puuid, count, entity, req),
-                        ForkJoinPool.commonPool());
-                mmr = mmrFut.join();
-                matches = matFut.join();
-            }
-
+            ValorantMmrTierSnapshot mmr = Optional.ofNullable(valorantMmrSearchCache.get(mmrCacheKey))
+                    .filter(Cached::fresh)
+                    .map(Cached::value)
+                    .orElseGet(() -> {
+                        ValorantMmrTierSnapshot m = fetchValorantMmrForSearch(region, puuid, entity);
+                        valorantMmrSearchCache.put(mmrCacheKey,
+                                new Cached<>(m, System.currentTimeMillis() + VALORANT_SEARCH_API_CACHE_TTL_MS));
+                        return m;
+                    });
+            List<MatchInfo> matches = Optional.ofNullable(valorantLifetimeSearchCache.get(matchCacheKey))
+                    .filter(Cached::fresh)
+                    .map(c -> List.copyOf(c.value()))
+                    .orElse(null);
             if (matches == null) {
-                matches = List.of();
+                matches = fetchValorantMatchSummariesFromLifetime(region, puuid, count);
+                if (matches == null) {
+                    matches = fetchValorantSummariesFromV3Fallback(region, puuid, count, entity, req);
+                }
+                if (matches != null) {
+                    valorantLifetimeSearchCache.put(matchCacheKey,
+                            new Cached<>(matches, System.currentTimeMillis() + VALORANT_SEARCH_API_CACHE_TTL_MS));
+                }
             }
             MatchStats stats = buildStats(matches);
 
@@ -607,17 +697,91 @@ public class ValorantApiService {
                     .playerInfo(playerInfo).matches(matches).stats(stats).build();
         } catch (Exception e) {
             log.error("Valorant 전적 검색 오류 - {}", nickname, e);
-            return PlayerSearchResponse.error("valorant", nickname, e.getMessage());
+            String errorMessage = e.getMessage();
+            if (errorMessage != null && errorMessage.contains("429")) {
+                return PlayerSearchResponse.error("valorant", nickname, "발로란트 전적 API 요청이 잠시 많습니다. 잠시 후 다시 시도해 주세요.");
+            }
+            return PlayerSearchResponse.error(
+                    "valorant",
+                    nickname,
+                    errorMessage != null ? errorMessage : "발로란트 전적을 불러오지 못했습니다."
+            );
         }
     }
 
-    private List<MatchInfo> resolveValorantMatchesForSearch(String matchCacheKey, String region, String puuid, int count,
-                                                           HttpEntity<Void> entity, PlayerSearchRequest req) {
-        Cached<List<MatchInfo>> matCached = valorantLifetimeSearchCache.get(matchCacheKey);
-        if (!Boolean.TRUE.equals(req.getForceRefresh()) && matCached != null && matCached.fresh()) {
-            return List.copyOf(matCached.value());
+    private ValorantPuuidApiResponse.AccountData loadAccountForSearch(PlayerSearchRequest req) {
+        try {
+            ValorantPuuidApiResponse accountResponse = getAccountByNameTag(
+                    req.getGameName(),
+                    req.getTagLine(),
+                    Boolean.TRUE.equals(req.getForceRefresh())
+            );
+            return accountResponse.getData();
+        } catch (RuntimeException firstError) {
+            if (!isValorantAccountNotFound(firstError)) {
+                throw firstError;
+            }
+
+            try {
+                ValorantPuuidApiResponse fallbackResponse = getAccountByNameTagV2(req.getGameName(), req.getTagLine());
+                if (fallbackResponse != null && fallbackResponse.getData() != null
+                        && fallbackResponse.getData().getPuuid() != null
+                        && !fallbackResponse.getData().getPuuid().isBlank()) {
+                    try {
+                        valorantAccountService.saveAccount(fallbackResponse);
+                    } catch (Exception saveError) {
+                        log.warn("Valorant v2 fallback account cache save failed: {}", saveError.getMessage());
+                    }
+                    log.info("Recovered Valorant account lookup through v2 fallback for {}#{}",
+                            req.getGameName(), req.getTagLine());
+                    return fallbackResponse.getData();
+                }
+            } catch (HttpStatusCodeException fallbackError) {
+                log.warn("Valorant v2 fallback failed for {}#{} with status {}",
+                        req.getGameName(), req.getTagLine(), fallbackError.getStatusCode());
+            } catch (Exception fallbackError) {
+                log.warn("Valorant v2 fallback exception for {}#{}: {}",
+                        req.getGameName(), req.getTagLine(), fallbackError.getMessage());
+            }
+
+            try {
+                ValorantPuuidApiResponse riotFallback = getAccountByOfficialRiotId(
+                        req.getGameName(),
+                        req.getTagLine(),
+                        req.getRegion() != null && !req.getRegion().isBlank() ? req.getRegion() : "kr"
+                );
+                if (riotFallback.getData() != null && riotFallback.getData().getPuuid() != null
+                        && !riotFallback.getData().getPuuid().isBlank()) {
+                    try {
+                        valorantAccountService.saveAccount(riotFallback);
+                    } catch (Exception saveError) {
+                        log.warn("Valorant Riot fallback account cache save failed: {}", saveError.getMessage());
+                    }
+                    log.info("Recovered Valorant account lookup through Riot account-v1 fallback for {}#{}",
+                            req.getGameName(), req.getTagLine());
+                    return riotFallback.getData();
+                }
+            } catch (Exception riotFallbackError) {
+                log.warn("Valorant Riot account-v1 fallback failed for {}#{}: {}",
+                        req.getGameName(), req.getTagLine(), riotFallbackError.getMessage());
+            }
+
+            Optional<ValorantPuuidApiResponse> cachedAccount =
+                    valorantAccountService.findAnyCachedAccountResponse(req.getGameName(), req.getTagLine());
+            if (cachedAccount.isPresent() && cachedAccount.get().getData() != null) {
+                log.info("Using stale cached Valorant account for {}#{}", req.getGameName(), req.getTagLine());
+                return cachedAccount.get().getData();
+            }
+            throw firstError;
         }
-        return fetchMatchesAndCache(matchCacheKey, region, puuid, count, entity, req);
+    }
+
+    private boolean isValorantAccountNotFound(RuntimeException error) {
+        String message = error.getMessage();
+        return message != null
+                && (message.contains("Account not found")
+                || message.contains("발로란트 계정을 찾을 수 없습니다.")
+                || message.contains("입력한 Riot ID로 발로란트 계정을 찾을 수 없습니다."));
     }
 
     private record ValorantMmrTierSnapshot(String tier, String tierName) {
@@ -652,6 +816,43 @@ public class ValorantApiService {
             }
         } catch (Exception e) {
             log.warn("Valorant MMR 조회 실패 (region={}): {}", region, e.getMessage());
+        }
+        return new ValorantMmrTierSnapshot(tier, tierName);
+    }
+
+    private ValorantMmrTierSnapshot fetchValorantMmrByRiotIdForSearch(String region, String gameName, String tagLine, HttpEntity<Void> entity) {
+        String tier = "UNRANKED";
+        String tierName = "";
+        try {
+            String mmrUrl = UriComponentsBuilder
+                    .fromHttpUrl(valorantApiProperties.getBaseUrl())
+                    .path("/valorant/v3/mmr/{region}/{platform}/{name}/{tag}")
+                    .buildAndExpand(region, "pc", gameName, tagLine)
+                    .encode()
+                    .toUriString();
+            if (valorantApiProperties.hasApiKey()) {
+                mmrUrl = appendApiKey(mmrUrl);
+            }
+            @SuppressWarnings("unchecked")
+            Map<String, Object> mmrResp = restTemplate.exchange(mmrUrl, HttpMethod.GET, entity, Map.class).getBody();
+            @SuppressWarnings("unchecked")
+            Map<String, Object> mmrData = mmrResp != null ? (Map<String, Object>) mmrResp.get("data") : null;
+            if (mmrData != null) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> current = (Map<String, Object>) mmrData.get("current");
+                if (current != null) {
+                    Object tierObj = current.get("tier");
+                    if (tierObj instanceof Map<?, ?> tierMap) {
+                        Object id = tierMap.get("id");
+                        Object name = tierMap.get("name");
+                        tier = id != null ? String.valueOf(id) : tier;
+                        tierName = name != null ? String.valueOf(name) : tierName;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            log.warn("Valorant Riot ID MMR lookup failed (region={}, name={}, tag={}): {}",
+                    region, gameName, tagLine, e.getMessage());
         }
         return new ValorantMmrTierSnapshot(tier, tierName);
     }
@@ -691,32 +892,94 @@ public class ValorantApiService {
         }
     }
 
-    /**
-     * Henrik lifetime 응답에서 {@code meta.mode}가 비는 경우가 있음(예: 난투). {@code game_mode} 또는 맵 이름으로 보강.
-     */
-    private static String resolveLifetimeModeDisplay(ValorantLifetimeDataItem.ValorantLifetimeMeta meta) {
-        if (meta == null) {
-            return "";
-        }
-        String m = meta.getMode() != null ? meta.getMode().trim() : "";
-        if (!m.isEmpty()) {
-            return m;
-        }
-        String gm = meta.getGameMode() != null ? meta.getGameMode().trim() : "";
-        if (!gm.isEmpty()) {
-            return gm;
-        }
-        ValorantLifetimeDataItem.MapRef map = meta.getMap();
-        if (map != null && map.getName() != null && !map.getName().isBlank()) {
-            String lower = map.getName().trim().toLowerCase(Locale.ROOT);
-            if (lower.startsWith("skirmish")) {
-                return "Skirmish";
+    @SuppressWarnings("unchecked")
+    private List<MatchInfo> fetchValorantSummariesByRiotIdFallback(String region, String gameName, String tagLine,
+                                                                   int count, HttpEntity<Void> entity) {
+        int size = Math.min(Math.max(count, 1), 10);
+        List<String> candidateUrls = List.of(
+                UriComponentsBuilder
+                        .fromHttpUrl(valorantApiProperties.getBaseUrl())
+                        .path("/valorant/v3/matches/{region}/{name}/{tag}")
+                        .queryParam("size", size)
+                        .buildAndExpand(region, gameName, tagLine)
+                        .encode()
+                        .toUriString(),
+                UriComponentsBuilder
+                        .fromHttpUrl(valorantApiProperties.getBaseUrl())
+                        .path("/valorant/v4/matches/{region}/{platform}/{name}/{tag}")
+                        .queryParam("size", size)
+                        .buildAndExpand(region, "pc", gameName, tagLine)
+                        .encode()
+                        .toUriString()
+        );
+
+        for (String candidateUrl : candidateUrls) {
+            String matchUrl = appendApiKey(candidateUrl);
+            try {
+                Map<String, Object> matchResp = restTemplate.exchange(matchUrl, HttpMethod.GET, entity, Map.class).getBody();
+                List<Map<String, Object>> matchData = matchResp != null
+                        ? (List<Map<String, Object>>) matchResp.getOrDefault("data", List.of())
+                        : List.of();
+                List<MatchInfo> matches = new ArrayList<>();
+                for (Map<String, Object> matchMap : matchData) {
+                    MatchInfo one = parseOneValorantMatchFromMap(matchMap, null, gameName, tagLine);
+                    if (one != null) {
+                        matches.add(one);
+                    }
+                }
+                if (!matches.isEmpty()) {
+                    log.info("Recovered Valorant matches through Riot ID fallback for {}#{} in region {} via {}",
+                            gameName, tagLine, region, candidateUrl);
+                    return matches;
+                }
+            } catch (HttpStatusCodeException e) {
+                log.warn("Valorant Riot ID match fallback failed for {}#{} in region {} via {} with status {}",
+                        gameName, tagLine, region, candidateUrl, e.getStatusCode());
+            } catch (Exception e) {
+                log.warn("Valorant Riot ID match fallback exception for {}#{} in region {} via {}: {}",
+                        gameName, tagLine, region, candidateUrl, e.getMessage());
             }
-            if (lower.contains("deathmatch")) {
-                return "Deathmatch";
-            }
         }
-        return "";
+
+        return List.of();
+    }
+
+    private List<MatchInfo> fetchValorantStoredMatchesByRiotIdFallback(String region, String gameName, String tagLine, int count) {
+        int size = Math.min(Math.max(count, 1), 100);
+        String url = UriComponentsBuilder
+                .fromHttpUrl(valorantApiProperties.getBaseUrl())
+                .path("/valorant/v1/stored-matches/{region}/{name}/{tag}")
+                .queryParam("size", size)
+                .buildAndExpand(region, gameName, tagLine)
+                .encode()
+                .toUriString();
+        url = appendApiKey(url);
+
+        try {
+            ResponseEntity<String> response = restTemplate.exchange(url, HttpMethod.GET, valorantHttpEntity(), String.class);
+            if (response.getBody() == null || response.getBody().isBlank()) {
+                return List.of();
+            }
+            ValorantLifetimeApiResponse parsed = objectMapper.readValue(response.getBody(), ValorantLifetimeApiResponse.class);
+            if (parsed.getData() == null || parsed.getData().isEmpty()) {
+                return List.of();
+            }
+            log.info("Recovered Valorant matches through stored-matches fallback for {}#{} in region {}",
+                    gameName, tagLine, region);
+            return parsed.getData().stream()
+                    .map(this::matchInfoFromLifetimeItem)
+                    .filter(Objects::nonNull)
+                    .limit(count)
+                    .collect(Collectors.toList());
+        } catch (HttpStatusCodeException e) {
+            log.warn("Valorant stored-matches fallback failed for {}#{} in region {} with status {}",
+                    gameName, tagLine, region, e.getStatusCode());
+            return List.of();
+        } catch (Exception e) {
+            log.warn("Valorant stored-matches fallback exception for {}#{} in region {}: {}",
+                    gameName, tagLine, region, e.getMessage());
+            return List.of();
+        }
     }
 
     private MatchInfo matchInfoFromLifetimeItem(ValorantLifetimeDataItem item) {
@@ -750,7 +1013,7 @@ public class ValorantApiService {
         }
         return MatchInfo.builder()
                 .matchId(mid)
-                .gameMode(resolveLifetimeModeDisplay(meta))
+                .gameMode(meta.getMode() != null ? meta.getMode() : "")
                 .agent(agent)
                 .win(win)
                 .kills(kills).deaths(deaths).assists(assists)
@@ -818,17 +1081,27 @@ public class ValorantApiService {
 
     @SuppressWarnings("unchecked")
     private List<MatchInfo> fetchValorantSummariesFromV3Fallback(String region, String puuid, int count,
-                                                                   HttpEntity<Void> entity, PlayerSearchRequest req) {
+                                                                    HttpEntity<Void> entity, PlayerSearchRequest req) {
+        int size = Math.min(Math.max(count, 1), 10);
         String matchUrl = UriComponentsBuilder
                 .fromHttpUrl(valorantApiProperties.getBaseUrl())
                 .path("/valorant/v3/by-puuid/matches/{region}/{puuid}")
-                .queryParam("size", count)
+                .queryParam("size", size)
                 .buildAndExpand(region, puuid)
                 .toUriString();
         if (valorantApiProperties.hasApiKey()) {
             matchUrl = appendApiKey(matchUrl);
         }
-        Map<String, Object> matchResp = restTemplate.exchange(matchUrl, HttpMethod.GET, entity, Map.class).getBody();
+        Map<String, Object> matchResp;
+        try {
+            matchResp = restTemplate.exchange(matchUrl, HttpMethod.GET, entity, Map.class).getBody();
+        } catch (HttpStatusCodeException e) {
+            log.warn("Valorant v3 매치 fallback 실패: {}", e.getMessage());
+            return List.of();
+        } catch (Exception e) {
+            log.warn("Valorant v3 매치 fallback 오류: {}", e.getMessage());
+            return List.of();
+        }
         List<Map<String, Object>> matchData = matchResp != null ? (List<Map<String, Object>>) matchResp.get("data") : List.of();
         List<MatchInfo> matches = new ArrayList<>();
         for (Map<String, Object> matchMap : matchData) {
@@ -843,7 +1116,7 @@ public class ValorantApiService {
                         && !MatchApiCachePolicy.isStale(cached.get().getApiCachedAt())) {
                     one = matchInfoFromValorantEntity(cached.get(), puuid);
                 } else {
-                    one = parseOneValorantMatchFromMap(matchMap, puuid);
+                    one = parseOneValorantMatchFromMap(matchMap, puuid, req.getGameName(), req.getTagLine());
                 }
                 if (one != null) {
                     matches.add(one);
@@ -894,7 +1167,7 @@ public class ValorantApiService {
     }
 
     @SuppressWarnings("unchecked")
-    private MatchInfo parseOneValorantMatchFromMap(Map<String, Object> match, String puuid) {
+    private MatchInfo parseOneValorantMatchFromMap(Map<String, Object> match, String puuid, String gameName, String tagLine) {
         try {
             Map<String, Object> metadata = (Map<String, Object>) match.get("metadata");
             Map<String, Object> players = (Map<String, Object>) match.get("players");
@@ -903,7 +1176,9 @@ public class ValorantApiService {
             List<Map<String, Object>> allPlayers = (List<Map<String, Object>>) players.get("all_players");
             if (allPlayers == null) return null;
             Map<String, Object> me = allPlayers.stream()
-                    .filter(p -> puuid.equals(p.get("puuid"))).findFirst().orElse(null);
+                    .filter(p -> matchesValorantPlayerIdentity(p, puuid, gameName, tagLine))
+                    .findFirst()
+                    .orElse(null);
             if (me == null) return null;
             Map<String, Object> stats = (Map<String, Object>) me.get("stats");
             int kills = stats != null ? toInt(stats.get("kills")) : 0;
@@ -953,6 +1228,24 @@ public class ValorantApiService {
         }
     }
 
+    private boolean matchesValorantPlayerIdentity(Map<String, Object> player, String puuid, String gameName, String tagLine) {
+        if (player == null) {
+            return false;
+        }
+        if (puuid != null && !puuid.isBlank() && puuid.equals(player.get("puuid"))) {
+            return true;
+        }
+        String playerName = Objects.toString(player.get("name"), "").trim();
+        String playerTag = Objects.toString(player.get("tag"), "").trim();
+        return gameName != null && tagLine != null
+                && gameName.trim().equalsIgnoreCase(playerName)
+                && tagLine.trim().equalsIgnoreCase(playerTag);
+    }
+
+    private boolean looksLikeOfficialRiotPuuid(String puuid) {
+        return puuid != null && puuid.length() > 50;
+    }
+
     private MatchStats buildStats(List<MatchInfo> matches) {
         if (matches.isEmpty()) return MatchStats.builder().build();
         int wins = (int) matches.stream().filter(m -> Boolean.TRUE.equals(m.getWin())).count();
@@ -977,5 +1270,8 @@ public class ValorantApiService {
             return ((Number) o).intValue();
         }
         return 0;
+    }
+
+    public record PlayerCardSnapshot(String matchId, String cardId, String cardImageUrl) {
     }
 }

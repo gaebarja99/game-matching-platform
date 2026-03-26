@@ -11,7 +11,7 @@ export const PREFERRED_GAME_OPTIONS = [
   { value: '에이펙스 레전드' },
 ] as const;
 
-const VALID_VALUES = new Set(
+const VALID_VALUES = new Set<string>(
   PREFERRED_GAME_OPTIONS.map((o) => o.value)
 );
 
