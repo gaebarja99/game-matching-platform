@@ -56,11 +56,11 @@ function ReportModal({
   return (
     <div className="community-report-backdrop" onClick={onClose} role="dialog" aria-modal="true">
       <div className="community-report-modal" onClick={(event) => event.stopPropagation()}>
-        <h2>{targetLabel} 신고</h2>
-        <p className="community-muted">신고 사유를 선택하면 운영 검토 대상으로 접수됩니다.</p>
+        <h2>{targetLabel} {'\uC2E0\uACE0'}</h2>
+        <p className="community-muted">{'\uC2E0\uACE0 \uC0AC\uC720\uB97C \uC120\uD0DD\uD558\uBA74 \uC6B4\uC601 \uAC80\uD1A0 \uB300\uC0C1\uC73C\uB85C \uC811\uC218\uB429\uB2C8\uB2E4.'}</p>
 
         <label className="community-report-field">
-          <span>신고 사유</span>
+          <span>{'\uC2E0\uACE0 \uC0AC\uC720'}</span>
           <select value={reason} onChange={(event) => onReasonChange(event.target.value as ReportReason)}>
             {COMMUNITY_REPORT_REASONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -71,22 +71,22 @@ function ReportModal({
         </label>
 
         <label className="community-report-field">
-          <span>상세 설명</span>
+          <span>{'\uC0C1\uC138 \uC124\uBA85'}</span>
           <textarea
             rows={4}
             maxLength={500}
             value={description}
             onChange={(event) => onDescriptionChange(event.target.value)}
-            placeholder="운영진이 확인해야 할 내용을 적어 주세요."
+            placeholder={'\uC6B4\uC601\uC9C4\uC774 \uD655\uC778\uD574\uC57C \uD560 \uB0B4\uC6A9\uC744 \uC801\uC5B4 \uC8FC\uC138\uC694.'}
           />
         </label>
 
         <div className="community-report-actions">
           <button type="button" className="community-btn-ghost" onClick={onClose} disabled={submitting}>
-            취소
+            {'\uCDE8\uC18C'}
           </button>
           <button type="button" className="community-btn-danger" onClick={onSubmit} disabled={submitting}>
-            {submitting ? '신고 중...' : '신고 접수'}
+            {submitting ? '\uC2E0\uACE0 \uC911...' : '\uC2E0\uACE0 \uC811\uC218'}
           </button>
         </div>
       </div>
@@ -117,11 +117,11 @@ function CommentBlock({
 
   const handleDelete = async () => {
     if (!userId || node.authorId !== userId) return;
-    if (!window.confirm('댓글을 삭제할까요?')) return;
+    if (!window.confirm('\uB313\uAE00\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?')) return;
 
     const { ok, message } = await deleteComment(userId, node.id);
     if (!ok) {
-      showAlert(message || '댓글 삭제에 실패했습니다.');
+      showAlert(message || '\uB313\uAE00 \uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.');
       return;
     }
     onDeleted(-1);
@@ -138,7 +138,7 @@ function CommentBlock({
     try {
       const { ok, message } = await createComment(userId, postId, text, node.id);
       if (!ok) {
-        showAlert(message || '답글 등록에 실패했습니다.');
+        showAlert(message || '\uB2F5\uAE00 \uB4F1\uB85D\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.');
         return;
       }
       setReplyText('');
@@ -152,10 +152,10 @@ function CommentBlock({
     <li className={`community-comment-item ${node.parentId ? 'is-reply' : ''}`}>
       <div className="community-comment-head">
         <strong>{node.authorUsername}</strong>
-        <span className="community-muted">{formatTime(node.createdAt)}</span>
+        <span className="community-muted">{'\u00B7 '}{formatTime(node.createdAt)}</span>
         {userId === node.authorId && !node.isDeleted ? (
           <button type="button" className="community-comment-del" onClick={handleDelete}>
-            삭제
+            {'\uC0AD\uC81C'}
           </button>
         ) : null}
       </div>
@@ -165,11 +165,11 @@ function CommentBlock({
       {userId && !node.isDeleted ? (
         <div className="community-comment-tools">
           <button type="button" className="community-comment-reply-btn" onClick={() => onReply(node.id)}>
-            답글
+            {'\uB2F5\uAE00'}
           </button>
           {userId !== node.authorId ? (
             <button type="button" className="community-comment-report-btn" onClick={() => onReport({ targetType: 'COMMENT', commentId: node.id })}>
-              신고
+              {'\uC2E0\uACE0'}
             </button>
           ) : null}
         </div>
@@ -182,10 +182,10 @@ function CommentBlock({
             onChange={(event) => setReplyText(event.target.value)}
             rows={2}
             maxLength={2000}
-            placeholder="답글을 입력해 주세요."
+            placeholder={'\uB2F5\uAE00\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694.'}
           />
           <button type="submit" disabled={submitting}>
-            등록
+            {'\uB4F1\uB85D'}
           </button>
         </form>
       ) : null}
@@ -271,7 +271,7 @@ export default function CommunityPost() {
 
   const openReportModal = (payload: { targetType: 'POST' | 'COMMENT'; commentId?: number }) => {
     if (!user) {
-      showAlert('로그인 후 신고할 수 있습니다.');
+      showAlert('\uB85C\uADF8\uC778 \uD6C4 \uC2E0\uACE0\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.');
       return;
     }
     setReportTarget(payload);
@@ -300,11 +300,11 @@ export default function CommunityPost() {
       });
 
       if (!ok) {
-        showAlert(message || '신고 접수에 실패했습니다.');
+        showAlert(message || '\uC2E0\uACE0 \uC811\uC218\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.');
         return;
       }
 
-      showAlert('신고가 접수되었습니다.');
+      showAlert('\uC2E0\uACE0\uAC00 \uC811\uC218\uB418\uC5C8\uC2B5\uB2C8\uB2E4.');
       closeReportModal();
     } finally {
       setReportBusy(false);
@@ -313,12 +313,12 @@ export default function CommunityPost() {
 
   const onToggleLike = async () => {
     if (!user || !post) {
-      showAlert('로그인 후 이용할 수 있습니다.');
+      showAlert('\uB85C\uADF8\uC778 \uD6C4 \uC774\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.');
       return;
     }
     const { ok, message } = await toggleLike(user.id, post.id);
     if (!ok) {
-      showAlert(message || '처리에 실패했습니다.');
+      showAlert(message || '\uCC98\uB9AC\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.');
       return;
     }
     reload();
@@ -326,12 +326,12 @@ export default function CommunityPost() {
 
   const onToggleBookmark = async () => {
     if (!user || !post) {
-      showAlert('로그인 후 이용할 수 있습니다.');
+      showAlert('\uB85C\uADF8\uC778 \uD6C4 \uC774\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.');
       return;
     }
     const { ok, message } = await toggleBookmark(user.id, post.id);
     if (!ok) {
-      showAlert(message || '처리에 실패했습니다.');
+      showAlert(message || '\uCC98\uB9AC\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.');
       return;
     }
     reload();
@@ -339,12 +339,12 @@ export default function CommunityPost() {
 
   const onRecommend = async (type: 'RECOMMEND' | 'NOT_RECOMMEND') => {
     if (!user || !post) {
-      showAlert('로그인 후 이용할 수 있습니다.');
+      showAlert('\uB85C\uADF8\uC778 \uD6C4 \uC774\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.');
       return;
     }
     const { ok, message } = await recommendPost(user.id, post.id, type);
     if (!ok) {
-      showAlert(message || '처리에 실패했습니다.');
+      showAlert(message || '\uCC98\uB9AC\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.');
       return;
     }
     reload();
@@ -352,11 +352,11 @@ export default function CommunityPost() {
 
   const onDeletePost = async () => {
     if (!user || !post) return;
-    if (!window.confirm('게시글을 삭제할까요?')) return;
+    if (!window.confirm('\uAC8C\uC2DC\uAE00\uC744 \uC0AD\uC81C\uD560\uAE4C\uC694?')) return;
 
     const { ok, message } = await deletePost(user.id, post.id);
     if (!ok) {
-      showAlert(message || '삭제에 실패했습니다.');
+      showAlert(message || '\uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.');
       return;
     }
     navigate('/community', { replace: true });
@@ -365,7 +365,7 @@ export default function CommunityPost() {
   const onSubmitComment = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!user || !post) {
-      showAlert('로그인 후 댓글을 작성할 수 있습니다.');
+      showAlert('\uB85C\uADF8\uC778 \uD6C4 \uB313\uAE00\uC744 \uC791\uC131\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.');
       return;
     }
 
@@ -376,7 +376,7 @@ export default function CommunityPost() {
     try {
       const { ok, message } = await createComment(user.id, post.id, text);
       if (!ok) {
-        showAlert(message || '댓글 등록에 실패했습니다.');
+        showAlert(message || '\uB313\uAE00 \uB4F1\uB85D\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.');
         return;
       }
       setCommentText('');
@@ -390,7 +390,7 @@ export default function CommunityPost() {
     return (
       <Layout>
         <p className="community-muted" style={{ padding: 24 }}>
-          불러오는 중...
+          {'\uBD88\uB7EC\uC624\uB294 \uC911...'}
         </p>
       </Layout>
     );
@@ -400,8 +400,8 @@ export default function CommunityPost() {
     return (
       <Layout>
         <div className="community-page" style={{ padding: 24 }}>
-          <p>게시글을 찾을 수 없습니다.</p>
-          <Link to="/community">목록으로</Link>
+          <p>{"\uC874\uC7AC\uD558\uC9C0 \uC54A\uAC70\uB098 \uC0AD\uC81C\uB41C \uAC8C\uC2DC\uAE00\uC785\uB2C8\uB2E4."}</p>
+          <Link to="/community">{"\uCEE4\uBBA4\uB2C8\uD2F0\uB85C \uB3CC\uC544\uAC00\uAE30"}</Link>
         </div>
       </Layout>
     );
@@ -413,7 +413,7 @@ export default function CommunityPost() {
     <Layout>
       <div className="community-page community-post-page">
         <div className="community-post-breadcrumb">
-          <Link to="/community">커뮤니티</Link>
+          <Link to="/community">{"\uCEE4\uBBA4\uB2C8\uD2F0"}</Link>
           <span className="community-muted"> / </span>
           <span>{BOARD_LABELS[post.boardCategory]}</span>
         </div>
@@ -421,15 +421,15 @@ export default function CommunityPost() {
         <article className="community-article">
           <header className="community-article-head">
             <h1 className="community-article-title">
-              {post.isNotice ? <span className="community-badge-notice">공지</span> : null}
+              {post.isNotice ? <span className="community-badge-notice">{"\uACF5\uC9C0"}</span> : null}
               {post.title}
             </h1>
             <div className="community-article-meta">
               <span>{post.authorUsername}</span>
-              <span className="community-muted">쨌</span>
+              <span className="community-muted">{" \u00B7 "}</span>
               <span>{formatTime(post.createdAt)}</span>
-              <span className="community-muted">쨌</span>
-              <span>조회 {post.viewCount}</span>
+              <span className="community-muted">{" \u00B7 "}</span>
+              <span>{"\uC870\uD68C "}{post.viewCount}</span>
             </div>
             {post.hashtags?.length ? (
               <div className="community-hashtags">
@@ -446,10 +446,10 @@ export default function CommunityPost() {
 
           {post.attachments?.length ? (
             <div className="community-attachments">
-              <strong>첨부 파일</strong>
+              <strong>{"\uCCA8\uBD80 \uD30C\uC77C"}</strong>
               <div className="community-attachment-grid">
                 {post.attachments.map((attachment) =>
-                  attachment.contentType?.startsWith('image/') ? (
+                  attachment.contentType?.startsWith("image/") ? (
                     <a
                       key={attachment.id}
                       href={attachmentUrl(attachment.filePath)}
@@ -470,30 +470,30 @@ export default function CommunityPost() {
           ) : null}
 
           <div className="community-article-actions">
-            <button type="button" className={post.liked ? 'active' : ''} onClick={onToggleLike}>
-              좋아요 {post.likeCount}
+            <button type="button" className={post.liked ? "active" : ""} onClick={onToggleLike}>
+              {"\uC88B\uC544\uC694 "}{post.likeCount}
             </button>
-            <button type="button" className={post.bookmarked ? 'active' : ''} onClick={onToggleBookmark}>
-              북마크
+            <button type="button" className={post.bookmarked ? "active" : ""} onClick={onToggleBookmark}>
+              {"\uBD81\uB9C8\uD06C"}
             </button>
-            <button type="button" className={post.myRecommend === 1 ? 'active' : ''} onClick={() => onRecommend('RECOMMEND')}>
-              추천 {post.recommendCount}
+            <button type="button" className={post.myRecommend === 1 ? "active" : ""} onClick={() => onRecommend("RECOMMEND")}>
+              {"\uCD94\uCC9C "}{post.recommendCount}
             </button>
-            <button type="button" className={post.myRecommend === -1 ? 'active' : ''} onClick={() => onRecommend('NOT_RECOMMEND')}>
-              비추천 {post.notRecommendCount}
+            <button type="button" className={post.myRecommend === -1 ? "active" : ""} onClick={() => onRecommend("NOT_RECOMMEND")}>
+              {"\uBE44\uCD94\uCC9C "}{post.notRecommendCount}
             </button>
             {!isAuthor ? (
-              <button type="button" className="community-btn-danger" onClick={() => openReportModal({ targetType: 'POST' })}>
-                신고
+              <button type="button" className="community-btn-danger" onClick={() => openReportModal({ targetType: "POST" })}>
+                {"\uC2E0\uACE0"}
               </button>
             ) : null}
             {isAuthor ? (
               <>
                 <Link to={`/community/write/${post.id}`} className="community-btn-ghost">
-                  수정
+                  {"\uC218\uC815"}
                 </Link>
                 <button type="button" className="community-btn-danger" onClick={onDeletePost}>
-                  삭제
+                  {"\uC0AD\uC81C"}
                 </button>
               </>
             ) : null}
@@ -501,17 +501,17 @@ export default function CommunityPost() {
         </article>
 
         <section className="community-comments-section">
-          <h2>댓글 {post.commentCount}</h2>
+          <h2>{"\uB313\uAE00 "}{post.commentCount}</h2>
           <form className="community-comment-form" onSubmit={onSubmitComment}>
             <textarea
               value={commentText}
               onChange={(event) => setCommentText(event.target.value)}
               rows={3}
               maxLength={2000}
-              placeholder="댓글을 입력해 주세요."
+              placeholder={"\uB313\uAE00\uC744 \uC785\uB825\uD574 \uC8FC\uC138\uC694."}
             />
             <button type="submit" disabled={commentBusy}>
-              {commentBusy ? '등록 중...' : '댓글 등록'}
+              {commentBusy ? "\uB4F1\uB85D \uC911..." : "\uB313\uAE00 \uB4F1\uB85D"}
             </button>
           </form>
 
@@ -534,7 +534,7 @@ export default function CommunityPost() {
 
       <ReportModal
         open={reportTarget != null}
-        targetLabel={reportTarget?.targetType === 'COMMENT' ? '댓글' : '게시글'}
+        targetLabel={reportTarget?.targetType === "COMMENT" ? "\uB313\uAE00" : "\uAC8C\uC2DC\uAE00"}
         reason={reportReason}
         description={reportDescription}
         submitting={reportBusy}
@@ -546,3 +546,4 @@ export default function CommunityPost() {
     </Layout>
   );
 }
+

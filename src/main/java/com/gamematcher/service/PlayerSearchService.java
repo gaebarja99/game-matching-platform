@@ -10,7 +10,7 @@ import com.gamematcher.service.search.LolSearchService;
 import com.gamematcher.service.search.OverwatchSearchService;
 import com.gamematcher.service.search.PubgSearchService;
 import com.gamematcher.service.search.TftSearchService;
-import com.gamematcher.service.valorant.ValorantApiService;
+import com.gamematcher.service.search.ValorantSearchService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
@@ -25,7 +25,7 @@ public class PlayerSearchService {
 
     private final LolSearchService lolSearchService;
     private final TftSearchService tftSearchService;
-    private final ValorantApiService valorantApiService;
+    private final ValorantSearchService valorantSearchService;
     private final PubgSearchService pubgSearchService;
     private final OverwatchSearchService overwatchSearchService;
     private final Cs2SearchService cs2SearchService;
@@ -43,7 +43,7 @@ public class PlayerSearchService {
         return switch (game) {
             case "lol" -> lolSearchService.search(request);
             case "tft" -> tftSearchService.search(request);
-            case "valorant" -> valorantApiService.search(request);
+            case "valorant" -> valorantSearchService.search(request);
             case "pubg" -> pubgSearchService.search(request);
             case "overwatch" -> overwatchSearchService.search(request);
             case "cs2" -> cs2SearchService.search(request);
