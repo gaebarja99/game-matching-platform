@@ -5,3 +5,6 @@ src/main/resources/application-oauth-local.properties
 # 포트원 결제 API 시크릿 (절대 커밋 금지)
 application-portone-local.properties
 src/main/resources/application-portone-local.properties
+
+# Maven 빌드 산출물 (로컬에서 mvn compile 시 생성)
+/target/
