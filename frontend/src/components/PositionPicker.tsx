@@ -36,7 +36,6 @@ const CS2_POSITIONS: PositionOption[] = [
   { key: 'LURKER', icon: 'L', label: 'Lurker' },
 ];
 
-
 const PUBG_POSITIONS: PositionOption[] = [
   { key: 'ALL', icon: 'A', label: 'All' },
   { key: 'DUO', icon: 'D', label: 'Duo' },

@@ -3,8 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiUrl, resolveProfileImageUrl } from '../api/client';
 import { sendChatMessage } from '../api/chat';
+import ChatbotMessageContent from './ChatbotMessageContent';
+import { CHATBOT_STARTER_PROMPTS } from '../constants/chatbotStarterPrompts';
 import { useDirectMessages, type FriendRow } from '../hooks/useDirectMessages';
 import { useAutoResizeTextarea } from '../hooks/useAutoResizeTextarea';
+import { deriveChatbotActions, type ChatbotAction } from '../utils/chatbotActions';
 import ChatPopup from './ChatPopup';
 import RandomMatchChatBody from './RandomMatchChatBody';
 import './FloatingChatWidget.css';
@@ -161,19 +164,24 @@ function FloatingGroupPanel({ onRoomNavigate }: { onRoomNavigate?: () => void })
   );
 }
 
-type BotMsg = { role: 'assistant' | 'user'; text: string; time: string };
+type BotMsg = { role: 'assistant' | 'user'; text: string; time: string; actions?: ChatbotAction[] };
 
 function formatTime() {
   return new Date().toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
 }
 
 function FloatingChatbotPanel() {
+  const navigate = useNavigate();
   const endRef = useRef<HTMLDivElement | null>(null);
   const [messages, setMessages] = useState<BotMsg[]>([
     {
       role: 'assistant',
-      text: 'GameMatcher 챗봇입니다. 서비스 이용 안내를 물어보세요.',
+      text: '필요한 기능만 보내 주세요.\n\n📌 바로 도와드릴 수 있는 내용\n- 전적 검색\n- 계정 연동\n- 채팅과 매칭\n- 후원과 스튜디오',
       time: formatTime(),
+      actions: [
+        { label: '전적 검색', to: '/records' },
+        { label: '계정 연동', to: '/profile/account-links' },
+      ],
     },
   ]);
   const [input, setInput] = useState('');
@@ -193,14 +201,23 @@ function FloatingChatbotPanel() {
     setLoading(true);
     try {
       const res = await sendChatMessage(m);
+      const reply = res.reply || '답변을 생성하지 못했습니다.';
       setMessages((prev) => [
         ...prev,
-        { role: 'assistant', text: res.reply || '답변을 생성하지 못했습니다.', time: formatTime() },
+        {
+          role: 'assistant',
+          text: reply,
+          time: formatTime(),
+          actions: deriveChatbotActions(`${m}\n${reply}`),
+        },
       ]);
     } catch (e) {
       const msg = e instanceof Error ? e.message : '응답을 불러오지 못했습니다.';
       setError(msg);
-      setMessages((prev) => [...prev, { role: 'assistant', text: msg, time: formatTime() }]);
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', text: msg, time: formatTime(), actions: deriveChatbotActions(m) },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -211,16 +228,44 @@ function FloatingChatbotPanel() {
       <div className="floating-chat-widget-chatbot-messages chat-popup-scroll">
         {messages.map((msg, i) => (
           <div key={`${msg.role}-${i}-${msg.time}`} className={`floating-chat-widget-bubble ${msg.role === 'user' ? 'is-user' : 'is-bot'}`}>
-            <span className="floating-chat-widget-bubble-meta">
-              {msg.role === 'user' ? '나' : 'GM BOT'} · {msg.time}
-            </span>
-            <p>{msg.text}</p>
+            <span className="floating-chat-widget-bubble-meta">{msg.role === 'user' ? '사용자' : 'GM MATE'} · {msg.time}</span>
+            <ChatbotMessageContent text={msg.text} className="floating-chat-widget-message-content" />
+            {msg.role === 'assistant' && i === 0 ? (
+              <div className="floating-chat-widget-starter-grid">
+                {CHATBOT_STARTER_PROMPTS.map((item) => (
+                  <button
+                    key={item.label}
+                    type="button"
+                    className="floating-chat-widget-starter-card"
+                    onClick={() => void submit(item.prompt)}
+                    disabled={loading}
+                  >
+                    <strong>{item.label}</strong>
+                    <span>바로 질문</span>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+            {msg.role === 'assistant' && msg.actions?.length ? (
+              <div className="floating-chat-widget-bubble-actions">
+                {msg.actions.map((action) => (
+                  <button
+                    key={`${action.to}-${action.label}`}
+                    type="button"
+                    className="floating-chat-widget-bubble-action"
+                    onClick={() => navigate(action.to)}
+                  >
+                    {action.label}
+                  </button>
+                ))}
+              </div>
+            ) : null}
           </div>
         ))}
         {loading ? (
           <div className="floating-chat-widget-bubble is-bot">
-            <span className="floating-chat-widget-bubble-meta">GM BOT</span>
-            <p>응답 생성 중…</p>
+            <span className="floating-chat-widget-bubble-meta">GM MATE</span>
+            <ChatbotMessageContent text="응답 생성 중..." className="floating-chat-widget-message-content" />
           </div>
         ) : null}
         <div ref={endRef} />
@@ -241,12 +286,12 @@ function FloatingChatbotPanel() {
               void submit(input);
             }
           }}
-          placeholder="질문을 입력하세요"
+          placeholder="질문을 입력해 주세요"
           rows={3}
           disabled={loading}
         />
         <button type="submit" disabled={loading || !input.trim()}>
-          {loading ? '전송 중…' : '보내기'}
+          {loading ? '전송 중...' : '보내기'}
         </button>
       </form>
       {error ? <p className="floating-chat-widget-error">{error}</p> : null}

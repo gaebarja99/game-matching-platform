@@ -10,7 +10,6 @@ export type BoardCategory =
   | 'PUBG'
   | 'OVERWATCH'
   | 'CS2'
-  | 'APEX'
   | 'BLIZZARD'
   | 'STEAM';
 
@@ -38,7 +37,6 @@ export const BOARD_LABELS: Record<BoardCategory, string> = {
   PUBG: '배그',
   OVERWATCH: '오버워치',
   CS2: 'CS2',
-  APEX: '에이펙스',
   BLIZZARD: '블리자드',
   STEAM: '스팀',
 };

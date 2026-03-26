@@ -296,7 +296,7 @@ public class AccountConnectionService {
                 .secondaryValue(account == null ? null : account.getDiscordId())
                 .avatarUrl(account == null ? null : account.getAvatar())
                 .ownershipVerified(account != null)
-                .note("Discord OAuth2 본인 인증 기반 연동")
+                .note(account == null ? null : "인증 확인됨")
                 .build();
     }
 
@@ -309,7 +309,7 @@ public class AccountConnectionService {
                 .secondaryValue(account == null ? null : account.getSteamId())
                 .avatarUrl(account == null ? null : account.getAvatar())
                 .ownershipVerified(account != null)
-                .note("Steam OpenID 본인 인증 기반 연동")
+                .note(account == null ? null : "인증 확인됨")
                 .build();
     }
 
@@ -321,19 +321,29 @@ public class AccountConnectionService {
                 .displayName(account == null ? null : account.getBattleTag())
                 .secondaryValue(account == null ? null : account.getAccountId())
                 .ownershipVerified(account != null)
-                .note("Battle.net OAuth 본인 인증 기반 연동")
+                .note(account == null ? null : "인증 확인됨")
                 .build();
     }
 
     private AccountConnectionStatusDto buildRiotStatus(Long userId) {
         RiotAccount account = riotAccountRepository.findFirstByUserId(userId).orElse(null);
+        String displayName = account == null ? null : account.getGameName() + "#" + account.getTagLine();
+        String gameType = account == null || account.getGameType() == null || account.getGameType().isBlank()
+                ? "RIOT"
+                : account.getGameType().toUpperCase();
+        String verificationMethod = account == null ? null : account.getVerificationMethod();
+        String note = account == null ? null : "연동 완료";
+        if ("LOL_THIRD_PARTY_CODE".equals(verificationMethod) || "VALORANT_CARD_SWAP".equals(verificationMethod)) {
+            note = "인증 확인됨";
+        }
+
         return AccountConnectionStatusDto.builder()
                 .provider("riot")
                 .connected(account != null)
-                .displayName(account == null ? null : account.getGameName() + "#" + account.getTagLine())
+                .displayName(account == null ? null : displayName + " (" + gameType + ")")
                 .secondaryValue(account == null ? null : account.getPuuid())
-                .ownershipVerified(false)
-                .note("현재 Riot은 공개 API 조회 기반 연동만 가능하며, OAuth 기반 소유권 인증은 미구현 상태입니다.")
+                .ownershipVerified(account != null && account.isOwnershipVerified())
+                .note(note)
                 .build();
     }
 

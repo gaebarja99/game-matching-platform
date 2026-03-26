@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { checkNicknameAvailable } from '../api/auth';
+import { checkNicknameAvailable, repairMojibakeText } from '../api/auth';
 import { apiUrl, resolveProfileImageUrl } from '../api/client';
 import { fetchProfile, patchProfile, type ProfileDto, type ProfilePatchBody } from '../api/profile';
 import {
@@ -113,6 +113,12 @@ export default function Profile() {
   ]);
 
   const pangBalance = user?.pangBalance ?? 0;
+  const displayName =
+    repairMojibakeText(user?.nickname) ??
+    repairMojibakeText(user?.username) ??
+    repairMojibakeText(user?.loginId) ??
+    '사용자';
+  const displayBio = repairMojibakeText(user?.bio)?.trim() || '간단한 자기소개를 작성해보세요.';
   const bannerDisplaySrc = publicProfile ? resolveBannerStyleUrl(publicProfile.bannerImageUrl) : null;
   const gameTagsDisplay = parsePreferredGamesToSelected(publicProfile?.preferredGames);
   const gamesPreview = (
@@ -273,8 +279,8 @@ export default function Profile() {
           )}
         </div>
         <div className="profile-info">
-          <div className="profile-nickname">{user?.nickname ?? user?.username ?? user?.loginId ?? '—'}</div>
-          <p className="profile-bio">{user?.bio?.trim() || '간단 자기소개를 작성해보세요.'}</p>
+          <div className="profile-nickname">{displayName}</div>
+          <p className="profile-bio">{displayBio}</p>
           <button type="button" className="profile-edit-btn" onClick={handleOpenEdit}>프로필 편집</button>
         </div>
       </div>

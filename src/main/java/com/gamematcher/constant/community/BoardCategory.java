@@ -1,8 +1,5 @@
 package com.gamematcher.constant.community;
 
-/**
- * Community board categories.
- */
 public enum BoardCategory {
     FREE("자유"),
     NOTICE("공지"),
@@ -13,7 +10,6 @@ public enum BoardCategory {
     PUBG("배그"),
     OVERWATCH("오버워치"),
     CS2("CS2"),
-    APEX("에이펙스"),
     BLIZZARD("블리자드"),
     STEAM("스팀");
 

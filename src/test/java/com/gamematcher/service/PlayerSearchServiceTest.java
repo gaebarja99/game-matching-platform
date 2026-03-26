@@ -3,7 +3,6 @@ package com.gamematcher.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamematcher.dto.search.PlayerSearchRequest;
 import com.gamematcher.dto.search.PlayerSearchResponse;
-import com.gamematcher.service.search.ApexSearchService;
 import com.gamematcher.service.search.Cs2SearchService;
 import com.gamematcher.service.search.LolSearchService;
 import com.gamematcher.service.search.OverwatchSearchService;
@@ -36,7 +35,6 @@ class PlayerSearchServiceTest {
     @Mock ObjectMapper objectMapper;
     @Mock PubgSearchService pubgSearchService;
     @Mock OverwatchSearchService overwatchSearchService;
-    @Mock ApexSearchService apexSearchService;
     @Mock Cs2SearchService cs2SearchService;
 
     @InjectMocks
@@ -44,10 +42,10 @@ class PlayerSearchServiceTest {
 
     private PlayerSearchResponse mockSuccessResponse(String game) {
         return PlayerSearchResponse.builder()
-                .success(true)
-                .game(game)
-                .nickname("test#tag")
-                .build();
+            .success(true)
+            .game(game)
+            .nickname("test#tag")
+            .build();
     }
 
     @BeforeEach
@@ -57,7 +55,6 @@ class PlayerSearchServiceTest {
         when(valorantApiService.search(any())).thenReturn(mockSuccessResponse("valorant"));
         when(pubgSearchService.search(any())).thenReturn(mockSuccessResponse("pubg"));
         when(overwatchSearchService.search(any())).thenReturn(mockSuccessResponse("overwatch"));
-        when(apexSearchService.search(any())).thenReturn(mockSuccessResponse("apex"));
         when(cs2SearchService.search(any())).thenReturn(mockSuccessResponse("cs2"));
     }
 
@@ -139,18 +136,6 @@ class PlayerSearchServiceTest {
 
             verify(cs2SearchService).search(any());
             assertThat(response.getGame()).isEqualTo("cs2");
-        }
-
-        @Test
-        void routes_apex_requests() {
-            PlayerSearchRequest req = new PlayerSearchRequest();
-            req.setGame("apex");
-            req.setGameName("test");
-
-            PlayerSearchResponse response = playerSearchService.searchPlayer(req);
-
-            verify(apexSearchService).search(any());
-            assertThat(response.getGame()).isEqualTo("apex");
         }
     }
 
