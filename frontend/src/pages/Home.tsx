@@ -170,12 +170,6 @@ function TeamSearchGameTabIcon({ game }: { game: TeamSearchGameId }) {
   }
 }
 
-const HOME_QUICK_LINKS = [
-  { to: '/records', eyebrow: '전적 검색', title: '연동된 게임 전적 확인', body: '지원 게임 전적을 검색하고 최근 플레이 흐름을 한곳에서 비교할 수 있습니다.' },
-  { to: '/community', eyebrow: '커뮤니티', title: '실시간 소통 바로가기', body: '게시글 확인, 글 작성, 팀 찾기 흐름을 한 화면 안에서 이어갈 수 있습니다.' },
-  { to: '/chatbot', eyebrow: '도우미', title: '앱 내 챗봇 이용', body: '기능 위치나 사용 방법이 헷갈릴 때 바로 물어보고 도움을 받을 수 있습니다.' },
-];
-
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -916,32 +910,6 @@ export default function Home() {
 
   return (
     <Layout>
-      <section className="home-hero" aria-label="GameMatcher overview">
-        <div className="home-hero-copy">
-          <span className="home-hero-eyebrow">메인 프론트</span>
-          <h1 className="home-hero-title">매칭, 방송, 팀 관리까지 한곳에서 이어집니다.</h1>
-          <p className="home-hero-body">
-            이제 메인 `frontend` 기준으로 사용자 흐름이 정리되어, 실시간 방송 확인부터 방 생성, 매칭 기록, 보조 기능까지 하나의 동선으로 사용할 수 있습니다.
-          </p>
-          <div className="home-hero-actions">
-            <button type="button" className="home-hero-primary" onClick={() => { setPanelType('create'); setIsPanelOpen(true); }}>
-              방 만들기
-            </button>
-            <button type="button" className="home-hero-secondary" onClick={() => { setPanelType('match'); setIsPanelOpen(true); }}>
-              매칭 시작
-            </button>
-          </div>
-        </div>
-        <div className="home-hero-grid">
-          {HOME_QUICK_LINKS.map((item) => (
-            <Link key={item.to} to={item.to} className="home-hero-card">
-              <span className="home-hero-card-eyebrow">{item.eyebrow}</span>
-              <strong className="home-hero-card-title">{item.title}</strong>
-              <span className="home-hero-card-body">{item.body}</span>
-            </Link>
-          ))}
-        </div>
-      </section>
       <section className="live-section" aria-label="지금 라이브">
         <div className="live-section-header">
           <h2 className="live-section-title"><span className="icon">??</span> 지금 라이브</h2>
