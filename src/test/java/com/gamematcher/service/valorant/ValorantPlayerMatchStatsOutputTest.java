@@ -15,6 +15,7 @@ import com.gamematcher.service.ai.LlmEvaluationServiceImpl;
 import com.gamematcher.service.ai.ValorantEvaluationPromptBuilder;
 import com.gamematcher.service.ai.ValorantLlmEvaluationService;
 import com.gamematcher.service.ai.score.ValorantRoundScoreEngine;
+import com.gamematcher.testsupport.LlmTestSupport;
 import com.gamematcher.service.ai.score.ValorantScoreService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -24,7 +25,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -190,6 +190,7 @@ class ValorantPlayerMatchStatsOutputTest {
         assertThat(fullPrompt).contains("[매치 요약]");
         assertThat(fullPrompt).contains("{\"summary\":");
         assertThat(fullPrompt).contains("한국어로 작성하십시오");
+        assertThat(fullPrompt).contains("톤·분량 균형");
     }
 
     @Test
@@ -199,14 +200,15 @@ class ValorantPlayerMatchStatsOutputTest {
         Files.createDirectories(outDir);
 
         // API 키: 환경변수 우선, 없으면 application.properties 기본값 사용
-        String apiKey = resolveApiKeyForTest();
+        String apiKey = LlmTestSupport.resolveApiKeyForTest();
         ObjectMapper om = new ObjectMapper();
+        String model = LlmTestSupport.resolveLlmModelForTest("gpt-5-mini");
         LlmEvaluationService llmService = new LlmEvaluationServiceImpl(
                 om,
                 apiKey != null ? apiKey : "",
-                "gpt-4o-mini",
-                30,
-                2
+                model,
+                LlmTestSupport.resolveLlmTimeoutSecondsForTest(30),
+                LlmTestSupport.resolveLlmMaxRetriesForTest(2)
         );
         ValorantLlmEvaluationService valorantLlmService = new ValorantLlmEvaluationService(
                 promptBuilder,
@@ -255,14 +257,14 @@ class ValorantPlayerMatchStatsOutputTest {
         Path outDir = Paths.get(OUTPUT_DIR);
         Files.createDirectories(outDir);
 
-        String apiKey = resolveApiKeyForTest();
+        String apiKey = LlmTestSupport.resolveApiKeyForTest();
         ObjectMapper om = new ObjectMapper();
         LlmEvaluationService llmService = new LlmEvaluationServiceImpl(
                 om,
                 apiKey != null ? apiKey : "",
-                "gpt-4o",
-                45,
-                2
+                "gpt-5.2",
+                LlmTestSupport.resolveLlmTimeoutSecondsForTest(45),
+                LlmTestSupport.resolveLlmMaxRetriesForTest(2)
         );
         ValorantLlmEvaluationService valorantLlmService = new ValorantLlmEvaluationService(
                 promptBuilder,
@@ -300,28 +302,6 @@ class ValorantPlayerMatchStatsOutputTest {
         Path txtPath = outDir.resolve("valorant_llm_api_response_gpt4o.txt");
         Files.writeString(txtPath, content);
         System.out.println("LLM API 응답 출력 (gpt-4o): " + txtPath.toAbsolutePath());
-    }
-
-    /**
-     * 테스트용 API 키: 환경변수 AI_API_KEY 우선, 없으면 application.properties 기본값 사용.
-     */
-    private static String resolveApiKeyForTest() {
-        String key = System.getenv("AI_API_KEY");
-        if (key != null && !key.isBlank()) {
-            return key;
-        }
-        try {
-            Path propsPath = Paths.get("src/main/resources/application.properties");
-            if (Files.exists(propsPath)) {
-                String content = Files.readString(propsPath);
-                var m = Pattern.compile("ai\\.llm\\.api-key=\\$\\{AI_API_KEY:([^}]+)\\}").matcher(content);
-                if (m.find() && m.group(1) != null && !m.group(1).isBlank()) {
-                    return m.group(1).trim();
-                }
-            }
-        } catch (Exception ignored) {
-        }
-        return "";
     }
 
     private static ObjectMapper createOutputObjectMapper() {

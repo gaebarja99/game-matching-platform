@@ -29,6 +29,7 @@ import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
@@ -90,7 +91,7 @@ class PubgAiEvaluationFlowTest {
         mockLlmResponse.setSummary("테스트 AI 요약");
         mockLlmResponse.setDetailedComment("테스트 AI 상세 코멘트");
 
-        when(llmEvaluationService.evaluate(anyString())).thenReturn(Optional.of(mockLlmResponse));
+        when(llmEvaluationService.evaluate(anyString(), isNull())).thenReturn(Optional.of(mockLlmResponse));
 
         List<PubgAiEvaluationResponseDto> results = pubgAiEvaluationService
                 .evaluateMatch(savedMatch.getMatchId(), 30);
@@ -112,7 +113,7 @@ class PubgAiEvaluationFlowTest {
     @Test
     @DisplayName("LLM 실패 시 규칙 기반 점수만 저장 (summary/detailedComment는 null)")
     void evaluateAndSave_whenLlmFails_savesRuleBasedScoreOnly() {
-        when(llmEvaluationService.evaluate(anyString())).thenReturn(Optional.empty());
+        when(llmEvaluationService.evaluate(anyString(), isNull())).thenReturn(Optional.empty());
 
         pubgAiEvaluationService.evaluateMatch(savedMatch.getMatchId(), 30);
 

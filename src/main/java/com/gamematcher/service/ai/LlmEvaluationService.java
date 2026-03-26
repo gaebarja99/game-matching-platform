@@ -15,5 +15,12 @@ public interface LlmEvaluationService {
      * @param promptText LLM에 전달할 프롬프트 전문
      * @return summary, detailedComment. API 키 없음·호출 실패 시 {@link Optional#empty()}
      */
-    Optional<LlmEvaluationResponseDTO> evaluate(String promptText);
+    default Optional<LlmEvaluationResponseDTO> evaluate(String promptText) {
+        return evaluate(promptText, null);
+    }
+
+    /**
+     * @param modelOverride 비어 있지 않으면 이 모델 ID로 호출 (예: gpt-4o-mini). null/공백이면 설정 기본 모델.
+     */
+    Optional<LlmEvaluationResponseDTO> evaluate(String promptText, String modelOverride);
 }

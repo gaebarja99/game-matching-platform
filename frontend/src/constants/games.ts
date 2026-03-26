@@ -18,10 +18,11 @@ const VALID_VALUES = new Set<string>(
 /** API 문자열 → 체크박스용 값 배열 (목록에 없는 토큰은 제외) */
 export function parsePreferredGamesToSelected(raw: string | null | undefined): string[] {
   if (!raw?.trim()) return [];
+  const valid = VALID_VALUES as ReadonlySet<string>;
   return raw
     .split(',')
     .map((t) => t.trim())
-    .filter((t) => VALID_VALUES.has(t));
+    .filter((t) => valid.has(t));
 }
 
 export function serializePreferredGames(selected: string[]): string | null {

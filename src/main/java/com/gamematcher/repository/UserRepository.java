@@ -32,4 +32,13 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     /** 전화번호 중복 여부 (회원가입 시 사용) */
     boolean existsByPhone(String phone);
+
+    /**
+     * username 부분 일치(LIKE %q%). 여러 명이면 id 오름차순 첫 번째.
+     * {@code Containing}은 대소문자 구분 DB에서도 {@code IgnoreCase}로 비교합니다.
+     */
+    Optional<User> findFirstByUsernameContainingIgnoreCaseOrderByIdAsc(String username);
+
+    /** username 부분 일치, 최대 50명, id 오름차순 */
+    List<User> findTop50ByUsernameContainingIgnoreCaseOrderByIdAsc(String username);
 }

@@ -8,9 +8,9 @@ import java.util.Optional;
 
 public interface ValorantMatchAiEvaluationRepository extends JpaRepository<ValorantMatchAiEvaluation, Long> {
 
-    Optional<ValorantMatchAiEvaluation> findByValorantMatchPlayerId(Long valorantMatchPlayerId);
+    Optional<ValorantMatchAiEvaluation> findByValorantMatchPlayer_IdAndLlmModel(Long valorantMatchPlayerId, String llmModel);
 
     List<ValorantMatchAiEvaluation> findByValorantMatchPlayer_Match_MatchId(String matchId);
 
-    boolean existsByValorantMatchPlayerId(Long valorantMatchPlayerId);
+    boolean existsByValorantMatchPlayer_Id(Long valorantMatchPlayerId);
 }

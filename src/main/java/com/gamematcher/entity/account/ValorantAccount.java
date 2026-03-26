@@ -62,6 +62,10 @@ public class ValorantAccount {
     @Column(name = "updated_at", nullable = false)
     private LocalDateTime updatedAt;
 
+    /** Henrik 계정 API를 마지막으로 받아 반영한 시각 (전적 검색 캐시 신선도) */
+    @Column(name = "api_cached_at")
+    private LocalDateTime apiCachedAt;
+
     @PrePersist
     protected void onCreate() {
         LocalDateTime now = LocalDateTime.now();

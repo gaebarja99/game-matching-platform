@@ -33,6 +33,9 @@ public class MatchQueueEntry {
     @Column(name = "position", length = 32)
     private String position;
 
+    @Column(name = "max_players")
+    private Integer maxPlayers;
+
     @Column(name = "joined_at", nullable = false, updatable = false)
     private LocalDateTime joinedAt;
 

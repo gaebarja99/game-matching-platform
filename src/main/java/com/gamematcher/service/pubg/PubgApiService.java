@@ -1,10 +1,17 @@
 package com.gamematcher.service.pubg;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gamematcher.dto.pubg.PubgMatchApiResponse;
 import com.gamematcher.dto.pubg.PubgRankedPlayerStatsApiResponse;
 import com.gamematcher.dto.search.PlayerSearchRequest;
+import com.gamematcher.service.MatchApiCachePolicy;
 import com.gamematcher.dto.search.PlayerSearchResponse;
 import com.gamematcher.dto.search.PlayerSearchResponse.*;
+import com.gamematcher.entity.match.pubg.PubgMatch;
+import com.gamematcher.entity.match.pubg.PubgMatchParticipant;
+import com.gamematcher.mapper.PubgMatchMapper;
 import com.gamematcher.mapper.PubgRankMapper;
+import com.gamematcher.repository.match.PubgMatchRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,6 +19,7 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -40,6 +48,9 @@ public class PubgApiService {
     private final RestTemplate restTemplate;
     private final PubgJsonService jsonService;
     private final PubgRankMapper rankMapper;
+    private final PubgMatchRepository pubgMatchRepository;
+    private final PubgMatchMapper pubgMatchMapper;
+    private final ObjectMapper objectMapper;
 
     @Value("${pubg.api.key:}")
     private String pubgApiKey;
@@ -120,7 +131,7 @@ public class PubgApiService {
             List<MatchInfo> matches = new ArrayList<>();
             for (String matchId : matchIds) {
                 try {
-                    MatchInfo info = fetchMatchDetail(matchId, accountId, platform, entity);
+                    MatchInfo info = fetchMatchDetail(matchId, accountId, platform, entity, req);
                     if (info != null) matches.add(info);
                     Thread.sleep(200); // rate limit 대비
                 } catch (InterruptedException ie) {
@@ -162,23 +173,96 @@ public class PubgApiService {
 
     @SuppressWarnings("unchecked")
     private MatchInfo fetchMatchDetail(String matchId, String accountId,
-                                        String platform, HttpEntity<Void> entity) {
+                                        String platform, HttpEntity<Void> entity, PlayerSearchRequest req) {
+        Optional<PubgMatch> cached = pubgMatchRepository.findByMatchIdWithParticipants(matchId);
+        if (cached.isPresent() && !Boolean.TRUE.equals(req.getForceRefresh())
+                && !MatchApiCachePolicy.isStale(cached.get().getApiCachedAt())) {
+            return matchInfoFromPubgEntity(cached.get(), accountId, matchId);
+        }
+
         String url = String.format("%s/%s/matches/%s", BASE, platform, matchId);
         Map<String, Object> resp = restTemplate
                 .exchange(url, HttpMethod.GET, entity, Map.class).getBody();
         if (resp == null) return null;
 
+        MatchInfo mi = matchInfoFromPubgApiResponseMap(resp, accountId, matchId);
+        if (mi != null) {
+            try {
+                String json = objectMapper.writeValueAsString(resp);
+                PubgMatchApiResponse parsed = jsonService.parseMatchResponse(json);
+                if (parsed.getData() != null && parsed.getData().getId() != null) {
+                    String dataId = parsed.getData().getId();
+                    pubgMatchRepository.findByMatchId(dataId).ifPresent(pubgMatchRepository::delete);
+                    PubgMatch toSave = pubgMatchMapper.toEntity(parsed);
+                    if (toSave != null) {
+                        toSave.setApiCachedAt(LocalDateTime.now());
+                        pubgMatchRepository.save(toSave);
+                    }
+                }
+            } catch (Exception e) {
+                log.warn("PUBG 매치 DB 캐시 저장 실패 {}: {}", matchId, e.getMessage());
+            }
+        }
+        return mi;
+    }
+
+    private MatchInfo matchInfoFromPubgEntity(PubgMatch m, String accountId, String matchId) {
+        PubgMatchParticipant me = m.getParticipants().stream()
+                .filter(p -> accountId.equals(p.getPlayerId())).findFirst().orElse(null);
+        if (me == null) return null;
+        int kills = me.getKills() != null ? me.getKills() : 0;
+        int assists = me.getAssists() != null ? me.getAssists() : 0;
+        int winPlace = me.getWinPlace() != null ? me.getWinPlace() : 99;
+        boolean win = me.isWin();
+        int headshotK = me.getHeadshotKills() != null ? me.getHeadshotKills() : 0;
+        double damage = me.getDamageDealt() != null ? me.getDamageDealt() : 0;
+        double survive = me.getTimeSurvived() != null ? me.getTimeSurvived() : 0;
+        double walkDist = me.getWalkDistance() != null ? me.getWalkDistance() : 0;
+        double rideDist = me.getRideDistance() != null ? me.getRideDistance() : 0;
+        String mapName = m.getMapName() != null ? m.getMapName() : "";
+        String createdAt = m.getCreatedAt() != null ? m.getCreatedAt() : "";
+        String gameMode = m.getGameMode() != null ? m.getGameMode() : "";
+
+        String playedAt = "";
+        try {
+            if (createdAt != null && !createdAt.isEmpty()) {
+                playedAt = OffsetDateTime.parse(createdAt).toLocalDateTime().format(FORMATTER);
+            }
+        } catch (Exception ignored) {}
+
+        Map<String, Object> extras = new LinkedHashMap<>();
+        extras.put("순위", winPlace + "위");
+        extras.put("데미지", String.format("%.0f", damage));
+        extras.put("헤드샷킬", headshotK);
+        extras.put("생존시간", String.format("%.0f분", survive / 60));
+        extras.put("이동거리", String.format("%.0fm", walkDist + rideDist));
+        extras.put("맵", translateMap(mapName));
+
+        return MatchInfo.builder()
+                .matchId(matchId)
+                .gameMode(formatGameMode(gameMode))
+                .win(win)
+                .kills(kills)
+                .deaths(winPlace)
+                .assists(assists)
+                .kda((double) kills + assists)
+                .playtime((int) survive)
+                .playedAt(playedAt)
+                .extras(extras)
+                .build();
+    }
+
+    @SuppressWarnings("unchecked")
+    private MatchInfo matchInfoFromPubgApiResponseMap(Map<String, Object> resp, String accountId, String matchId) {
         Map<String, Object> matchData = (Map<String, Object>) resp.get("data");
         List<Map<String, Object>> included = (List<Map<String, Object>>) resp.get("included");
         if (matchData == null || included == null) return null;
 
-        // 매치 기본 정보
         Map<String, Object> matchAttrs = (Map<String, Object>) matchData.get("attributes");
-        String gameMode  = matchAttrs != null ? (String) matchAttrs.getOrDefault("gameMode", "") : "";
-        String mapName   = matchAttrs != null ? (String) matchAttrs.getOrDefault("mapName", "") : "";
-        String createdAt = matchAttrs != null ? (String) matchAttrs.get("createdAt") : "";
+        String gameMode = matchAttrs != null ? (String) matchAttrs.getOrDefault("gameMode", "") : "";
+        String mapName = matchAttrs != null ? (String) matchAttrs.getOrDefault("mapName", "") : "";
+        String createdAt = matchAttrs != null ? (String) matchAttrs.getOrDefault("createdAt", "") : "";
 
-        // included 에서 내 participant 찾기 (playerId == accountId)
         Map<String, Object> myStats = null;
         for (Map<String, Object> item : included) {
             if (!"participant".equals(item.get("type"))) continue;
@@ -186,42 +270,46 @@ public class PubgApiService {
             if (pAttrs == null) continue;
             Map<String, Object> st = (Map<String, Object>) pAttrs.get("stats");
             if (st == null) continue;
-            if (accountId.equals(st.get("playerId"))) { myStats = st; break; }
+            if (accountId.equals(st.get("playerId"))) {
+                myStats = st;
+                break;
+            }
         }
         if (myStats == null) return null;
 
-        int    kills        = toInt(myStats.get("kills"));
-        int    assists      = toInt(myStats.get("assists"));
-        int    winPlace     = toInt(myStats.get("winPlace"));   // 순위
-        boolean win         = winPlace == 1;
-        int    headshotK    = toInt(myStats.get("headshotKills"));
-        double damage       = toDouble(myStats.get("damageDealt"));
-        double survive      = toDouble(myStats.get("timeSurvived")); // 초
-        double walkDist     = toDouble(myStats.get("walkDistance"));
-        double rideDist     = toDouble(myStats.get("rideDistance"));
+        int kills = toInt(myStats.get("kills"));
+        int assists = toInt(myStats.get("assists"));
+        int winPlace = toInt(myStats.get("winPlace"));
+        boolean win = winPlace == 1;
+        int headshotK = toInt(myStats.get("headshotKills"));
+        double damage = toDouble(myStats.get("damageDealt"));
+        double survive = toDouble(myStats.get("timeSurvived"));
+        double walkDist = toDouble(myStats.get("walkDistance"));
+        double rideDist = toDouble(myStats.get("rideDistance"));
 
         String playedAt = "";
         try {
-            if (createdAt != null && !createdAt.isEmpty())
+            if (createdAt != null && !createdAt.isEmpty()) {
                 playedAt = OffsetDateTime.parse(createdAt).toLocalDateTime().format(FORMATTER);
+            }
         } catch (Exception ignored) {}
 
         Map<String, Object> extras = new LinkedHashMap<>();
-        extras.put("순위",      winPlace + "위");
-        extras.put("데미지",    String.format("%.0f", damage));
-        extras.put("헤드샷킬",  headshotK);
-        extras.put("생존시간",  String.format("%.0f분", survive / 60));
-        extras.put("이동거리",  String.format("%.0fm", walkDist + rideDist));
-        extras.put("맵",       translateMap(mapName));
+        extras.put("순위", winPlace + "위");
+        extras.put("데미지", String.format("%.0f", damage));
+        extras.put("헤드샷킬", headshotK);
+        extras.put("생존시간", String.format("%.0f분", survive / 60));
+        extras.put("이동거리", String.format("%.0fm", walkDist + rideDist));
+        extras.put("맵", translateMap(mapName));
 
         return MatchInfo.builder()
                 .matchId(matchId)
                 .gameMode(formatGameMode(gameMode))
                 .win(win)
                 .kills(kills)
-                .deaths(winPlace)   // PUBG 는 deaths 대신 순위 저장
+                .deaths(winPlace)
                 .assists(assists)
-                .kda((double) kills + assists)  // K+A 표기
+                .kda((double) kills + assists)
                 .playtime((int) survive)
                 .playedAt(playedAt)
                 .extras(extras)
@@ -309,6 +397,46 @@ public class PubgApiService {
             case "Neon_Main"      -> "론도";
             default               -> raw;
         };
+    }
+
+    /**
+     * Records 매치 상세: PUBG 매치 API 원본(JSON:API) 응답
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> fetchMatchRawForRecords(String matchId, String platform) {
+        if (pubgApiKey == null || pubgApiKey.isEmpty()) return null;
+        String shard = PLATFORM_SHARD.getOrDefault(
+                platform != null ? platform.toLowerCase(java.util.Locale.ROOT) : "steam", "steam");
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("Authorization", "Bearer " + pubgApiKey);
+        headers.set("Accept", "application/vnd.api+json");
+        HttpEntity<Void> entity = new HttpEntity<>(headers);
+        String url = String.format("%s/%s/matches/%s", BASE, shard, matchId);
+        try {
+            return restTemplate.exchange(url, HttpMethod.GET, entity, Map.class).getBody();
+        } catch (Exception e) {
+            log.warn("PUBG 매치 raw 조회 실패 {}: {}", matchId, e.getMessage());
+            return null;
+        }
+    }
+
+    public void persistMatchFromSearchMap(Map<String, Object> resp) {
+        if (resp == null) return;
+        try {
+            String json = objectMapper.writeValueAsString(resp);
+            PubgMatchApiResponse parsed = jsonService.parseMatchResponse(json);
+            if (parsed.getData() != null && parsed.getData().getId() != null) {
+                String dataId = parsed.getData().getId();
+                pubgMatchRepository.findByMatchId(dataId).ifPresent(pubgMatchRepository::delete);
+                PubgMatch toSave = pubgMatchMapper.toEntity(parsed);
+                if (toSave != null) {
+                    toSave.setApiCachedAt(LocalDateTime.now());
+                    pubgMatchRepository.save(toSave);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("PUBG 매치 DB 저장 실패: {}", e.getMessage());
+        }
     }
 
     private int toInt(Object o)        { return o instanceof Number n ? n.intValue()    : 0;   }

@@ -7,6 +7,7 @@ import com.gamematcher.repository.match.ValorantMatchDetailRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
@@ -41,6 +42,22 @@ public class ValorantMatchService {
         }
 
         ValorantMatch match = valorantMatchMapper.toEntity(dto);
+        match.setApiCachedAt(LocalDateTime.now());
+        return valorantMatchDetailRepository.save(match);
+    }
+
+    /**
+     * 전적 검색 캐시 갱신: 동일 matchId 가 있으면 삭제 후 다시 저장한다.
+     */
+    @Transactional
+    public ValorantMatch replaceMatchFromApi(ValorantMatchDetailDto dto) {
+        if (dto == null || dto.getMetadata() == null || dto.getMetadata().getMatchId() == null) {
+            return null;
+        }
+        String matchId = dto.getMetadata().getMatchId();
+        valorantMatchDetailRepository.findByMatchId(matchId).ifPresent(valorantMatchDetailRepository::delete);
+        ValorantMatch match = valorantMatchMapper.toEntity(dto);
+        match.setApiCachedAt(LocalDateTime.now());
         return valorantMatchDetailRepository.save(match);
     }
 
