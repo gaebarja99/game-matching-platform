@@ -261,6 +261,26 @@ function formatPubg(payload: Record<string, unknown>): FormattedMatchDetail {
   return withAi({ matchBlocks, playerBlocks }, payload);
 }
 
+/**
+ * 전적 목록 행의 gameMode가 비어 있을 때, 상세 API payload로 표시 문자열 보강.
+ */
+export function extractValorantRowModeFromDetailPayload(
+  payload: Record<string, unknown> | null | undefined,
+): string | undefined {
+  if (!payload || !isRecord(payload)) return undefined;
+  const meta = payload.metadata;
+  if (!isRecord(meta)) return undefined;
+  const fromMeta = firstStr(meta, ['mode', 'queue']);
+  if (fromMeta?.trim()) return fromMeta.trim();
+  const mapName = firstStr(meta, ['map']);
+  if (mapName) {
+    const lower = mapName.trim().toLowerCase();
+    if (lower.startsWith('skirmish')) return 'Skirmish';
+    if (lower.includes('deathmatch')) return 'Deathmatch';
+  }
+  return undefined;
+}
+
 export function formatRecordsMatchDetail(
   gameId: string,
   payload: unknown,

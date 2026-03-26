@@ -351,6 +351,14 @@ public class ValorantApiService {
      * @param matchId 매치 고유 ID (lifetime에서 확보)
      * @return 매치 상세 DTO, 없으면 null
      */
+    private static final Object VALORANT_MATCH_DETAIL_THROTTLE = new Object();
+    private static volatile long valorantLastMatchDetailCallMs = 0L;
+    private static final long VALORANT_MATCH_DETAIL_MIN_INTERVAL_MS = 450L;
+    private static final int VALORANT_MATCH_DETAIL_MAX_429_RETRIES = 5;
+
+    /**
+     * Henrik 매치 상세(v2/match)는 분당 호출 제한이 빡빡해, 연속 호출 간 최소 간격 + 429 시 재시도한다.
+     */
     public ValorantMatchDetailDto getMatchDetail(String matchId) {
         if (matchId == null || matchId.isBlank()) {
             return null;
@@ -364,22 +372,80 @@ public class ValorantApiService {
         url = appendApiKey(url);
 
         HttpEntity<Void> entity = new HttpEntity<>(new HttpHeaders());
+        long backoffBaseMs = 1200L;
 
-        try {
-            ResponseEntity<String> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    entity,
-                    String.class
-            );
-            return valorantMatchJsonService.parseFirstMatch(response.getBody());
-        } catch (HttpStatusCodeException e) {
-            if (e.getStatusCode().value() == 404) {
-                return null;
+        for (int attempt = 1; attempt <= VALORANT_MATCH_DETAIL_MAX_429_RETRIES; attempt++) {
+            throttleValorantMatchDetail();
+            try {
+                ResponseEntity<String> response = restTemplate.exchange(
+                        url,
+                        HttpMethod.GET,
+                        entity,
+                        String.class
+                );
+                return valorantMatchJsonService.parseFirstMatch(response.getBody());
+            } catch (HttpStatusCodeException e) {
+                if (e.getStatusCode().value() == 404) {
+                    return null;
+                }
+                if (e.getStatusCode().value() == 429 && attempt < VALORANT_MATCH_DETAIL_MAX_429_RETRIES) {
+                    long waitMs = parseRetryAfterDelayMs(e);
+                    if (waitMs < 0) {
+                        waitMs = Math.min(backoffBaseMs * attempt, 30_000L);
+                    }
+                    log.warn("Valorant 매치 상세 429, {}ms 후 재시도 ({}/{})", waitMs, attempt,
+                            VALORANT_MATCH_DETAIL_MAX_429_RETRIES);
+                    sleepUnchecked(waitMs);
+                    continue;
+                }
+                if (e.getStatusCode().value() == 429) {
+                    throw new RuntimeException(
+                            "Valorant 매치 상세 API 호출 한도에 걸렸습니다. 잠시 후 다시 시도해 주세요.");
+                }
+                throw new RuntimeException("Valorant 매치 상세 API 호출 실패: " + e.getStatusCode() + " / "
+                        + e.getResponseBodyAsString());
+            } catch (Exception e) {
+                throw new RuntimeException("Valorant 매치 상세 조회 오류: " + e.getMessage(), e);
             }
-            throw new RuntimeException("Valorant 매치 상세 API 호출 실패: " + e.getStatusCode() + " / " + e.getResponseBodyAsString());
-        } catch (Exception e) {
-            throw new RuntimeException("Valorant 매치 상세 조회 오류: " + e.getMessage(), e);
+        }
+        throw new RuntimeException("Valorant 매치 상세 API 호출 한도에 걸렸습니다. 잠시 후 다시 시도해 주세요.");
+    }
+
+    private static void throttleValorantMatchDetail() {
+        synchronized (VALORANT_MATCH_DETAIL_THROTTLE) {
+            long now = System.currentTimeMillis();
+            long waitMs = valorantLastMatchDetailCallMs + VALORANT_MATCH_DETAIL_MIN_INTERVAL_MS - now;
+            if (waitMs > 0) {
+                sleepUnchecked(waitMs);
+            }
+            valorantLastMatchDetailCallMs = System.currentTimeMillis();
+        }
+    }
+
+    private static long parseRetryAfterDelayMs(HttpStatusCodeException e) {
+        if (e.getResponseHeaders() == null) {
+            return -1;
+        }
+        String v = e.getResponseHeaders().getFirst("Retry-After");
+        if (v == null || v.isBlank()) {
+            return -1;
+        }
+        try {
+            long sec = Long.parseLong(v.trim());
+            return Math.min(Math.max(sec * 1000L, 500L), 120_000L);
+        } catch (NumberFormatException ex) {
+            return -1;
+        }
+    }
+
+    private static void sleepUnchecked(long ms) {
+        if (ms <= 0) {
+            return;
+        }
+        try {
+            Thread.sleep(ms);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
@@ -625,6 +691,34 @@ public class ValorantApiService {
         }
     }
 
+    /**
+     * Henrik lifetime 응답에서 {@code meta.mode}가 비는 경우가 있음(예: 난투). {@code game_mode} 또는 맵 이름으로 보강.
+     */
+    private static String resolveLifetimeModeDisplay(ValorantLifetimeDataItem.ValorantLifetimeMeta meta) {
+        if (meta == null) {
+            return "";
+        }
+        String m = meta.getMode() != null ? meta.getMode().trim() : "";
+        if (!m.isEmpty()) {
+            return m;
+        }
+        String gm = meta.getGameMode() != null ? meta.getGameMode().trim() : "";
+        if (!gm.isEmpty()) {
+            return gm;
+        }
+        ValorantLifetimeDataItem.MapRef map = meta.getMap();
+        if (map != null && map.getName() != null && !map.getName().isBlank()) {
+            String lower = map.getName().trim().toLowerCase(Locale.ROOT);
+            if (lower.startsWith("skirmish")) {
+                return "Skirmish";
+            }
+            if (lower.contains("deathmatch")) {
+                return "Deathmatch";
+            }
+        }
+        return "";
+    }
+
     private MatchInfo matchInfoFromLifetimeItem(ValorantLifetimeDataItem item) {
         if (item.getMeta() == null || item.getStats() == null) {
             return null;
@@ -656,7 +750,7 @@ public class ValorantApiService {
         }
         return MatchInfo.builder()
                 .matchId(mid)
-                .gameMode(meta.getMode() != null ? meta.getMode() : "")
+                .gameMode(resolveLifetimeModeDisplay(meta))
                 .agent(agent)
                 .win(win)
                 .kills(kills).deaths(deaths).assists(assists)

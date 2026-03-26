@@ -11,6 +11,7 @@ import {
   RECORDS_AI_MODEL_OPTIONS,
 } from './recordsShared';
 import {
+  extractValorantRowModeFromDetailPayload,
   formatRecordsMatchDetail,
   type FormattedMatchDetail,
   type MatchDetailBlock,
@@ -474,6 +475,16 @@ export function MatchRow({
     [gameId, detailPayload, detailContext.puuid],
   );
 
+  const summaryGameMode = useMemo(() => {
+    const fromList = match.gameMode?.trim();
+    if (fromList) return fromList;
+    if (gameId === 'valorant' && detailPayload) {
+      const fromDetail = extractValorantRowModeFromDetailPayload(detailPayload);
+      if (fromDetail) return fromDetail;
+    }
+    return '';
+  }, [match.gameMode, gameId, detailPayload]);
+
   const toggleDetail = async () => {
     if (!canDetail) return;
     if (detailOpen) {
@@ -551,7 +562,7 @@ export function MatchRow({
               {match.win ? 'WIN' : 'LOSS'}
             </span>
           )}
-          <span className="records-match-mode">{match.gameMode || 'Mode'}</span>
+          <span className="records-match-mode">{summaryGameMode || 'Unknown mode'}</span>
         </div>
         <div
           className={
