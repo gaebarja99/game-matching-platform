@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -84,6 +85,9 @@ public class ValorantMatch {
 
     @Column(name = "premier_matchup_id", length = 100)
     private String premierMatchupId;
+
+    @Column(name = "api_cached_at")
+    private LocalDateTime apiCachedAt;
 
     @OneToMany(mappedBy = "match", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ValorantMatchPlayer> players = new ArrayList<>();

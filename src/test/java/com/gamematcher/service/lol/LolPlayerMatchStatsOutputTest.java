@@ -10,6 +10,7 @@ import com.gamematcher.service.ai.LlmEvaluationService;
 import com.gamematcher.service.ai.LlmEvaluationServiceImpl;
 import com.gamematcher.service.ai.LolEvaluationPromptBuilder;
 import com.gamematcher.service.ai.LolLlmEvaluationService;
+import com.gamematcher.testsupport.LlmTestSupport;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,7 +19,6 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.regex.Pattern;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -201,14 +201,17 @@ class LolPlayerMatchStatsOutputTest {
         Path outDir = Paths.get(OUTPUT_DIR);
         Files.createDirectories(outDir);
 
-        String apiKey = resolveApiKeyForTest();
+        String apiKey = LlmTestSupport.resolveApiKeyForTest();
         ObjectMapper om = new ObjectMapper();
+        String model = LlmTestSupport.resolveLlmModelForTest("gpt-5-mini");
+        int timeoutSec = LlmTestSupport.resolveLlmTimeoutSecondsForTest(30);
+        int maxRetries = LlmTestSupport.resolveLlmMaxRetriesForTest(2);
         LlmEvaluationService llmService = new LlmEvaluationServiceImpl(
                 om,
                 apiKey != null ? apiKey : "",
-                "gpt-5-mini",
-                30,
-                2
+                model,
+                timeoutSec,
+                maxRetries
         );
         LolLlmEvaluationService lolLlmService = new LolLlmEvaluationService(
                 promptBuilder,
@@ -244,8 +247,11 @@ class LolPlayerMatchStatsOutputTest {
             }
             content.append("[상세 코멘트]\n").append(comment != null ? comment : "").append("\n");
         } else {
-            content.append("AI_API_KEY 또는 OPENAI_API_KEY가 설정되지 않았거나 API 호출에 실패했습니다.\n");
-            content.append("환경변수를 설정하고 테스트를 다시 실행하세요.\n");
+            if (apiKey == null || apiKey.isBlank()) {
+                content.append("API 키가 비어 있습니다. 환경변수 AI_API_KEY / OPENAI_API_KEY 또는 application.properties 의 ai.llm.api-key 기본값을 확인하세요.\n");
+            } else {
+                content.append("API 키는 있으나 모델 호출에 실패했습니다. 모델명·쿼터·네트워크·키 권한을 확인하세요. (현재 모델: ").append(model).append(")\n");
+            }
         }
 
         Path txtPath = outDir.resolve("lol_llm_api_response.txt");
@@ -259,14 +265,14 @@ class LolPlayerMatchStatsOutputTest {
         Path outDir = Paths.get(OUTPUT_DIR);
         Files.createDirectories(outDir);
 
-        String apiKey = resolveApiKeyForTest();
+        String apiKey = LlmTestSupport.resolveApiKeyForTest();
         ObjectMapper om = new ObjectMapper();
         LlmEvaluationService llmService = new LlmEvaluationServiceImpl(
                 om,
                 apiKey != null ? apiKey : "",
                 "gpt-5.2",
-                45,
-                2
+                LlmTestSupport.resolveLlmTimeoutSecondsForTest(45),
+                LlmTestSupport.resolveLlmMaxRetriesForTest(2)
         );
         LolLlmEvaluationService lolLlmService = new LolLlmEvaluationService(
                 promptBuilder,
@@ -302,35 +308,16 @@ class LolPlayerMatchStatsOutputTest {
             }
             content.append("[상세 코멘트]\n").append(comment != null ? comment : "").append("\n");
         } else {
-            content.append("AI_API_KEY 또는 OPENAI_API_KEY가 설정되지 않았거나 API 호출에 실패했습니다.\n");
-            content.append("환경변수를 설정하고 테스트를 다시 실행하세요.\n");
+            if (apiKey == null || apiKey.isBlank()) {
+                content.append("API 키가 비어 있습니다. 환경변수 또는 application.properties 의 ai.llm.api-key 를 확인하세요.\n");
+            } else {
+                content.append("API 키는 있으나 gpt-5.2 호출에 실패했습니다. 계정에서 해당 모델 사용 가능 여부를 확인하세요.\n");
+            }
         }
 
         Path txtPath = outDir.resolve("lol_llm_api_response_gpt52.txt");
         Files.writeString(txtPath, content);
         System.out.println("LLM API 응답 출력 (gpt-5.2): " + txtPath.toAbsolutePath());
-    }
-
-    /**
-     * 테스트용 API 키: 환경변수 AI_API_KEY, OPENAI_API_KEY 순으로 확인.
-     */
-    private static String resolveApiKeyForTest() {
-        String key = System.getenv("AI_API_KEY");
-        if (key != null && !key.isBlank()) return key;
-        key = System.getenv("OPENAI_API_KEY");
-        if (key != null && !key.isBlank()) return key;
-        try {
-            Path propsPath = Paths.get("src/main/resources/application.properties");
-            if (Files.exists(propsPath)) {
-                String content = Files.readString(propsPath);
-                var m = Pattern.compile("ai\\.llm\\.api-key=\\$\\{.*?:([^}]*)\\}").matcher(content);
-                if (m.find() && m.group(1) != null && !m.group(1).isBlank()) {
-                    return m.group(1).trim();
-                }
-            }
-        } catch (Exception ignored) {
-        }
-        return "";
     }
 
     private static ObjectMapper createOutputObjectMapper() {

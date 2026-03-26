@@ -230,14 +230,14 @@ export default function ProfileAccountLinks() {
                   ) : provider.oauth ? (
                     <button
                       type="button"
-                      className="btn-myinfo-save"
+                      className="account-link-primary-btn"
                       onClick={() => handleOAuthConnect(provider.oauth!)}
                       disabled={oauthBusy === provider.oauth}
                     >
                       {oauthBusy === provider.oauth ? '연결 중...' : '연동 시작'}
                     </button>
                   ) : (
-                    <button type="button" className="btn-myinfo-save" onClick={handleRiotConnect} disabled={riotBusy}>
+                    <button type="button" className="account-link-primary-btn" onClick={handleRiotConnect} disabled={riotBusy}>
                       {riotBusy ? '연동 중...' : 'Riot 연동'}
                     </button>
                   )}

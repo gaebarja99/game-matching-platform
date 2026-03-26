@@ -30,7 +30,7 @@ public class ValorantLlmEvaluationService {
      * @return summary, detailedComment. API 키 없음·호출 실패 시 {@link Optional#empty()}
      */
     public Optional<LlmEvaluationResponseDTO> evaluate(ValorantPlayerMatchStatsDTO playerStats) {
-        return evaluate(playerStats, -1);
+        return evaluate(playerStats, -1, null);
     }
 
     /**
@@ -43,10 +43,20 @@ public class ValorantLlmEvaluationService {
     public Optional<LlmEvaluationResponseDTO> evaluate(
             ValorantPlayerMatchStatsDTO playerStats,
             int maxRoundLines) {
+        return evaluate(playerStats, maxRoundLines, null);
+    }
+
+    /**
+     * @param modelOverride 비어 있지 않으면 해당 OpenAI 모델로 호출
+     */
+    public Optional<LlmEvaluationResponseDTO> evaluate(
+            ValorantPlayerMatchStatsDTO playerStats,
+            int maxRoundLines,
+            String modelOverride) {
         if (playerStats == null) {
             return Optional.empty();
         }
         String prompt = promptBuilder.build(playerStats, maxRoundLines);
-        return llmService.evaluate(prompt);
+        return llmService.evaluate(prompt, modelOverride);
     }
 }

@@ -20,8 +20,9 @@
     <properties>
         <java.version>17</java.version>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-        <!-- JDK 22+ / TypeTag :: UNKNOWN 오류 방지 -->
-        <lombok.version>1.18.38</lombok.version>
+        <lombok.version>1.18.42</lombok.version>
+        <!-- QueryDSL Q-type 패치 스크립트는 Python 필요. PATH에 없으면 compile 실패하므로 기본은 스킵. 패치 필요 시: mvn compile -Dexec.skip=false -->
+        <exec.skip>true</exec.skip>
     </properties>
 
     <dependencies>
@@ -130,6 +131,26 @@
             </resource>
         </resources>
         <plugins>
+            <!-- IDE/Maven이 QueryDSL 생성 경로를 소스 루트로 인식하도록 -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>build-helper-maven-plugin</artifactId>
+                <version>3.6.0</version>
+                <executions>
+                    <execution>
+                        <id>add-querydsl-generated-sources</id>
+                        <phase>generate-sources</phase>
+                        <goals>
+                            <goal>add-source</goal>
+                        </goals>
+                        <configuration>
+                            <sources>
+                                <source>${project.build.directory}/generated-sources/annotations</source>
+                            </sources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
@@ -160,6 +181,29 @@
                 </configuration>
             </plugin>
             <!-- compile 단계에서 컴파일 직후 실행 (mvn compile만 쳐도 process-classes까지는 안 가므로 phase=compile) -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>patch-querydsl-q-imports</id>
+                        <phase>compile</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${exec.skip}</skip>
+                            <executable>python</executable>
+                            <workingDirectory>${project.basedir}</workingDirectory>
+                            <arguments>
+                                <argument>${project.basedir}/scripts/patch-querydsl-imports.py</argument>
+                                <argument>${project.build.directory}/generated-sources/annotations</argument>
+                            </arguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>

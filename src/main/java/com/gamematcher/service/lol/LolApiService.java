@@ -3,6 +3,8 @@ package com.gamematcher.service.lol;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamematcher.config.api.RiotApiProperties;
+import com.gamematcher.service.MatchApiCachePolicy;
+import com.gamematcher.dto.lol.LolMatchDetailDto;
 import com.gamematcher.dto.riot.RiotAccountResponseDto;
 import com.gamematcher.dto.riot.RiotMatchDetailResponseDto;
 import com.gamematcher.dto.riot.RiotStatsResponseDto;
@@ -10,7 +12,10 @@ import com.gamematcher.dto.riot.RiotSummonerResponseDto;
 import com.gamematcher.dto.search.PlayerSearchRequest;
 import com.gamematcher.dto.search.PlayerSearchResponse;
 import com.gamematcher.dto.search.PlayerSearchResponse.*;
+import com.gamematcher.entity.match.lol.LolMatch;
+import com.gamematcher.entity.match.lol.LolMatchParticipant;
 import com.gamematcher.entity.match.lol.LolMatchSummary;
+import com.gamematcher.repository.match.LolMatchRepository;
 import com.gamematcher.repository.match.MatchSummaryRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -70,6 +75,10 @@ public class LolApiService {
 
     private final RiotApiProperties riotApiProperties;
     private final MatchSummaryRepository matchSummaryRepository;
+    private final LolMatchRepository lolMatchRepository;
+    private final LolMatchService lolMatchService;
+    private final LolMatchJsonService lolMatchJsonService;
+    private final ObjectMapper objectMapper;
     private final RestTemplate restTemplate = new RestTemplate();
 
     public RiotAccountResponseDto getAccountByRiotId(String gameName, String tagLine) {
@@ -500,7 +509,21 @@ public class LolApiService {
             List<MatchInfo> matches = new ArrayList<>();
             for (String mId : matchIds) {
                 try {
-                    MatchInfo mi = fetchMatchDetailForSearch(mId, puuid, rout);
+                    MatchInfo mi = null;
+                    Optional<LolMatch> cached = lolMatchRepository.findByMatchIdWithParticipants(mId);
+                    if (cached.isPresent() && !Boolean.TRUE.equals(req.getForceRefresh())
+                            && !MatchApiCachePolicy.isStale(cached.get().getApiCachedAt())) {
+                        mi = matchInfoFromLolEntity(cached.get(), puuid);
+                    }
+                    if (mi == null) {
+                        Map<String, Object> raw = getMapForSearch("https://" + rout + ".api.riotgames.com/lol/match/v5/matches/" + mId);
+                        if (raw != null) {
+                            mi = matchInfoFromLolRiotMap(raw, mId, puuid);
+                            if (mi != null) {
+                                persistLolMatchFromRiotMap(raw);
+                            }
+                        }
+                    }
                     if (mi != null) matches.add(mi);
                 } catch (Exception e) {
                     log.warn("매치 상세 실패 - {}: {}", mId, e.getMessage());
@@ -567,9 +590,63 @@ public class LolApiService {
         return result;
     }
 
+    private void persistLolMatchFromRiotMap(Map<String, Object> match) {
+        try {
+            String json = objectMapper.writeValueAsString(match);
+            LolMatchDetailDto dto = lolMatchJsonService.parseMatchDetail(json);
+            lolMatchService.replaceMatchFromApi(dto);
+        } catch (Exception e) {
+            log.warn("LoL 매치 DB 캐시 저장 실패: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * Records 매치 상세 패널: Riot match-v5 원본 JSON 조회
+     */
+    public Map<String, Object> fetchMatchV5RawForRecords(String matchId, String regionInput) {
+        if (riotApiProperties.getApiKey() == null || riotApiProperties.getApiKey().isBlank()) {
+            return null;
+        }
+        String plat = PLATFORM.getOrDefault(regionInput != null ? regionInput.toLowerCase(java.util.Locale.ROOT) : "kr", "kr");
+        String rout = ROUTING.getOrDefault(plat, "asia");
+        return getMapForSearch("https://" + rout + ".api.riotgames.com/lol/match/v5/matches/" + matchId);
+    }
+
+    /** Records 매치 상세 조회 후 DB 캐시 저장 */
+    public void persistMatchV5FromSearchMap(Map<String, Object> match) {
+        persistLolMatchFromRiotMap(match);
+    }
+
+    private MatchInfo matchInfoFromLolEntity(LolMatch m, String puuid) {
+        if (m.getParticipants() == null) return null;
+        LolMatchParticipant me = m.getParticipants().stream()
+                .filter(p -> puuid.equals(p.getPuuid())).findFirst().orElse(null);
+        if (me == null) return null;
+        int kills = me.getKills() != null ? me.getKills() : 0;
+        int deaths = me.getDeaths() != null ? me.getDeaths() : 0;
+        int assists = me.getAssists() != null ? me.getAssists() : 0;
+        double kda = deaths == 0 ? (kills + assists) : (double) (kills + assists) / deaths;
+        long gameEnd = m.getGameEndTimestamp() != null ? m.getGameEndTimestamp() : 0L;
+        String playedAt = gameEnd > 0 ? LocalDateTime.ofInstant(Instant.ofEpochMilli(gameEnd), ZoneId.of("Asia/Seoul")).format(FORMATTER) : "";
+        int queueIdVal = m.getQueueId() != null ? m.getQueueId() : 0;
+        String gameMode = QUEUE_LABEL.getOrDefault(queueIdVal, "CLASSIC");
+        int cs = (me.getTotalMinionsKilled() != null ? me.getTotalMinionsKilled() : 0)
+                + (me.getNeutralMinionsKilled() != null ? me.getNeutralMinionsKilled() : 0);
+        Map<String, Object> extras = new LinkedHashMap<>();
+        extras.put("queueId", queueIdVal);
+        extras.put("goldEarned", me.getGoldEarned());
+        extras.put("totalDamage", me.getTotalDamageDealtToChampions());
+        extras.put("visionScore", me.getVisionScore());
+        return MatchInfo.builder()
+                .matchId(m.getMatchId()).gameMode(gameMode).champion(me.getChampionName() != null ? me.getChampionName() : "")
+                .win(me.isWin())
+                .kills(kills).deaths(deaths).assists(assists).kda(Math.round(kda * 100.0) / 100.0)
+                .cs(cs)
+                .playtime(m.getGameDuration() != null ? m.getGameDuration().intValue() : 0).playedAt(playedAt).extras(extras).build();
+    }
+
     @SuppressWarnings("unchecked")
-    private MatchInfo fetchMatchDetailForSearch(String matchId, String puuid, String routing) {
-        Map<String, Object> match = getMapForSearch("https://" + routing + ".api.riotgames.com/lol/match/v5/matches/" + matchId);
+    private MatchInfo matchInfoFromLolRiotMap(Map<String, Object> match, String matchId, String puuid) {
         if (match == null) return null;
         Map<String, Object> info = (Map<String, Object>) match.get("info");
         if (info == null) return null;

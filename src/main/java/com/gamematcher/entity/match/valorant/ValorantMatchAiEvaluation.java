@@ -15,7 +15,10 @@ import java.time.LocalDateTime;
  */
 @Entity
 @Table(name = "valorant_match_ai_evaluation", uniqueConstraints = {
-        @UniqueConstraint(columnNames = {"valorant_match_player_id"})
+        @UniqueConstraint(
+                name = "uk_valorant_ai_eval_player_model",
+                columnNames = {"valorant_match_player_id", "llm_model"}
+        )
 })
 @Getter
 @Setter
@@ -26,9 +29,14 @@ public class ValorantMatchAiEvaluation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "valorant_match_player_id", nullable = false, unique = true)
+    /** 동일 플레이어에 대해 모델별로 별도 행 저장 */
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "valorant_match_player_id", nullable = false)
     private ValorantMatchPlayer valorantMatchPlayer;
+
+    /** OpenAI 모델 ID (예: gpt-5-mini). 레거시 행은 빈 문자열 */
+    @Column(name = "llm_model", nullable = false, length = 128)
+    private String llmModel = "";
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -63,13 +71,15 @@ public class ValorantMatchAiEvaluation {
 
     public ValorantMatchAiEvaluation(ValorantMatchPlayer valorantMatchPlayer) {
         this.valorantMatchPlayer = valorantMatchPlayer;
+        this.llmModel = "";
         this.status = EvaluationStatus.PENDING;
         this.createdAt = LocalDateTime.now();
     }
 
-    public ValorantMatchAiEvaluation(ValorantMatchPlayer valorantMatchPlayer, EvaluationStatus status,
+    public ValorantMatchAiEvaluation(ValorantMatchPlayer valorantMatchPlayer, String llmModel, EvaluationStatus status,
                                      Integer score, String summary, String detailedComment) {
         this.valorantMatchPlayer = valorantMatchPlayer;
+        this.llmModel = llmModel != null ? llmModel : "";
         this.status = status;
         this.score = score;
         this.grade = Grade.fromScore(score);

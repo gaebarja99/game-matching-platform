@@ -10,6 +10,8 @@ export interface PlayerSearchRequest {
   region?: string;
   count?: number;
   queueType?: number;
+  /** true면 DB 캐시를 쓰지 않고 API로 다시 받아 갱신 */
+  forceRefresh?: boolean;
 }
 
 export interface PlayerSearchResponse {
@@ -68,5 +70,71 @@ export async function searchPlayer(request: PlayerSearchRequest): Promise<Player
     throw new Error(response.message ?? '전적 검색 요청에 실패했습니다.');
   }
 
+  return response.data;
+}
+
+export interface MatchDetailResponse {
+  success: boolean;
+  errorMessage?: string;
+  game?: string;
+  matchId?: string;
+  payload?: Record<string, unknown>;
+}
+
+/** Records 매치 행 펼침 시 상세 데이터 로드 (발로/LoL/TFT/PUBG), 서버에서 DB 저장 후 payload 반환 */
+export async function fetchMatchDetail(request: {
+  game: string;
+  matchId: string;
+  region?: string;
+  platform?: string;
+  puuid?: string;
+  /** 발로란트: 저장된 AI 분석 중 이 모델 행만 붙임. 생략 시 서버 기본 모델 */
+  llmModel?: string;
+  forceRefresh?: boolean;
+}): Promise<MatchDetailResponse> {
+  const response = await apiFetch<MatchDetailResponse>('/api/search/match-detail', {
+    method: 'POST',
+    body: JSON.stringify(request),
+  });
+
+  if (!response.ok || !response.data) {
+    throw new Error(response.message ?? '매치 상세 요청에 실패했습니다.');
+  }
+
+  return response.data;
+}
+
+/** POST /api/valorant/evaluations/match/{matchId} 응답 행 */
+export interface ValorantAiEvaluationApiRow {
+  matchId?: string;
+  playerPuuid?: string;
+  llmModel?: string | null;
+  summary?: string | null;
+  detailedComment?: string | null;
+  score?: number | null;
+  grade?: string | null;
+  status?: string | null;
+}
+
+/**
+ * 발로란트 매치 AI 평가 실행·DB 저장 후 결과 목록 반환.
+ * `force: true`면 기존 평가가 있어도 선택한 모델로 다시 호출한다.
+ */
+export async function runValorantMatchAiEvaluation(request: {
+  matchId: string;
+  puuid?: string;
+  model?: string;
+  force?: boolean;
+}): Promise<ValorantAiEvaluationApiRow[]> {
+  const q = new URLSearchParams();
+  if (request.puuid) q.set('puuid', request.puuid);
+  if (request.model) q.set('model', request.model);
+  if (request.force) q.set('force', 'true');
+  const qs = q.toString();
+  const path = `/api/valorant/evaluations/match/${encodeURIComponent(request.matchId)}${qs ? `?${qs}` : ''}`;
+  const response = await apiFetch<ValorantAiEvaluationApiRow[]>(path, { method: 'POST' });
+  if (!response.ok || !response.data) {
+    throw new Error(response.message ?? 'AI 분석 요청에 실패했습니다.');
+  }
   return response.data;
 }

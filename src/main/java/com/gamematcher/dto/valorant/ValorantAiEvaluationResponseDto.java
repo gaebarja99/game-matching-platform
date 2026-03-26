@@ -49,6 +49,9 @@ public class ValorantAiEvaluationResponseDto {
     /** AI 상세 코멘트 */
     private String detailedComment;
 
+    /** 사용한 OpenAI 모델 ID (저장·조회 키) */
+    private String llmModel;
+
     /** 평가 시각 */
     private LocalDateTime evaluatedAt;
 }

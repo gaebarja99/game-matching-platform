@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,6 +55,9 @@ public class PubgMatch {
 
     @Column(name = "match_type", length = 20)
     private String matchType;
+
+    @Column(name = "api_cached_at")
+    private LocalDateTime apiCachedAt;
 
     @OneToMany(mappedBy = "match", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<PubgMatchParticipant> participants = new ArrayList<>();

@@ -36,7 +36,8 @@ import GroupChat from './pages/GroupChat';
 import GroupChatRoom from './pages/GroupChatRoom';
 import MatchChat from './pages/MatchChat';
 import MatchHistory from './pages/MatchHistory';
-import Records from './pages/Records';
+import RecordsSearch from './pages/records/RecordsSearch';
+import RecordsResult from './pages/records/RecordsResult';
 import Esports from './pages/Esports';
 import Chatbot from './pages/Chatbot';
 import DirectMessages from './pages/DirectMessages';
@@ -65,7 +66,9 @@ function App() {
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route path="/records" element={<Records />} />
+              <Route path="/records" element={<RecordsSearch />} />
+              <Route path="/records/:gameId" element={<RecordsResult />} />
+              <Route path="/records/:gameId/:playerSlug" element={<RecordsResult />} />
               <Route path="/esports" element={<Esports />} />
               <Route path="/login" element={<Login />} />
               <Route path="/find-login-id" element={<FindLoginId />} />

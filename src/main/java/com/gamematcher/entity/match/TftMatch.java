@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 /**
  * TFT 전적
  */
@@ -47,4 +49,7 @@ public class TftMatch {
 
     @Column(name = "game_creation")
     private Long gameCreation;
+
+    @Column(name = "api_cached_at")
+    private LocalDateTime apiCachedAt;
 }

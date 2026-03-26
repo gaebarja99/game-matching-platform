@@ -5,6 +5,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -72,6 +73,10 @@ public class LolMatch {
 
     @Column(name = "tournament_code", length = 50)
     private String tournamentCode;
+
+    /** 전적 검색 캐시: 마지막 API 반영 시각 (null 이면 즉시 갱신 대상) */
+    @Column(name = "api_cached_at")
+    private LocalDateTime apiCachedAt;
 
     @OneToMany(mappedBy = "match", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<LolMatchParticipant> participants = new ArrayList<>();
