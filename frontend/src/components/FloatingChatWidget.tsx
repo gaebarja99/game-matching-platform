@@ -547,9 +547,10 @@ function FloatingOneOnOnePanel() {
 
 export default function FloatingChatWidget() {
   const { user } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeMode, setActiveMode] = useState<ActiveChatMode | null>(null);
   const [dmUnreadCount, setDmUnreadCount] = useState(0);
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   const fetchDmUnreadCount = useCallback(() => {
     fetch(apiUrl('api/notifications/dm-count'), { credentials: 'include' })
@@ -583,8 +584,14 @@ export default function FloatingChatWidget() {
     fetchDmUnreadCount();
   }, [fetchDmUnreadCount]);
 
+  const closeAll = useCallback(() => {
+    setActiveMode(null);
+    fetchDmUnreadCount();
+    setIsChatOpen(false);
+  }, [fetchDmUnreadCount]);
+
   const toggleMenu = useCallback(() => {
-    setIsOpen((wasOpen) => {
+    setIsChatOpen((wasOpen) => {
       if (wasOpen) {
         setActiveMode(null);
         fetchDmUnreadCount();
@@ -598,16 +605,33 @@ export default function FloatingChatWidget() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if (activeMode !== null) closePanel();
-      else setIsOpen(false);
+      else setIsChatOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [activeMode, closePanel]);
 
+  useEffect(() => {
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      if (!isChatOpen && activeMode === null) return;
+      const root = rootRef.current;
+      const t = e.target as Node | null;
+      if (!root || !t) return;
+      if (root.contains(t)) return;
+      closeAll();
+    };
+    window.addEventListener('mousedown', onDown, { capture: true });
+    window.addEventListener('touchstart', onDown, { capture: true, passive: true });
+    return () => {
+      window.removeEventListener('mousedown', onDown, { capture: true } as unknown as boolean);
+      window.removeEventListener('touchstart', onDown, { capture: true } as unknown as boolean);
+    };
+  }, [activeMode, closeAll, isChatOpen]);
+
   const panelOpen = activeMode !== null;
 
   return (
-    <div className="floating-chat-widget-root">
+    <div className="floating-chat-widget-root" ref={rootRef}>
       {panelOpen && activeMode && (
         <ChatPopup title={MODE_TITLES[activeMode]} onClose={closePanel} titleId="floating-chat-popup-title">
           {activeMode === 'ONE_ON_ONE' && <FloatingOneOnOnePanel />}
@@ -622,7 +646,7 @@ export default function FloatingChatWidget() {
       )}
 
       <div className="floating-chat-widget-buttons">
-        <div className={`floating-chat-widget-menu ${isOpen ? 'is-open' : ''}`} aria-hidden={!isOpen}>
+        <div className={`floating-chat-widget-menu ${isChatOpen ? 'is-open' : ''}`} aria-hidden={!isChatOpen}>
           {MENU.map(({ key, label, Icon }) => (
             <div className="floating-chat-widget-row" key={key}>
               <span className="floating-chat-widget-label">{label}</span>
@@ -641,8 +665,8 @@ export default function FloatingChatWidget() {
         <button
           type="button"
           className={`floating-chat-widget-toggle ${user && dmUnreadCount > 0 ? 'has-dm-unread' : ''}`}
-          aria-label={isOpen ? '메뉴 닫기' : '메뉴 열기'}
-          aria-expanded={isOpen}
+          aria-label={isChatOpen ? '메뉴 닫기' : '메뉴 열기'}
+          aria-expanded={isChatOpen}
           onClick={toggleMenu}
         >
           {user && dmUnreadCount > 0 ? (
@@ -650,7 +674,7 @@ export default function FloatingChatWidget() {
               N
             </span>
           ) : null}
-          {isOpen ? (
+          {isChatOpen ? (
             <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden className="floating-chat-widget-toggle-icon">
               <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
             </svg>
