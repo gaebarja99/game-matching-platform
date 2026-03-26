@@ -172,7 +172,6 @@ function formatValorant(payload: Record<string, unknown>, puuid?: string): Forma
 function formatLol(payload: Record<string, unknown>, puuid?: string): FormattedMatchDetail {
   const matchBlocks: MatchDetailBlock[] = [];
   const playerBlocks: MatchDetailBlock[] = [];
-  const meta = isRecord(payload.metadata) ? payload.metadata : {};
   const info = isRecord(payload.info) ? payload.info : {};
   const kv: [string, string][] = [];
   const mode = firstStr(info, ['gameMode', 'game_mode']);
@@ -206,7 +205,6 @@ function formatLol(payload: Record<string, unknown>, puuid?: string): FormattedM
 function formatTft(payload: Record<string, unknown>, puuid?: string): FormattedMatchDetail {
   const matchBlocks: MatchDetailBlock[] = [];
   const playerBlocks: MatchDetailBlock[] = [];
-  const meta = isRecord(payload.metadata) ? payload.metadata : {};
   const info = isRecord(payload.info) ? payload.info : {};
   const kv: [string, string][] = [];
   const gl = num(info.game_length ?? info.gameLength);
