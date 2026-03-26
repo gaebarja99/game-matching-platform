@@ -118,8 +118,7 @@ type TeamSearchGameId =
   | 'VALORANT'
   | 'OVERWATCH'
   | 'PUBG'
-  | 'COUNTER_STRIKE_2'
-  | 'APEX_LEGENDS';
+  | 'COUNTER_STRIKE_2';
 
 const TEAM_SEARCH_GAME_TABS: { id: TeamSearchGameId; label: string }[] = [
   { id: 'LEAGUE_OF_LEGENDS', label: '리그오브레전드' },
@@ -127,7 +126,6 @@ const TEAM_SEARCH_GAME_TABS: { id: TeamSearchGameId; label: string }[] = [
   { id: 'OVERWATCH', label: '오버워치2' },
   { id: 'PUBG', label: 'PUBG' },
   { id: 'COUNTER_STRIKE_2', label: 'CS2' },
-  { id: 'APEX_LEGENDS', label: 'Apex 레전드' },
 ];
 
 function TeamSearchGameTabIcon({ game }: { game: TeamSearchGameId }) {
@@ -167,15 +165,6 @@ function TeamSearchGameTabIcon({ game }: { game: TeamSearchGameId }) {
         <svg {...svgProps}>
           <path fill="#4A90D9" d="M12 3 20 8v8l-8 5-8-5V8l8-5zm0 2.5L6 9v6l6 3.8L18 15V9l-6-3.5z" />
           <path fill="#1e3a5f" d="m12 8.5 4 2.3V15l-4 2.5-4-2.5v-4.2l4-2.3z" />
-        </svg>
-      );
-    case 'APEX_LEGENDS':
-      return (
-        <svg {...svgProps}>
-          <path
-            fill="#DA292E"
-            d="M12 4 19 19h-3.2l-1.4-3.5H9.6L8.2 19H5L12 4zm0 4.2L10 14h4L12 8.2z"
-          />
         </svg>
       );
   }

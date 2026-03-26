@@ -59,6 +59,7 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
   const [notificationList, setNotificationList] = useState<NotificationItem[]>([]);
   const [notificationListLoading, setNotificationListLoading] = useState(false);
   const [profileImgError, setProfileImgError] = useState(false);
+  const [isFriendsOpen, setIsFriendsOpen] = useState(false);
 
   const [activeFriendTab, setActiveFriendTab] = useState<FriendTab>('list');
   const [friends, setFriends] = useState<FriendItem[]>([]);
@@ -509,6 +510,32 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
             </span>
           </button>
 
+          {showFriendSidebar && (
+            <span className="header-icon-wrap" title="친구 목록">
+              <button
+                type="button"
+                className={`header-icon-btn header-friends-btn ${isFriendsOpen ? 'active' : ''}`}
+                onClick={() => {
+                  setIsFriendsOpen((v) => {
+                    const next = !v;
+                    if (!next) setFriendMenu(null);
+                    return next;
+                  });
+                }}
+                aria-label="친구 목록"
+                aria-pressed={isFriendsOpen}
+              >
+                {/* Users 아이콘 대체 SVG (lucide-react 미사용) */}
+                <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+              </button>
+            </span>
+          )}
+
           <Link to="/login" className="btn-login no-auth">로그인</Link>
 
           <div className="header-profile-wrap auth-only" ref={dropdownRef}>
@@ -533,10 +560,10 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
 
       {topSection}
 
-      <div className="page-layout">
+      <div className={`page-layout ${showFriendSidebar && isFriendsOpen ? 'page-layout--friends-open' : ''}`}>
         <main className="main-container">{children}</main>
         {showFriendSidebar && (
-          <aside className="friend-sidebar">
+          <aside className={`friend-sidebar ${isFriendsOpen ? 'is-open' : 'is-collapsed'}`} aria-hidden={!isFriendsOpen}>
             <div className="friend-sidebar-header">친구</div>
             <div className="friend-sidebar-login-msg no-auth">
               로그인하면 친구 목록과 요청을 볼 수 있어요.

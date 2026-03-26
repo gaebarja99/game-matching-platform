@@ -82,8 +82,31 @@ a:hover { color: #00e676; }
 .game-tabs a.active, .game-tabs button.active { color: #00e676; border-bottom: 2px solid #00e676; margin-bottom: -1px; }
 /* 페이지 레이아웃: 메인 + 우측 친구 사이드바 */
 .page-layout { display: flex; width: 100%; min-width: 0; min-height: calc(100vh - 105px); overflow-x: hidden; }
-.main-container { flex: 1; min-width: 0; padding: 24px; overflow-x: hidden; }
-.friend-sidebar { width: 280px; min-width: 280px; flex-shrink: 0; border-left: 1px solid; display: flex; flex-direction: column; transition: background 0.2s, border-color 0.2s, box-shadow 0.2s; }
+.main-container { flex: 1; min-width: 0; padding: 24px; overflow-x: hidden; transition: flex 0.3s ease; }
+.friend-sidebar {
+  width: 280px;
+  min-width: 280px;
+  flex-shrink: 0;
+  border-left: 1px solid;
+  display: flex;
+  flex-direction: column;
+  transition:
+    width 0.3s ease,
+    min-width 0.3s ease,
+    background 0.2s,
+    border-color 0.2s,
+    box-shadow 0.2s;
+  overflow: hidden;
+}
+.friend-sidebar.is-collapsed {
+  width: 0;
+  min-width: 0;
+  border-left-color: transparent;
+  box-shadow: none;
+  pointer-events: none;
+}
+.friend-sidebar.is-collapsed > * { opacity: 0; }
+.friend-sidebar.is-open > * { opacity: 1; transition: opacity 0.18s ease; }
 .theme-dark .friend-sidebar { background: #151517; border-color: #2e2e32; }
 .theme-light .friend-sidebar { background: #fff; border-color: #d8d8dc; }
 .friend-sidebar.friend-sidebar-highlight { box-shadow: inset 0 0 0 2px #00e676; }
@@ -628,6 +651,9 @@ a:hover { color: #00e676; }
 /* 메인 헤더 아이콘 hover (알림/메시지 등) */
 .theme-dark .main-header .header-icon-wrap .header-icon-btn:hover { color: #efeff1; background: #2c2c2e; }
 .theme-light .main-header .header-icon-wrap .header-icon-btn:hover { color: #141418; background: #e5e5e7; }
+.main-header .header-icon-wrap .header-icon-btn.active { color: #00e676; }
+.theme-dark .main-header .header-icon-wrap .header-icon-btn.active { background: rgba(0, 230, 118, 0.12); }
+.theme-light .main-header .header-icon-wrap .header-icon-btn.active { background: rgba(0, 230, 118, 0.18); }
 /* 알림 빨간불: 미확인 알림 있을 때 벨에 빨간 점 표시 */
 #header-alarm-wrap.has-unread::before { content: ''; position: absolute; top: 4px; right: 4px; width: 8px; height: 8px; background: #e91916; border-radius: 50%; z-index: 1; pointer-events: none; }
 .main-header .header-msg-wrap .header-icon-btn { text-decoration: none; color: inherit; }
