@@ -5,9 +5,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamematcher.dto.search.PlayerSearchRequest;
 import com.gamematcher.dto.search.PlayerSearchResponse;
 import com.gamematcher.exception.GameApiException;
+import com.gamematcher.service.lol.LolApiService;
 import com.gamematcher.service.search.ApexSearchService;
 import com.gamematcher.service.search.Cs2SearchService;
-import com.gamematcher.service.search.LolSearchService;
 import com.gamematcher.service.search.OverwatchSearchService;
 import com.gamematcher.service.search.PubgSearchService;
 import com.gamematcher.service.search.TftSearchService;
@@ -24,7 +24,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PlayerSearchService {
 
-    private final LolSearchService lolSearchService;
+    private final LolApiService lolApiService;
     private final TftSearchService tftSearchService;
     private final ValorantApiService valorantApiService;
     private final PubgSearchService pubgSearchService;
@@ -42,7 +42,7 @@ public class PlayerSearchService {
         }
 
         return switch (game) {
-            case "lol" -> lolSearchService.search(request);
+            case "lol" -> lolApiService.search(request);
             case "tft" -> tftSearchService.search(request);
             case "valorant" -> valorantApiService.search(request);
             case "pubg" -> pubgSearchService.search(request);

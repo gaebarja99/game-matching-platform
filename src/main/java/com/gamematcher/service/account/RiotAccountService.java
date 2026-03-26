@@ -23,6 +23,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Objects;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -81,6 +83,23 @@ public class RiotAccountService {
                 saved.getTagLine(),
                 "Riot 계정 연동 완료. LoL·발로란트 기본 전적을 불러왔습니다."
         );
+    }
+
+    /**
+     * 연동된 Riot 계정의 최신 게임명·태그를 반영하고 LoL·발로란트 캐시를 다시 동기화한다.
+     */
+    @Transactional
+    public void refreshLinkedData(Long userId) {
+        RiotAccount acc = riotAccountRepository.findFirstByUserId(userId)
+                .orElseThrow(() -> new GameApiException(HttpStatus.NOT_FOUND, "연동된 Riot 계정이 없습니다."));
+        RiotAccountResponseDto fresh = lolApiService.getAccountByPuuid(acc.getPuuid());
+        if (!Objects.equals(acc.getPuuid(), fresh.getPuuid())) {
+            throw new GameApiException(HttpStatus.CONFLICT, "Riot 계정 식별 정보가 일치하지 않습니다. 연동을 해제한 뒤 다시 연결해 주세요.");
+        }
+        acc.setGameName(fresh.getGameName());
+        acc.setTagLine(fresh.getTagLine());
+        riotAccountRepository.save(acc);
+        syncLolAndValorantFromRiotAccount(fresh);
     }
 
     /**

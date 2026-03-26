@@ -464,6 +464,7 @@ export function MatchRow({
 
   const duration = match.playtime ? `${Math.floor(match.playtime / 60)}m` : null;
   const canDetail = GAMES_WITH_MATCH_DETAIL.has(gameId) && Boolean(match.matchId);
+  const listOnlyRow = Boolean(match.extras && (match.extras as { listOnly?: boolean }).listOnly);
 
   const formattedDetail = useMemo(
     () =>
@@ -534,9 +535,22 @@ export function MatchRow({
 
   return (
     <div className="records-match-block">
-      <div className={`records-match-row ${match.win ? 'is-win' : 'is-loss'}`}>
+      <div
+        className={[
+          'records-match-row',
+          listOnlyRow ? 'is-list-only' : match.win ? 'is-win' : 'is-loss',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
         <div className="records-match-status">
-          <span className={match.win ? 'records-win-badge' : 'records-loss-badge'}>{match.win ? 'WIN' : 'LOSS'}</span>
+          {listOnlyRow ? (
+            <span className="records-list-only-badge">요약 없음</span>
+          ) : (
+            <span className={match.win ? 'records-win-badge' : 'records-loss-badge'}>
+              {match.win ? 'WIN' : 'LOSS'}
+            </span>
+          )}
           <span className="records-match-mode">{match.gameMode || 'Mode'}</span>
         </div>
         <div
@@ -548,7 +562,11 @@ export function MatchRow({
         >
           <div className="records-match-stat-block records-match-stat-block--agent">
             <span className="records-match-stat-label">{gameId === 'valorant' ? '에이전트' : '픽'}</span>
-            <strong className="records-match-title">{match.champion || match.agent || 'Unknown'}</strong>
+            <strong className="records-match-title">
+              {listOnlyRow
+                ? '상세 전적에서 확인'
+                : match.champion || match.agent || 'Unknown'}
+            </strong>
           </div>
           {match.kills != null ? (
             <div className="records-match-stat-block">
@@ -580,10 +598,16 @@ export function MatchRow({
           ) : null}
         </div>
         <div className="records-match-meta-chips">
+          {listOnlyRow && match.matchId ? (
+            <span className="records-meta-chip records-meta-chip--id" title={match.matchId}>
+              {match.matchId.length > 14 ? `${match.matchId.slice(0, 12)}…` : match.matchId}
+            </span>
+          ) : null}
           {duration ? <span className="records-meta-chip">{duration}</span> : null}
           {match.cs != null ? <span className="records-meta-chip">CS {match.cs}</span> : null}
-          {match.extras && gameId !== 'valorant'
+          {match.extras && gameId !== 'valorant' && !listOnlyRow
             ? Object.entries(match.extras)
+                .filter(([key]) => key !== 'listOnly')
                 .slice(0, 2)
                 .map(([key, value]) => (
                   <span key={key} className="records-meta-chip">
@@ -633,6 +657,7 @@ export function ResultPanel({
   showLoadMore,
   onLoadMore,
   detailContext,
+  valorantMmrPending,
 }: {
   result: PlayerSearchResponse;
   gameId: string;
@@ -643,6 +668,7 @@ export function ResultPanel({
   showLoadMore?: boolean;
   onLoadMore?: () => void;
   detailContext: { puuid?: string; platform?: string };
+  valorantMmrPending?: boolean;
 }) {
   const info = result.playerInfo ?? {};
   const stats = result.stats ?? {};
@@ -670,7 +696,10 @@ export function ResultPanel({
               {info.tagLine ? <span className="records-tag-line">#{info.tagLine}</span> : null}
             </h2>
             <div className="records-rank-row">
-              {info.tier ? (
+              {valorantMmrPending && gameId === 'valorant' ? (
+                <span className="records-soft-badge records-tier-loading">티어 불러오는 중…</span>
+              ) : null}
+              {!valorantMmrPending && info.tier && info.tier !== '…' ? (
                 <span className="records-rank-badge">
                   {info.tier} {info.rank || ''}
                 </span>
@@ -691,14 +720,20 @@ export function ResultPanel({
         </button>
       </div>
 
-      <div className="records-stat-grid">
-        {statCards.map((item) => (
-          <div key={item.label} className="records-stat-card">
-            <span className="records-stat-label">{item.label}</span>
-            <strong className="records-stat-value">{item.value}</strong>
-          </div>
-        ))}
-      </div>
+      {result.matchListOnly ? (
+        <p className="records-match-list-hint">
+          최근 매치는 ID만 불러왔습니다. 각 행에서 「상세 전적」을 누르면 그때 매치 상세 API를 호출합니다.
+        </p>
+      ) : (
+        <div className="records-stat-grid">
+          {statCards.map((item) => (
+            <div key={item.label} className="records-stat-card">
+              <span className="records-stat-label">{item.label}</span>
+              <strong className="records-stat-value">{item.value}</strong>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="records-result-body">
         <div className="records-section-card">

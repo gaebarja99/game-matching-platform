@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Link, Navigate, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
-import type { PlayerSearchResponse } from '../../api/search';
+import { fetchValorantSearchMmr, type PlayerSearchResponse } from '../../api/search';
 import { GAMES, parseProfileSlug, fetchRecordsPlayerSearch, type SearchFieldOverrides } from './recordsShared';
 import { ResultPanel } from './RecordsResultPanel';
 import '../Records.css';
@@ -47,6 +47,8 @@ function RecordsResultContent({
 }) {
   const autoSearchedUrlKey = useRef<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const [nickname, setNickname] = useState('');
   const [tagLine, setTagLine] = useState('');
@@ -57,6 +59,41 @@ function RecordsResultContent({
   const [error, setError] = useState<string | null>(null);
 
   const game = useMemo(() => GAMES.find((item) => item.id === gameId) || GAMES[0], [gameId]);
+
+  useEffect(() => {
+    if (!result?.success || result.game !== 'valorant' || !result.valorantMmrPending) return;
+    const puuid = result.playerInfo?.puuid?.trim();
+    const raw = result.playerInfo?.rawData as Record<string, unknown> | undefined;
+    const region = typeof raw?.valorantRegion === 'string' ? raw.valorantRegion.trim() : '';
+    if (!puuid || !region) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const mmr = await fetchValorantSearchMmr({ puuid, region });
+        if (cancelled) return;
+        setResult((prev) => {
+          if (!prev?.success || prev.game !== 'valorant' || !prev.playerInfo) return prev;
+          return {
+            ...prev,
+            valorantMmrPending: false,
+            playerInfo: {
+              ...prev.playerInfo,
+              tier:
+                mmr.success && mmr.tierDisplay != null && mmr.tierDisplay !== ''
+                  ? mmr.tierDisplay
+                  : prev.playerInfo.tier,
+            },
+          };
+        });
+      } catch {
+        if (cancelled) return;
+        setResult((prev) => (prev?.success ? { ...prev, valorantMmrPending: false } : prev));
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [result?.success, result?.game, result?.valorantMmrPending, result?.playerInfo?.puuid, result?.playerInfo?.rawData]);
 
   useEffect(() => {
     const parsed = parseProfileSlug(gameId, playerSlug, urlHash);
@@ -127,15 +164,18 @@ function RecordsResultContent({
     if (!g.fields.includes('count')) return;
     const next = Math.min(count + 5, 20);
     if (next <= count) return;
-    setSearchParams(
-      (prev) => {
-        const n = new URLSearchParams(prev);
-        n.set('count', String(next));
-        return n;
+    const params = new URLSearchParams(location.search);
+    params.set('count', String(next));
+    const qs = params.toString();
+    navigate(
+      {
+        pathname: location.pathname,
+        search: qs ? `?${qs}` : '',
+        hash: location.hash,
       },
       { replace: true },
     );
-  }, [count, gameId, setSearchParams]);
+  }, [count, gameId, navigate, location.pathname, location.search, location.hash]);
 
   useEffect(() => {
     const key = `${gameId}/${playerSlug}${urlHash}?${searchParams.toString()}`;
@@ -201,6 +241,7 @@ function RecordsResultContent({
             gameId={gameId}
             accent={game.accent}
             title={`${game.label} Result`}
+            valorantMmrPending={Boolean(result.valorantMmrPending)}
             loading={loading}
             onRefresh={() => void performSearch(true)}
             showLoadMore={showLoadMore}

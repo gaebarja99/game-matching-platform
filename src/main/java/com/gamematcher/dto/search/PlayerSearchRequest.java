@@ -86,6 +86,17 @@ public class PlayerSearchRequest {
     private Boolean forceRefresh;
 
     /**
+     * true 이면 매치 ID 목록까지만 조회하고, 매치 상세(match-v5 등)는 호출하지 않는다.
+     * 상세는 {@code POST /api/search/match-detail} 로 지연 로드한다.
+     */
+    private Boolean matchListOnly;
+
+    /**
+     * true 이면 발로란트 전적 검색에서 MMR(티어) 조회를 생략하고, {@code POST /api/search/valorant/mmr} 로 이어서 받는다.
+     */
+    private Boolean deferValorantMmr;
+
+    /**
      * nickname 필드에서 gameName / tagLine 자동 파싱
      */
     public void parseNickname() {

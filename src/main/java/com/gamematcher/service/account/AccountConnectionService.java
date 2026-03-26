@@ -2,6 +2,7 @@ package com.gamematcher.service.account;
 
 import com.gamematcher.dto.account.AccountConnectionStatusDto;
 import com.gamematcher.dto.account.AccountConnectionsResponseDto;
+import com.gamematcher.dto.account.AccountLinkRefreshResponseDto;
 import com.gamematcher.dto.account.OAuthStartResponseDto;
 import com.gamematcher.dto.profile.ProfilePublicResponseDto;
 import com.gamematcher.dto.riot.RiotLeagueEntryResponseDto;
@@ -35,6 +36,7 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -55,6 +57,7 @@ public class AccountConnectionService {
     private final LolApiService riotLolApiService;
     private final ValorantApiService valorantApiService;
     private final UserProfileRepository userProfileRepository;
+    private final RiotAccountService riotAccountService;
 
     @Value("${app.frontend.base-url:http://localhost:5173}")
     private String frontendBaseUrl;
@@ -148,6 +151,62 @@ public class AccountConnectionService {
             }
         }
         return b.build();
+    }
+
+    /**
+     * 연동된 외부 계정 표시 정보·(가능한 경우) 게임 캐시를 최신으로 맞춘다.
+     */
+    @Transactional
+    public AccountLinkRefreshResponseDto refreshLinkedProfile(Long userId, String provider) {
+        return switch (provider.toLowerCase()) {
+            case "riot" -> refreshRiotLinked(userId);
+            case "steam" -> refreshSteamLinked(userId);
+            case "discord" -> new AccountLinkRefreshResponseDto(false,
+                    "Discord 닉네임·아바타는 OAuth 연동 시점 기준으로 저장됩니다. 변경 후에는 「연동 해제」 후 다시 연결해 주세요.");
+            case "blizzard" -> new AccountLinkRefreshResponseDto(false,
+                    "Battle.net 표시명은 OAuth 연동 시점 기준입니다. 최신 정보가 필요하면 연동 해제 후 다시 연결해 주세요.");
+            default -> throw new GameApiException(HttpStatus.BAD_REQUEST, "지원하지 않는 연동 제공자입니다: " + provider);
+        };
+    }
+
+    private AccountLinkRefreshResponseDto refreshRiotLinked(Long userId) {
+        riotAccountService.refreshLinkedData(userId);
+        return new AccountLinkRefreshResponseDto(true, "Riot 닉네임·LoL·발로란트 연동 데이터를 최신으로 불러왔습니다.");
+    }
+
+    private AccountLinkRefreshResponseDto refreshSteamLinked(Long userId) {
+        SteamAccount acc = steamAccountRepository.findFirstByUserId(userId)
+                .orElseThrow(() -> new GameApiException(HttpStatus.NOT_FOUND, "연동된 Steam 계정이 없습니다."));
+        if (steamApiKey == null || steamApiKey.isBlank()) {
+            throw new GameApiException(HttpStatus.BAD_REQUEST,
+                    "Steam Web API 키(steam.api.key)가 설정되어 있지 않아 프로필을 갱신할 수 없습니다.");
+        }
+        String steamId = acc.getSteamId();
+        String personaName = steamId;
+        String avatar = null;
+        Map<?, ?> summaries = restTemplate.getForObject(
+                "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key="
+                        + enc(steamApiKey) + "&steamids=" + enc(steamId),
+                Map.class
+        );
+        Object responseObj = summaries == null ? null : summaries.get("response");
+        if (responseObj instanceof Map<?, ?> responseMap) {
+            Object playersObj = responseMap.get("players");
+            if (playersObj instanceof List<?> players && !players.isEmpty() && players.get(0) instanceof Map<?, ?> player) {
+                String pn = stringValue(player.get("personaname"));
+                if (pn != null && !pn.isBlank()) {
+                    personaName = pn;
+                }
+                avatar = stringValue(player.get("avatarfull"));
+            }
+        }
+        boolean changed =
+                !Objects.equals(acc.getPersonaName(), personaName) || !Objects.equals(acc.getAvatar(), avatar);
+        acc.setPersonaName(personaName);
+        acc.setAvatar(avatar);
+        steamAccountRepository.save(acc);
+        return new AccountLinkRefreshResponseDto(changed,
+                changed ? "Steam 닉네임·아바타를 최신으로 반영했습니다." : "이미 최신 Steam 프로필입니다.");
     }
 
     @Transactional

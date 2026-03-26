@@ -161,6 +161,8 @@ export async function fetchRecordsPlayerSearch(
     platform: g.fields.includes('pubg_platform') || g.fields.includes('apex_platform') ? platform : undefined,
     count: g.fields.includes('count') ? count : undefined,
     forceRefresh: forceRefresh || undefined,
+    matchListOnly: gameId === 'lol' || gameId === 'tft' ? true : undefined,
+    deferValorantMmr: gameId === 'valorant' ? true : undefined,
   });
 }
 

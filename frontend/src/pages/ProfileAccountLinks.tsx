@@ -3,13 +3,11 @@ import { useAuth } from '../contexts/AuthContext';
 import {
   fetchAccountConnections,
   linkRiotAccount,
+  refreshAccountLink,
   startOAuthLink,
   unlinkAccount,
   type AccountConnectionStatus,
 } from '../api/accountLinks';
-import { patchProfile, type ProfilePatchBody } from '../api/profile';
-import { RiotLinkedGameStats } from '../components/RiotLinkedGameStats';
-
 type OAuthProvider = 'discord' | 'steam' | 'blizzard';
 
 const PROVIDERS: Array<{
@@ -34,20 +32,22 @@ export default function ProfileAccountLinks() {
   const [riotGameName, setRiotGameName] = useState('');
   const [riotTagLine, setRiotTagLine] = useState('');
   const [riotBusy, setRiotBusy] = useState(false);
-  const [linkPublicBusy, setLinkPublicBusy] = useState<string | null>(null);
+  const [refreshBusy, setRefreshBusy] = useState<string | null>(null);
 
-  const loadConnections = async () => {
-    setLoading(true);
+  const loadConnections = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const { ok, data, message: errorMessage } = await fetchAccountConnections();
       if (ok && data?.connections) {
         setConnections(data.connections);
-        setMessage({ text: '', ok: null });
+        if (!silent) {
+          setMessage({ text: '', ok: null });
+        }
       } else {
         setMessage({ text: errorMessage || '연동 정보를 불러오지 못했습니다.', ok: false });
       }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -119,6 +119,25 @@ export default function ProfileAccountLinks() {
     }
   };
 
+  const handleRefreshInfo = async (providerKey: string) => {
+    const p = providerKey.toLowerCase() as 'discord' | 'steam' | 'blizzard' | 'riot';
+    setRefreshBusy(providerKey);
+    setMessage({ text: '', ok: null });
+    try {
+      const { ok, data, message: errorMessage } = await refreshAccountLink(p);
+      if (ok && data?.message) {
+        setMessage({ text: data.message, ok: true });
+        await loadConnections(true);
+      } else {
+        setMessage({ text: errorMessage || '정보를 불러오지 못했습니다.', ok: false });
+      }
+    } catch {
+      setMessage({ text: '정보를 불러오지 못했습니다.', ok: false });
+    } finally {
+      setRefreshBusy(null);
+    }
+  };
+
   const handleDisconnect = async (provider: string) => {
     if (!window.confirm(`${provider} 연동을 해제할까요?`)) return;
     setDisconnectBusy(provider);
@@ -134,53 +153,6 @@ export default function ProfileAccountLinks() {
       }
     } finally {
       setDisconnectBusy(null);
-    }
-  };
-
-  function linkVisibilityPatchKey(providerKey: string): keyof ProfilePatchBody | null {
-    switch (providerKey.toUpperCase()) {
-      case 'DISCORD':
-        return 'discordLinkVisible';
-      case 'STEAM':
-        return 'steamLinkVisible';
-      case 'BLIZZARD':
-        return 'blizzardLinkVisible';
-      case 'RIOT':
-        return 'riotLinkVisible';
-      default:
-        return null;
-    }
-  }
-
-  const handleToggleLinkPublic = async (providerKey: string, visible: boolean) => {
-    if (!user?.id) return;
-    const patchKey = linkVisibilityPatchKey(providerKey);
-    if (!patchKey) return;
-    setLinkPublicBusy(providerKey);
-    setMessage({ text: '', ok: null });
-    try {
-      await patchProfile(user.id, { [patchKey]: visible });
-      setMessage({ text: visible ? '공개 프로필에 표시하도록 저장했습니다.' : '공개 프로필에서 숨기도록 저장했습니다.', ok: true });
-      await loadConnections();
-    } catch (e) {
-      setMessage({ text: e instanceof Error ? e.message : '저장에 실패했습니다.', ok: false });
-    } finally {
-      setLinkPublicBusy(null);
-    }
-  };
-
-  const handleRiotVisibilityPatch = async (body: Pick<ProfilePatchBody, 'riotLinkVisible' | 'riotLolRankVisible' | 'riotValorantRankVisible'>) => {
-    if (!user?.id) return;
-    setLinkPublicBusy('RIOT');
-    setMessage({ text: '', ok: null });
-    try {
-      await patchProfile(user.id, body);
-      setMessage({ text: '공개 설정을 저장했습니다.', ok: true });
-      await loadConnections();
-    } catch (e) {
-      setMessage({ text: e instanceof Error ? e.message : '저장에 실패했습니다.', ok: false });
-    } finally {
-      setLinkPublicBusy(null);
     }
   };
 
@@ -232,7 +204,7 @@ export default function ProfileAccountLinks() {
                 <div className="account-link-card-head">
                   <div>
                     <strong>{provider.title}</strong>
-                    <p>{provider.description}</p>
+                    {!connected ? <p>{provider.description}</p> : null}
                   </div>
                   <span className={`account-link-badge ${connected ? 'is-connected' : 'is-disconnected'}`}>
                     {connected ? '연동됨' : '미연동'}
@@ -240,74 +212,13 @@ export default function ProfileAccountLinks() {
                 </div>
 
                 {connected ? (
-                  <div className="account-link-meta">
-                    <div>{connection?.displayName || '표시 이름 없음'}</div>
+                  <div className="account-link-meta account-link-meta--compact account-link-meta--connected-only">
+                    <div className="account-link-display-line">
+                      {connection?.displayName?.trim() || '표시 이름 없음'}
+                    </div>
                     {connection?.secondaryValue && provider.key !== 'RIOT' ? (
-                      <div>{connection.secondaryValue}</div>
+                      <div className="account-link-secondary-line">{connection.secondaryValue}</div>
                     ) : null}
-                    {provider.key === 'RIOT' && connection ? (
-                      <RiotLinkedGameStats
-                        riotDisplayName={connection.displayName}
-                        lolRankSummary={connection.lolRankSummary}
-                        valorantRankSummary={connection.valorantRankSummary}
-                      />
-                    ) : null}
-                    {connection?.note ? <div>{connection.note}</div> : null}
-                    <div>{connection?.ownershipVerified ? '본인 확인 완료' : '본인 확인 필요'}</div>
-                    {provider.key === 'RIOT' ? (
-                      <>
-                        <label className="account-link-public-row account-link-public-row--riot-parent">
-                          <input
-                            type="checkbox"
-                            checked={connection?.publicProfileVisible !== false}
-                            disabled={linkPublicBusy === 'RIOT'}
-                            onChange={(e) => void handleRiotVisibilityPatch({ riotLinkVisible: e.target.checked })}
-                          />
-                          <span>Riot 닉네임·연동 공개 프로필에 표시</span>
-                        </label>
-                        <div
-                          className={`account-link-riot-children${
-                            connection?.publicProfileVisible === false ? ' is-disabled' : ''
-                          }`}
-                          aria-disabled={connection?.publicProfileVisible === false}
-                        >
-                          <label className="account-link-public-row">
-                            <input
-                              type="checkbox"
-                              checked={connection?.publicLolRankVisible !== false}
-                              disabled={
-                                linkPublicBusy === 'RIOT' || connection?.publicProfileVisible === false
-                              }
-                              onChange={(e) => void handleRiotVisibilityPatch({ riotLolRankVisible: e.target.checked })}
-                            />
-                            <span>리그 오브 레전드 랭크 정보 공개</span>
-                          </label>
-                          <label className="account-link-public-row">
-                            <input
-                              type="checkbox"
-                              checked={connection?.publicValorantRankVisible !== false}
-                              disabled={
-                                linkPublicBusy === 'RIOT' || connection?.publicProfileVisible === false
-                              }
-                              onChange={(e) =>
-                                void handleRiotVisibilityPatch({ riotValorantRankVisible: e.target.checked })
-                              }
-                            />
-                            <span>발로란트 경쟁 티어 정보 공개</span>
-                          </label>
-                        </div>
-                      </>
-                    ) : (
-                      <label className="account-link-public-row">
-                        <input
-                          type="checkbox"
-                          checked={connection?.publicProfileVisible !== false}
-                          disabled={linkPublicBusy === provider.key}
-                          onChange={(e) => void handleToggleLinkPublic(provider.key, e.target.checked)}
-                        />
-                        <span>공개 프로필·프로필 조회에 이 연동 표시</span>
-                      </label>
-                    )}
                   </div>
                 ) : provider.key === 'RIOT' ? (
                   <div className="account-link-riot-form">
@@ -332,14 +243,24 @@ export default function ProfileAccountLinks() {
 
                 <div className="account-link-actions">
                   {connected ? (
-                    <button
-                      type="button"
-                      className="account-link-secondary"
-                      onClick={() => handleDisconnect(provider.key)}
-                      disabled={disconnectBusy === provider.key}
-                    >
-                      {disconnectBusy === provider.key ? '해제 중...' : '연동 해제'}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className="account-link-refresh-btn"
+                        onClick={() => void handleRefreshInfo(provider.key)}
+                        disabled={refreshBusy === provider.key || disconnectBusy === provider.key}
+                      >
+                        {refreshBusy === provider.key ? '불러오는 중...' : '정보 불러오기'}
+                      </button>
+                      <button
+                        type="button"
+                        className="account-link-secondary"
+                        onClick={() => handleDisconnect(provider.key)}
+                        disabled={disconnectBusy === provider.key || refreshBusy === provider.key}
+                      >
+                        {disconnectBusy === provider.key ? '해제 중...' : '연동 해제'}
+                      </button>
+                    </>
                   ) : provider.oauth ? (
                     <button
                       type="button"

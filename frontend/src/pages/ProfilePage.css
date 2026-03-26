@@ -518,6 +518,7 @@ label.profile-visibility-check input[type='checkbox'] {
   display: flex;
   align-items: center;
   gap: 12px;
+  width: 100%;
 }
 .profile-public-connection-avatar {
   width: 44px;
@@ -538,6 +539,7 @@ label.profile-visibility-check input[type='checkbox'] {
   flex-direction: column;
   gap: 4px;
   min-width: 0;
+  flex: 1 1 auto;
 }
 .profile-public-connection-provider {
   font-size: 0.72rem;

@@ -1,6 +1,7 @@
 package com.gamematcher.controller.account;
 
 import com.gamematcher.dto.account.AccountConnectionsResponseDto;
+import com.gamematcher.dto.account.AccountLinkRefreshResponseDto;
 import com.gamematcher.dto.account.OAuthStartResponseDto;
 import com.gamematcher.dto.account.RiotAccountLinkResponseDto;
 import com.gamematcher.dto.account.RiotManualLinkRequestDto;
@@ -29,6 +30,15 @@ public class AccountConnectionController {
     private final AccountConnectionService accountConnectionService;
     private final CurrentUserService currentUserService;
     private final RiotAccountService riotAccountService;
+
+    @PostMapping("/{provider}/refresh")
+    public AccountLinkRefreshResponseDto refreshLinkedProfile(
+            @RequestHeader(value = "X-Auth-Token", required = false) String authToken,
+            HttpSession session,
+            @PathVariable String provider) {
+        User user = currentUserService.requireUserByTokenOrSession(authToken, session);
+        return accountConnectionService.refreshLinkedProfile(user.getId(), provider);
+    }
 
     @GetMapping
     public AccountConnectionsResponseDto getConnections(

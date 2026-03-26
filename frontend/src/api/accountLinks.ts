@@ -62,3 +62,15 @@ export async function linkRiotAccount(gameName: string, tagLine: string) {
     body: JSON.stringify({ gameName, tagLine }),
   });
 }
+
+export interface AccountLinkRefreshResponse {
+  updated: boolean;
+  message: string;
+}
+
+export async function refreshAccountLink(provider: Lowercase<AccountLinkProvider>) {
+  return apiFetch<AccountLinkRefreshResponse>(`/api/account-links/${provider}/refresh`, {
+    method: 'POST',
+    body: '{}',
+  });
+}

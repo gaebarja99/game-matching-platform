@@ -12,6 +12,8 @@ import com.gamematcher.service.MatchApiCachePolicy;
 import com.gamematcher.dto.search.PlayerSearchRequest;
 import com.gamematcher.dto.search.PlayerSearchResponse;
 import com.gamematcher.dto.search.PlayerSearchResponse.*;
+import com.gamematcher.dto.search.ValorantSearchMmrRequest;
+import com.gamematcher.dto.search.ValorantSearchMmrResponse;
 import com.gamematcher.entity.match.valorant.ValorantMatch;
 import com.gamematcher.entity.match.valorant.ValorantMatchPlayer;
 import com.gamematcher.repository.match.ValorantMatchDetailRepository;
@@ -33,7 +35,9 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.Duration;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ForkJoinPool;
 import java.util.stream.Collectors;
 
 /**
@@ -67,9 +71,11 @@ public class ValorantApiService {
 
     /**
      * 전적 검색 시 Henrik MMR / lifetime 응답을 잠깐 보관해 재검색·새로고침 시 외부 지연을 줄인다.
-     * 병렬 API 호출은 레이트리밋에 걸리기 쉬워 순차 호출 + 캐시 조합을 쓴다.
+     * MMR과 lifetime은 서로 독립이므로 캐시 미스 시 {@link ForkJoinPool#commonPool()} 로 병렬 호출한다.
      */
     private static final long VALORANT_SEARCH_API_CACHE_TTL_MS = Duration.ofMinutes(3).toMillis();
+
+    private static final Set<String> HENRIK_SHARDS = Set.of("ap", "na", "eu", "kr", "br", "latam");
 
     private final ConcurrentHashMap<String, Cached<ValorantMmrTierSnapshot>> valorantMmrSearchCache = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Cached<List<MatchInfo>>> valorantLifetimeSearchCache = new ConcurrentHashMap<>();
@@ -123,6 +129,64 @@ public class ValorantApiService {
             return "ap";
         }
         return REGION_MAP.getOrDefault(valorantAccountRegion.toLowerCase().trim(), "ap");
+    }
+
+    /** 클라이언트가 넘긴 region 문자열을 Henrik 샤드로 정규화 */
+    public String normalizeHenrikShard(String region) {
+        if (region == null || region.isBlank()) {
+            return "ap";
+        }
+        String raw = region.toLowerCase(Locale.ROOT).trim();
+        if (HENRIK_SHARDS.contains(raw)) {
+            return raw;
+        }
+        return REGION_MAP.getOrDefault(raw, "ap");
+    }
+
+    /**
+     * Records용: 1차 검색({@code deferValorantMmr}) 이후 티어만 조회.
+     */
+    public ValorantSearchMmrResponse resolveMmrForSearch(ValorantSearchMmrRequest r) {
+        String puuid = r.getPuuid();
+        if (puuid == null || puuid.isBlank()) {
+            return ValorantSearchMmrResponse.fail("puuid가 필요합니다.");
+        }
+        String shard = normalizeHenrikShard(r.getRegion());
+        String mmrCacheKey = shard + "|" + puuid.trim();
+        if (Boolean.TRUE.equals(r.getForceRefresh())) {
+            valorantMmrSearchCache.remove(mmrCacheKey);
+        }
+        HttpEntity<Void> entity = valorantHttpEntity();
+        Cached<ValorantMmrTierSnapshot> cached = valorantMmrSearchCache.get(mmrCacheKey);
+        ValorantMmrTierSnapshot snap;
+        if (cached != null && cached.fresh()) {
+            snap = cached.value();
+        } else {
+            snap = fetchMmrAndCache(mmrCacheKey, shard, puuid.trim(), entity);
+        }
+        return ValorantSearchMmrResponse.ok(snap.displayTier());
+    }
+
+    private ValorantMmrTierSnapshot fetchMmrAndCache(String mmrCacheKey, String region, String puuid,
+                                                     HttpEntity<Void> entity) {
+        ValorantMmrTierSnapshot m = fetchValorantMmrForSearch(region, puuid, entity);
+        valorantMmrSearchCache.put(mmrCacheKey,
+                new Cached<>(m, System.currentTimeMillis() + VALORANT_SEARCH_API_CACHE_TTL_MS));
+        return m;
+    }
+
+    private List<MatchInfo> fetchMatchesAndCache(String matchCacheKey, String region, String puuid, int count,
+                                                  HttpEntity<Void> entity, PlayerSearchRequest req) {
+        List<MatchInfo> list = fetchValorantMatchSummariesFromLifetime(region, puuid, count);
+        if (list == null) {
+            list = fetchValorantSummariesFromV3Fallback(region, puuid, count, entity, req);
+        }
+        if (list == null) {
+            list = List.of();
+        }
+        valorantLifetimeSearchCache.put(matchCacheKey,
+                new Cached<>(list, System.currentTimeMillis() + VALORANT_SEARCH_API_CACHE_TTL_MS));
+        return list;
     }
 
     /**
@@ -416,29 +480,54 @@ public class ValorantApiService {
                 valorantLifetimeSearchCache.keySet().removeIf(k -> k.startsWith(mmrCacheKey + "|"));
             }
 
-            ValorantMmrTierSnapshot mmr = Optional.ofNullable(valorantMmrSearchCache.get(mmrCacheKey))
-                    .filter(Cached::fresh)
-                    .map(Cached::value)
-                    .orElseGet(() -> {
-                        ValorantMmrTierSnapshot m = fetchValorantMmrForSearch(region, puuid, entity);
-                        valorantMmrSearchCache.put(mmrCacheKey,
-                                new Cached<>(m, System.currentTimeMillis() + VALORANT_SEARCH_API_CACHE_TTL_MS));
-                        return m;
-                    });
+            if (Boolean.TRUE.equals(req.getDeferValorantMmr())) {
+                List<MatchInfo> matches = resolveValorantMatchesForSearch(
+                        matchCacheKey, region, puuid, count, entity, req);
+                MatchStats stats = buildStats(matches);
+                Map<String, Object> raw = new LinkedHashMap<>();
+                raw.put("valorantRegion", region);
+                PlayerInfo playerInfo = PlayerInfo.builder()
+                        .puuid(puuid).gameName(req.getGameName()).tagLine(req.getTagLine())
+                        .tier("…")
+                        .avatarUrl(cardUrl)
+                        .rawData(raw)
+                        .build();
+                return PlayerSearchResponse.builder()
+                        .success(true).game("valorant").nickname(nickname)
+                        .valorantMmrPending(true)
+                        .playerInfo(playerInfo).matches(matches).stats(stats)
+                        .build();
+            }
 
-            List<MatchInfo> matches = Optional.ofNullable(valorantLifetimeSearchCache.get(matchCacheKey))
-                    .filter(Cached::fresh)
-                    .map(c -> List.copyOf(c.value()))
-                    .orElse(null);
+            Cached<ValorantMmrTierSnapshot> mmrCached = valorantMmrSearchCache.get(mmrCacheKey);
+            Cached<List<MatchInfo>> matCached = valorantLifetimeSearchCache.get(matchCacheKey);
+            boolean mmrFresh = !Boolean.TRUE.equals(req.getForceRefresh()) && mmrCached != null && mmrCached.fresh();
+            boolean matFresh = !Boolean.TRUE.equals(req.getForceRefresh()) && matCached != null && matCached.fresh();
+
+            ValorantMmrTierSnapshot mmr;
+            List<MatchInfo> matches;
+
+            if (mmrFresh && matFresh) {
+                mmr = mmrCached.value();
+                matches = List.copyOf(matCached.value());
+            } else if (mmrFresh) {
+                mmr = mmrCached.value();
+                matches = fetchMatchesAndCache(matchCacheKey, region, puuid, count, entity, req);
+            } else if (matFresh) {
+                matches = List.copyOf(matCached.value());
+                mmr = fetchMmrAndCache(mmrCacheKey, region, puuid, entity);
+            } else {
+                CompletableFuture<ValorantMmrTierSnapshot> mmrFut = CompletableFuture.supplyAsync(
+                        () -> fetchMmrAndCache(mmrCacheKey, region, puuid, entity), ForkJoinPool.commonPool());
+                CompletableFuture<List<MatchInfo>> matFut = CompletableFuture.supplyAsync(
+                        () -> fetchMatchesAndCache(matchCacheKey, region, puuid, count, entity, req),
+                        ForkJoinPool.commonPool());
+                mmr = mmrFut.join();
+                matches = matFut.join();
+            }
+
             if (matches == null) {
-                matches = fetchValorantMatchSummariesFromLifetime(region, puuid, count);
-                if (matches == null) {
-                    matches = fetchValorantSummariesFromV3Fallback(region, puuid, count, entity, req);
-                }
-                if (matches != null) {
-                    valorantLifetimeSearchCache.put(matchCacheKey,
-                            new Cached<>(matches, System.currentTimeMillis() + VALORANT_SEARCH_API_CACHE_TTL_MS));
-                }
+                matches = List.of();
             }
             MatchStats stats = buildStats(matches);
 
@@ -454,6 +543,15 @@ public class ValorantApiService {
             log.error("Valorant 전적 검색 오류 - {}", nickname, e);
             return PlayerSearchResponse.error("valorant", nickname, e.getMessage());
         }
+    }
+
+    private List<MatchInfo> resolveValorantMatchesForSearch(String matchCacheKey, String region, String puuid, int count,
+                                                           HttpEntity<Void> entity, PlayerSearchRequest req) {
+        Cached<List<MatchInfo>> matCached = valorantLifetimeSearchCache.get(matchCacheKey);
+        if (!Boolean.TRUE.equals(req.getForceRefresh()) && matCached != null && matCached.fresh()) {
+            return List.copyOf(matCached.value());
+        }
+        return fetchMatchesAndCache(matchCacheKey, region, puuid, count, entity, req);
     }
 
     private record ValorantMmrTierSnapshot(String tier, String tierName) {
