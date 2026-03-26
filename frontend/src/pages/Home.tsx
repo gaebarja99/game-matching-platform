@@ -28,16 +28,13 @@ import {
   VALORANT_MODE_OPTIONS,
   OVERWATCH_MODE_OPTIONS,
   PUBG_MODE_OPTIONS,
-  PUBG_PLATFORM_OPTIONS,
   GAME_OPTIONS,
   getMatchModeOptions,
   getControlledPartyOptions,
   tierOptionsForGame,
   createFormShowTier,
-  tierLabel,
   rankLabel,
   modeLabel,
-  modeHasNoTier,
   showPositionForRoom,
   partySizeLabel,
   isLolAram,
@@ -103,17 +100,33 @@ function formatDateForRoom(s: string) {
   }
 }
 
-function extraColumnValue(op: ReturnType<typeof parseGameOptions>, roomGame: string) {
-  if (roomGame === 'PUBG') return op.platform ? (PUBG_PLATFORM_OPTIONS.find((x) => x.value === op.platform)?.label ?? op.platform) : '-';
-  if (roomGame === 'COUNTER_STRIKE_2') return op.preferredMethod || '-';
-  // APEX 제거: 남겨진 표시 로직 없음
-  return '-';
+function formatRelativeCreatedAt(s: string) {
+  try {
+    const d = new Date(s);
+    const now = new Date();
+    if (Number.isNaN(d.getTime())) return s;
+    const isSameDay =
+      d.getFullYear() === now.getFullYear() &&
+      d.getMonth() === now.getMonth() &&
+      d.getDate() === now.getDate();
+    if (!isSameDay) return formatDateForRoom(s);
+
+    const diffMs = now.getTime() - d.getTime();
+    const diffMin = Math.floor(diffMs / 60000);
+    if (diffMin <= 0) return '방금 전';
+    if (diffMin < 60) return `${diffMin}분 전`;
+    const diffHr = Math.floor(diffMin / 60);
+    return `${diffHr}시간 전`;
+  } catch {
+    return s;
+  }
 }
 
 type TeamPanelType = 'match' | 'create';
 
 /** 팀 찾기 테이블 게임 필터 (방 `game` 필드와 동일) */
 type TeamSearchGameId =
+  | 'ALL'
   | 'LEAGUE_OF_LEGENDS'
   | 'VALORANT'
   | 'OVERWATCH'
@@ -121,6 +134,7 @@ type TeamSearchGameId =
   | 'COUNTER_STRIKE_2';
 
 const TEAM_SEARCH_GAME_TABS: { id: TeamSearchGameId; label: string }[] = [
+  { id: 'ALL', label: '전체' },
   { id: 'LEAGUE_OF_LEGENDS', label: '리그오브레전드' },
   { id: 'VALORANT', label: '발로란트' },
   { id: 'OVERWATCH', label: '오버워치2' },
@@ -131,6 +145,14 @@ const TEAM_SEARCH_GAME_TABS: { id: TeamSearchGameId; label: string }[] = [
 function TeamSearchGameTabIcon({ game }: { game: TeamSearchGameId }) {
   const svgProps = { width: 22, height: 22, viewBox: '0 0 24 24' as const, 'aria-hidden': true as const };
   switch (game) {
+    case 'ALL':
+      return (
+        <svg {...svgProps}>
+          <circle cx="12" cy="12" r="9.5" fill="#9CA3AF" opacity="0.25" />
+          <path d="M6.8 12h10.4" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" />
+          <path d="M12 6.8v10.4" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" opacity="0.85" />
+        </svg>
+      );
     case 'LEAGUE_OF_LEGENDS':
       return (
         <svg {...svgProps}>
@@ -227,7 +249,7 @@ export default function Home() {
   const [roomList, setRoomList] = useState<GameRoomItem[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [joinRoomId, setJoinRoomId] = useState<number | null>(null);
-  const [selectedGame, setSelectedGame] = useState<TeamSearchGameId>('LEAGUE_OF_LEGENDS');
+  const [selectedGame, setSelectedGame] = useState<TeamSearchGameId>('ALL');
 
   const fetchRooms = useCallback(() => {
     setLoadingRooms(true);
@@ -256,7 +278,7 @@ export default function Home() {
   );
 
   const filteredRoomList = useMemo(
-    () => visibleRoomList.filter((r) => r.game === selectedGame),
+    () => (selectedGame === 'ALL' ? visibleRoomList : visibleRoomList.filter((r) => r.game === selectedGame)),
     [visibleRoomList, selectedGame],
   );
 
@@ -1010,10 +1032,9 @@ export default function Home() {
                 <thead>
                   <tr>
                     <th>제목</th>
-                    <th>티어</th>
                     <th>랭크</th>
                     <th>포지션</th>
-                    <th>비고</th>
+                    <th>메모</th>
                     <th>인원</th>
                     <th>방장</th>
                     <th>등록일</th>
@@ -1023,39 +1044,29 @@ export default function Home() {
                 <tbody>
                   {loadingRooms && roomList.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="home-demo-room-loading-cell">방 목록 불러오는 중…</td>
+                      <td colSpan={8} className="home-demo-room-loading-cell">방 목록 불러오는 중…</td>
                     </tr>
                   ) : visibleRoomList.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="home-demo-room-loading-cell">등록된 방이 없습니다.</td>
+                      <td colSpan={8} className="home-demo-room-loading-cell">등록된 방이 없습니다.</td>
                     </tr>
                   ) : filteredRoomList.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="home-demo-room-loading-cell">선택한 게임에 등록된 방이 없습니다.</td>
+                      <td colSpan={8} className="home-demo-room-loading-cell">선택한 게임에 등록된 방이 없습니다.</td>
                     </tr>
                   ) : null}
                   {filteredRoomList.map((r) => {
                     const op = parseGameOptions(r.gameOptions);
                     const { maxPlayers: maxP, isFull } = getRoomCapacityMeta(r);
-                    const tierCell = modeHasNoTier(r.game, op.mode)
-                      ? '-'
-                      : op.tier
-                        ? tierLabel(op.tier, r.game === 'PUBG' || r.game === 'VALORANT' ? r.game : undefined)
-                        : '-';
                     let rankCell = '-';
                     if (r.game === 'LEAGUE_OF_LEGENDS') rankCell = rankLabel(op.mode ?? '');
                     else if (['VALORANT', 'OVERWATCH', 'PUBG'].includes(r.game)) rankCell = modeLabel(r.game, op.mode ?? '');
                     else rankCell = op.mode || '-';
-                    let noteCell = extraColumnValue(op, r.game);
-                    if (r.game === 'PUBG' && op.preferredMap) {
-                      noteCell = noteCell !== '-' ? `${noteCell} · ${op.preferredMap}` : op.preferredMap;
-                    }
                     const partyCell = partySizeLabel(op.partySize, r.game);
                     const showPos = r.game !== 'PUBG' && showPositionForRoom(r.game, op.mode) && op.position;
                     return (
-                      <tr key={`api-${r.id}`}>
+                      <tr key={`api-${r.id}`} className={isFull ? 'home-demo-room-row home-demo-room-row--full' : 'home-demo-room-row'}>
                         <td>{r.title}</td>
-                        <td>{tierCell}</td>
                         <td>{rankCell}</td>
                         <td>
                           {showPos ? (
@@ -1066,7 +1077,9 @@ export default function Home() {
                             '-'
                           )}
                         </td>
-                        <td>{noteCell}</td>
+                        <td className="home-demo-room-memo-cell" title={r.memo?.trim() ? r.memo : ''}>
+                          {r.memo?.trim() ? r.memo : '-'}
+                        </td>
                         <td>
                           {maxP != null ? (
                             <span className="room-capacity-badge" title="현재 인원 / 최대 인원">
@@ -1085,7 +1098,7 @@ export default function Home() {
                           )}
                         </td>
                         <td>{r.hostNickname ?? '-'}</td>
-                        <td>{formatDateForRoom(r.createdAt)}</td>
+                        <td>{formatRelativeCreatedAt(r.createdAt)}</td>
                         <td>
                           {r.closed ? (
                             <span className="home-demo-room-closed-label">마감</span>

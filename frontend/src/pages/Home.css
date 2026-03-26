@@ -116,6 +116,22 @@
 .home-demo-room-table td { color: var(--text); }
 .home-demo-room-table tbody tr:hover td { background: var(--hover); }
 .home-demo-room-table tbody tr:last-child td { border-bottom: none; }
+/* 제목(1열) / 메모(4열) 컬럼을 동일하게 */
+.home-demo-room-table th:nth-child(1),
+.home-demo-room-table td:nth-child(1),
+.home-demo-room-table th:nth-child(4),
+.home-demo-room-table td:nth-child(4) {
+  width: 24%;
+  min-width: 200px;
+}
+.home-demo-room-table td:nth-child(1),
+.home-demo-room-table td:nth-child(4) {
+  max-width: 420px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.home-demo-room-memo-cell { color: var(--text-muted); }
 .home-demo-room-position { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; }
 .room-capacity-badge {
   display: inline-flex;
