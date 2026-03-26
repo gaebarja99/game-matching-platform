@@ -5,6 +5,7 @@ import LiveThumb from '../components/LiveThumb';
 import PositionPicker from '../components/PositionPicker';
 import PositionIcon from '../components/PositionIcon';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { resolveProfileImageUrl } from '../api/client';
 import {
   createGameRoom,
@@ -134,67 +135,83 @@ type TeamSearchGameId =
   | 'PUBG'
   | 'COUNTER_STRIKE_2';
 
-const TEAM_SEARCH_GAME_TABS: { id: TeamSearchGameId; label: string }[] = [
+const TEAM_SEARCH_GAME_TABS: Array<{
+  id: TeamSearchGameId;
+  label: string;
+  /** simple-icons CDN slug (https://cdn.simpleicons.org/) */
+  simpleIconSlug?: string;
+}> = [
   { id: 'ALL', label: '전체' },
-  { id: 'LEAGUE_OF_LEGENDS', label: '리그오브레전드' },
-  { id: 'VALORANT', label: '발로란트' },
+  { id: 'LEAGUE_OF_LEGENDS', label: '리그오브레전드', simpleIconSlug: 'leagueoflegends' },
+  { id: 'VALORANT', label: '발로란트', simpleIconSlug: 'valorant' },
+  // Overwatch는 simple-icons에 없거나 slug가 달라 CDN에서 깨질 수 있어 인라인 SVG 사용
   { id: 'OVERWATCH', label: '오버워치2' },
-  { id: 'PUBG', label: 'PUBG' },
-  { id: 'COUNTER_STRIKE_2', label: 'CS2' },
+  { id: 'PUBG', label: 'PUBG', simpleIconSlug: 'pubg' },
+  { id: 'COUNTER_STRIKE_2', label: 'CS2', simpleIconSlug: 'counterstrike' },
 ];
 
-function TeamSearchGameTabIcon({ game }: { game: TeamSearchGameId }) {
-  const svgProps = { width: 22, height: 22, viewBox: '0 0 24 24' as const, 'aria-hidden': true as const };
-  switch (game) {
-    case 'ALL':
-      return (
-        <svg {...svgProps}>
-          <circle cx="12" cy="12" r="9.5" fill="#9CA3AF" opacity="0.25" />
-          <path d="M6.8 12h10.4" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" />
-          <path d="M12 6.8v10.4" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" opacity="0.85" />
-        </svg>
-      );
-    case 'LEAGUE_OF_LEGENDS':
-      return (
-        <svg {...svgProps}>
-          <circle cx="12" cy="12" r="10" fill="#C8AA6E" />
-          <path fill="#010A13" d="M8 7.5h3.2v8.4h4.8V17H8V7.5z" />
-        </svg>
-      );
-    case 'VALORANT':
-      return (
-        <svg {...svgProps}>
-          <path fill="#FF4655" d="M6 18 12 6h2.2L18 18h-2.6l-1.2-3.2H10.8L9.6 18H6zm5.7-5.5h2.6L13 9.8 11.7 12.5z" />
-        </svg>
-      );
-    case 'OVERWATCH':
-      return (
-        <svg {...svgProps}>
-          <circle cx="12" cy="12" r="9.5" fill="#FF9C23" opacity="0.95" />
-          <circle cx="12" cy="12" r="6" fill="#1a1a1d" />
-          <circle cx="12" cy="12" r="3" fill="#FF9C23" />
-        </svg>
-      );
-    case 'PUBG':
-      return (
-        <svg {...svgProps}>
-          <rect x="3" y="3" width="18" height="18" rx="3" fill="#E0BC5B" />
-          <circle cx="12" cy="11" r="2.4" fill="none" stroke="#2a1f0f" strokeWidth="1.8" />
-          <path stroke="#2a1f0f" strokeWidth="1.4" d="M12 8v6M9 11h6" strokeLinecap="round" />
-        </svg>
-      );
-    case 'COUNTER_STRIKE_2':
-      return (
-        <svg {...svgProps}>
-          <path fill="#4A90D9" d="M12 3 20 8v8l-8 5-8-5V8l8-5zm0 2.5L6 9v6l6 3.8L18 15V9l-6-3.5z" />
-          <path fill="#1e3a5f" d="m12 8.5 4 2.3V15l-4 2.5-4-2.5v-4.2l4-2.3z" />
-        </svg>
-      );
+function TeamSearchGameTabIcon({
+  gameId,
+  slug,
+  active,
+  theme,
+}: {
+  gameId: TeamSearchGameId;
+  slug?: string;
+  active: boolean;
+  theme: 'dark' | 'light';
+}) {
+  // simple-icons CDN: /{slug}/{color}
+  // - 기본: 다크=연회색, 라이트=진회색
+  // - 활성: 연두색(2ECC71)
+  const baseColor = theme === 'dark' ? '9CA3AF' : '111827';
+  const activeColor = '2ECC71';
+  const color = active ? activeColor : baseColor;
+
+  if (gameId === 'OVERWATCH') {
+    return (
+      <svg width={18} height={18} viewBox="0 0 24 24" aria-hidden focusable="false">
+        <path
+          fill="currentColor"
+          d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5A8.51 8.51 0 0 0 12 3.5Zm0 2a6.5 6.5 0 0 1 6.16 4.4l-2.47-1.43a1 1 0 0 0-1 1.73l2.9 1.68a6.47 6.47 0 0 1-1.78 4.22l-2.23-3.86a1 1 0 0 0-1.73 1l2.24 3.88A6.5 6.5 0 0 1 5.5 12 6.5 6.5 0 0 1 12 5.5Z"
+          opacity={active ? 1 : 0.92}
+        />
+        <path
+          fill="currentColor"
+          d="M8.2 8.9 6.7 11.5a1 1 0 0 0 .37 1.36 1 1 0 0 0 1.36-.37l.9-1.56 1.7 1a1 1 0 0 0 1-1.73L9.2 8.7a1 1 0 0 0-1 .2Z"
+          opacity={active ? 0.95 : 0.65}
+        />
+      </svg>
+    );
   }
+
+  if (!slug) {
+    return (
+      <svg width={18} height={18} viewBox="0 0 24 24" aria-hidden focusable="false">
+        <circle cx="12" cy="12" r="9.5" fill="currentColor" opacity="0.18" />
+        <path d="M6.8 12h10.4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M12 6.8v10.4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.85" />
+      </svg>
+    );
+  }
+
+  return (
+    <img
+      className="home-team-game-tab-img"
+      src={`https://cdn.simpleicons.org/${slug}/${color}`}
+      alt=""
+      width={18}
+      height={18}
+      loading="lazy"
+      decoding="async"
+      referrerPolicy="no-referrer"
+    />
+  );
 }
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
+  const { theme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   /** 우측 팀 찾기 패널: 랜덤 매칭 / 방 만들기 */
@@ -1060,7 +1077,12 @@ export default function Home() {
                   onClick={() => setSelectedGame(tab.id)}
                 >
                   <span className="home-team-game-tab-icon">
-                    <TeamSearchGameTabIcon game={tab.id} />
+                    <TeamSearchGameTabIcon
+                      gameId={tab.id}
+                      slug={tab.simpleIconSlug}
+                      active={selectedGame === tab.id}
+                      theme={theme}
+                    />
                   </span>
                   <span className="home-team-game-tab-label">{tab.label}</span>
                 </button>

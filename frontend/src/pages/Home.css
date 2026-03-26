@@ -38,7 +38,7 @@
   font-weight: 600;
   letter-spacing: -0.02em;
   color: #9ca3af;
-  transition: color 0.18s ease;
+  transition: color 0.18s ease, filter 0.18s ease;
   box-shadow: inset 0 -2px 0 transparent;
 }
 .home-team-game-tab:hover {
@@ -48,14 +48,42 @@
   color: #ffffff;
   box-shadow: inset 0 -2px 0 #ffffff;
 }
+.theme-light .home-team-game-tab {
+  color: #111827;
+}
+.theme-light .home-team-game-tab:hover {
+  color: #0f172a;
+}
+.theme-light .home-team-game-tab--active {
+  color: #2ecc71;
+  box-shadow: inset 0 -2px 0 #2ecc71;
+}
+.theme-dark .home-team-game-tab--active {
+  color: #2ecc71;
+  box-shadow: inset 0 -2px 0 #2ecc71;
+}
 .home-team-game-tab-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
+  transition: filter 0.18s ease, transform 0.18s ease;
 }
 .home-team-game-tab-icon svg {
   display: block;
+}
+.home-team-game-tab-img {
+  width: 18px;
+  height: 18px;
+  display: block;
+  transition: filter 0.18s ease, transform 0.18s ease, opacity 0.18s ease;
+}
+.theme-dark .home-team-game-tab:hover .home-team-game-tab-img {
+  filter: brightness(1.18) saturate(1.12);
+}
+.home-team-game-tab--active .home-team-game-tab-icon,
+.home-team-game-tab--active .home-team-game-tab-img {
+  filter: drop-shadow(0 0 10px rgba(46, 204, 113, 0.38)) saturate(1.18);
 }
 .home-team-game-tab-label {
   white-space: nowrap;
