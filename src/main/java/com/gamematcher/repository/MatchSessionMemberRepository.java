@@ -12,6 +12,8 @@ public interface MatchSessionMemberRepository extends JpaRepository<MatchSession
 
     List<MatchSessionMember> findByUserIdOrderByJoinedAtDesc(Long userId);
 
+    long countByUserId(Long userId);
+
     boolean existsBySessionIdAndUserId(Long sessionId, Long userId);
 
     Optional<MatchSessionMember> findBySessionIdAndUserId(Long sessionId, Long userId);

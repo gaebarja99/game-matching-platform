@@ -164,6 +164,79 @@ a:hover { color: #00e676; }
 .friend-avatar-menu.theme-dark button:hover { background: #38383c; }
 .friend-avatar-menu.theme-light button { color: #141418 !important; }
 .friend-avatar-menu.theme-light button:hover { background: #f0f0f2; }
+
+/* 친구 상세 프로필 모달 */
+.friend-profile-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.55); display: none; align-items: center; justify-content: center; z-index: 10000; padding: 18px; }
+.friend-profile-modal-backdrop.show { display: flex; }
+.friend-profile-modal {
+  width: min(520px, 96vw);
+  max-height: min(80vh, 720px);
+  overflow: auto;
+  border-radius: 14px;
+  border: 1px solid;
+}
+.theme-dark .friend-profile-modal { background: #17171a; border-color: #2c2c2e; color: #efeff1; }
+.theme-light .friend-profile-modal { background: #fff; border-color: #e5e5e7; color: #1a1a1d; }
+.friend-profile-modal-head { position: sticky; top: 0; display: flex; align-items: center; justify-content: space-between; padding: 14px 16px; border-bottom: 1px solid; background: inherit; }
+.theme-dark .friend-profile-modal-head { border-color: #26262c; }
+.theme-light .friend-profile-modal-head { border-color: #e5e5e7; }
+.friend-profile-modal-title { font-size: 1rem; font-weight: 800; }
+.friend-profile-modal-close { appearance: none; border: none; background: transparent; color: inherit; cursor: pointer; font-size: 1.6rem; line-height: 1; padding: 4px 8px; opacity: 0.85; }
+.friend-profile-modal-close:hover { opacity: 1; }
+.friend-profile-modal-body { padding: 16px; }
+
+.friend-profile-header { display: flex; align-items: center; gap: 12px; }
+.friend-profile-avatar { width: 54px; height: 54px; border-radius: 16px; overflow: hidden; flex: 0 0 auto; display: grid; place-items: center; }
+.theme-dark .friend-profile-avatar { background: #1e1e21; border: 1px solid #2c2c2e; }
+.theme-light .friend-profile-avatar { background: #f3f4f6; border: 1px solid #e5e5e7; }
+.friend-profile-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.friend-profile-avatar-fallback { font-weight: 900; font-size: 1.2rem; }
+.friend-profile-meta { min-width: 0; }
+.friend-profile-name { font-size: 1.15rem; font-weight: 900; }
+.friend-profile-sub { font-size: 0.85rem; margin-top: 2px; opacity: 0.75; }
+
+.friend-profile-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+@media (max-width: 520px) { .friend-profile-stats { grid-template-columns: 1fr; } }
+.friend-profile-stat { padding: 14px; border-radius: 12px; border: 1px solid; }
+.theme-dark .friend-profile-stat { background: #1e1e21; border-color: #2c2c2e; }
+.theme-light .friend-profile-stat { background: #fff; border-color: #e5e5e7; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+.friend-profile-stat .label { font-size: 0.78rem; margin-bottom: 6px; opacity: 0.75; font-weight: 700; }
+.friend-profile-stat .value { font-size: 1.05rem; font-weight: 900; }
+
+.friend-profile-links { margin-top: 16px; }
+.friend-profile-links-title { font-size: 0.85rem; font-weight: 800; margin-bottom: 10px; opacity: 0.9; }
+.friend-profile-links-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.friend-profile-links-empty { font-size: 0.85rem; opacity: 0.75; }
+.friend-link-icon { width: 38px; height: 38px; border-radius: 12px; display: inline-flex; align-items: center; justify-content: center; border: 1px solid; }
+.theme-dark .friend-link-icon { background: #1e1e21; border-color: #2c2c2e; color: #e5e7eb; }
+.theme-light .friend-link-icon { background: #fff; border-color: #e5e5e7; color: #111827; }
+.friend-link-icon svg { display: block; }
+.friend-link-icon.discord { color: #5865F2; }
+.friend-link-icon.steam { color: #66C0F4; }
+.friend-link-icon.blizzard { color: #00AEFF; }
+.friend-link-icon.riot { color: #FF4655; }
+
+/* 로딩 스켈레톤 */
+.friend-profile-skeleton { display: grid; gap: 14px; }
+.friend-profile-skeleton .sk-row { display: flex; gap: 12px; align-items: center; }
+.friend-profile-skeleton .sk-avatar { width: 54px; height: 54px; border-radius: 16px; background: rgba(255,255,255,0.08); }
+.friend-profile-skeleton .sk-lines { flex: 1; display: grid; gap: 8px; }
+.friend-profile-skeleton .sk-line { height: 12px; border-radius: 8px; background: rgba(255,255,255,0.08); }
+.friend-profile-skeleton .sk-line.w-60 { width: 60%; }
+.friend-profile-skeleton .sk-line.w-40 { width: 40%; }
+.friend-profile-skeleton .sk-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+@media (max-width: 520px) { .friend-profile-skeleton .sk-grid { grid-template-columns: 1fr; } }
+.friend-profile-skeleton .sk-card { height: 74px; border-radius: 12px; background: rgba(255,255,255,0.08); }
+.friend-profile-skeleton .sk-icons { display: flex; gap: 10px; }
+.friend-profile-skeleton .sk-dot { width: 38px; height: 38px; border-radius: 12px; background: rgba(255,255,255,0.08); }
+.theme-light .friend-profile-skeleton .sk-avatar,
+.theme-light .friend-profile-skeleton .sk-line,
+.theme-light .friend-profile-skeleton .sk-card,
+.theme-light .friend-profile-skeleton .sk-dot { background: rgba(0,0,0,0.06); }
+
+.friend-profile-error { padding: 14px; border-radius: 12px; border: 1px solid; font-size: 0.9rem; }
+.theme-dark .friend-profile-error { border-color: #3a3a3d; background: #1e1e21; color: #ff8a80; }
+.theme-light .friend-profile-error { border-color: #f1b7b7; background: #fff5f5; color: #b91c1c; }
 .friend-list-item .friend-avatar img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: center; display: block; }
 .friend-list-item .friend-avatar .friend-avatar-fallback { display: flex; align-items: center; justify-content: center; width: 100%; height: 100%; }
 .theme-dark .friend-list-item .friend-avatar { background: #38383c; color: #8a8a8f; }
@@ -1442,6 +1515,37 @@ a.msg-conversation-item { text-decoration: none; color: inherit; }
 .profile-page .profile-stat-card .sub { font-size: 0.8rem; margin-top: 6px; }
 .theme-dark .profile-page .profile-stat-card .sub { color: #6b6b70; }
 .theme-light .profile-page .profile-stat-card .sub { color: #1a1a1d; }
+
+/* 프로필 홈 - 외부 계정 연동 요약 카드 */
+.profile-page .profile-extlinks { margin-top: 26px; }
+.profile-page .profile-extlinks-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.profile-page .profile-extlinks-title { font-size: 1.05rem; font-weight: 800; margin: 0; }
+.theme-dark .profile-page .profile-extlinks-title { color: #fafafa; }
+.theme-light .profile-page .profile-extlinks-title { color: #1a1a1d; }
+.profile-page .profile-extlinks-sub { font-size: 0.82rem; font-weight: 600; }
+.theme-dark .profile-page .profile-extlinks-sub { color: #9e9ea6; }
+.theme-light .profile-page .profile-extlinks-sub { color: #6b6b70; }
+.profile-page .profile-extlinks-sub.err { color: #e91916; }
+.profile-page .profile-extlink-card { display: flex; flex-direction: column; gap: 12px; }
+.profile-page .profile-extlink-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.profile-page .profile-extlink-provider { display: inline-flex; align-items: center; gap: 10px; min-width: 0; }
+.profile-page .profile-extlink-icon {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #0d0d0f;
+  font-weight: 900;
+  font-size: 0.95rem;
+  flex: 0 0 auto;
+}
+.profile-page .profile-extlink-name { font-weight: 800; font-size: 0.95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.theme-dark .profile-page .profile-extlink-name { color: #fafafa; }
+.theme-light .profile-page .profile-extlink-name { color: #1a1a1d; }
+.profile-page .profile-extlink-body .label { margin-bottom: 6px; }
+.profile-page .profile-extlink-value { font-size: 1.05rem; }
 .profile-page .profile-pang-charge-btn { margin-top: 12px; padding: 8px 16px; background: #00e676; color: #0d0d0f; border: none; border-radius: 8px; font-size: 0.9rem; font-weight: 600; cursor: pointer; font-family: inherit; }
 .theme-light .profile-page .profile-pang-charge-btn { color: #fff; background: #00a858; }
 .theme-light .profile-page .profile-pang-charge-btn:hover { background: #00c968; }

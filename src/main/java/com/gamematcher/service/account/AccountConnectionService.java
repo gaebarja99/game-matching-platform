@@ -76,6 +76,20 @@ public class AccountConnectionService {
         return new AccountConnectionsResponseDto(user.getId(), connections);
     }
 
+    public AccountConnectionsResponseDto getConnectionsForUser(String authToken, Long targetUserId) {
+        // 로그인 상태만 확인하고, 조회 대상은 targetUserId로 한다.
+        currentUserService.requireUser(authToken);
+        if (targetUserId == null) {
+            throw new GameApiException(HttpStatus.BAD_REQUEST, "userId가 필요합니다.");
+        }
+        List<AccountConnectionStatusDto> connections = new ArrayList<>();
+        connections.add(buildDiscordStatus(targetUserId));
+        connections.add(buildSteamStatus(targetUserId));
+        connections.add(buildBlizzardStatus(targetUserId));
+        connections.add(buildRiotStatus(targetUserId));
+        return new AccountConnectionsResponseDto(targetUserId, connections);
+    }
+
     @Transactional
     public void unlink(String authToken, String provider) {
         User user = currentUserService.requireUser(authToken);
