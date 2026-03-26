@@ -16,6 +16,29 @@ import {
 } from '../api/gameRooms';
 import { isHiddenGameRoomHost } from '../utils/gameRoomVisibility';
 
+function parseMaxPlayers(s?: string | null): number | null {
+  if (!s || !s.trim()) return null;
+  try {
+    const o = JSON.parse(s) as { maxPlayers?: unknown };
+    return typeof o.maxPlayers === 'number' && Number.isFinite(o.maxPlayers) ? o.maxPlayers : null;
+  } catch {
+    return null;
+  }
+}
+
+function parsePlatformAndParty(s?: string | null): { platform?: string; partySize?: string } {
+  if (!s || !s.trim()) return {};
+  try {
+    const o = JSON.parse(s) as { platform?: unknown; partySize?: unknown };
+    return {
+      platform: typeof o.platform === 'string' ? o.platform : undefined,
+      partySize: typeof o.partySize === 'string' ? o.partySize : undefined,
+    };
+  } catch {
+    return {};
+  }
+}
+
 const GAME_OPTIONS: { key: string; label: string }[] = [
   { key: 'ALL', label: '전체' },
   { key: 'LEAGUE_OF_LEGENDS', label: '리그오브레전드' },
@@ -23,7 +46,6 @@ const GAME_OPTIONS: { key: string; label: string }[] = [
   { key: 'OVERWATCH', label: '오버워치2' },
   { key: 'PUBG', label: 'PUBG' },
   { key: 'COUNTER_STRIKE_2', label: 'CS2' },
-  { key: 'APEX_LEGENDS', label: '에이펙스' },
 ];
 
 export default function GameRooms() {
@@ -209,8 +231,22 @@ export default function GameRooms() {
                 </div>
                 {r.memo && <p className="game-room-memo">{r.memo}</p>}
                 <div className="game-room-meta">
+                  {r.game === 'PUBG' && (() => {
+                    const p = parsePlatformAndParty(r.gameOptions);
+                    const label = p.platform === 'KAKAO' ? '카카오' : p.platform === 'STEAM' ? '스팀' : null;
+                    return label ? (
+                      <span style={{ fontWeight: 800, color: '#00e676' }}>{label}</span>
+                    ) : null;
+                  })()}
                   <span>방장: {r.hostNickname ?? '—'}</span>
-                  <span>인원: {r.memberCount}</span>
+                  <span>
+                    인원:{' '}
+                    {(r.game === 'LEAGUE_OF_LEGENDS' || r.game === 'VALORANT' || r.game === 'OVERWATCH' || r.game === 'COUNTER_STRIKE_2')
+                      ? `${r.memberCount}/${parseMaxPlayers(r.gameOptions) ?? 5}`
+                      : r.game === 'PUBG'
+                        ? `${r.memberCount}/${parseMaxPlayers(r.gameOptions) ?? 2}`
+                        : r.memberCount}
+                  </span>
                   <span>{formatDate(r.createdAt)}</span>
                 </div>
                 <div className="game-room-actions">

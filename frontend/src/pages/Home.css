@@ -22,6 +22,25 @@
 .home-demo-room-table tbody tr:hover td { background: var(--hover); }
 .home-demo-room-table tbody tr:last-child td { border-bottom: none; }
 .home-demo-room-position { display: inline-flex; align-items: center; gap: 4px; vertical-align: middle; }
+.room-capacity-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  background: rgba(0, 230, 118, 0.12);
+  color: #00e676;
+  font-weight: 700;
+  font-size: 0.82rem;
+  line-height: 1;
+  white-space: nowrap;
+}
+.room-capacity-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #00e676;
+}
 .home-demo-room-join-btn {
   padding: 6px 12px;
   font-size: 0.85rem;
@@ -118,6 +137,23 @@ select.sidebar-form-input option {
 .random-match-form .sidebar-form-label:first-of-type { margin-top: 0; }
 .random-match-form .position-picker { margin: 4px 0 0; }
 .create-panel .position-picker { margin: 4px 0 0; }
+.create-toggle-row { display: flex; gap: 8px; margin: 6px 0 4px; }
+.create-toggle-btn {
+  flex: 1;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--input-bg);
+  color: var(--text);
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s, border-color 0.2s, color 0.2s;
+}
+.create-toggle-btn:hover { background: var(--hover); }
+.create-toggle-btn.active {
+  border-color: #00e676;
+  box-shadow: 0 0 0 2px rgba(0, 230, 118, 0.18);
+}
 .create-room-form { display: block; }
 .create-room-fieldset { border: 1px solid var(--border); border-radius: 8px; padding: 16px; background: var(--hover); margin: 0; }
 .create-room-legend { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); padding: 0 8px; margin-left: -4px; }

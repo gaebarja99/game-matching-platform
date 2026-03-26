@@ -21,15 +21,24 @@ public class MatchController {
 
     /** 랜덤 매칭 대기열 참가 */
     @PostMapping("/queue/join")
-    public ResponseEntity<?> joinQueue(@RequestBody Map<String, String> body, HttpSession session) {
+    public ResponseEntity<?> joinQueue(@RequestBody Map<String, Object> body, HttpSession session) {
         Long userId = (Long) session.getAttribute(SESSION_USER_ID);
         if (userId == null) return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
-        String game = body != null ? body.get("game") : null;
+        String game = body != null && body.get("game") != null ? body.get("game").toString() : null;
         if (game == null || game.isBlank()) game = "LEAGUE_OF_LEGENDS";
+        Integer maxPlayers = null;
+        if (body != null && body.get("maxPlayers") != null) {
+            try {
+                maxPlayers = Integer.parseInt(body.get("maxPlayers").toString());
+            } catch (NumberFormatException ignored) {
+                maxPlayers = null;
+            }
+        }
         try {
             Map<String, Object> result = matchService.joinQueue(userId, game,
-                    body != null ? body.get("tier") : null,
-                    body != null ? body.get("position") : null);
+                    body != null && body.get("tier") != null ? body.get("tier").toString() : null,
+                    body != null && body.get("position") != null ? body.get("position").toString() : null,
+                    maxPlayers);
             return ResponseEntity.ok(result);
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
@@ -51,6 +60,14 @@ public class MatchController {
         Long userId = (Long) session.getAttribute(SESSION_USER_ID);
         if (userId == null) return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
         return ResponseEntity.ok(Map.of("inQueue", matchService.isInQueue(userId)));
+    }
+
+    /** 대기열 상태 (상세: 현재 인원/최대 인원) */
+    @GetMapping("/queue/status-detail")
+    public ResponseEntity<?> queueStatusDetail(HttpSession session) {
+        Long userId = (Long) session.getAttribute(SESSION_USER_ID);
+        if (userId == null) return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
+        return ResponseEntity.ok(matchService.queueStatusDetail(userId));
     }
 
     /** 매칭 세션 조회 (매칭 완료 시 모달용) */

@@ -10,7 +10,6 @@ const GAME_LABELS: Record<string, string> = {
   OVERWATCH: '오버워치2',
   PUBG: 'PUBG',
   COUNTER_STRIKE_2: 'CS2',
-  APEX_LEGENDS: '에이펙스',
 };
 
 function formatHistoryTime(createdAt: string): string {

@@ -38,6 +38,18 @@ public interface MatchingQueueRepository extends JpaRepository<MatchingQueue, Lo
             @Param("beforeInclusive") LocalDateTime beforeInclusive
     );
 
+    @Query("""
+            select count(mq)
+            from MatchingQueue mq
+            where mq.gameName = :gameName
+              and mq.matched = false
+              and mq.tier = :tier
+            """)
+    long countWaitingByGameAndTier(
+            @Param("gameName") String gameName,
+            @Param("tier") LolTier tier
+    );
+
     boolean existsByUserId(Long userId);
 
     Optional<MatchingQueue> findByUserId(Long userId);
