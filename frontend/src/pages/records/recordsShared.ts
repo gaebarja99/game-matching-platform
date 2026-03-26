@@ -109,6 +109,21 @@ export function buildRecordsProfileUrl(
   return `/records/${gameId}/${encodeURIComponent(nick)}${suffix}`;
 }
 
+/** Riot 연동 표시명 `게임명#태그` → 전적 검색용 */
+export function parseRiotDisplayName(displayName: string | null | undefined): {
+  gameName: string;
+  tagLine: string;
+} | null {
+  const t = displayName?.trim();
+  if (!t) return null;
+  const i = t.indexOf('#');
+  if (i <= 0 || i >= t.length - 1) return null;
+  const gameName = t.slice(0, i).trim();
+  const tagLine = t.slice(i + 1).trim();
+  if (!gameName || !tagLine) return null;
+  return { gameName, tagLine };
+}
+
 export const GAMES_WITH_MATCH_DETAIL = new Set(['valorant', 'lol', 'tft', 'pubg']);
 
 export function formatWinRate(value: number | null | undefined) {

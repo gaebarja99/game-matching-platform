@@ -8,6 +8,7 @@ import com.gamematcher.constant.profile.ProfileImageConstants;
 import com.gamematcher.dto.profile.ProfileMatchDto;
 import com.gamematcher.dto.profile.ProfilePublicResponseDto;
 import com.gamematcher.entity.User;
+import com.gamematcher.entity.profile.UserProfile;
 import com.gamematcher.exception.GameApiException;
 import com.gamematcher.repository.common.CommonUserRepository;
 import com.gamematcher.repository.profile.UserProfileRepository;
@@ -168,8 +169,8 @@ class ProfileServiceTest {
     }
 
     @Test
-    @DisplayName("공개 비공개 — 타인 조회는 마스킹, 본인 조회는 원문·visibility")
-    void visibilityMasking_publicVsOwner() {
+    @DisplayName("자기소개·배너·프로필 이미지는 항상 공개 — 레거시 false PATCH도 타인 조회에 노출")
+    void visibility_bioBannerImageAlwaysPublic() {
         User user = saveUser();
         ObjectNode body = objectMapper.createObjectNode();
         body.put("bio", "내부소개");
@@ -179,16 +180,17 @@ class ProfileServiceTest {
         profileService.patchProfile(user.getId(), body);
 
         ProfilePublicResponseDto pub = profileService.getProfile(user.getId(), null);
-        assertThat(pub.getBio()).isNull();
-        assertThat(pub.getBannerImageUrl()).isNull();
+        assertThat(pub.getBio()).isEqualTo("내부소개");
+        assertThat(pub.getBannerImageUrl()).isEqualTo("https://example.com/banner.png");
         assertThat(pub.getVisibility()).isNull();
 
         ProfilePublicResponseDto own = profileService.getProfile(user.getId(), user.getId());
         assertThat(own.getBio()).isEqualTo("내부소개");
         assertThat(own.getBannerImageUrl()).isEqualTo("https://example.com/banner.png");
         assertThat(own.getVisibility()).isNotNull();
-        assertThat(own.getVisibility().isBio()).isFalse();
-        assertThat(own.getVisibility().isBannerImage()).isFalse();
+        assertThat(own.getVisibility().isBio()).isTrue();
+        assertThat(own.getVisibility().isBannerImage()).isTrue();
+        assertThat(own.getVisibility().isProfileImage()).isTrue();
     }
 
     @Test
@@ -199,6 +201,23 @@ class ProfileServiceTest {
         body.put("preferredGamesVisible", false);
         ProfilePublicResponseDto dto = profileService.patchProfile(user.getId(), body);
         assertThat(dto.getVisibility().isPreferredGames()).isFalse();
+    }
+
+    @Test
+    @DisplayName("PATCH — 외부 계정 연동 공개 플래그")
+    void patchAccountLinkVisibility() {
+        User user = saveUser();
+        ObjectNode body = objectMapper.createObjectNode();
+        body.put("discordLinkVisible", false);
+        body.put("riotLinkVisible", false);
+        body.put("riotLolRankVisible", false);
+        body.put("riotValorantRankVisible", true);
+        profileService.patchProfile(user.getId(), body);
+        UserProfile p = userProfileRepository.findById(user.getId()).orElseThrow();
+        assertThat(p.getPublicDiscordLinkVisible()).isFalse();
+        assertThat(p.getPublicRiotLinkVisible()).isFalse();
+        assertThat(p.getPublicRiotLolRankVisible()).isFalse();
+        assertThat(p.getPublicRiotValorantRankVisible()).isTrue();
     }
 
     private User saveUser() {

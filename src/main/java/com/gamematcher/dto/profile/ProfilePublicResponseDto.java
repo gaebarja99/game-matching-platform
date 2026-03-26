@@ -2,11 +2,14 @@ package com.gamematcher.dto.profile;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.gamematcher.constant.profile.ProfileImageConstants;
+import com.gamematcher.dto.account.AccountConnectionStatusDto;
 import com.gamematcher.entity.User;
 import com.gamematcher.entity.profile.UserProfile;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
+
+import java.util.List;
 
 @Getter
 @Setter
@@ -24,6 +27,10 @@ public class ProfilePublicResponseDto {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     private ProfileFieldVisibilityDto visibility;
 
+    /** 연동된 계정 요약. 본인: 연결된 것만·공개 여부 포함. 타인: 공개로 설정된 연동만 */
+    @JsonInclude(JsonInclude.Include.NON_EMPTY)
+    private List<AccountConnectionStatusDto> connections;
+
     /** 본인에게는 저장값 그대로, visibility 포함 */
     public static ProfilePublicResponseDto buildOwner(User user, UserProfile profile) {
         ProfilePublicResponseDto dto = new ProfilePublicResponseDto();
@@ -36,9 +43,9 @@ public class ProfilePublicResponseDto {
             dto.bannerImageUrl = profile.getBannerImageUrl();
             dto.preferredGames = profile.getPreferredGames();
             dto.visibility = new ProfileFieldVisibilityDto(
-                    effectiveVisible(profile.getPublicBioVisible()),
-                    effectiveVisible(profile.getPublicBannerVisible()),
-                    effectiveVisible(profile.getPublicProfileImageVisible()),
+                    true,
+                    true,
+                    true,
                     effectiveVisible(profile.getPublicPreferredGamesVisible()));
         } else {
             dto.visibility = new ProfileFieldVisibilityDto(true, true, true, true);
@@ -53,23 +60,16 @@ public class ProfilePublicResponseDto {
         dto.username = user.getUsername();
         dto.visibility = null;
 
-        boolean bioOk = profile == null || effectiveVisible(profile.getPublicBioVisible());
-        boolean bannerOk = profile == null || effectiveVisible(profile.getPublicBannerVisible());
-        boolean imgOk = profile == null || effectiveVisible(profile.getPublicProfileImageVisible());
         boolean gamesOk = profile == null || effectiveVisible(profile.getPublicPreferredGamesVisible());
 
         if (profile != null) {
-            dto.bio = bioOk ? profile.getBio() : null;
-            dto.bannerImageUrl = bannerOk ? profile.getBannerImageUrl() : null;
+            dto.bio = profile.getBio();
+            dto.bannerImageUrl = profile.getBannerImageUrl();
             dto.preferredGames = gamesOk ? profile.getPreferredGames() : null;
         }
 
         String storedImg = profile != null ? profile.getProfileImageUrl() : null;
-        if (imgOk) {
-            dto.profileImageUrl = ProfileImageConstants.resolveProfileImageUrl(storedImg);
-        } else {
-            dto.profileImageUrl = ProfileImageConstants.DEFAULT_PROFILE_IMAGE_URL;
-        }
+        dto.profileImageUrl = ProfileImageConstants.resolveProfileImageUrl(storedImg);
         return dto;
     }
 

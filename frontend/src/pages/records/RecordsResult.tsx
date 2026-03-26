@@ -6,6 +6,36 @@ import { GAMES, parseProfileSlug, fetchRecordsPlayerSearch, type SearchFieldOver
 import { ResultPanel } from './RecordsResultPanel';
 import '../Records.css';
 
+const VALID_RECORDS_COUNTS = [5, 10, 15, 20] as const;
+
+function recordsIdentityWithoutCount(fullKey: string): string {
+  const qIdx = fullKey.indexOf('?');
+  if (qIdx < 0) return fullKey;
+  const base = fullKey.slice(0, qIdx);
+  const params = new URLSearchParams(fullKey.slice(qIdx + 1));
+  params.delete('count');
+  const rest = params.toString();
+  return rest ? `${base}?${rest}` : base;
+}
+
+function recordsCountFromUrlKey(fullKey: string): number {
+  const qIdx = fullKey.indexOf('?');
+  if (qIdx < 0) return 5;
+  const c = new URLSearchParams(fullKey.slice(qIdx + 1)).get('count');
+  const n = c != null ? Number(c) : NaN;
+  return VALID_RECORDS_COUNTS.includes(n as (typeof VALID_RECORDS_COUNTS)[number]) ? n : 5;
+}
+
+function isLoadMoreRecordsUrl(prevKey: string | null, newKey: string): boolean {
+  if (!prevKey) return false;
+  return (
+    recordsIdentityWithoutCount(prevKey) === recordsIdentityWithoutCount(newKey) &&
+    recordsCountFromUrlKey(newKey) > recordsCountFromUrlKey(prevKey)
+  );
+}
+
+type PerformSearchOptions = { keepPreviousResult?: boolean };
+
 function RecordsResultContent({
   gameId,
   playerSlug,
@@ -16,7 +46,7 @@ function RecordsResultContent({
   urlHash: string;
 }) {
   const autoSearchedUrlKey = useRef<string | null>(null);
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const [nickname, setNickname] = useState('');
   const [tagLine, setTagLine] = useState('');
@@ -38,7 +68,7 @@ function RecordsResultContent({
       setPlatform(platQ);
     }
     const c = searchParams.get('count');
-    if (c && [5, 10, 15, 20].includes(Number(c))) {
+    if (c && VALID_RECORDS_COUNTS.includes(Number(c) as (typeof VALID_RECORDS_COUNTS)[number])) {
       setCount(Number(c));
     }
   }, [gameId, playerSlug, urlHash, searchParams]);
@@ -59,7 +89,7 @@ function RecordsResultContent({
   }, [game, searchParams]);
 
   const performSearch = useCallback(
-    async (forceRefresh: boolean, overrides?: SearchFieldOverrides) => {
+    async (forceRefresh: boolean, overrides?: SearchFieldOverrides, options?: PerformSearchOptions) => {
       const gid = overrides?.gameId ?? gameId;
       const nick = (overrides?.nickname ?? nickname).trim();
       if (!nick) return;
@@ -69,7 +99,7 @@ function RecordsResultContent({
       const g = GAMES.find((item) => item.id === gid) || GAMES[0];
       setLoading(true);
       setError(null);
-      if (!forceRefresh) setResult(null);
+      if (!forceRefresh && !options?.keepPreviousResult) setResult(null);
       try {
         const response = await fetchRecordsPlayerSearch(
           gid,
@@ -92,27 +122,56 @@ function RecordsResultContent({
     [gameId, nickname, tagLine, platform, count],
   );
 
+  const handleLoadMore = useCallback(() => {
+    const g = GAMES.find((item) => item.id === gameId)!;
+    if (!g.fields.includes('count')) return;
+    const next = Math.min(count + 5, 20);
+    if (next <= count) return;
+    setSearchParams(
+      (prev) => {
+        const n = new URLSearchParams(prev);
+        n.set('count', String(next));
+        return n;
+      },
+      { replace: true },
+    );
+  }, [count, gameId, setSearchParams]);
+
   useEffect(() => {
     const key = `${gameId}/${playerSlug}${urlHash}?${searchParams.toString()}`;
     if (autoSearchedUrlKey.current === key) return;
     const parsed = parseProfileSlug(gameId, playerSlug, urlHash);
     if (!parsed.nickname.trim()) return;
+    const prevKey = autoSearchedUrlKey.current;
+    const keepPrev = isLoadMoreRecordsUrl(prevKey, key);
     autoSearchedUrlKey.current = key;
     const platQ = searchParams.get('platform') ?? '';
     const cntQ = searchParams.get('count');
-    const cnt = cntQ && [5, 10, 15, 20].includes(Number(cntQ)) ? Number(cntQ) : 5;
+    const cnt =
+      cntQ && VALID_RECORDS_COUNTS.includes(Number(cntQ) as (typeof VALID_RECORDS_COUNTS)[number])
+        ? Number(cntQ)
+        : 5;
     const g = GAMES.find((item) => item.id === gameId)!;
-    void performSearch(false, {
-      gameId,
-      nickname: parsed.nickname,
-      tagLine: parsed.tagLine,
-      platform:
-        (g.fields.includes('pubg_platform') || g.fields.includes('apex_platform')) && platQ
-          ? platQ
-          : undefined,
-      count: g.fields.includes('count') ? cnt : undefined,
-    });
+    void performSearch(
+      false,
+      {
+        gameId,
+        nickname: parsed.nickname,
+        tagLine: parsed.tagLine,
+        platform:
+          (g.fields.includes('pubg_platform') || g.fields.includes('apex_platform')) && platQ
+            ? platQ
+            : undefined,
+        count: g.fields.includes('count') ? cnt : undefined,
+      },
+      { keepPreviousResult: keepPrev },
+    );
   }, [gameId, playerSlug, urlHash, searchParams, performSearch]);
+
+  const supportsPaginatedMatches = game.fields.includes('count');
+  const matchCount = result?.matches?.length ?? 0;
+  const showLoadMore =
+    Boolean(result?.success) && supportsPaginatedMatches && count < 20 && matchCount > 0 && matchCount === count;
 
   return (
     <Layout>
@@ -144,6 +203,8 @@ function RecordsResultContent({
             title={`${game.label} Result`}
             loading={loading}
             onRefresh={() => void performSearch(true)}
+            showLoadMore={showLoadMore}
+            onLoadMore={handleLoadMore}
             detailContext={{
               puuid: result.playerInfo?.puuid,
               platform: game.fields.includes('pubg_platform') ? platform : undefined,

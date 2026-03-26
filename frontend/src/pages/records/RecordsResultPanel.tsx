@@ -630,6 +630,8 @@ export function ResultPanel({
   title,
   loading,
   onRefresh,
+  showLoadMore,
+  onLoadMore,
   detailContext,
 }: {
   result: PlayerSearchResponse;
@@ -638,6 +640,8 @@ export function ResultPanel({
   title: string;
   loading: boolean;
   onRefresh: () => void;
+  showLoadMore?: boolean;
+  onLoadMore?: () => void;
   detailContext: { puuid?: string; platform?: string };
 }) {
   const info = result.playerInfo ?? {};
@@ -703,16 +707,30 @@ export function ResultPanel({
             <span>{result.matches?.length || 0} games</span>
           </div>
           {result.matches?.length ? (
-            <div className="records-match-list">
-              {result.matches.map((match, index) => (
-                <MatchRow
-                  key={match.matchId || `${index}-${match.gameMode || 'match'}`}
-                  gameId={gameId}
-                  match={match}
-                  detailContext={detailContext}
-                />
-              ))}
-            </div>
+            <>
+              <div className="records-match-list">
+                {result.matches.map((match, index) => (
+                  <MatchRow
+                    key={match.matchId || `${index}-${match.gameMode || 'match'}`}
+                    gameId={gameId}
+                    match={match}
+                    detailContext={detailContext}
+                  />
+                ))}
+              </div>
+              {showLoadMore && onLoadMore ? (
+                <div className="records-load-more-wrap">
+                  <button
+                    type="button"
+                    className="records-load-more-btn"
+                    disabled={loading}
+                    onClick={onLoadMore}
+                  >
+                    {loading ? '불러오는 중…' : '더보기'}
+                  </button>
+                </div>
+              ) : null}
+            </>
           ) : (
             <p className="records-empty-matches">표시할 최근 전적이 없습니다.</p>
           )}

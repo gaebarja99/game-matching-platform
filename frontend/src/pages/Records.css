@@ -227,6 +227,32 @@
 .theme-dark .records-section-head h3 { color: #f0f0f2; }
 .records-section-head span, .records-match-mode, .records-empty-matches { color: #64748b; font-size: 13px; }
 .theme-dark .records-section-head span, .theme-dark .records-match-mode, .theme-dark .records-empty-matches { color: #a0a0a6; }
+.records-load-more-wrap { display: flex; justify-content: center; padding-top: 8px; }
+.records-load-more-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 22px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  cursor: pointer;
+  font-family: inherit;
+}
+.theme-light .records-load-more-btn {
+  border: 1px solid #00c968;
+  background: transparent;
+  color: #047857;
+}
+.theme-dark .records-load-more-btn {
+  border: 1px solid #00e676;
+  background: transparent;
+  color: #69f0ae;
+}
+.theme-light .records-load-more-btn:hover:not(:disabled) { background: rgba(0, 230, 118, 0.1); }
+.theme-dark .records-load-more-btn:hover:not(:disabled) { background: rgba(0, 230, 118, 0.12); }
+.records-load-more-btn:disabled { opacity: 0.62; cursor: wait; }
 .records-match-row {
   display: grid;
   grid-template-columns: 120px minmax(0, 1fr) minmax(0, auto) minmax(132px, auto);

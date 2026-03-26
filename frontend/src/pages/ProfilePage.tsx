@@ -14,6 +14,8 @@ import {
 } from '../constants/games';
 import { DEFAULT_PROFILE_IMAGE_URL, effectiveCustomProfileUrl } from '../constants/profile';
 import { effectiveVisibility } from '../lib/profileVisibility';
+import { apiUrl, resolveProfileImageUrl } from '../api/client';
+import { RiotLinkedGameStats } from '../components/RiotLinkedGameStats';
 import './ProfilePage.css';
 
 const LS_USER_ID = 'communityUserId';
@@ -22,6 +24,20 @@ const LS_USERNAME = 'communityUsername';
 /** 소개 textarea: 기본 노출 높이 ~7줄, 최대 ~15줄까지 자동 확장 후 스크롤 */
 const BIO_TEXTAREA_MIN_PX = 168;
 const BIO_TEXTAREA_MAX_PX = 360;
+
+const PUBLIC_LINK_PROVIDER_LABELS: Record<string, string> = {
+  discord: 'Discord',
+  steam: 'Steam',
+  blizzard: 'Blizzard',
+  riot: 'Riot',
+};
+
+function publicLinkAvatarSrc(url: string | null | undefined): string | null {
+  if (!url?.trim()) return null;
+  const t = url.trim();
+  if (t.startsWith('http://') || t.startsWith('https://')) return t;
+  return apiUrl(t.replace(/^\//, ''));
+}
 
 function initialSearchQuery(sp: URLSearchParams): string {
   const name = sp.get('username')?.trim();
@@ -70,9 +86,6 @@ export default function ProfilePage() {
   const [selectedGames, setSelectedGames] = useState<string[]>([]);
   const [gamesModalOpen, setGamesModalOpen] = useState(false);
   const [modalGameDraft, setModalGameDraft] = useState<string[]>([]);
-  const [vPublicBio, setVPublicBio] = useState(true);
-  const [vPublicBanner, setVPublicBanner] = useState(true);
-  const [vPublicProfileImg, setVPublicProfileImg] = useState(true);
   const [vPublicPreferredGames, setVPublicPreferredGames] = useState(true);
 
   const bioTextareaRef = useRef<HTMLTextAreaElement>(null);
@@ -84,9 +97,6 @@ export default function ProfilePage() {
     setFBannerUrl(p.bannerImageUrl ?? '');
     setSelectedGames(parsePreferredGamesToSelected(p.preferredGames));
     const ev = effectiveVisibility(p.visibility);
-    setVPublicBio(ev.bio);
-    setVPublicBanner(ev.bannerImage);
-    setVPublicProfileImg(ev.profileImage);
     setVPublicPreferredGames(ev.preferredGames);
   }, []);
 
@@ -260,9 +270,6 @@ export default function ProfilePage() {
         profileImageUrl: fProfileUrl.trim() === '' ? null : fProfileUrl.trim(),
         bannerImageUrl: fBannerUrl.trim() === '' ? null : fBannerUrl.trim(),
         preferredGames: serializePreferredGames(selectedGames),
-        bioVisible: vPublicBio,
-        bannerImageVisible: vPublicBanner,
-        profileImageVisible: vPublicProfileImg,
         preferredGamesVisible: vPublicPreferredGames,
       });
       setProfile(next);
@@ -345,11 +352,8 @@ export default function ProfilePage() {
           <>
             {(() => {
               const vis = effectiveVisibility(profile.visibility);
-              const showBanner = vis.bannerImage && Boolean(profile.bannerImageUrl?.trim());
-              const showProfileImg = vis.profileImage;
-              const avatarSrc = showProfileImg
-                ? profile.profileImageUrl ?? DEFAULT_PROFILE_IMAGE_URL
-                : DEFAULT_PROFILE_IMAGE_URL;
+              const showBanner = Boolean(profile.bannerImageUrl?.trim());
+              const avatarSrc = profile.profileImageUrl ?? DEFAULT_PROFILE_IMAGE_URL;
               return (
                 <>
             <div
@@ -373,10 +377,8 @@ export default function ProfilePage() {
 
               <div className="profile-section">
                 <h3>소개</h3>
-                <div className={`profile-bio${profile.bio && vis.bio ? '' : ' empty'}`}>
-                  {!vis.bio
-                    ? '비공개로 설정된 소개입니다.'
-                    : profile.bio ?? '소개가 없습니다.'}
+                <div className={`profile-bio${profile.bio?.trim() ? '' : ' empty'}`}>
+                  {profile.bio?.trim() ? profile.bio : '소개가 없습니다.'}
                 </div>
               </div>
 
@@ -386,6 +388,46 @@ export default function ProfilePage() {
                   {!vis.preferredGames ? '비공개로 설정되었습니다.' : profile.preferredGames ?? '—'}
                 </div>
               </div>
+
+              {profile.connections && profile.connections.length > 0 ? (
+                <div className="profile-section">
+                  <h3>연동 계정</h3>
+                  <ul className="profile-public-connection-list">
+                    {profile.connections.map((c) => {
+                      const key = (c.provider ?? '').toLowerCase();
+                      const label = PUBLIC_LINK_PROVIDER_LABELS[key] ?? c.provider;
+                      const av = publicLinkAvatarSrc(c.avatarUrl ?? null);
+                      const resolvedAv = av ? resolveProfileImageUrl(av) ?? av : null;
+                      const showSub = Boolean(c.secondaryValue) && key !== 'riot';
+                      return (
+                        <li key={key} className="profile-public-connection-row">
+                          <div className="profile-public-connection-main">
+                            {resolvedAv ? (
+                              <img className="profile-public-connection-avatar" src={resolvedAv} alt="" />
+                            ) : (
+                              <span className="profile-public-connection-avatar-fallback" aria-hidden />
+                            )}
+                            <div className="profile-public-connection-text">
+                              <span className="profile-public-connection-provider">{label}</span>
+                              <span className="profile-public-connection-display">{c.displayName?.trim() || '—'}</span>
+                              {showSub ? (
+                                <span className="profile-public-connection-secondary">{c.secondaryValue}</span>
+                              ) : null}
+                              {key === 'riot' ? (
+                                <RiotLinkedGameStats
+                                  riotDisplayName={c.displayName}
+                                  lolRankSummary={c.lolRankSummary}
+                                  valorantRankSummary={c.valorantRankSummary}
+                                />
+                              ) : null}
+                            </div>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </div>
+              ) : null}
 
               <div className="profile-toolbar">
                 <button type="button" className="profile-btn profile-btn-primary" onClick={openEdit}>
@@ -486,39 +528,15 @@ export default function ProfilePage() {
                 </button>
               </div>
               <div className="profile-field">
-                <span className="profile-field-heading">공개 프로필 표시</span>
-                <p className="hint">체크 해제 시 해당 항목은 다른 사용자에게 보이지 않습니다.</p>
-                <label className="profile-visibility-check">
-                  <input
-                    type="checkbox"
-                    checked={vPublicBio}
-                    onChange={(e) => setVPublicBio(e.target.checked)}
-                  />
-                  소개 공개
-                </label>
-                <label className="profile-visibility-check">
-                  <input
-                    type="checkbox"
-                    checked={vPublicBanner}
-                    onChange={(e) => setVPublicBanner(e.target.checked)}
-                  />
-                  배너 공개
-                </label>
-                <label className="profile-visibility-check">
-                  <input
-                    type="checkbox"
-                    checked={vPublicProfileImg}
-                    onChange={(e) => setVPublicProfileImg(e.target.checked)}
-                  />
-                  프로필 이미지 공개
-                </label>
+                <span className="profile-field-heading">선호 게임 공개</span>
+                <p className="hint">체크 해제 시 선호 게임만 다른 사용자에게 보이지 않습니다. 자기소개·배너·프로필 이미지는 항상 공개됩니다.</p>
                 <label className="profile-visibility-check">
                   <input
                     type="checkbox"
                     checked={vPublicPreferredGames}
                     onChange={(e) => setVPublicPreferredGames(e.target.checked)}
                   />
-                  선호 게임 공개
+                  선호 게임을 공개 프로필에 표시
                 </label>
               </div>
               <div className="profile-toolbar profile-edit-actions">

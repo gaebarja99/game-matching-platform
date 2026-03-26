@@ -1430,6 +1430,44 @@ a.msg-conversation-item { text-decoration: none; color: inherit; }
 
 /* 프로필 홈 — 공개 프로필 카드(배너·선호 게임·URL 편집) */
 .profile-page .phe-wrap { margin-top: 36px; max-width: 900px; }
+.profile-page .phe-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+.profile-page .phe-title-row .phe-title { margin: 0; flex: 0 1 auto; min-width: 0; }
+.profile-page .phe-visibility-settings-btn {
+  flex-shrink: 0;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  border: 1px solid;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+.theme-dark .phe-visibility-settings-btn {
+  background: rgba(255, 255, 255, 0.08);
+  color: #e4e4e7;
+  border-color: #3f3f46;
+}
+.theme-dark .phe-visibility-settings-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: #52525b;
+}
+.theme-light .phe-visibility-settings-btn {
+  background: #fff;
+  color: #1a1a1d;
+  border-color: #d4d4d8;
+}
+.theme-light .phe-visibility-settings-btn:hover {
+  background: #f4f4f5;
+  border-color: #a1a1aa;
+}
 .profile-page .phe-title { font-size: 1.05rem; font-weight: 700; margin: 0 0 8px; }
 .theme-dark .profile-page .phe-title { color: #fafafa; }
 .theme-light .profile-page .phe-title { color: #1a1a1d; }
@@ -1523,6 +1561,9 @@ a.msg-conversation-item { text-decoration: none; color: inherit; }
 .theme-dark .profile-page .profile-linked-row { border-color: #2c2c2e; background: #17171a; }
 .theme-light .profile-page .profile-linked-row { border-color: #e5e5e7; background: #fafafb; box-shadow: 0 1px 2px rgba(0,0,0,0.04); }
 .profile-page .profile-linked-row-main { display: flex; align-items: center; gap: 14px; }
+.profile-page .profile-linked-row--riot .profile-linked-row-main { align-items: flex-start; }
+.profile-page .profile-linked-row--riot .profile-linked-avatar,
+.profile-page .profile-linked-row--riot .profile-linked-avatar-fallback { margin-top: 2px; }
 .profile-page .profile-linked-avatar {
   width: 40px;
   height: 40px;
@@ -1560,6 +1601,17 @@ a.msg-conversation-item { text-decoration: none; color: inherit; }
 }
 .theme-dark .profile-page .profile-linked-secondary { color: #a1a1aa; }
 .theme-light .profile-page .profile-linked-secondary { color: #64748b; }
+.profile-page .profile-linked-rank {
+  font-size: 0.82rem;
+  line-height: 1.45;
+}
+.theme-dark .profile-page .profile-linked-rank { color: #94a3b8; }
+.theme-light .profile-page .profile-linked-rank { color: #475569; }
+.profile-page .profile-linked-visibility { font-size: 0.78rem; font-weight: 600; }
+.theme-dark .profile-page .profile-linked-visibility.is-off { color: #f87171; }
+.theme-light .profile-page .profile-linked-visibility.is-off { color: #dc2626; }
+.theme-dark .profile-page .profile-linked-visibility.is-on { color: #86efac; }
+.theme-light .profile-page .profile-linked-visibility.is-on { color: #059669; }
 
 .profile-page .pang-history-section { margin-top: 32px; }
 .profile-page .pang-history-section .section-title { font-size: 1.1rem; font-weight: 700; margin-bottom: 16px; }
@@ -1653,8 +1705,29 @@ a.msg-conversation-item { text-decoration: none; color: inherit; }
 .profile-page .account-link-badge.is-connected { background: rgba(0, 230, 118, 0.14); color: #00c968; }
 .profile-page .account-link-badge.is-disconnected { background: rgba(107, 114, 128, 0.14); color: #9ca3af; }
 .profile-page .account-link-meta { display: flex; flex-direction: column; gap: 6px; font-size: 0.9rem; }
+.profile-page .account-link-public-row { display: flex; align-items: flex-start; gap: 10px; margin-top: 8px; font-size: 0.86rem; line-height: 1.45; cursor: pointer; }
+.profile-page .account-link-public-row input { margin-top: 3px; flex-shrink: 0; }
+.profile-page .account-link-riot-children {
+  margin: 6px 0 0 2px;
+  padding: 4px 0 2px 14px;
+  border-left: 2px solid rgba(115, 115, 128, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.profile-page .account-link-riot-children.is-disabled {
+  opacity: 0.5;
+}
+.profile-page .account-link-public-row--riot-parent {
+  font-weight: 600;
+}
+.theme-dark .profile-page .account-link-public-row span { color: #b4b4bd; }
+.theme-light .profile-page .account-link-public-row span { color: #4b5563; }
 .theme-dark .profile-page .account-link-meta { color: #d2d2d7; }
 .theme-light .profile-page .account-link-meta { color: #1f2937; }
+.profile-page .account-link-rank-line { font-size: 0.85rem; line-height: 1.4; font-weight: 500; }
+.theme-dark .profile-page .account-link-rank-line { color: #a5b4fc; }
+.theme-light .profile-page .account-link-rank-line { color: #4338ca; }
 .profile-page .account-link-riot-form { display: grid; gap: 10px; }
 .profile-page .account-link-riot-form input { width: 100%; }
 .profile-page .account-link-actions { display: flex; justify-content: stretch; margin-top: auto; padding-top: 6px; }
@@ -1758,6 +1831,43 @@ a.msg-conversation-item { text-decoration: none; color: inherit; }
   margin: 0;
   flex-shrink: 0;
 }
+.profile-page .profile-visibility-modal-subtitle {
+  margin: 18px 0 0;
+  font-size: 0.88rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+.theme-dark .profile-page .profile-visibility-modal-subtitle { color: #e4e4e7; }
+.theme-light .profile-page .profile-visibility-modal-subtitle { color: #27272a; }
+.profile-page .profile-visibility-riot-block {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(115, 115, 128, 0.25);
+}
+.profile-page .profile-visibility-riot-children {
+  margin: 6px 0 0 2px;
+  padding: 4px 0 2px 14px;
+  border-left: 2px solid rgba(115, 115, 128, 0.45);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.profile-page .profile-visibility-riot-children.is-disabled {
+  opacity: 0.5;
+}
+.profile-page .profile-visibility-riot-children .profile-visibility-row {
+  margin-bottom: 6px;
+}
+.profile-page .profile-visibility-row--riot-parent {
+  font-weight: 600;
+}
+.profile-page .profile-visibility-riot-subheading {
+  margin: 0 0 10px;
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+.theme-dark .profile-page .profile-visibility-riot-subheading { color: #d4d4d8; }
+.theme-light .profile-page .profile-visibility-riot-subheading { color: #3f3f46; }
 .profile-page .profile-edit-actions { display: flex; gap: 10px; margin-top: 24px; }
 .profile-page .btn-save-profile { padding: 10px 20px; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; border: none; font-family: inherit; background: #00e676; color: #0d0d0f; }
 .profile-page .btn-cancel-profile { padding: 10px 20px; border-radius: 8px; font-size: 0.95rem; font-weight: 600; cursor: pointer; border: 1px solid; font-family: inherit; background: transparent; }
@@ -1774,6 +1884,92 @@ a.msg-conversation-item { text-decoration: none; color: inherit; }
 .theme-light .profile-page .pang-charge-quick-btn { border-color: #d0d0d2; color: #53535a; }
 .profile-page .pang-charge-total { margin: 0 0 12px 0; font-size: 1rem; font-weight: 600; color: #00e676; }
 .theme-light .profile-page .pang-charge-total { color: #00a858; }
+
+/* Riot 연동 — LoL / 발로란트 게임별 블록 (가로 배치, 좁으면 줄바꿈) */
+.riot-game-stats {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: stretch;
+  gap: 10px;
+  margin-top: 10px;
+  width: 100%;
+}
+.riot-game-stats__block {
+  flex: 1 1 200px;
+  min-width: min(100%, 180px);
+  border-radius: 10px;
+  padding: 10px 12px 11px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(0, 0, 0, 0.22);
+  box-sizing: border-box;
+}
+.riot-game-stats__block--lol { border-left: 3px solid #c89b3c; }
+.riot-game-stats__block--valorant { border-left: 3px solid #ff4655; }
+a.riot-game-stats__block--link {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.12s ease;
+}
+a.riot-game-stats__block--link:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.28);
+  transform: translateY(-1px);
+}
+.theme-light a.riot-game-stats__block--link:hover {
+  border-color: rgba(0, 0, 0, 0.14);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+a.riot-game-stats__block--link:focus-visible {
+  outline: 2px solid #00e676;
+  outline-offset: 2px;
+}
+.theme-light a.riot-game-stats__block--link:focus-visible {
+  outline-color: #059669;
+}
+.theme-light .riot-game-stats__block {
+  border-color: rgba(0, 0, 0, 0.1);
+  background: rgba(0, 0, 0, 0.03);
+}
+.riot-game-stats__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.riot-game-stats__title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #d4d4d8;
+}
+.theme-light .riot-game-stats__title { color: #3f3f46; }
+.riot-game-stats__badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+.riot-game-stats__badge.is-on { color: #86efac; }
+.theme-light .riot-game-stats__badge.is-on { color: #059669; }
+.riot-game-stats__badge.is-off { color: #f87171; }
+.theme-light .riot-game-stats__badge.is-off { color: #dc2626; }
+.riot-game-stats__detail {
+  margin: 0;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  word-break: break-word;
+  color: #cbd5e1;
+}
+.theme-light .riot-game-stats__detail { color: #475569; }
+.riot-game-stats__detail.is-empty {
+  font-style: italic;
+  opacity: 0.75;
+  color: #71717a;
+}
+.theme-light .riot-game-stats__detail.is-empty { color: #94a3b8; }
 
 /* ========== studio 페이지 (studio.html 8080 동일) ========== */
 .studio-page { --studio-bg: #0e0e10; --studio-bg-elevated: #18181b; --studio-bg-hover: #1f1f23; --studio-bg-card: #26262c; --studio-border: #2e2e32; --studio-border-strong: #45454a; --studio-border-hover: #606068; --studio-text: #f0f0f2; --studio-text-muted: #b8b8c0; --studio-text-dim: #8a8a8f; --studio-text-heading: #fff; --studio-accent: #a970ff; --studio-accent-hover: #bf94ff; --studio-accent-bg: rgba(169,112,255,0.15); --studio-highlight-from: #1a1a2e; --studio-highlight-to: #252538; }

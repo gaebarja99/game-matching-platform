@@ -49,6 +49,22 @@ public class UserProfile {
     @Column(name = "public_preferred_games_visible")
     private Boolean publicPreferredGamesVisible;
 
+    /** null이면 공개로 간주 — 외부 계정 연동을 공개 프로필에 표시할지 */
+    @Column(name = "public_discord_link_visible")
+    private Boolean publicDiscordLinkVisible;
+    @Column(name = "public_steam_link_visible")
+    private Boolean publicSteamLinkVisible;
+    @Column(name = "public_blizzard_link_visible")
+    private Boolean publicBlizzardLinkVisible;
+    @Column(name = "public_riot_link_visible")
+    private Boolean publicRiotLinkVisible;
+    /** Riot 연동의 LoL 랭크 요약 공개. null이면 공개로 간주 */
+    @Column(name = "public_riot_lol_rank_visible")
+    private Boolean publicRiotLolRankVisible;
+    /** Riot 연동의 발로란트 티어 요약 공개. null이면 공개로 간주 */
+    @Column(name = "public_riot_valorant_rank_visible")
+    private Boolean publicRiotValorantRankVisible;
+
     @Column(name = "profile_updated_at")
     private LocalDateTime profileUpdatedAt;
 

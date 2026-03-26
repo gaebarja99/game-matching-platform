@@ -3,17 +3,24 @@ package com.gamematcher.service.account;
 import com.gamematcher.dto.account.AccountConnectionStatusDto;
 import com.gamematcher.dto.account.AccountConnectionsResponseDto;
 import com.gamematcher.dto.account.OAuthStartResponseDto;
-import com.gamematcher.entity.User;
+import com.gamematcher.dto.profile.ProfilePublicResponseDto;
+import com.gamematcher.dto.riot.RiotLeagueEntryResponseDto;
+import com.gamematcher.dto.valorant.ValorantMmrApiResponse;
 import com.gamematcher.entity.account.BlizzardAccount;
 import com.gamematcher.entity.account.DiscordAccount;
 import com.gamematcher.entity.account.RiotAccount;
 import com.gamematcher.entity.account.SteamAccount;
+import com.gamematcher.entity.profile.UserProfile;
 import com.gamematcher.exception.GameApiException;
 import com.gamematcher.repository.account.BlizzardAccountRepository;
 import com.gamematcher.repository.account.DiscordAccountRepository;
 import com.gamematcher.repository.account.RiotAccountRepository;
 import com.gamematcher.repository.account.SteamAccountRepository;
+import com.gamematcher.repository.profile.UserProfileRepository;
+import com.gamematcher.service.riot.LolApiService;
+import com.gamematcher.service.valorant.ValorantApiService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -28,7 +35,10 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AccountConnectionService {
@@ -42,6 +52,9 @@ public class AccountConnectionService {
     private final BlizzardAccountService blizzardAccountService;
     private final OAuthLinkStateService oAuthLinkStateService;
     private final RestTemplate restTemplate;
+    private final LolApiService riotLolApiService;
+    private final ValorantApiService valorantApiService;
+    private final UserProfileRepository userProfileRepository;
 
     @Value("${app.frontend.base-url:http://localhost:5173}")
     private String frontendBaseUrl;
@@ -65,12 +78,76 @@ public class AccountConnectionService {
     private String steamApiKey;
 
     public AccountConnectionsResponseDto getConnections(Long userId) {
+        UserProfile profile = userProfileRepository.findById(userId).orElse(null);
+        return new AccountConnectionsResponseDto(userId, buildAllWithVisibility(userId, profile));
+    }
+
+    /**
+     * 프로필 응답에 연동 목록을 붙인다. 타인 조회 시 비공개·보조 식별자·안내 문구는 제외한다.
+     */
+    @Transactional(readOnly = true)
+    public void fillConnections(ProfilePublicResponseDto dto, Long userId, boolean ownerView) {
+        UserProfile profile = userProfileRepository.findById(userId).orElse(null);
+        List<AccountConnectionStatusDto> all = buildAllWithVisibility(userId, profile);
+        if (ownerView) {
+            dto.setConnections(all.stream()
+                    .filter(AccountConnectionStatusDto::isConnected)
+                    .collect(Collectors.toList()));
+        } else {
+            dto.setConnections(all.stream()
+                    .filter(c -> c.isConnected() && c.isPublicProfileVisible())
+                    .map(this::sanitizeConnectionForPublic)
+                    .collect(Collectors.toList()));
+        }
+    }
+
+    private List<AccountConnectionStatusDto> buildAllWithVisibility(Long userId, UserProfile profile) {
         List<AccountConnectionStatusDto> connections = new ArrayList<>();
-        connections.add(buildDiscordStatus(userId));
-        connections.add(buildSteamStatus(userId));
-        connections.add(buildBlizzardStatus(userId));
-        connections.add(buildRiotStatus(userId));
-        return new AccountConnectionsResponseDto(userId, connections);
+        connections.add(withLinkVisibility(buildDiscordStatus(userId), profile, UserProfile::getPublicDiscordLinkVisible));
+        connections.add(withLinkVisibility(buildSteamStatus(userId), profile, UserProfile::getPublicSteamLinkVisible));
+        connections.add(withLinkVisibility(buildBlizzardStatus(userId), profile, UserProfile::getPublicBlizzardLinkVisible));
+        connections.add(withRiotLinkVisibility(buildRiotStatus(userId), profile));
+        return connections;
+    }
+
+    private static AccountConnectionStatusDto withRiotLinkVisibility(AccountConnectionStatusDto base, UserProfile profile) {
+        boolean linkVis = profile == null || profile.getPublicRiotLinkVisible() == null || profile.getPublicRiotLinkVisible();
+        boolean lolVis = profile == null || profile.getPublicRiotLolRankVisible() == null || profile.getPublicRiotLolRankVisible();
+        boolean valVis =
+                profile == null || profile.getPublicRiotValorantRankVisible() == null || profile.getPublicRiotValorantRankVisible();
+        return base.toBuilder()
+                .publicProfileVisible(linkVis)
+                .publicLolRankVisible(lolVis)
+                .publicValorantRankVisible(valVis)
+                .build();
+    }
+
+    private static AccountConnectionStatusDto withLinkVisibility(
+            AccountConnectionStatusDto base,
+            UserProfile profile,
+            Function<UserProfile, Boolean> visibilityFlag) {
+        boolean vis = true;
+        if (profile != null) {
+            Boolean v = visibilityFlag.apply(profile);
+            vis = v == null || v;
+        }
+        return base.toBuilder().publicProfileVisible(vis).build();
+    }
+
+    private AccountConnectionStatusDto sanitizeConnectionForPublic(AccountConnectionStatusDto c) {
+        AccountConnectionStatusDto.AccountConnectionStatusDtoBuilder b = c.toBuilder()
+                .secondaryValue(null)
+                .note(null)
+                .connectUrl(null);
+        if ("riot".equalsIgnoreCase(c.getProvider())) {
+            if (!c.isPublicLolRankVisible()) {
+                b.lolRankSummary(null);
+            }
+            if (!c.isPublicValorantRankVisible()) {
+                b.valorantRankSummary(null);
+            }
+        }
+        return b.build();
     }
 
     @Transactional
@@ -320,14 +397,90 @@ public class AccountConnectionService {
 
     private AccountConnectionStatusDto buildRiotStatus(Long userId) {
         RiotAccount account = riotAccountRepository.findFirstByUserId(userId).orElse(null);
+        String lolRankSummary = null;
+        String valorantRankSummary = null;
+        if (account != null) {
+            try {
+                List<RiotLeagueEntryResponseDto> entries = riotLolApiService.findLeagueEntriesByPuuidOrEmpty(account.getPuuid());
+                lolRankSummary = formatLolRankSummary(entries);
+            } catch (Exception e) {
+                log.debug("LoL 랭크 요약 생략: {}", e.getMessage());
+            }
+            try {
+                ValorantMmrApiResponse mmr = valorantApiService.fetchMmrForRiotLinkedProfile(
+                        account.getGameName(), account.getTagLine());
+                valorantRankSummary = formatValorantRankSummary(mmr);
+            } catch (Exception e) {
+                log.debug("발로란트 티어 요약 생략: {}", e.getMessage());
+            }
+        }
         return AccountConnectionStatusDto.builder()
                 .provider("riot")
                 .connected(account != null)
                 .displayName(account == null ? null : account.getGameName() + "#" + account.getTagLine())
-                .secondaryValue(account == null ? null : account.getPuuid())
+                .secondaryValue(null)
                 .ownershipVerified(false)
                 .note("현재 Riot은 공개 API 조회 기반 연동만 가능하며, OAuth 기반 소유권 인증은 미구현 상태입니다.")
+                .lolRankSummary(lolRankSummary)
+                .valorantRankSummary(valorantRankSummary)
                 .build();
+    }
+
+    private static String formatLolRankSummary(List<RiotLeagueEntryResponseDto> entries) {
+        if (entries == null || entries.isEmpty()) {
+            return "LoL: 솔로/자유 랭크 없음 (미배치)";
+        }
+        StringBuilder sb = new StringBuilder();
+        for (RiotLeagueEntryResponseDto e : entries) {
+            if ("RANKED_SOLO_5x5".equals(e.getQueueType())) {
+                if (sb.length() > 0) {
+                    sb.append(" · ");
+                }
+                sb.append("LoL 솔로: ").append(formatLolLeagueEntry(e));
+            } else if ("RANKED_FLEX_SR".equals(e.getQueueType())) {
+                if (sb.length() > 0) {
+                    sb.append(" · ");
+                }
+                sb.append("LoL 자유: ").append(formatLolLeagueEntry(e));
+            }
+        }
+        if (sb.length() == 0) {
+            return "LoL: 솔로/자유 랭크 없음 (미배치)";
+        }
+        return sb.toString();
+    }
+
+    private static String formatLolLeagueEntry(RiotLeagueEntryResponseDto e) {
+        String tier = e.getTier() != null ? e.getTier() : "UNRANKED";
+        String div = e.getRank() != null && !e.getRank().isBlank() ? " " + e.getRank() : "";
+        return tier + div + " (" + e.getLeaguePoints() + " LP)";
+    }
+
+    private static String formatValorantRankSummary(ValorantMmrApiResponse mmr) {
+        if (mmr == null || mmr.getData() == null) {
+            return null;
+        }
+        ValorantMmrApiResponse.MmrData data = mmr.getData();
+        ValorantMmrApiResponse.CurrentData cd = data.getCurrentData();
+        if (cd != null) {
+            String patched = cd.getCurrentTierPatched();
+            Integer need = cd.getGamesNeededForRating();
+            if (patched == null || patched.isBlank()) {
+                if (need != null && need > 0) {
+                    return "발로란트 경쟁: 배치전 (" + need + "경기 남음)";
+                }
+            } else {
+                if (need != null && need > 0) {
+                    return "발로란트 경쟁: " + patched + " (등록 " + need + "경기 남음)";
+                }
+                return "발로란트 경쟁: " + patched;
+            }
+        }
+        ValorantMmrApiResponse.HighestRank hr = data.getHighestRank();
+        if (hr != null && hr.getPatchedTier() != null && !hr.getPatchedTier().isBlank()) {
+            return "발로란트 경쟁: 시즌 최고 " + hr.getPatchedTier();
+        }
+        return "발로란트 경쟁: 경쟁 전적 없음·언랭";
     }
 
     private void requireConfigured(String value, String label) {

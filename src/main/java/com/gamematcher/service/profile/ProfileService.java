@@ -9,6 +9,7 @@ import com.gamematcher.entity.profile.UserProfile;
 import com.gamematcher.exception.GameApiException;
 import com.gamematcher.repository.common.CommonUserRepository;
 import com.gamematcher.repository.profile.UserProfileRepository;
+import com.gamematcher.service.account.AccountConnectionService;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,10 +30,15 @@ public class ProfileService {
 
     private final CommonUserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
+    private final AccountConnectionService accountConnectionService;
 
-    public ProfileService(CommonUserRepository userRepository, UserProfileRepository userProfileRepository) {
+    public ProfileService(
+            CommonUserRepository userRepository,
+            UserProfileRepository userProfileRepository,
+            AccountConnectionService accountConnectionService) {
         this.userRepository = userRepository;
         this.userProfileRepository = userProfileRepository;
+        this.accountConnectionService = accountConnectionService;
     }
 
     @Transactional(readOnly = true)
@@ -46,10 +52,11 @@ public class ProfileService {
                 .orElseThrow(() -> new GameApiException(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."));
         UserProfile profile = userProfileRepository.findById(userId).orElse(null);
         boolean owner = viewerUserId != null && viewerUserId.equals(userId);
-        if (owner) {
-            return ProfilePublicResponseDto.buildOwner(user, profile);
-        }
-        return ProfilePublicResponseDto.buildPublic(user, profile);
+        ProfilePublicResponseDto dto = owner
+                ? ProfilePublicResponseDto.buildOwner(user, profile)
+                : ProfilePublicResponseDto.buildPublic(user, profile);
+        accountConnectionService.fillConnections(dto, userId, owner);
+        return dto;
     }
 
     @Transactional(readOnly = true)
@@ -93,10 +100,13 @@ public class ProfileService {
                 || body.has("bannerImageUrl") || body.has("preferredGames");
         boolean mentionsVisibility = body.has("bioVisible") || body.has("bannerImageVisible")
                 || body.has("profileImageVisible") || body.has("preferredGamesVisible");
+        boolean mentionsLinkVisibility = body.has("discordLinkVisible") || body.has("steamLinkVisible")
+                || body.has("blizzardLinkVisible") || body.has("riotLinkVisible")
+                || body.has("riotLolRankVisible") || body.has("riotValorantRankVisible");
 
         UserProfile profile = userProfileRepository.findById(userId).orElse(null);
-        if (!patchUsername && !mentionsProfileField && !mentionsVisibility) {
-            return ProfilePublicResponseDto.buildOwner(user, profile);
+        if (!patchUsername && !mentionsProfileField && !mentionsVisibility && !mentionsLinkVisibility) {
+            return buildOwnerWithConnections(user, profile);
         }
 
         if (patchUsername) {
@@ -104,7 +114,7 @@ public class ProfileService {
             userRepository.save(user);
         }
 
-        if (mentionsProfileField || mentionsVisibility) {
+        if (mentionsProfileField || mentionsVisibility || mentionsLinkVisibility) {
             if (profile == null) {
                 profile = createProfile(user);
             }
@@ -115,16 +125,30 @@ public class ProfileService {
                 applyStringField(body, "preferredGames", profile::setPreferredGames, PREFERRED_GAMES_MAX_LEN);
             }
             if (mentionsVisibility) {
-                applyVisibilityBoolean(body, "bioVisible", profile::setPublicBioVisible);
-                applyVisibilityBoolean(body, "bannerImageVisible", profile::setPublicBannerVisible);
-                applyVisibilityBoolean(body, "profileImageVisible", profile::setPublicProfileImageVisible);
+                profile.setPublicBioVisible(true);
+                profile.setPublicBannerVisible(true);
+                profile.setPublicProfileImageVisible(true);
                 applyVisibilityBoolean(body, "preferredGamesVisible", profile::setPublicPreferredGamesVisible);
+            }
+            if (mentionsLinkVisibility) {
+                applyVisibilityBoolean(body, "discordLinkVisible", profile::setPublicDiscordLinkVisible);
+                applyVisibilityBoolean(body, "steamLinkVisible", profile::setPublicSteamLinkVisible);
+                applyVisibilityBoolean(body, "blizzardLinkVisible", profile::setPublicBlizzardLinkVisible);
+                applyVisibilityBoolean(body, "riotLinkVisible", profile::setPublicRiotLinkVisible);
+                applyVisibilityBoolean(body, "riotLolRankVisible", profile::setPublicRiotLolRankVisible);
+                applyVisibilityBoolean(body, "riotValorantRankVisible", profile::setPublicRiotValorantRankVisible);
             }
             userProfileRepository.save(profile);
         }
 
         profile = userProfileRepository.findById(userId).orElse(null);
-        return ProfilePublicResponseDto.buildOwner(user, profile);
+        return buildOwnerWithConnections(user, profile);
+    }
+
+    private ProfilePublicResponseDto buildOwnerWithConnections(User user, UserProfile profile) {
+        ProfilePublicResponseDto dto = ProfilePublicResponseDto.buildOwner(user, profile);
+        accountConnectionService.fillConnections(dto, user.getId(), true);
+        return dto;
     }
 
     /** {@code username} 키가 있을 때만 반영. null·빈 문자열은 불가(DB NOT NULL). */

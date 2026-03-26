@@ -14,8 +14,6 @@ export default function ProfileMyInfo() {
   const [newPw, setNewPw] = useState('');
   const [newPw2, setNewPw2] = useState('');
   const [pwMsg, setPwMsg] = useState<{ text: string; ok: boolean | null }>({ text: '', ok: null });
-  const [newUsername, setNewUsername] = useState('');
-  const [nameMsg, setNameMsg] = useState<{ text: string; ok: boolean | null }>({ text: '', ok: null });
   const [newEmail, setNewEmail] = useState('');
   const [emailMsg, setEmailMsg] = useState<{ text: string; ok: boolean | null }>({ text: '', ok: null });
   const [newPhone, setNewPhone] = useState('');
@@ -24,7 +22,6 @@ export default function ProfileMyInfo() {
   const [verifyModalOpen, setVerifyModalOpen] = useState(false);
   const [verifyCode, setVerifyCode] = useState('');
   const [verifyMsg, setVerifyMsg] = useState('');
-  const [pendingUsername, setPendingUsername] = useState<string | null>(null);
   const [pendingPhone, setPendingPhone] = useState<string | null>(null);
   const [sendingCode, setSendingCode] = useState(false);
   const [verifyingCode, setVerifyingCode] = useState(false);
@@ -71,22 +68,6 @@ export default function ProfileMyInfo() {
       .catch(() => setPwMsg({ text: '요청에 실패했습니다.', ok: false }));
   };
 
-  const submitUsernameToApi = (name: string) => {
-    const fd = new FormData();
-    fd.append('username', name);
-    return fetch(apiUrl('api/profile'), { method: 'PUT', credentials: 'include', body: fd })
-      .then((r) => {
-        if (r.ok) return r.json();
-        return r.json().then((d: { message?: string }) => Promise.reject(new Error(d.message)));
-      })
-      .then(() => {
-        refreshUser();
-        setNameMsg({ text: '이름이 변경되었습니다.', ok: true });
-        setNewUsername('');
-      })
-      .catch((err) => setNameMsg({ text: err?.message || '변경에 실패했습니다.', ok: false }));
-  };
-
   const submitPhoneToApi = (phone: string) => {
     const fd = new FormData();
     fd.append('phone', phone);
@@ -107,7 +88,6 @@ export default function ProfileMyInfo() {
     setVerifyModalOpen(false);
     setVerifyCode('');
     setVerifyMsg('');
-    setPendingUsername(null);
     setPendingPhone(null);
     setPendingWithdraw(null);
     confirmationResultRef.current = null;
@@ -178,10 +158,6 @@ export default function ProfileMyInfo() {
         confirmationResultRef.current = null;
         clearRecaptchaVerifier(recaptchaContainerId, recaptchaVerifierRef.current);
         recaptchaVerifierRef.current = null;
-        if (pendingUsername) {
-          await submitUsernameToApi(pendingUsername);
-          setPendingUsername(null);
-        }
         if (pendingPhone) {
           await submitPhoneToApi(pendingPhone);
           setPendingPhone(null);
@@ -210,21 +186,6 @@ export default function ProfileMyInfo() {
       return;
     }
     setVerifyMsg('인증번호 요청을 먼저 진행해 주세요.');
-  };
-
-  const handleUsername = () => {
-    setNameMsg({ text: '', ok: null });
-    const name = newUsername.trim();
-    if (!name) {
-      setNameMsg({ text: '이름을 입력해 주세요.', ok: false });
-      return;
-    }
-    if (!phoneVerified) {
-      setPendingUsername(name);
-      setVerifyModalOpen(true);
-      return;
-    }
-    submitUsernameToApi(name);
   };
 
   const handlePhoneChange = () => {
@@ -281,7 +242,9 @@ export default function ProfileMyInfo() {
   return (
     <>
       <h1 className="profile-page-title">내 정보</h1>
-      <p className="profile-bio" style={{ marginBottom: 24 }}>비밀번호, 이름, 전화번호, 이메일을 변경할 수 있습니다.</p>
+      <p className="profile-bio" style={{ marginBottom: 24 }}>
+        비밀번호, 전화번호, 이메일을 변경할 수 있습니다. 표시 이름(닉네임)은 프로필 홈의 「프로필 편집」에서 변경할 수 있습니다.
+      </p>
 
       <section className="myinfo-section">
         <h3>비밀번호 변경</h3>
@@ -301,25 +264,6 @@ export default function ProfileMyInfo() {
           <button type="button" className="btn-myinfo-save" onClick={handlePassword}>비밀번호 변경</button>
         </div>
         <p className={`myinfo-msg ${pwMsg.ok === true ? 'ok' : pwMsg.ok === false ? 'err' : ''}`} aria-live="polite">{pwMsg.text}</p>
-      </section>
-
-      <section className="myinfo-section">
-        <h3>이름 변경</h3>
-        {!phoneVerified && (
-          <p className="myinfo-verify-hint">이름 변경은 휴대전화 인증이 필요합니다. 새 이름을 입력한 뒤 "이름 변경" 버튼을 누르면 인증 화면이 열립니다.</p>
-        )}
-        <div className="myinfo-row">
-          <label>현재 이름</label>
-          <span className="current-value">{user?.username ?? '—'}</span>
-        </div>
-        <div className="myinfo-row">
-          <label htmlFor="myinfo-new-username">새 이름</label>
-          <input type="text" id="myinfo-new-username" placeholder="변경할 이름" value={newUsername} onChange={(e) => setNewUsername(e.target.value)} />
-        </div>
-        <div className="myinfo-actions">
-          <button type="button" className="btn-myinfo-save" onClick={handleUsername}>이름 변경</button>
-        </div>
-        <p className={`myinfo-msg ${nameMsg.ok === true ? 'ok' : nameMsg.ok === false ? 'err' : ''}`} aria-live="polite">{nameMsg.text}</p>
       </section>
 
       <section className="myinfo-section">
@@ -391,9 +335,7 @@ export default function ProfileMyInfo() {
             <p className="pang-charge-desc" style={{ marginBottom: 16 }}>
               {pendingWithdraw
                 ? '계정 탈퇴를 위해 등록된 전화번호로 인증 번호가 전송됩니다. 아래 "인증번호 요청"을 눌러 주세요.'
-                : pendingPhone
-                  ? '새 전화번호로 인증 번호가 전송됩니다. 아래 "인증번호 요청"을 눌러 주세요.'
-                  : '등록된 전화번호로 인증 번호가 전송됩니다. 아래 "인증번호 요청"을 눌러 주세요.'}
+                : '새 전화번호로 인증 번호가 전송됩니다. 아래 "인증번호 요청"을 눌러 주세요.'}
             </p>
             <div className="profile-edit-field">
               <button type="button" className="btn-save-profile" style={{ marginBottom: 12 }} onClick={requestVerifyCode} disabled={sendingCode}>

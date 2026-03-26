@@ -23,7 +23,7 @@ public class ValorantAccount {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 36)
+    @Column(nullable = false, unique = true, length = 120)
     private String puuid;
 
     @Column(length = 20)

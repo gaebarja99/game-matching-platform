@@ -2,18 +2,28 @@ package com.gamematcher.service.account;
 
 import com.gamematcher.dto.account.RiotAccountLinkRequestDto;
 import com.gamematcher.dto.account.RiotAccountLinkResponseDto;
+import com.gamematcher.dto.lol.LolAccountResponseDto;
+import com.gamematcher.dto.lol.LolSummonerProfileDto;
+import com.gamematcher.dto.valorant.ValorantMmrApiResponse;
 import com.gamematcher.dto.riot.RiotAccountResponseDto;
+import com.gamematcher.dto.riot.RiotSummonerResponseDto;
 import com.gamematcher.entity.User;
 import com.gamematcher.entity.account.RiotAccount;
 import com.gamematcher.exception.GameApiException;
 import com.gamematcher.repository.account.RiotAccountRepository;
 import com.gamematcher.repository.common.CommonUserRepository;
+import com.gamematcher.service.lol.LolAccountService;
+import com.gamematcher.service.lol.LolSummonerProfileService;
 import com.gamematcher.service.riot.LolApiService;
+import com.gamematcher.service.valorant.ValorantApiService;
+import com.gamematcher.service.valorant.ValorantMmrService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RiotAccountService {
@@ -21,6 +31,10 @@ public class RiotAccountService {
     private final LolApiService lolApiService;
     private final RiotAccountRepository riotAccountRepository;
     private final CommonUserRepository userRepository;
+    private final LolAccountService lolAccountService;
+    private final LolSummonerProfileService lolSummonerProfileService;
+    private final ValorantApiService valorantApiService;
+    private final ValorantMmrService valorantMmrService;
 
     @Transactional
     public RiotAccountLinkResponseDto linkAccount(RiotAccountLinkRequestDto request) {
@@ -37,6 +51,7 @@ public class RiotAccountService {
         if (riotAccountRepository.existsByPuuid(riotAccount.getPuuid())) {
             RiotAccount existing = riotAccountRepository.findByPuuid(riotAccount.getPuuid()).orElseThrow();
             if (existing.getUser().getId().equals(userId)) {
+                syncLolAndValorantFromRiotAccount(riotAccount);
                 return new RiotAccountLinkResponseDto(
                         existing.getId(),
                         user.getId(),
@@ -56,6 +71,7 @@ public class RiotAccountService {
         entity.setTagLine(riotAccount.getTagLine());
 
         RiotAccount saved = riotAccountRepository.save(entity);
+        syncLolAndValorantFromRiotAccount(riotAccount);
 
         return new RiotAccountLinkResponseDto(
                 saved.getId(),
@@ -63,7 +79,62 @@ public class RiotAccountService {
                 saved.getPuuid(),
                 saved.getGameName(),
                 saved.getTagLine(),
-                "Riot 계정 연동 완료"
+                "Riot 계정 연동 완료. LoL·발로란트 기본 전적을 불러왔습니다."
         );
+    }
+
+    /**
+     * Riot Account API로 받은 동일 계정으로 LoL(local DB)·발로란트(Henrik) 데이터를 조회·저장한다.
+     */
+    private void syncLolAndValorantFromRiotAccount(RiotAccountResponseDto account) {
+        if (account == null || account.getPuuid() == null || account.getPuuid().isBlank()) {
+            return;
+        }
+        String puuid = account.getPuuid();
+        String gameName = account.getGameName() != null ? account.getGameName() : "";
+        String tagLine = account.getTagLine() != null ? account.getTagLine() : "";
+
+        try {
+            LolAccountResponseDto accDto = new LolAccountResponseDto();
+            accDto.setPuuid(puuid);
+            accDto.setGameName(gameName);
+            accDto.setTagLine(tagLine);
+            lolAccountService.saveAccount(accDto);
+        } catch (Exception e) {
+            log.warn("Riot 연동 후 LoL 계정 저장 실패: {}", e.getMessage());
+        }
+
+        try {
+            RiotSummonerResponseDto summoner = lolApiService.getSummonerByPuuid(puuid);
+            if (summoner != null && summoner.getPuuid() != null) {
+                LolSummonerProfileDto prof = new LolSummonerProfileDto();
+                prof.setPuuid(summoner.getPuuid());
+                prof.setProfileIconId(summoner.getProfileIconId());
+                prof.setRevisionDate(summoner.getRevisionDate());
+                prof.setSummonerLevel((int) Math.min(Integer.MAX_VALUE, summoner.getSummonerLevel()));
+                lolSummonerProfileService.saveProfile(prof);
+            }
+        } catch (Exception e) {
+            log.warn("Riot 연동 후 LoL 소환사 프로필 저장 실패: {}", e.getMessage());
+        }
+
+        try {
+            if (!gameName.isBlank() && !tagLine.isBlank()) {
+                valorantApiService.getAccountByNameTag(gameName, tagLine, false);
+            }
+        } catch (Exception e) {
+            log.debug("Riot 연동 후 발로란트 계정 조회 생략: {}", e.getMessage());
+        }
+
+        try {
+            if (!gameName.isBlank() && !tagLine.isBlank()) {
+                ValorantMmrApiResponse mmr = valorantApiService.fetchMmrForRiotLinkedProfile(gameName, tagLine);
+                if (mmr != null) {
+                    valorantMmrService.saveMmr(mmr);
+                }
+            }
+        } catch (Exception e) {
+            log.debug("Riot 연동 후 발로란트 MMR 저장 생략: {}", e.getMessage());
+        }
     }
 }

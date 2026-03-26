@@ -7,6 +7,8 @@ import {
   unlinkAccount,
   type AccountConnectionStatus,
 } from '../api/accountLinks';
+import { patchProfile, type ProfilePatchBody } from '../api/profile';
+import { RiotLinkedGameStats } from '../components/RiotLinkedGameStats';
 
 type OAuthProvider = 'discord' | 'steam' | 'blizzard';
 
@@ -32,6 +34,7 @@ export default function ProfileAccountLinks() {
   const [riotGameName, setRiotGameName] = useState('');
   const [riotTagLine, setRiotTagLine] = useState('');
   const [riotBusy, setRiotBusy] = useState(false);
+  const [linkPublicBusy, setLinkPublicBusy] = useState<string | null>(null);
 
   const loadConnections = async () => {
     setLoading(true);
@@ -134,6 +137,53 @@ export default function ProfileAccountLinks() {
     }
   };
 
+  function linkVisibilityPatchKey(providerKey: string): keyof ProfilePatchBody | null {
+    switch (providerKey.toUpperCase()) {
+      case 'DISCORD':
+        return 'discordLinkVisible';
+      case 'STEAM':
+        return 'steamLinkVisible';
+      case 'BLIZZARD':
+        return 'blizzardLinkVisible';
+      case 'RIOT':
+        return 'riotLinkVisible';
+      default:
+        return null;
+    }
+  }
+
+  const handleToggleLinkPublic = async (providerKey: string, visible: boolean) => {
+    if (!user?.id) return;
+    const patchKey = linkVisibilityPatchKey(providerKey);
+    if (!patchKey) return;
+    setLinkPublicBusy(providerKey);
+    setMessage({ text: '', ok: null });
+    try {
+      await patchProfile(user.id, { [patchKey]: visible });
+      setMessage({ text: visible ? '공개 프로필에 표시하도록 저장했습니다.' : '공개 프로필에서 숨기도록 저장했습니다.', ok: true });
+      await loadConnections();
+    } catch (e) {
+      setMessage({ text: e instanceof Error ? e.message : '저장에 실패했습니다.', ok: false });
+    } finally {
+      setLinkPublicBusy(null);
+    }
+  };
+
+  const handleRiotVisibilityPatch = async (body: Pick<ProfilePatchBody, 'riotLinkVisible' | 'riotLolRankVisible' | 'riotValorantRankVisible'>) => {
+    if (!user?.id) return;
+    setLinkPublicBusy('RIOT');
+    setMessage({ text: '', ok: null });
+    try {
+      await patchProfile(user.id, body);
+      setMessage({ text: '공개 설정을 저장했습니다.', ok: true });
+      await loadConnections();
+    } catch (e) {
+      setMessage({ text: e instanceof Error ? e.message : '저장에 실패했습니다.', ok: false });
+    } finally {
+      setLinkPublicBusy(null);
+    }
+  };
+
   const handleRiotConnect = async () => {
     const gameName = riotGameName.trim();
     const tagLine = riotTagLine.trim();
@@ -192,9 +242,72 @@ export default function ProfileAccountLinks() {
                 {connected ? (
                   <div className="account-link-meta">
                     <div>{connection?.displayName || '표시 이름 없음'}</div>
-                    {connection?.secondaryValue ? <div>{connection.secondaryValue}</div> : null}
+                    {connection?.secondaryValue && provider.key !== 'RIOT' ? (
+                      <div>{connection.secondaryValue}</div>
+                    ) : null}
+                    {provider.key === 'RIOT' && connection ? (
+                      <RiotLinkedGameStats
+                        riotDisplayName={connection.displayName}
+                        lolRankSummary={connection.lolRankSummary}
+                        valorantRankSummary={connection.valorantRankSummary}
+                      />
+                    ) : null}
                     {connection?.note ? <div>{connection.note}</div> : null}
                     <div>{connection?.ownershipVerified ? '본인 확인 완료' : '본인 확인 필요'}</div>
+                    {provider.key === 'RIOT' ? (
+                      <>
+                        <label className="account-link-public-row account-link-public-row--riot-parent">
+                          <input
+                            type="checkbox"
+                            checked={connection?.publicProfileVisible !== false}
+                            disabled={linkPublicBusy === 'RIOT'}
+                            onChange={(e) => void handleRiotVisibilityPatch({ riotLinkVisible: e.target.checked })}
+                          />
+                          <span>Riot 닉네임·연동 공개 프로필에 표시</span>
+                        </label>
+                        <div
+                          className={`account-link-riot-children${
+                            connection?.publicProfileVisible === false ? ' is-disabled' : ''
+                          }`}
+                          aria-disabled={connection?.publicProfileVisible === false}
+                        >
+                          <label className="account-link-public-row">
+                            <input
+                              type="checkbox"
+                              checked={connection?.publicLolRankVisible !== false}
+                              disabled={
+                                linkPublicBusy === 'RIOT' || connection?.publicProfileVisible === false
+                              }
+                              onChange={(e) => void handleRiotVisibilityPatch({ riotLolRankVisible: e.target.checked })}
+                            />
+                            <span>리그 오브 레전드 랭크 정보 공개</span>
+                          </label>
+                          <label className="account-link-public-row">
+                            <input
+                              type="checkbox"
+                              checked={connection?.publicValorantRankVisible !== false}
+                              disabled={
+                                linkPublicBusy === 'RIOT' || connection?.publicProfileVisible === false
+                              }
+                              onChange={(e) =>
+                                void handleRiotVisibilityPatch({ riotValorantRankVisible: e.target.checked })
+                              }
+                            />
+                            <span>발로란트 경쟁 티어 정보 공개</span>
+                          </label>
+                        </div>
+                      </>
+                    ) : (
+                      <label className="account-link-public-row">
+                        <input
+                          type="checkbox"
+                          checked={connection?.publicProfileVisible !== false}
+                          disabled={linkPublicBusy === provider.key}
+                          onChange={(e) => void handleToggleLinkPublic(provider.key, e.target.checked)}
+                        />
+                        <span>공개 프로필·프로필 조회에 이 연동 표시</span>
+                      </label>
+                    )}
                   </div>
                 ) : provider.key === 'RIOT' ? (
                   <div className="account-link-riot-form">
