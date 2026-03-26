@@ -9,6 +9,8 @@ import com.gamematcher.repository.GameRoomRepository;
 import com.gamematcher.repository.GroupChatRoomMemberRepository;
 import com.gamematcher.repository.GroupChatRoomRepository;
 import com.gamematcher.repository.UserRepository;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
@@ -31,6 +33,7 @@ public class GameRoomService {
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final GroupChatService groupChatService;
+    private final ObjectMapper objectMapper;
 
     /** 방 만들기: 제목, 메모, 삭제 비밀번호 필수 + 게임·게임옵션. 그룹 채팅방도 생성해 방 채팅 연동 */
     @Transactional
@@ -101,6 +104,40 @@ public class GameRoomService {
         return map;
     }
 
+    /**
+     * gameOptions JSON 및 게임 종류에 따른 최대 인원. 파싱 실패 시 게임별 기본값.
+     * null 이면 정원 상한을 두지 않음(레거시 방).
+     */
+    private Integer resolveMaxPlayers(GameRoom room) {
+        if (room == null || room.getGame() == null) return null;
+        String game = room.getGame();
+        JsonNode node = null;
+        String opts = room.getGameOptions();
+        if (opts != null && !opts.isBlank()) {
+            try {
+                node = objectMapper.readTree(opts);
+            } catch (Exception ignored) {
+                node = null;
+            }
+        }
+        if (node != null && node.has("maxPlayers") && node.get("maxPlayers").isIntegralNumber()) {
+            int m = node.get("maxPlayers").asInt();
+            if (m > 0) return m;
+        }
+        if ("LEAGUE_OF_LEGENDS".equals(game) || "VALORANT".equals(game) || "OVERWATCH".equals(game)) {
+            return 5;
+        }
+        if ("PUBG".equals(game)) {
+            String ps = node != null && node.has("partySize") ? node.get("partySize").asText("") : "";
+            return "SQUAD".equalsIgnoreCase(ps) ? 4 : 2;
+        }
+        if ("COUNTER_STRIKE_2".equals(game)) {
+            String mode = node != null && node.has("mode") ? node.get("mode").asText("") : "";
+            return "WINGMAN".equalsIgnoreCase(mode) ? 2 : 5;
+        }
+        return null;
+    }
+
     /** 참가 */
     @Transactional
     public String join(Long roomId, Long userId) {
@@ -110,6 +147,12 @@ public class GameRoomService {
         GameRoom room = opt.get();
         if (room.isClosed()) return "closed";
         if (memberRepository.existsByRoomIdAndUserId(roomId, userId)) return "already_member";
+
+        Integer cap = resolveMaxPlayers(room);
+        if (cap != null) {
+            long count = memberRepository.countByRoomId(roomId);
+            if (count >= cap) return "full";
+        }
 
         GameRoomMember member = new GameRoomMember();
         member.setRoomId(roomId);

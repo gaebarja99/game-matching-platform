@@ -66,11 +66,28 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
 
   const fetchSession = useCallback(() => {
     if (!user || !sessionId) return;
-    getMatchSession(sessionId).then((s) => {
-      if (s) setSession(s);
-      else setForbidden(true);
-      setLoading(false);
-    });
+    const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+    const maxAttempts = 6;
+    (async () => {
+      try {
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          const s = await getMatchSession(sessionId);
+          if (s) {
+            setSession(s);
+            setForbidden(false);
+            return;
+          }
+          if (attempt < maxAttempts - 1) {
+            await delay(100 * (attempt + 1));
+          }
+        }
+        setForbidden(true);
+      } catch {
+        setForbidden(true);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [user, sessionId]);
 
   const fetchMessages = useCallback(() => {
