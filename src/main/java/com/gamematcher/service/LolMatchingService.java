@@ -205,6 +205,8 @@ public class LolMatchingService {
         Map<String, Object> map = new LinkedHashMap<>();
         if (userId == null) {
             map.put("inQueue", false);
+            map.put("currentParticipants", 0);
+            map.put("maxParticipants", TEAM_SIZE);
             return map;
         }
         return matchingQueueRepository.findByUserId(userId)
@@ -215,11 +217,16 @@ public class LolMatchingService {
                     m.put("tier", q.getTier().name());
                     m.put("position", q.getPosition().name());
                     m.put("createdAt", q.getCreatedAt() != null ? q.getCreatedAt().format(ISO) : "");
+                    long cnt = matchingQueueRepository.countWaitingByGameAndTier(q.getGameName(), q.getTier());
+                    m.put("currentParticipants", (int) Math.min(Integer.MAX_VALUE, cnt));
+                    m.put("maxParticipants", TEAM_SIZE);
                     return m;
                 })
                 .orElseGet(() -> {
                     Map<String, Object> m = new LinkedHashMap<>();
                     m.put("inQueue", false);
+                    m.put("currentParticipants", 0);
+                    m.put("maxParticipants", TEAM_SIZE);
                     return m;
                 });
     }

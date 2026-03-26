@@ -17,7 +17,8 @@ import java.util.stream.Collectors;
 public class MatchService {
 
     private static final DateTimeFormatter ISO = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
-    private static final int MAX_MATCH_GROUP_SIZE = 2;
+    private static final int DEFAULT_MATCH_GROUP_SIZE = 2;
+    private static final int VALORANT_MATCH_GROUP_SIZE = 5;
     private static final int MAX_TEXT_LENGTH = 2000;
 
     private final MatchQueueEntryRepository queueRepository;
@@ -27,9 +28,9 @@ public class MatchService {
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
-    /** 대기열 참가 → 매칭 시도 (2명 이상이면 매칭 생성 후 알림) */
+    /** 대기열 참가 → 매칭 시도 */
     @Transactional
-    public Map<String, Object> joinQueue(Long userId, String game, String tier, String position) {
+    public Map<String, Object> joinQueue(Long userId, String game, String tier, String position, Integer maxPlayers) {
         if (userId == null) throw new IllegalArgumentException("로그인이 필요합니다.");
         if (game == null || game.isBlank()) game = "LEAGUE_OF_LEGENDS";
 
@@ -40,23 +41,27 @@ public class MatchService {
         entry.setGame(game);
         entry.setTier(tier != null && !tier.isBlank() ? tier : null);
         entry.setPosition(position != null && !position.isBlank() ? position : null);
+        entry.setMaxPlayers(maxPlayers);
         queueRepository.save(entry);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("inQueue", true);
         result.put("game", game);
 
-        tryMatch(game);
+        tryMatch(game, entry.getMaxPlayers());
         return result;
     }
 
-    /** 같은 게임 대기열에서 2명 이상이면 매칭 생성 후 알림 */
+    /** 같은 게임(+정원) 대기열에서 인원 충족 시 매칭 생성 후 알림 */
     @Transactional
-    protected void tryMatch(String game) {
-        List<MatchQueueEntry> entries = queueRepository.findByGameOrderByJoinedAtAsc(game);
-        if (entries.size() < MAX_MATCH_GROUP_SIZE) return;
+    protected void tryMatch(String game, Integer maxPlayers) {
+        List<MatchQueueEntry> entries = maxPlayers != null
+                ? queueRepository.findByGameAndMaxPlayersOrderByJoinedAtAsc(game, maxPlayers)
+                : queueRepository.findByGameOrderByJoinedAtAsc(game);
+        int groupSize = maxPlayers != null ? maxPlayers : groupSizeForGame(game);
+        if (entries.size() < groupSize) return;
 
-        List<MatchQueueEntry> toMatch = entries.subList(0, MAX_MATCH_GROUP_SIZE);
+        List<MatchQueueEntry> toMatch = entries.subList(0, groupSize);
         MatchSession session = new MatchSession();
         session.setGame(game);
         session = sessionRepository.save(session);
@@ -80,6 +85,40 @@ public class MatchService {
         for (Long uid : userIds) {
             messagingTemplate.convertAndSend("/topic/user/" + uid, payload);
         }
+    }
+
+    private int groupSizeForGame(String game) {
+        if ("VALORANT".equalsIgnoreCase(game)) return VALORANT_MATCH_GROUP_SIZE;
+        if ("OVERWATCH".equalsIgnoreCase(game)) return VALORANT_MATCH_GROUP_SIZE;
+        return DEFAULT_MATCH_GROUP_SIZE;
+    }
+
+    public Map<String, Object> queueStatusDetail(Long userId) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        if (userId == null) {
+            m.put("inQueue", false);
+            m.put("currentParticipants", 0);
+            m.put("maxParticipants", DEFAULT_MATCH_GROUP_SIZE);
+            return m;
+        }
+        Optional<MatchQueueEntry> opt = queueRepository.findByUserId(userId);
+        if (opt.isEmpty()) {
+            m.put("inQueue", false);
+            m.put("currentParticipants", 0);
+            m.put("maxParticipants", DEFAULT_MATCH_GROUP_SIZE);
+            return m;
+        }
+        MatchQueueEntry e = opt.get();
+        String game = e.getGame();
+        int max = e.getMaxPlayers() != null ? e.getMaxPlayers() : groupSizeForGame(game);
+        long cnt = e.getMaxPlayers() != null
+                ? queueRepository.countByGameAndMaxPlayers(game, e.getMaxPlayers())
+                : queueRepository.countByGame(game);
+        m.put("inQueue", true);
+        m.put("game", game);
+        m.put("currentParticipants", (int) Math.min(Integer.MAX_VALUE, cnt));
+        m.put("maxParticipants", max);
+        return m;
     }
 
     /** 대기열 나가기 */
