@@ -209,6 +209,20 @@ public class AccountConnectionService {
                 changed ? "Steam 닉네임·아바타를 최신으로 반영했습니다." : "이미 최신 Steam 프로필입니다.");
     }
 
+    public AccountConnectionsResponseDto getConnectionsForUser(String authToken, Long targetUserId) {
+        // 로그인 상태만 확인하고, 조회 대상은 targetUserId로 한다.
+        currentUserService.requireUser(authToken);
+        if (targetUserId == null) {
+            throw new GameApiException(HttpStatus.BAD_REQUEST, "userId가 필요합니다.");
+        }
+        List<AccountConnectionStatusDto> connections = new ArrayList<>();
+        connections.add(buildDiscordStatus(targetUserId));
+        connections.add(buildSteamStatus(targetUserId));
+        connections.add(buildBlizzardStatus(targetUserId));
+        connections.add(buildRiotStatus(targetUserId));
+        return new AccountConnectionsResponseDto(targetUserId, connections);
+    }
+
     @Transactional
     public void unlink(Long userId, String provider) {
         switch (provider.toLowerCase()) {

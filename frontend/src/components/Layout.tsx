@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
@@ -7,6 +7,9 @@ import FloatingChatWidget from './FloatingChatWidget';
 import { useMatchCompleteNotification } from '../hooks/useMatchCompleteNotification';
 import { useAutoResizeTextarea } from '../hooks/useAutoResizeTextarea';
 import { filterFriendsExcludingSelf, isDmWithSelf } from '../utils/dmSelf';
+import { fetchUserSummary, type UserSummaryDto } from '../api/userSummary';
+import { fetchAccountConnectionsForUser, type AccountConnectionStatus } from '../api/accountLinks';
+import { formatActivityPeriod } from '../lib/activityPeriod';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -47,6 +50,11 @@ type FriendRequestItem = {
 type FriendTab = 'list' | 'requests' | 'find' | 'blocked';
 type FriendMenuState = { friend: FriendItem; x: number; y: number } | null;
 
+type FriendProfileModalState = {
+  friend: FriendItem;
+  open: boolean;
+};
+
 export default function Layout({ children, showFriendSidebar = true, topSection }: LayoutProps) {
   const { user, logout } = useAuth();
   useMatchCompleteNotification(user?.id);
@@ -81,6 +89,15 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
   const dmMessagesEndRef = useRef<HTMLDivElement>(null);
   const lastDmMessagesSigRef = useRef<string>('');
   const dmInputResize = useAutoResizeTextarea(dmInput);
+
+  const [friendProfileModal, setFriendProfileModal] = useState<FriendProfileModalState>({
+    friend: { id: 0, loginId: '', nickname: '', profileImageUrl: null },
+    open: false,
+  });
+  const [friendProfileLoading, setFriendProfileLoading] = useState(false);
+  const [friendProfileErr, setFriendProfileErr] = useState('');
+  const [friendProfileSummary, setFriendProfileSummary] = useState<UserSummaryDto | null>(null);
+  const [friendProfileConnections, setFriendProfileConnections] = useState<AccountConnectionStatus[] | null>(null);
 
   const showToast = useCallback((message: string) => {
     setMainToast(message);
@@ -142,6 +159,10 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
   const handleSearchFriend = useCallback(() => {
     const q = searchQuery.trim();
     if (!q) {
+      setSearchResults([]);
+      return;
+    }
+    if (q.length < 1) {
       setSearchResults([]);
       return;
     }
@@ -345,6 +366,50 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
       })
       .catch(() => showToast('친구 요청 전송 중 오류가 발생했습니다.'));
   }, [showToast]);
+
+  const providerKeyForConnections = useMemo(
+    () => ['DISCORD', 'STEAM', 'BLIZZARD', 'RIOT'] as const,
+    [],
+  );
+
+  const connectedProviders = useMemo(() => {
+    const conns = friendProfileConnections ?? [];
+    const set = new Set<string>();
+    for (const c of conns) {
+      const k = (c.provider ?? '').toUpperCase();
+      if (k && c.connected) set.add(k);
+    }
+    return providerKeyForConnections.filter((k) => set.has(k));
+  }, [friendProfileConnections, providerKeyForConnections]);
+
+  const openFriendProfile = useCallback(async (friend: FriendItem) => {
+    setFriendMenu(null);
+    setFriendProfileModal({ friend, open: true });
+    setFriendProfileLoading(true);
+    setFriendProfileErr('');
+    setFriendProfileSummary(null);
+    setFriendProfileConnections(null);
+    try {
+      const [summary, connectionsRes] = await Promise.all([
+        fetchUserSummary(friend.id),
+        fetchAccountConnectionsForUser(friend.id),
+      ]);
+      setFriendProfileSummary(summary);
+      if (connectionsRes.ok && connectionsRes.data?.connections) {
+        setFriendProfileConnections(connectionsRes.data.connections);
+      } else {
+        setFriendProfileConnections([]);
+      }
+    } catch (e) {
+      setFriendProfileErr(e instanceof Error && e.message === 'NOT_FOUND' ? '사용자를 찾을 수 없습니다.' : '프로필 정보를 불러오지 못했습니다.');
+    } finally {
+      setFriendProfileLoading(false);
+    }
+  }, []);
+
+  const closeFriendProfile = useCallback(() => {
+    setFriendProfileModal((prev) => ({ ...prev, open: false }));
+  }, []);
 
   const loadDmMessages = useCallback(
     (targetUserId: number, opts?: { markRead?: boolean; silent?: boolean }) => {
@@ -646,7 +711,17 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
 
               <div className={`friend-sidebar-panel ${activeFriendTab === 'find' ? 'active' : ''}`}>
                 <div className="friend-search-wrap">
-                  <input value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} placeholder="아이디/닉네임 검색" />
+                  <input
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleSearchFriend();
+                      }
+                    }}
+                    placeholder="아이디/닉네임 검색"
+                  />
                   <button type="button" onClick={handleSearchFriend}>검색</button>
                 </div>
                 <div className="friend-list-wrap">
@@ -735,8 +810,139 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
           >
             차단
           </button>
+          <button
+            type="button"
+            onClick={() => {
+              const target = friendMenu.friend;
+              void openFriendProfile(target);
+            }}
+          >
+            정보보기
+          </button>
         </div>
       )}
+
+      <div
+        className={`friend-profile-modal-backdrop ${friendProfileModal.open ? 'show' : ''}`}
+        onClick={closeFriendProfile}
+        role="presentation"
+      >
+        <div className="friend-profile-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-label="친구 프로필">
+          <div className="friend-profile-modal-head">
+            <div className="friend-profile-modal-title">프로필</div>
+            <button type="button" className="friend-profile-modal-close" onClick={closeFriendProfile} aria-label="닫기">
+              ×
+            </button>
+          </div>
+
+          <div className="friend-profile-modal-body">
+            {friendProfileLoading ? (
+              <div className="friend-profile-skeleton">
+                <div className="sk-row">
+                  <div className="sk-avatar" />
+                  <div className="sk-lines">
+                    <div className="sk-line w-60" />
+                    <div className="sk-line w-40" />
+                  </div>
+                </div>
+                <div className="sk-grid">
+                  <div className="sk-card" />
+                  <div className="sk-card" />
+                </div>
+                <div className="sk-icons">
+                  <div className="sk-dot" />
+                  <div className="sk-dot" />
+                  <div className="sk-dot" />
+                  <div className="sk-dot" />
+                </div>
+              </div>
+            ) : friendProfileErr ? (
+              <div className="friend-profile-error" role="alert">
+                {friendProfileErr}
+              </div>
+            ) : (
+              (() => {
+                const summary = friendProfileSummary;
+                const displayName =
+                  (summary?.nickname ?? '').trim() ||
+                  (summary?.username ?? '').trim() ||
+                  friendProfileModal.friend.nickname ||
+                  friendProfileModal.friend.loginId;
+                return (
+                  <>
+                    <div className="friend-profile-header">
+                      <div className="friend-profile-avatar">
+                        {resolveProfileImageUrl(summary?.profileImageUrl ?? friendProfileModal.friend.profileImageUrl) ? (
+                          <img src={resolveProfileImageUrl(summary?.profileImageUrl ?? friendProfileModal.friend.profileImageUrl)!} alt="" />
+                        ) : (
+                          <span className="friend-profile-avatar-fallback">{(displayName || '?')[0]}</span>
+                        )}
+                      </div>
+                      <div className="friend-profile-meta">
+                        <div className="friend-profile-name">{displayName}</div>
+                      </div>
+                    </div>
+
+                    <div className="friend-profile-stats">
+                      <div className="friend-profile-stat">
+                        <div className="label">활동 기간</div>
+                        <div className="value">{formatActivityPeriod(summary?.createdAt ?? null)}</div>
+                      </div>
+                      <div className="friend-profile-stat">
+                        <div className="label">매칭 횟수</div>
+                        <div className="value">{Number(summary?.matchCount ?? 0).toLocaleString()}</div>
+                      </div>
+                    </div>
+
+                    <div className="friend-profile-links">
+                      <div className="friend-profile-links-title">연동된 계정</div>
+                      <div className="friend-profile-links-row" aria-label="연동된 외부 서비스">
+                        {connectedProviders.length === 0 ? (
+                          <span className="friend-profile-links-empty">연동된 계정이 없습니다.</span>
+                        ) : (
+                          connectedProviders.map((p) => (
+                            <span key={p} className={`friend-link-icon ${p.toLowerCase()}`} title={p}>
+                              {p === 'DISCORD' ? (
+                                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden focusable="false">
+                                  <path
+                                    fill="currentColor"
+                                    d="M19.54 6.46A15.93 15.93 0 0 0 15.5 5l-.2.4a14.58 14.58 0 0 1 3.07 1.02 12.46 12.46 0 0 0-4.79-1.48 12.4 12.4 0 0 0-3.16 0 12.46 12.46 0 0 0-4.79 1.48A14.6 14.6 0 0 1 8.77 5.4L8.57 5A15.93 15.93 0 0 0 4.54 6.46C2.65 9.28 2.2 12.03 2.4 14.73c1.66 1.22 3.27 1.97 4.83 2.46l.59-.81a9.86 9.86 0 0 1-1.52-.71l.37-.29c2.98 1.36 6.2 1.36 9.18 0l.37.29c-.48.28-1 .52-1.52.71l.59.81c1.56-.49 3.17-1.24 4.83-2.46.27-2.83-.25-5.57-2.28-8.27ZM9.35 13.66c-.75 0-1.36-.68-1.36-1.52 0-.84.6-1.52 1.36-1.52s1.36.68 1.36 1.52c0 .84-.6 1.52-1.36 1.52Zm5.3 0c-.75 0-1.36-.68-1.36-1.52 0-.84.6-1.52 1.36-1.52s1.36.68 1.36 1.52c0 .84-.6 1.52-1.36 1.52Z"
+                                  />
+                                </svg>
+                              ) : p === 'STEAM' ? (
+                                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden focusable="false">
+                                  <path
+                                    fill="currentColor"
+                                    d="M12 2a10 10 0 1 0 10 10A10.02 10.02 0 0 0 12 2Zm4.87 14.8a3.42 3.42 0 0 1-1.9-.58l-2.66 1.94a.9.9 0 0 1-.84.1l-4.05-1.72a2.5 2.5 0 1 1 1.05-1.82l3.48 1.48 2.28-1.66a3.42 3.42 0 1 1 2.64 2.26Zm-10.07-1.5a1.35 1.35 0 1 0-1.35 1.35A1.35 1.35 0 0 0 6.8 15.3Zm10.07-.72a2.07 2.07 0 1 0-2.07-2.07 2.07 2.07 0 0 0 2.07 2.07Z"
+                                  />
+                                </svg>
+                              ) : p === 'BLIZZARD' ? (
+                                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden focusable="false">
+                                  <path
+                                    fill="currentColor"
+                                    d="M12.02 2.5c-3.28 0-5.94 2.66-5.94 5.94 0 .7.12 1.36.35 1.98-1.78.76-3.03 2.52-3.03 4.58 0 2.75 2.23 4.98 4.98 4.98.95 0 1.84-.26 2.6-.72a5.92 5.92 0 0 0 8.99-5.12c0-.55-.08-1.08-.22-1.58 1.42-.84 2.37-2.38 2.37-4.14 0-2.67-2.16-4.84-4.84-4.84-.55 0-1.08.09-1.58.26a5.9 5.9 0 0 0-3.68-1.32Zm0 1.8c1.27 0 2.42.5 3.3 1.31a4.83 4.83 0 0 0-1.19 3.17 4.8 4.8 0 0 0 1.31 3.3 4.12 4.12 0 0 1-3.42 6.52 4.12 4.12 0 0 1-3.6-2.12 4.95 4.95 0 0 0 2.08-4.03 4.95 4.95 0 0 0-2.12-4.06 4.12 4.12 0 0 1 3.63-4.09Zm6.03 1.74c1.67 0 3.04 1.36 3.04 3.04a3.03 3.03 0 0 1-1.86 2.79 5.92 5.92 0 0 0-2.79-1.86 3.02 3.02 0 0 1-.59-1.82c0-1.68 1.36-3.04 3.04-3.04ZM7.15 10.2c1.8.62 3.09 2.32 3.09 4.3a3.15 3.15 0 0 1-3.15 3.15A3.15 3.15 0 0 1 3.94 14.5c0-1.98 1.3-3.68 3.21-4.3Z"
+                                  />
+                                </svg>
+                              ) : (
+                                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden focusable="false">
+                                  <path
+                                    fill="currentColor"
+                                    d="M4 3h8.2L9.2 8.3h3.7L7.6 21H4.9l3.2-7.3H4.4L9.3 3H4zm10.2 0H20l-4.1 6.2H20L12.9 21h-2.8l3.6-6.8H9.9L14.2 3z"
+                                  />
+                                </svg>
+                              )}
+                            </span>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </>
+                );
+              })()
+            )}
+          </div>
+        </div>
+      </div>
 
       <div className={`dm-panel-backdrop ${dmOpen ? 'show' : ''}`} onClick={() => setDmOpen(false)}>
         <div className="dm-panel" onClick={(e) => e.stopPropagation()}>

@@ -4,6 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 import { checkNicknameAvailable, repairMojibakeText } from '../api/auth';
 import { apiUrl, resolveProfileImageUrl } from '../api/client';
 import { fetchProfile, patchProfile, type ProfileDto, type ProfilePatchBody } from '../api/profile';
+import { fetchAccountConnections, type AccountConnectionStatus } from '../api/accountLinks';
 import {
   PREFERRED_GAME_OPTIONS,
   parsePreferredGamesToSelected,
@@ -155,6 +156,10 @@ export default function Profile() {
     }
   }, [user?.id]);
 
+  const [accountConnections, setAccountConnections] = useState<AccountConnectionStatus[]>([]);
+  const [accountConnectionsLoading, setAccountConnectionsLoading] = useState(false);
+  const [accountConnectionsError, setAccountConnectionsError] = useState('');
+
   const loadPublicProfile = useCallback(async () => {
     if (!user?.id) return;
     setPublicLoading(true);
@@ -173,6 +178,30 @@ export default function Profile() {
   useEffect(() => {
     void loadPublicProfile();
   }, [loadPublicProfile]);
+
+  const loadAccountConnections = useCallback(async () => {
+    if (!user) return;
+    setAccountConnectionsLoading(true);
+    setAccountConnectionsError('');
+    try {
+      const { ok, data, message } = await fetchAccountConnections();
+      if (ok && data?.connections) {
+        setAccountConnections(data.connections);
+      } else {
+        setAccountConnections([]);
+        setAccountConnectionsError(message || '외부 계정 연동 정보를 불러오지 못했습니다.');
+      }
+    } catch {
+      setAccountConnections([]);
+      setAccountConnectionsError('외부 계정 연동 정보를 불러오지 못했습니다.');
+    } finally {
+      setAccountConnectionsLoading(false);
+    }
+  }, [user]);
+
+  useEffect(() => {
+    void loadAccountConnections();
+  }, [loadAccountConnections]);
 
   useEffect(() => {
     void loadLinkedAccounts();
@@ -253,6 +282,26 @@ export default function Profile() {
       </div>
     </>
   );
+
+  const externalProviders = useMemo(
+    () =>
+      [
+        { key: 'DISCORD' as const, label: 'Discord', accent: '#5865F2' },
+        { key: 'STEAM' as const, label: 'Steam', accent: '#66C0F4' },
+        { key: 'BLIZZARD' as const, label: 'Blizzard', accent: '#00AEFF' },
+        { key: 'RIOT' as const, label: 'Riot', accent: '#FF4655' },
+      ] satisfies Array<{ key: 'DISCORD' | 'STEAM' | 'BLIZZARD' | 'RIOT'; label: string; accent: string }>,
+    [],
+  );
+
+  const connectionByProvider = useMemo(() => {
+    const m = new Map<string, AccountConnectionStatus>();
+    for (const c of accountConnections) {
+      const k = (c.provider ?? '').toUpperCase();
+      if (k) m.set(k, c);
+    }
+    return m;
+  }, [accountConnections]);
 
   const handleOpenEdit = async () => {
     setEditNickname(user?.nickname ?? user?.username ?? '');
@@ -528,6 +577,44 @@ export default function Profile() {
           <div className="label">마일리지</div>
           <div className="value mileage-value">{(user?.mileage ?? 0).toLocaleString()}원</div>
           <div className="sub">팡 결제 금액의 5% 적립 (1팡=1.2원 기준)</div>
+        </div>
+      </div>
+
+      <div className="profile-extlinks">
+        <div className="profile-extlinks-head">
+          <h2 className="profile-extlinks-title">외부 계정 연동</h2>
+          {accountConnectionsLoading ? <span className="profile-extlinks-sub">불러오는 중…</span> : null}
+          {!accountConnectionsLoading && accountConnectionsError ? (
+            <span className="profile-extlinks-sub err" role="alert">
+              {accountConnectionsError}
+            </span>
+          ) : null}
+        </div>
+        <div className="profile-stats profile-extlinks-grid" aria-label="외부 계정 연동 상태">
+          {externalProviders.map((p) => {
+            const c = connectionByProvider.get(p.key);
+            const isConnected = Boolean(c?.connected);
+            const displayName = (c?.displayName ?? '').toString().trim();
+            return (
+              <div key={p.key} className="profile-stat-card profile-extlink-card">
+                <div className="profile-extlink-top">
+                  <div className="profile-extlink-provider">
+                    <span className="profile-extlink-icon" aria-hidden style={{ background: p.accent }}>
+                      {p.label[0]}
+                    </span>
+                    <span className="profile-extlink-name">{p.label}</span>
+                  </div>
+                  <span className={`account-link-badge ${isConnected ? 'is-connected' : 'is-disconnected'}`}>
+                    {isConnected ? '연동됨' : '미연동'}
+                  </span>
+                </div>
+                <div className="profile-extlink-body">
+                  <div className="label">계정</div>
+                  <div className="value profile-extlink-value">{isConnected ? (displayName || '-') : '-'}</div>
+                </div>
+              </div>
+            );
+          })}
         </div>
       </div>
 

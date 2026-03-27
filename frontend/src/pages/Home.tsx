@@ -5,10 +5,12 @@ import LiveThumb from '../components/LiveThumb';
 import PositionPicker from '../components/PositionPicker';
 import PositionIcon from '../components/PositionIcon';
 import { useAuth } from '../contexts/AuthContext';
+import { useTheme } from '../contexts/ThemeContext';
 import { resolveProfileImageUrl } from '../api/client';
 import {
   createGameRoom,
   fetchGameRoomList,
+  deleteGameRoom,
   joinGameRoom,
   getGameRoomChatRoomId,
   type GameRoomItem,
@@ -30,7 +32,6 @@ import {
   PUBG_MODE_OPTIONS,
   GAME_OPTIONS,
   getMatchModeOptions,
-  getControlledPartyOptions,
   tierOptionsForGame,
   createFormShowTier,
   rankLabel,
@@ -38,13 +39,52 @@ import {
   showPositionForRoom,
   partySizeLabel,
   isLolAram,
-  isLolSoloRank,
   positionRequiredForRandomMatch,
 } from '../utils/randomMatchHelpers';
 import { saveRandomMatchPending, clearRandomMatchPending } from '../utils/randomMatchPendingStorage';
 import { isHiddenGameRoomHost } from '../utils/gameRoomVisibility';
 import { getRoomCapacityMeta } from '../utils/gameRoomCapacity';
 import './Home.css';
+
+function defaultRandomMatchPosition(game: string): string {
+  switch (game) {
+    case 'VALORANT':
+      return 'DUELIST';
+    case 'OVERWATCH':
+      return 'TANK';
+    case 'COUNTER_STRIKE_2':
+      return 'ENTRY';
+    default:
+      return 'TOP';
+  }
+}
+
+function isRandomMatchPositionValid(game: string, pos: string | null): boolean {
+  if (pos == null || pos === '') return false;
+  const p = pos.toUpperCase();
+  switch (game) {
+    case 'LEAGUE_OF_LEGENDS':
+      return ['TOP', 'JUNGLE', 'MID', 'MIDDLE', 'ADC', 'BOTTOM', 'SUPPORT', 'SUP', 'UTILITY'].includes(
+        p,
+      );
+    case 'VALORANT':
+      return [
+        'DUELIST',
+        'SCOUT',
+        'STRATEGIST',
+        'WATCHER',
+        'INITIATOR',
+        'CONTROLLER',
+        'SENTINEL',
+      ].includes(p);
+    case 'OVERWATCH':
+      return ['TANK', 'DAMAGE', 'SUPPORT', 'DPS', 'HEALER'].includes(p);
+    case 'COUNTER_STRIKE_2':
+      return ['ENTRY', 'SUPPORT', 'IGL', 'AWPER', 'LURKER', 'ALL'].includes(p);
+    default:
+      return true;
+  }
+}
 
 function parseGameOptions(s?: string | null): {
   tier?: string;
@@ -122,6 +162,71 @@ function formatRelativeCreatedAt(s: string) {
   }
 }
 
+function UserGlyph({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={14}
+      height={14}
+      className={className}
+      aria-hidden
+      focusable="false"
+    >
+      <path
+        fill="currentColor"
+        d="M12 12.4a4.2 4.2 0 1 0-4.2-4.2 4.2 4.2 0 0 0 4.2 4.2Zm0 2.1c-3.5 0-6.7 1.8-8.1 4.7a1 1 0 0 0 .9 1.5h14.4a1 1 0 0 0 .9-1.5c-1.4-2.9-4.6-4.7-8.1-4.7Z"
+      />
+    </svg>
+  );
+}
+
+function PubgPartySizeButtons({
+  value,
+  onChange,
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (next: 'DUO' | 'SQUAD') => void;
+  ariaLabel: string;
+}) {
+  const isDuo = value === 'DUO' || value === '';
+  const isSquad = value === 'SQUAD';
+  return (
+    <div className="pubg-party-size" role="radiogroup" aria-label={ariaLabel}>
+      <button
+        type="button"
+        className={`pubg-party-size-btn ${isDuo ? 'active' : ''}`}
+        onClick={() => onChange('DUO')}
+        role="radio"
+        aria-checked={isDuo}
+        aria-label="듀오 2인"
+        title="듀오 2인"
+      >
+        <span className="pubg-party-size-icons" aria-hidden>
+          <UserGlyph />
+          <UserGlyph />
+        </span>
+      </button>
+      <button
+        type="button"
+        className={`pubg-party-size-btn ${isSquad ? 'active' : ''}`}
+        onClick={() => onChange('SQUAD')}
+        role="radio"
+        aria-checked={isSquad}
+        aria-label="스쿼드 4인"
+        title="스쿼드 4인"
+      >
+        <span className="pubg-party-size-icons" aria-hidden>
+          <UserGlyph />
+          <UserGlyph />
+          <UserGlyph />
+          <UserGlyph />
+        </span>
+      </button>
+    </div>
+  );
+}
+
 type TeamPanelType = 'match' | 'create';
 
 /** 팀 찾기 테이블 게임 필터 (방 `game` 필드와 동일) */
@@ -133,67 +238,83 @@ type TeamSearchGameId =
   | 'PUBG'
   | 'COUNTER_STRIKE_2';
 
-const TEAM_SEARCH_GAME_TABS: { id: TeamSearchGameId; label: string }[] = [
+const TEAM_SEARCH_GAME_TABS: Array<{
+  id: TeamSearchGameId;
+  label: string;
+  /** simple-icons CDN slug (https://cdn.simpleicons.org/) */
+  simpleIconSlug?: string;
+}> = [
   { id: 'ALL', label: '전체' },
-  { id: 'LEAGUE_OF_LEGENDS', label: '리그오브레전드' },
-  { id: 'VALORANT', label: '발로란트' },
+  { id: 'LEAGUE_OF_LEGENDS', label: '리그오브레전드', simpleIconSlug: 'leagueoflegends' },
+  { id: 'VALORANT', label: '발로란트', simpleIconSlug: 'valorant' },
+  // Overwatch는 simple-icons에 없거나 slug가 달라 CDN에서 깨질 수 있어 인라인 SVG 사용
   { id: 'OVERWATCH', label: '오버워치2' },
-  { id: 'PUBG', label: 'PUBG' },
-  { id: 'COUNTER_STRIKE_2', label: 'CS2' },
+  { id: 'PUBG', label: 'PUBG', simpleIconSlug: 'pubg' },
+  { id: 'COUNTER_STRIKE_2', label: 'CS2', simpleIconSlug: 'counterstrike' },
 ];
 
-function TeamSearchGameTabIcon({ game }: { game: TeamSearchGameId }) {
-  const svgProps = { width: 22, height: 22, viewBox: '0 0 24 24' as const, 'aria-hidden': true as const };
-  switch (game) {
-    case 'ALL':
-      return (
-        <svg {...svgProps}>
-          <circle cx="12" cy="12" r="9.5" fill="#9CA3AF" opacity="0.25" />
-          <path d="M6.8 12h10.4" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" />
-          <path d="M12 6.8v10.4" stroke="#9CA3AF" strokeWidth="2" strokeLinecap="round" opacity="0.85" />
-        </svg>
-      );
-    case 'LEAGUE_OF_LEGENDS':
-      return (
-        <svg {...svgProps}>
-          <circle cx="12" cy="12" r="10" fill="#C8AA6E" />
-          <path fill="#010A13" d="M8 7.5h3.2v8.4h4.8V17H8V7.5z" />
-        </svg>
-      );
-    case 'VALORANT':
-      return (
-        <svg {...svgProps}>
-          <path fill="#FF4655" d="M6 18 12 6h2.2L18 18h-2.6l-1.2-3.2H10.8L9.6 18H6zm5.7-5.5h2.6L13 9.8 11.7 12.5z" />
-        </svg>
-      );
-    case 'OVERWATCH':
-      return (
-        <svg {...svgProps}>
-          <circle cx="12" cy="12" r="9.5" fill="#FF9C23" opacity="0.95" />
-          <circle cx="12" cy="12" r="6" fill="#1a1a1d" />
-          <circle cx="12" cy="12" r="3" fill="#FF9C23" />
-        </svg>
-      );
-    case 'PUBG':
-      return (
-        <svg {...svgProps}>
-          <rect x="3" y="3" width="18" height="18" rx="3" fill="#E0BC5B" />
-          <circle cx="12" cy="11" r="2.4" fill="none" stroke="#2a1f0f" strokeWidth="1.8" />
-          <path stroke="#2a1f0f" strokeWidth="1.4" d="M12 8v6M9 11h6" strokeLinecap="round" />
-        </svg>
-      );
-    case 'COUNTER_STRIKE_2':
-      return (
-        <svg {...svgProps}>
-          <path fill="#4A90D9" d="M12 3 20 8v8l-8 5-8-5V8l8-5zm0 2.5L6 9v6l6 3.8L18 15V9l-6-3.5z" />
-          <path fill="#1e3a5f" d="m12 8.5 4 2.3V15l-4 2.5-4-2.5v-4.2l4-2.3z" />
-        </svg>
-      );
+function TeamSearchGameTabIcon({
+  gameId,
+  slug,
+  active,
+  theme,
+}: {
+  gameId: TeamSearchGameId;
+  slug?: string;
+  active: boolean;
+  theme: 'dark' | 'light';
+}) {
+  // simple-icons CDN: /{slug}/{color}
+  // - 기본: 다크=연회색, 라이트=진회색
+  // - 활성: 연두색(2ECC71)
+  const baseColor = theme === 'dark' ? '9CA3AF' : '111827';
+  const activeColor = '2ECC71';
+  const color = active ? activeColor : baseColor;
+
+  if (gameId === 'OVERWATCH') {
+    return (
+      <svg width={18} height={18} viewBox="0 0 24 24" aria-hidden focusable="false">
+        <path
+          fill="currentColor"
+          d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5A8.51 8.51 0 0 0 12 3.5Zm0 2a6.5 6.5 0 0 1 6.16 4.4l-2.47-1.43a1 1 0 0 0-1 1.73l2.9 1.68a6.47 6.47 0 0 1-1.78 4.22l-2.23-3.86a1 1 0 0 0-1.73 1l2.24 3.88A6.5 6.5 0 0 1 5.5 12 6.5 6.5 0 0 1 12 5.5Z"
+          opacity={active ? 1 : 0.92}
+        />
+        <path
+          fill="currentColor"
+          d="M8.2 8.9 6.7 11.5a1 1 0 0 0 .37 1.36 1 1 0 0 0 1.36-.37l.9-1.56 1.7 1a1 1 0 0 0 1-1.73L9.2 8.7a1 1 0 0 0-1 .2Z"
+          opacity={active ? 0.95 : 0.65}
+        />
+      </svg>
+    );
   }
+
+  if (!slug) {
+    return (
+      <svg width={18} height={18} viewBox="0 0 24 24" aria-hidden focusable="false">
+        <circle cx="12" cy="12" r="9.5" fill="currentColor" opacity="0.18" />
+        <path d="M6.8 12h10.4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+        <path d="M12 6.8v10.4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" opacity="0.85" />
+      </svg>
+    );
+  }
+
+  return (
+    <img
+      className="home-team-game-tab-img"
+      src={`https://cdn.simpleicons.org/${slug}/${color}`}
+      alt=""
+      width={18}
+      height={18}
+      loading="lazy"
+      decoding="async"
+      referrerPolicy="no-referrer"
+    />
+  );
 }
 
 export default function Home() {
   const { user, loading: authLoading } = useAuth();
+  const { theme } = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   /** 우측 팀 찾기 패널: 랜덤 매칭 / 방 만들기 */
@@ -221,10 +342,8 @@ export default function Home() {
   }, [matchGame, matchMode, matchPartySize]);
   const [liveStreams, setLiveStreams] = useState<StreamItem[]>([]);
   const [loadingLive, setLoadingLive] = useState(false);
-  const controlledPartyOptions = getControlledPartyOptions(matchGame, matchMode);
   const positionRequired = positionRequiredForRandomMatch(matchGame, matchMode);
   const positionDisabled = isLolAram(matchGame, matchMode);
-  const partySizeDisabled = isLolSoloRank(matchGame, matchMode);
 
   const [createGame, setCreateGame] = useState('LEAGUE_OF_LEGENDS');
   const [createTitle, setCreateTitle] = useState('');
@@ -250,6 +369,13 @@ export default function Home() {
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [joinRoomId, setJoinRoomId] = useState<number | null>(null);
   const [selectedGame, setSelectedGame] = useState<TeamSearchGameId>('ALL');
+
+  // 팀 찾기 테이블 컬럼 표시 규칙
+  // - PUBG 탭: 포지션 컬럼 숨김
+  // - 전체(ALL) 탭: 삭제 컬럼 숨김
+  const showPositionColumn = selectedGame !== 'PUBG';
+  const showDeleteColumn = selectedGame !== 'ALL';
+  const tableColumnCount = 7 + (showPositionColumn ? 1 : 0) + (showDeleteColumn ? 1 : 0);
 
   const fetchRooms = useCallback(() => {
     setLoadingRooms(true);
@@ -427,22 +553,27 @@ export default function Home() {
   }, [matchGame, matchMode]);
 
   useEffect(() => {
-    if (controlledPartyOptions.length === 0) {
+    if (matchGame !== 'PUBG') {
       if (matchPartySize !== '') setMatchPartySize('');
       return;
     }
-    if (!controlledPartyOptions.some((o) => o.value === matchPartySize)) {
-      setMatchPartySize(controlledPartyOptions[0]?.value ?? '');
+    if (matchPartySize !== 'DUO' && matchPartySize !== 'SQUAD') {
+      setMatchPartySize('DUO');
     }
-  }, [controlledPartyOptions, matchPartySize]);
+  }, [matchGame, matchPartySize]);
 
+  // matchPosition을 matchGame/positionRequired에만 맞춤 (의존에 matchPosition 넣지 않음 → 불필요한 루프 방지)
   useEffect(() => {
-    if (positionRequired) {
-      if (!matchPosition) setMatchPosition('TOP');
+    if (!positionRequired) {
+      setMatchPosition((p) => (p == null ? p : null));
       return;
     }
-    if (matchPosition != null) setMatchPosition(null);
-  }, [positionRequired, matchPosition]);
+    setMatchPosition((prev) =>
+      prev != null && isRandomMatchPositionValid(matchGame, prev)
+        ? prev
+        : defaultRandomMatchPosition(matchGame),
+    );
+  }, [matchGame, positionRequired]);
 
   useEffect(() => {
     // LoL 전용 매칭 API는 tier가 필수라 UI에서 숨겨도 기본값을 유지
@@ -617,6 +748,37 @@ export default function Home() {
     fetchRooms();
   };
 
+  const [deletingRoomId, setDeletingRoomId] = useState<number | null>(null);
+  const handleDeleteRoom = async (r: GameRoomItem) => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    if (!r.isHost) {
+      window.alert('방장만 삭제할 수 있습니다.');
+      return;
+    }
+    const pw = window.prompt('방 삭제용 비밀번호를 입력해 주세요.');
+    if (pw == null) return;
+    const deletePassword = pw.trim();
+    if (!deletePassword) return;
+    if (!window.confirm('정말 이 방을 삭제할까요?')) return;
+
+    setDeletingRoomId(r.id);
+    try {
+      const { ok, message } = await deleteGameRoom(r.id, deletePassword);
+      if (!ok) {
+        window.alert(message || '삭제에 실패했습니다.');
+        return;
+      }
+      setRoomList((prev) => prev.filter((x) => x.id !== r.id));
+    } catch {
+      window.alert('삭제 중 오류가 발생했습니다.');
+    } finally {
+      setDeletingRoomId(null);
+    }
+  };
+
   /** Random-match sidebar panel (shared with fixed sidebar). */
   const randomPanelContent = (
     <div className="sidebar-panel random-panel">
@@ -665,19 +827,14 @@ export default function Home() {
                   </select>
                 </>
               )}
-              {matchGame !== 'LEAGUE_OF_LEGENDS' && matchGame !== 'VALORANT' && matchGame !== 'OVERWATCH' && matchGame !== 'COUNTER_STRIKE_2' && controlledPartyOptions.length > 0 && (
+              {matchGame === 'PUBG' && (
                 <>
                   <label className="sidebar-form-label">인원</label>
-                  <select
-                    className="sidebar-form-input"
+                  <PubgPartySizeButtons
                     value={matchPartySize}
-                    onChange={(e) => setMatchPartySize(e.target.value)}
-                    disabled={partySizeDisabled}
-                  >
-                    {controlledPartyOptions.map((o) => (
-                      <option key={o.value || '_'} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
+                    onChange={setMatchPartySize}
+                    ariaLabel="PUBG 인원 선택"
+                  />
                 </>
               )}
               {matchGame !== 'PUBG' && (
@@ -725,7 +882,22 @@ export default function Home() {
           <legend className="create-room-legend">방 정보</legend>
 
           <label className="sidebar-form-label">게임</label>
-          <select className="sidebar-form-input" value={createGame} onChange={(e) => setCreateGame(e.target.value)}>
+          <select
+            className="sidebar-form-input"
+            value={createGame}
+            onChange={(e) => {
+              setCreateGame(e.target.value);
+              setCreateMode('');
+              setCreateTier('');
+              setCreatePosition(null);
+              setCreateMyPosition(null);
+              setCreatePartnerPosition(null);
+              setCreatePrimaryRole(null);
+              setCreateSecondaryRole(null);
+              setCreateFindPosition(null);
+              setCreateError('');
+            }}
+          >
             {GAME_OPTIONS.map((o) => (
               <option key={o.key} value={o.key}>{o.label}</option>
             ))}
@@ -846,22 +1018,11 @@ export default function Home() {
               </div>
 
               <label className="sidebar-form-label">파티</label>
-              <div className="create-toggle-row" role="radiogroup" aria-label="파티 선택">
-                <button
-                  type="button"
-                  className={`create-toggle-btn ${createPartySize === 'DUO' || !createPartySize ? 'active' : ''}`}
-                  onClick={() => setCreatePartySize('DUO')}
-                >
-                  듀오(2인)
-                </button>
-                <button
-                  type="button"
-                  className={`create-toggle-btn ${createPartySize === 'SQUAD' ? 'active' : ''}`}
-                  onClick={() => setCreatePartySize('SQUAD')}
-                >
-                  스쿼드(4인)
-                </button>
-              </div>
+              <PubgPartySizeButtons
+                value={createPartySize}
+                onChange={setCreatePartySize}
+                ariaLabel="PUBG 파티 인원 선택"
+              />
 
               <label className="sidebar-form-label">모드</label>
               <select className="sidebar-form-input" value={createMode} onChange={(e) => setCreateMode(e.target.value)}>
@@ -1021,7 +1182,12 @@ export default function Home() {
                   onClick={() => setSelectedGame(tab.id)}
                 >
                   <span className="home-team-game-tab-icon">
-                    <TeamSearchGameTabIcon game={tab.id} />
+                    <TeamSearchGameTabIcon
+                      gameId={tab.id}
+                      slug={tab.simpleIconSlug}
+                      active={selectedGame === tab.id}
+                      theme={theme}
+                    />
                   </span>
                   <span className="home-team-game-tab-label">{tab.label}</span>
                 </button>
@@ -1033,26 +1199,27 @@ export default function Home() {
                   <tr>
                     <th>제목</th>
                     <th>랭크</th>
-                    <th>포지션</th>
+                    {showPositionColumn ? <th>포지션</th> : null}
                     <th>메모</th>
                     <th>인원</th>
                     <th>방장</th>
                     <th>등록일</th>
                     <th>참가</th>
+                    {showDeleteColumn ? <th>삭제</th> : null}
                   </tr>
                 </thead>
                 <tbody>
                   {loadingRooms && roomList.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="home-demo-room-loading-cell">방 목록 불러오는 중…</td>
+                      <td colSpan={tableColumnCount} className="home-demo-room-loading-cell">방 목록 불러오는 중…</td>
                     </tr>
                   ) : visibleRoomList.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="home-demo-room-loading-cell">등록된 방이 없습니다.</td>
+                      <td colSpan={tableColumnCount} className="home-demo-room-loading-cell">등록된 방이 없습니다.</td>
                     </tr>
                   ) : filteredRoomList.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="home-demo-room-loading-cell">선택한 게임에 등록된 방이 없습니다.</td>
+                      <td colSpan={tableColumnCount} className="home-demo-room-loading-cell">선택한 게임에 등록된 방이 없습니다.</td>
                     </tr>
                   ) : null}
                   {filteredRoomList.map((r) => {
@@ -1068,15 +1235,17 @@ export default function Home() {
                       <tr key={`api-${r.id}`} className={isFull ? 'home-demo-room-row home-demo-room-row--full' : 'home-demo-room-row'}>
                         <td>{r.title}</td>
                         <td>{rankCell}</td>
-                        <td>
-                          {showPos ? (
-                            <span className="home-demo-room-position">
-                              <PositionIcon position={op.position} game={r.game} showLabel />
-                            </span>
-                          ) : (
-                            '-'
-                          )}
-                        </td>
+                        {showPositionColumn ? (
+                          <td>
+                            {showPos ? (
+                              <span className="home-demo-room-position">
+                                <PositionIcon position={op.position} game={r.game} showLabel />
+                              </span>
+                            ) : (
+                              '-'
+                            )}
+                          </td>
+                        ) : null}
                         <td className="home-demo-room-memo-cell" title={r.memo?.trim() ? r.memo : ''}>
                           {r.memo?.trim() ? r.memo : '-'}
                         </td>
@@ -1127,6 +1296,23 @@ export default function Home() {
                             </button>
                           )}
                         </td>
+                        {showDeleteColumn ? (
+                          <td>
+                            {r.isHost ? (
+                              <button
+                                type="button"
+                                className="home-demo-room-delete-btn"
+                                disabled={deletingRoomId === r.id}
+                                onClick={() => void handleDeleteRoom(r)}
+                                title="방 삭제"
+                              >
+                                {deletingRoomId === r.id ? '삭제 중…' : '삭제'}
+                              </button>
+                            ) : (
+                              <span className="home-demo-room-closed-label">-</span>
+                            )}
+                          </td>
+                        ) : null}
                       </tr>
                     );
                   })}

@@ -66,6 +66,10 @@ export async function fetchAccountConnections() {
   return apiFetch<AccountConnectionsResponse>('/api/account-links');
 }
 
+export async function fetchAccountConnectionsForUser(userId: number) {
+  return apiFetch<AccountConnectionsResponse>(`/api/account-links/user/${userId}`);
+}
+
 export async function unlinkAccount(provider: Lowercase<AccountLinkProvider>) {
   return apiFetch<void>(`/api/account-links/${provider}`, {
     method: 'DELETE',
