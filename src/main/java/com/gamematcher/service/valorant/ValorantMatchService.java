@@ -4,6 +4,7 @@ import com.gamematcher.dto.valorant.ValorantMatchDetailDto;
 import com.gamematcher.entity.match.valorant.ValorantMatch;
 import com.gamematcher.mapper.ValorantMatchMapper;
 import com.gamematcher.repository.match.ValorantMatchDetailRepository;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,7 +59,11 @@ public class ValorantMatchService {
         valorantMatchDetailRepository.findByMatchId(matchId).ifPresent(valorantMatchDetailRepository::delete);
         ValorantMatch match = valorantMatchMapper.toEntity(dto);
         match.setApiCachedAt(LocalDateTime.now());
-        return valorantMatchDetailRepository.save(match);
+        try {
+            return valorantMatchDetailRepository.save(match);
+        } catch (DataIntegrityViolationException ex) {
+            return valorantMatchDetailRepository.findByMatchId(matchId).orElseThrow(() -> ex);
+        }
     }
 
     /**

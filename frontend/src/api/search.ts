@@ -167,3 +167,24 @@ export async function runValorantMatchAiEvaluation(request: {
   }
   return response.data;
 }
+
+/**
+ * GET /api/valorant/evaluations/match/{matchId}/saved — DB에만 있는 저장 분석(LLM 미호출).
+ * 해당 모델 행이 없으면 null (404).
+ */
+export async function fetchValorantSavedAiEvaluation(request: {
+  matchId: string;
+  puuid: string;
+  model?: string;
+}): Promise<ValorantAiEvaluationApiRow | null> {
+  const q = new URLSearchParams();
+  q.set('puuid', request.puuid);
+  if (request.model) q.set('model', request.model);
+  const path = `/api/valorant/evaluations/match/${encodeURIComponent(request.matchId)}/saved?${q}`;
+  const response = await apiFetch<ValorantAiEvaluationApiRow>(path, { method: 'GET' });
+  if (response.status === 404) return null;
+  if (!response.ok || !response.data) {
+    throw new Error(response.message ?? '저장된 AI 분석 조회에 실패했습니다.');
+  }
+  return response.data;
+}

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchMatchDetail,
+  fetchValorantSavedAiEvaluation,
   runValorantMatchAiEvaluation,
   type PlayerSearchResponse,
 } from '../../api/search';
@@ -150,6 +151,7 @@ function RecordsMatchAiTab({
   onMergeDetailPayload,
   aiModel,
   onAiModelChange,
+  aiModelSwitchLoading,
 }: {
   gameId: string;
   matchId: string;
@@ -158,11 +160,14 @@ function RecordsMatchAiTab({
   onMergeDetailPayload: (patch: Record<string, unknown>) => void;
   aiModel: string;
   onAiModelChange: (model: string) => void;
+  /** 모델만 바꿀 때 저장분만 조회 중(전체 상세 로딩과 구분) */
+  aiModelSwitchLoading?: boolean;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const supported = gameId === 'valorant';
+  const modelBusy = Boolean(aiModelSwitchLoading);
   const parsed = useMemo(() => parseAiSavedBlocks(savedBlocks), [savedBlocks]);
   const hasResultContent = Boolean(
     parsed.model || parsed.status || parsed.grade || parsed.score || parsed.summary || parsed.detailed,
@@ -177,7 +182,7 @@ function RecordsMatchAiTab({
         matchId,
         puuid,
         model: aiModel,
-        force: true,
+        // 동일 모델이면 DB에 이미 있으면 재호출 없이 반환. 다른 모델이면 별도 행으로 저장됨.
       });
       const pid = puuid.trim().toLowerCase();
       const row =
@@ -218,7 +223,7 @@ function RecordsMatchAiTab({
                 className="records-match-detail-ai-model-select"
                 value={aiModel}
                 onChange={(e) => onAiModelChange(e.target.value)}
-                disabled={loading}
+                disabled={loading || modelBusy || !puuid}
               >
                 {RECORDS_AI_MODEL_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -230,7 +235,7 @@ function RecordsMatchAiTab({
             <button
               type="button"
               className="records-match-detail-ai-run-btn"
-              disabled={loading || !puuid}
+              disabled={loading || modelBusy || !puuid}
               onClick={() => void run()}
             >
               {loading ? '분석 중…' : '분석'}
@@ -240,6 +245,9 @@ function RecordsMatchAiTab({
             <p className="records-match-detail-ai-hint">
               플레이어 식별 정보(puuid)가 없어 분석을 실행할 수 없습니다.
             </p>
+          ) : null}
+          {puuid && modelBusy ? (
+            <p className="records-match-detail-ai-hint">선택한 모델의 저장된 분석을 불러오는 중…</p>
           ) : null}
           {error ? <p className="records-match-detail-error">{error}</p> : null}
           <div
@@ -372,6 +380,7 @@ function MatchDetailFormattedView({
   onMergeDetailPayload,
   aiModel,
   onAiModelChange,
+  aiModelSwitchLoading,
 }: {
   detail: FormattedMatchDetail;
   gameId: string;
@@ -380,6 +389,7 @@ function MatchDetailFormattedView({
   onMergeDetailPayload: (patch: Record<string, unknown>) => void;
   aiModel: string;
   onAiModelChange: (model: string) => void;
+  aiModelSwitchLoading?: boolean;
 }) {
   const [tab, setTab] = useState<'match' | 'players' | 'ai'>('match');
 
@@ -443,6 +453,7 @@ function MatchDetailFormattedView({
             onMergeDetailPayload={onMergeDetailPayload}
             aiModel={aiModel}
             onAiModelChange={onAiModelChange}
+            aiModelSwitchLoading={aiModelSwitchLoading}
           />
         )}
       </div>
@@ -464,6 +475,7 @@ export function MatchRow({
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detailAiModel, setDetailAiModel] = useState(RECORDS_AI_MODEL_OPTIONS[0]?.value ?? 'gpt-5-mini');
+  const [detailAiSlotLoading, setDetailAiSlotLoading] = useState(false);
   const lastDetailFetchKey = useRef<string | null>(null);
 
   const buildDetailFetchKey = (model: string) =>
@@ -525,28 +537,46 @@ export function MatchRow({
 
   const handleAiModelChange = async (model: string) => {
     setDetailAiModel(model);
-    if (!detailOpen || !match.matchId) return;
+    if (!detailOpen || !match.matchId || gameId !== 'valorant') return;
+
     const fetchKey = buildDetailFetchKey(model);
-    setDetailLoading(true);
+    lastDetailFetchKey.current = fetchKey;
+
+    const puuid = detailContext.puuid;
+    if (!puuid) {
+      setDetailPayload((prev) => (prev ? { ...prev, records_ai_evaluation: null } : prev));
+      return;
+    }
+
+    setDetailAiSlotLoading(true);
     setDetailError(null);
     try {
-      const res = await fetchMatchDetail({
-        game: gameId,
+      const row = await fetchValorantSavedAiEvaluation({
         matchId: match.matchId,
-        puuid: detailContext.puuid,
-        platform: detailContext.platform,
-        llmModel: gameId === 'valorant' ? model : undefined,
+        puuid,
+        model,
       });
-      if (!res.success) {
-        setDetailError(res.errorMessage || '상세를 불러오지 못했습니다.');
-        return;
-      }
-      lastDetailFetchKey.current = fetchKey;
-      setDetailPayload((res.payload ?? {}) as Record<string, unknown>);
+      setDetailPayload((prev) => {
+        if (!prev) return prev;
+        if (!row) {
+          return { ...prev, records_ai_evaluation: null };
+        }
+        return {
+          ...prev,
+          records_ai_evaluation: {
+            llmModel: row.llmModel ?? model,
+            status: row.status ?? undefined,
+            grade: row.grade ?? undefined,
+            score: row.score ?? undefined,
+            summary: row.summary ?? undefined,
+            detailedComment: row.detailedComment ?? undefined,
+          },
+        };
+      });
     } catch (e) {
-      setDetailError(e instanceof Error ? e.message : '상세 요청 오류');
+      setDetailError(e instanceof Error ? e.message : '저장된 분석 불러오기 실패');
     } finally {
-      setDetailLoading(false);
+      setDetailAiSlotLoading(false);
     }
   };
 
@@ -656,6 +686,7 @@ export function MatchRow({
               }
               aiModel={detailAiModel}
               onAiModelChange={(m) => void handleAiModelChange(m)}
+              aiModelSwitchLoading={detailAiSlotLoading}
             />
           ) : null}
         </div>
