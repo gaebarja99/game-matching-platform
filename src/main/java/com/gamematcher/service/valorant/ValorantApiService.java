@@ -16,6 +16,8 @@ import com.gamematcher.service.riot.RiotApiService;
 import com.gamematcher.dto.search.PlayerSearchRequest;
 import com.gamematcher.dto.search.PlayerSearchResponse;
 import com.gamematcher.dto.search.PlayerSearchResponse.*;
+import com.gamematcher.dto.search.ValorantSearchMmrRequest;
+import com.gamematcher.dto.search.ValorantSearchMmrResponse;
 import com.gamematcher.entity.match.valorant.ValorantMatch;
 import com.gamematcher.entity.match.valorant.ValorantMatchPlayer;
 import com.gamematcher.repository.match.ValorantMatchDetailRepository;
@@ -169,6 +171,48 @@ public class ValorantApiService {
         candidates.add("latam");
         candidates.add("br");
         return new ArrayList<>(candidates);
+    }
+
+    /** Henrik MMR 조회용 샤드 (ap, na, eu, kr, br, latam). */
+    public String mapAccountRegionToHenrikShard(String valorantAccountRegion) {
+        if (valorantAccountRegion == null || valorantAccountRegion.isBlank()) {
+            return "ap";
+        }
+        return REGION_MAP.getOrDefault(valorantAccountRegion.toLowerCase().trim(), "ap");
+    }
+
+    /**
+     * Riot ID(닉·태그)로 Henrik 계정을 찾은 뒤 Henrik puuid로 MMR을 조회한다.
+     * 프로필 연동 화면의 발로란트 티어 요약용.
+     */
+    public ValorantMmrApiResponse fetchMmrForRiotLinkedProfile(String gameName, String tag) {
+        if (!valorantApiProperties.hasApiKey()) {
+            return null;
+        }
+        String name = gameName == null ? "" : gameName.trim();
+        if (name.isBlank() || tag == null || tag.isBlank()) {
+            return null;
+        }
+        try {
+            ValorantPuuidApiResponse acc = getAccountByNameTag(name, tag, false);
+            if (acc == null || acc.getData() == null) {
+                return null;
+            }
+            String henrikPuuid = acc.getData().getPuuid();
+            if (henrikPuuid == null || henrikPuuid.isBlank()) {
+                return null;
+            }
+            String shard = mapAccountRegionToHenrikShard(acc.getData().getRegion());
+            try {
+                return getMmr(henrikPuuid.trim(), shard);
+            } catch (Exception e) {
+                log.debug("Valorant MMR 프로필용 조회 생략: {}", e.getMessage());
+                return null;
+            }
+        } catch (Exception e) {
+            log.debug("Valorant 계정/MMR 프로필용 조회 생략: {}", e.getMessage());
+            return null;
+        }
     }
 
     /**
@@ -665,6 +709,33 @@ public class ValorantApiService {
                     errorMessage != null ? errorMessage : "발로란트 전적을 불러오지 못했습니다."
             );
         }
+    }
+
+    /**
+     * Records: 1차 검색에서 {@code deferValorantMmr} 로 티어를 미룬 뒤, Henrik MMR만 조회한다.
+     */
+    public ValorantSearchMmrResponse resolveMmrForSearch(ValorantSearchMmrRequest request) {
+        if (request.getPuuid() == null || request.getPuuid().isBlank()) {
+            return ValorantSearchMmrResponse.fail("puuid가 필요합니다.");
+        }
+        String puuid = request.getPuuid();
+        String regionInput = request.getRegion();
+        final String region = (regionInput == null || regionInput.isBlank()) ? "kr" : regionInput;
+        String mmrCacheKey = region + "|" + puuid;
+        HttpEntity<Void> entity = valorantHttpEntity();
+        if (Boolean.TRUE.equals(request.getForceRefresh())) {
+            valorantMmrSearchCache.remove(mmrCacheKey);
+        }
+        ValorantMmrTierSnapshot mmr = Optional.ofNullable(valorantMmrSearchCache.get(mmrCacheKey))
+                .filter(Cached::fresh)
+                .map(Cached::value)
+                .orElseGet(() -> {
+                    ValorantMmrTierSnapshot m = fetchValorantMmrForSearch(region, puuid, entity);
+                    valorantMmrSearchCache.put(mmrCacheKey,
+                            new Cached<>(m, System.currentTimeMillis() + VALORANT_SEARCH_API_CACHE_TTL_MS));
+                    return m;
+                });
+        return ValorantSearchMmrResponse.ok(mmr.displayTier());
     }
 
     private ValorantPuuidApiResponse.AccountData loadAccountForSearch(PlayerSearchRequest req) {

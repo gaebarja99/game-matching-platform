@@ -1,5 +1,6 @@
 package com.gamematcher.dto.valorant;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -21,11 +22,16 @@ public class ValorantLifetimeDataItem {
     @Getter
     @Setter
     @NoArgsConstructor
+    @JsonIgnoreProperties(ignoreUnknown = true)
     public static class ValorantLifetimeMeta {
         private String id;
         private MapRef map;
         private String version;
         private String mode;
+
+        /** 일부 큐(난투 등)는 {@code mode} 대신 이 필드만 오는 경우가 있음 */
+        @JsonProperty("game_mode")
+        private String gameMode;
 
         @JsonProperty("started_at")
         private String startedAt;

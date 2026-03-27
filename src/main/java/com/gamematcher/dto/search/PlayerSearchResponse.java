@@ -14,6 +14,10 @@ public class PlayerSearchResponse {
     private String errorMessage;
     private String game;
     private String nickname;
+    /** true면 matches 행은 matchId 위주이며 요약(KDA 등)은 없음 — 상세는 match-detail API */
+    private Boolean matchListOnly;
+    /** 발로란트: 티어는 아직 로드 전 — {@code POST /api/search/valorant/mmr} 로 채움 */
+    private Boolean valorantMmrPending;
     private PlayerInfo playerInfo;
     private List<MatchInfo> matches;
     private MatchStats stats;

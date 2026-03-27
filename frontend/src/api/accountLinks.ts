@@ -14,6 +14,16 @@ export interface AccountConnectionStatus {
   ownershipVerified: boolean;
   connectUrl?: string | null;
   note?: string | null;
+  /** Riot: LoL 솔로/자유 랭크 요약 */
+  lolRankSummary?: string | null;
+  /** Riot: 발로란트 경쟁 티어 요약 */
+  valorantRankSummary?: string | null;
+  /** 공개 프로필 등에 이 연동 노출 여부 */
+  publicProfileVisible?: boolean;
+  /** Riot: LoL 랭크 요약 공개 */
+  publicLolRankVisible?: boolean;
+  /** Riot: 발로란트 티어 요약 공개 */
+  publicValorantRankVisible?: boolean;
 }
 
 export interface AccountConnectionsResponse {
@@ -70,6 +80,18 @@ export async function linkRiotAccount(gameName: string, tagLine: string) {
   return apiFetch<RiotManualLinkResponse>('/api/account-links/riot/manual', {
     method: 'POST',
     body: JSON.stringify({ gameName, tagLine }),
+  });
+}
+
+export interface AccountLinkRefreshResponse {
+  updated: boolean;
+  message: string;
+}
+
+export async function refreshAccountLink(provider: Lowercase<AccountLinkProvider>) {
+  return apiFetch<AccountLinkRefreshResponse>(`/api/account-links/${provider}/refresh`, {
+    method: 'POST',
+    body: '{}',
   });
 }
 

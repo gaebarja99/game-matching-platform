@@ -4,6 +4,7 @@ import {
   confirmRiotVerification,
   fetchAccountConnections,
   linkRiotAccount,
+  refreshAccountLink,
   startOAuthLink,
   startRiotVerification,
   unlinkAccount,
@@ -11,7 +12,6 @@ import {
   type RiotGameType,
   type RiotVerificationStartResponse,
 } from '../api/accountLinks';
-
 type OAuthProvider = 'discord' | 'steam' | 'blizzard';
 
 const TEXT = {
@@ -99,6 +99,7 @@ export default function ProfileAccountLinks() {
   const [riotGameName, setRiotGameName] = useState('');
   const [riotTagLine, setRiotTagLine] = useState('');
   const [riotBusy, setRiotBusy] = useState(false);
+  const [refreshBusy, setRefreshBusy] = useState<string | null>(null);
   const [riotVerification, setRiotVerification] = useState<RiotVerificationStartResponse | null>(null);
   const [riotFormOpen, setRiotFormOpen] = useState(false);
 
@@ -107,18 +108,20 @@ export default function ProfileAccountLinks() {
     setMessage({ text: '', ok: null });
   };
 
-  const loadConnections = async () => {
-    setLoading(true);
+  const loadConnections = async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const { ok, data, message: errorMessage } = await fetchAccountConnections();
       if (ok && data?.connections) {
         setConnections(data.connections);
-        setMessage({ text: '', ok: null });
+        if (!silent) {
+          setMessage({ text: '', ok: null });
+        }
       } else {
         setMessage({ text: errorMessage || TEXT.loadError, ok: false });
       }
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -187,6 +190,25 @@ export default function ProfileAccountLinks() {
     } catch {
       setMessage({ text: TEXT.openFail, ok: false });
       setOauthBusy(null);
+    }
+  };
+
+  const handleRefreshInfo = async (providerKey: string) => {
+    const p = providerKey.toLowerCase() as 'discord' | 'steam' | 'blizzard' | 'riot';
+    setRefreshBusy(providerKey);
+    setMessage({ text: '', ok: null });
+    try {
+      const { ok, data, message: errorMessage } = await refreshAccountLink(p);
+      if (ok && data?.message) {
+        setMessage({ text: data.message, ok: true });
+        await loadConnections(true);
+      } else {
+        setMessage({ text: errorMessage || '정보를 불러오지 못했습니다.', ok: false });
+      }
+    } catch {
+      setMessage({ text: '정보를 불러오지 못했습니다.', ok: false });
+    } finally {
+      setRefreshBusy(null);
     }
   };
 
@@ -357,7 +379,7 @@ export default function ProfileAccountLinks() {
                 <div className="account-link-card-head">
                   <div>
                     <strong>{provider.title}</strong>
-                    <p>{provider.description}</p>
+                    {!connected ? <p>{provider.description}</p> : null}
                   </div>
                   <span className={`account-link-badge ${connected ? 'is-connected' : 'is-disconnected'}`}>
                     {connected ? TEXT.connected : TEXT.notConnected}
@@ -365,10 +387,15 @@ export default function ProfileAccountLinks() {
                 </div>
 
                 {connected ? (
-                  <div className="account-link-meta">
-                    <div>{connection?.displayName || TEXT.noDisplayName}</div>
+                  <div className="account-link-meta account-link-meta--compact account-link-meta--connected-only">
+                    <div className="account-link-display-line">
+                      {connection?.displayName?.trim() || TEXT.noDisplayName}
+                    </div>
                     <div>{connection?.ownershipVerified ? TEXT.verified : TEXT.verifyNeeded}</div>
                     {connection?.note ? <div>{connection.note}</div> : null}
+                    {connection?.secondaryValue && provider.key !== 'RIOT' ? (
+                      <div className="account-link-secondary-line">{connection.secondaryValue}</div>
+                    ) : null}
                   </div>
                 ) : provider.key === 'RIOT' ? (
                   riotFormOpen ? (
@@ -425,14 +452,24 @@ export default function ProfileAccountLinks() {
 
                 <div className="account-link-actions">
                   {connected ? (
-                    <button
-                      type="button"
-                      className="account-link-secondary"
-                      onClick={() => handleDisconnect(provider.key)}
-                      disabled={disconnectBusy === provider.key}
-                    >
-                      {disconnectBusy === provider.key ? TEXT.disconnecting : TEXT.disconnect}
-                    </button>
+                    <>
+                      <button
+                        type="button"
+                        className="account-link-refresh-btn"
+                        onClick={() => void handleRefreshInfo(provider.key)}
+                        disabled={refreshBusy === provider.key || disconnectBusy === provider.key}
+                      >
+                        {refreshBusy === provider.key ? '불러오는 중...' : '정보 불러오기'}
+                      </button>
+                      <button
+                        type="button"
+                        className="account-link-secondary"
+                        onClick={() => handleDisconnect(provider.key)}
+                        disabled={disconnectBusy === provider.key || refreshBusy === provider.key}
+                      >
+                        {disconnectBusy === provider.key ? TEXT.disconnecting : TEXT.disconnect}
+                      </button>
+                    </>
                   ) : provider.oauth ? (
                     <button
                       type="button"

@@ -5,8 +5,8 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamematcher.dto.search.PlayerSearchRequest;
 import com.gamematcher.dto.search.PlayerSearchResponse;
 import com.gamematcher.exception.GameApiException;
+import com.gamematcher.service.lol.LolApiService;
 import com.gamematcher.service.search.Cs2SearchService;
-import com.gamematcher.service.search.LolSearchService;
 import com.gamematcher.service.search.OverwatchSearchService;
 import com.gamematcher.service.search.PubgSearchService;
 import com.gamematcher.service.search.TftSearchService;
@@ -23,7 +23,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class PlayerSearchService {
 
-    private final LolSearchService lolSearchService;
+    private final LolApiService lolApiService;
     private final TftSearchService tftSearchService;
     private final ValorantSearchService valorantSearchService;
     private final PubgSearchService pubgSearchService;
@@ -33,7 +33,7 @@ public class PlayerSearchService {
 
     public PlayerSearchResponse searchPlayer(PlayerSearchRequest request) {
         request.normalize();
-        request.setCount(20);
+        // count는 프론트(5·10·15·20) 및 normalize() 기본값을 따른다. 강제 20은 외부 API·DB 부하만 키운다.
 
         String game = request.getGame();
         if (game == null || game.isBlank()) {
@@ -41,7 +41,7 @@ public class PlayerSearchService {
         }
 
         return switch (game) {
-            case "lol" -> lolSearchService.search(request);
+            case "lol" -> lolApiService.search(request);
             case "tft" -> tftSearchService.search(request);
             case "valorant" -> valorantSearchService.search(request);
             case "pubg" -> pubgSearchService.search(request);

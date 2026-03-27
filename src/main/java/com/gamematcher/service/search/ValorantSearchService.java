@@ -86,34 +86,37 @@ public class ValorantSearchService {
             String accountRegion = asString(accountData.get("region"));
             List<String> candidateRegions = resolveCandidateRegions(inputRegion, accountRegion);
 
+            boolean deferMmr = Boolean.TRUE.equals(req.getDeferValorantMmr());
             String finalRegion = candidateRegions.get(0);
             String tier = "UNRANKED";
             String tierName = "";
-            for (String candidateRegion : candidateRegions) {
-                try {
-                    String mmrUrl = UriComponentsBuilder
-                            .fromHttpUrl("https://api.henrikdev.xyz")
-                            .path("/valorant/v2/by-puuid/mmr/{region}/{puuid}")
-                            .buildAndExpand(candidateRegion, puuid)
-                            .toUriString();
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> mmrResp = restTemplate.exchange(mmrUrl, HttpMethod.GET, entity, Map.class).getBody();
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> mmrData = mmrResp != null ? (Map<String, Object>) mmrResp.get("data") : null;
-                    if (mmrData == null) {
-                        continue;
+            if (!deferMmr) {
+                for (String candidateRegion : candidateRegions) {
+                    try {
+                        String mmrUrl = UriComponentsBuilder
+                                .fromHttpUrl("https://api.henrikdev.xyz")
+                                .path("/valorant/v2/by-puuid/mmr/{region}/{puuid}")
+                                .buildAndExpand(candidateRegion, puuid)
+                                .toUriString();
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> mmrResp = restTemplate.exchange(mmrUrl, HttpMethod.GET, entity, Map.class).getBody();
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> mmrData = mmrResp != null ? (Map<String, Object>) mmrResp.get("data") : null;
+                        if (mmrData == null) {
+                            continue;
+                        }
+                        @SuppressWarnings("unchecked")
+                        Map<String, Object> current = (Map<String, Object>) mmrData.get("current_data");
+                        if (current == null) {
+                            continue;
+                        }
+                        tier = String.valueOf(current.getOrDefault("currenttier", 0));
+                        tierName = asString(current.getOrDefault("currenttierpatched", "UNRANKED"));
+                        finalRegion = candidateRegion;
+                        break;
+                    } catch (Exception e) {
+                        log.warn("Valorant MMR lookup failed (region={}): {}", candidateRegion, e.getMessage());
                     }
-                    @SuppressWarnings("unchecked")
-                    Map<String, Object> current = (Map<String, Object>) mmrData.get("current_data");
-                    if (current == null) {
-                        continue;
-                    }
-                    tier = String.valueOf(current.getOrDefault("currenttier", 0));
-                    tierName = asString(current.getOrDefault("currenttierpatched", "UNRANKED"));
-                    finalRegion = candidateRegion;
-                    break;
-                } catch (Exception e) {
-                    log.warn("Valorant MMR lookup failed (region={}): {}", candidateRegion, e.getMessage());
                 }
             }
 
@@ -172,19 +175,28 @@ public class ValorantSearchService {
             }
             MatchStats stats = buildStats(matches);
 
-            PlayerInfo playerInfo = PlayerInfo.builder()
+            Map<String, Object> rawData = null;
+            if (deferMmr) {
+                rawData = new LinkedHashMap<>();
+                rawData.put("valorantRegion", finalRegion);
+            }
+            PlayerInfo.PlayerInfoBuilder pi = PlayerInfo.builder()
                     .puuid(puuid)
                     .gameName(req.getGameName())
                     .tagLine(req.getTagLine())
-                    .tier(tierName == null || tierName.isBlank() ? tier : tierName)
+                    .tier(deferMmr ? "" : (tierName == null || tierName.isBlank() ? tier : tierName))
                     .rank(finalRegion)
-                    .avatarUrl(cardUrl)
-                    .build();
+                    .avatarUrl(cardUrl);
+            if (rawData != null) {
+                pi.rawData(rawData);
+            }
+            PlayerInfo playerInfo = pi.build();
 
             return PlayerSearchResponse.builder()
                     .success(true)
                     .game("valorant")
                     .nickname(nickname)
+                    .valorantMmrPending(deferMmr ? Boolean.TRUE : null)
                     .playerInfo(playerInfo)
                     .matches(matches)
                     .stats(stats)

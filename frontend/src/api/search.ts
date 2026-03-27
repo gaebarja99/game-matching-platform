@@ -12,6 +12,10 @@ export interface PlayerSearchRequest {
   queueType?: number;
   /** true면 DB 캐시를 쓰지 않고 API로 다시 받아 갱신 */
   forceRefresh?: boolean;
+  /** true면 매치 ID 목록만 (상세는 match-detail API, LoL/TFT) */
+  matchListOnly?: boolean;
+  /** 발로란트: 티어는 /api/search/valorant/mmr 로 이어서 로드 */
+  deferValorantMmr?: boolean;
 }
 
 export interface PlayerSearchResponse {
@@ -19,6 +23,9 @@ export interface PlayerSearchResponse {
   errorMessage?: string;
   game?: string;
   nickname?: string;
+  /** 매치 행에 KDA 등 요약이 없고 matchId만 있을 때 */
+  matchListOnly?: boolean;
+  valorantMmrPending?: boolean;
   playerInfo?: {
     puuid?: string;
     gameName?: string;
@@ -45,7 +52,7 @@ export interface PlayerSearchResponse {
     cs?: number;
     playtime?: number;
     playedAt?: string;
-    extras?: Record<string, unknown>;
+    extras?: Record<string, unknown> & { listOnly?: boolean };
   }>;
   stats?: {
     totalGames?: number;
@@ -82,6 +89,28 @@ export interface MatchDetailResponse {
 }
 
 /** Records 매치 행 펼침 시 상세 데이터 로드 (발로/LoL/TFT/PUBG), 서버에서 DB 저장 후 payload 반환 */
+export async function fetchValorantSearchMmr(request: {
+  puuid: string;
+  region: string;
+  forceRefresh?: boolean;
+}): Promise<{ success: boolean; errorMessage?: string; tierDisplay?: string }> {
+  const response = await apiFetch<{ success: boolean; errorMessage?: string; tierDisplay?: string }>(
+    '/api/search/valorant/mmr',
+    {
+      method: 'POST',
+      body: JSON.stringify({
+        puuid: request.puuid,
+        region: request.region,
+        forceRefresh: request.forceRefresh || undefined,
+      }),
+    },
+  );
+  if (!response.ok || !response.data) {
+    throw new Error(response.message ?? 'MMR 요청에 실패했습니다.');
+  }
+  return response.data;
+}
+
 export async function fetchMatchDetail(request: {
   game: string;
   matchId: string;

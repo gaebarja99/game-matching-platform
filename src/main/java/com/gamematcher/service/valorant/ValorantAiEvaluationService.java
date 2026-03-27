@@ -132,7 +132,8 @@ public class ValorantAiEvaluationService {
 
         for (ValorantMatchPlayer player : targets) {
             ValorantPlayerMatchStatsDTO playerStats = playerStatsList.stream()
-                    .filter(ps -> player.getPuuid() != null && player.getPuuid().equals(ps.getPlayerPuuid()))
+                    .filter(ps -> player.getPuuid() != null && ps.getPlayerPuuid() != null
+                            && player.getPuuid().trim().equalsIgnoreCase(ps.getPlayerPuuid().trim()))
                     .findFirst()
                     .orElse(null);
 
@@ -171,7 +172,8 @@ public class ValorantAiEvaluationService {
         if (filterPuuid != null && !filterPuuid.isBlank()) {
             String id = filterPuuid.trim();
             return all.stream()
-                    .filter(p -> p != null && id.equals(p.getPuuid()))
+                    .filter(p -> p != null && p.getPuuid() != null
+                            && id.equalsIgnoreCase(p.getPuuid().trim()))
                     .collect(Collectors.toList());
         }
         if (filterGameName != null && !filterGameName.isBlank()
@@ -210,7 +212,8 @@ public class ValorantAiEvaluationService {
         ValorantMatch match = player.getMatch();
         List<ValorantPlayerMatchStatsDTO> playerStatsList = valorantMatchStatsMapper.toPlayerMatchStatsDtos(match);
         ValorantPlayerMatchStatsDTO playerStats = playerStatsList.stream()
-                .filter(ps -> player.getPuuid() != null && player.getPuuid().equals(ps.getPlayerPuuid()))
+                .filter(ps -> player.getPuuid() != null && ps.getPlayerPuuid() != null
+                        && player.getPuuid().trim().equalsIgnoreCase(ps.getPlayerPuuid().trim()))
                 .findFirst()
                 .orElse(null);
         return evaluateAndSaveForPlayer(player, playerStats, null, false);
@@ -290,8 +293,11 @@ public class ValorantAiEvaluationService {
             return Optional.empty();
         }
 
+        String mid = dto.getMatchId();
+        String pp = dto.getPlayerPuuid().trim();
         ValorantMatchPlayer player = valorantMatchPlayerRepository
-                .findByMatch_MatchIdAndPuuid(dto.getMatchId(), dto.getPlayerPuuid())
+                .findByMatch_MatchIdAndPuuidIgnoreCase(mid, pp)
+                .or(() -> valorantMatchPlayerRepository.findByMatch_MatchIdAndPuuid(mid, pp))
                 .orElse(null);
         if (player == null) {
             log.debug("ValorantMatchPlayer 없음: matchId={}, puuid={}", dto.getMatchId(), dto.getPlayerPuuid());

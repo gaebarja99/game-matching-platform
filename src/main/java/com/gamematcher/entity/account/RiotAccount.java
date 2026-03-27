@@ -28,7 +28,7 @@ public class RiotAccount {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @Column(nullable = false, unique = true, length = 36)
+    @Column(nullable = false, unique = true, length = 120)
     private String puuid;
 
     /** Riot Game Name: 3~16자 (한글·일본어 등 Unicode 지원) */

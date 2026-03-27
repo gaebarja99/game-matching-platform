@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamematcher.dto.search.PlayerSearchRequest;
 import com.gamematcher.dto.search.PlayerSearchResponse;
 import com.gamematcher.service.search.Cs2SearchService;
-import com.gamematcher.service.search.LolSearchService;
+import com.gamematcher.service.lol.LolApiService;
 import com.gamematcher.service.search.OverwatchSearchService;
 import com.gamematcher.service.search.PubgSearchService;
 import com.gamematcher.service.search.TftSearchService;
@@ -29,7 +29,7 @@ import static org.mockito.Mockito.when;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class PlayerSearchServiceTest {
 
-    @Mock LolSearchService lolSearchService;
+    @Mock LolApiService lolApiService;
     @Mock TftSearchService tftSearchService;
     @Mock ValorantApiService valorantApiService;
     @Mock ObjectMapper objectMapper;
@@ -50,7 +50,7 @@ class PlayerSearchServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(lolSearchService.search(any())).thenReturn(mockSuccessResponse("lol"));
+        when(lolApiService.search(any())).thenReturn(mockSuccessResponse("lol"));
         when(tftSearchService.search(any())).thenReturn(mockSuccessResponse("tft"));
         when(valorantApiService.search(any())).thenReturn(mockSuccessResponse("valorant"));
         when(pubgSearchService.search(any())).thenReturn(mockSuccessResponse("pubg"));
@@ -71,7 +71,7 @@ class PlayerSearchServiceTest {
 
             PlayerSearchResponse response = playerSearchService.searchPlayer(req);
 
-            verify(lolSearchService).search(any());
+            verify(lolApiService).search(any());
             assertThat(response.isSuccess()).isTrue();
             assertThat(response.getGame()).isEqualTo("lol");
         }
