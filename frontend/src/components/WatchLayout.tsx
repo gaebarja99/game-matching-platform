@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { apiUrl, resolveProfileImageUrl } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
-import { apiUrl, resolveProfileImageUrl } from '../api/client';
 import { resolveNotificationTargetPath } from '../utils/notificationNavigation';
 
 interface WatchLayoutProps {
@@ -75,17 +75,18 @@ export default function WatchLayout({ children }: WatchLayoutProps) {
       .catch(() => {});
   }, []);
 
-  const handleNotificationClick = useCallback((n: NotificationItem) => {
+  const handleNotificationClick = useCallback((notification: NotificationItem) => {
     setNotificationOpen(false);
-    if (!n.read) {
-      fetch(apiUrl(`api/notifications/${n.id}/read`), { method: 'PATCH', credentials: 'include' })
+    if (!notification.read) {
+      fetch(apiUrl(`api/notifications/${notification.id}/read`), { method: 'PATCH', credentials: 'include' })
         .then(() => {
-          setNotificationList((prev) => prev.map((item) => (item.id === n.id ? { ...item, read: true } : item)));
+          setNotificationList((prev) => prev.map((item) => (item.id === notification.id ? { ...item, read: true } : item)));
           fetchNotificationCount();
         })
         .catch(() => {});
     }
-    const targetPath = resolveNotificationTargetPath(n);
+
+    const targetPath = resolveNotificationTargetPath(notification);
     if (targetPath) {
       navigate(targetPath);
     }
@@ -104,10 +105,15 @@ export default function WatchLayout({ children }: WatchLayoutProps) {
   }, [user, fetchNotificationCount]);
 
   useEffect(() => {
-    const close = (e: MouseEvent) => {
-      if (profileRef.current && !profileRef.current.contains(e.target as Node)) setProfileOpen(false);
-      if (notificationRef.current && !notificationRef.current.contains(e.target as Node)) setNotificationOpen(false);
+    const close = (event: MouseEvent) => {
+      if (profileRef.current && !profileRef.current.contains(event.target as Node)) {
+        setProfileOpen(false);
+      }
+      if (notificationRef.current && !notificationRef.current.contains(event.target as Node)) {
+        setNotificationOpen(false);
+      }
     };
+
     document.addEventListener('click', close);
     return () => document.removeEventListener('click', close);
   }, []);
@@ -125,7 +131,6 @@ export default function WatchLayout({ children }: WatchLayoutProps) {
         <nav className="header-nav">
           <Link to="/streams">전체 방송</Link>
           <Link to="/streams">게임</Link>
-          <Link to="/streams">e스포츠</Link>
           <Link to="/studio" className="auth-only">스튜디오</Link>
         </nav>
 
@@ -137,9 +142,11 @@ export default function WatchLayout({ children }: WatchLayoutProps) {
               type="button"
               className="header-icon-btn"
               onClick={() => {
-                setNotificationOpen((o) => {
-                  const next = !o;
-                  if (next) fetchNotificationList();
+                setNotificationOpen((open) => {
+                  const next = !open;
+                  if (next) {
+                    fetchNotificationList();
+                  }
                   return next;
                 });
               }}
@@ -165,15 +172,17 @@ export default function WatchLayout({ children }: WatchLayoutProps) {
                 ) : notificationList.length === 0 ? (
                   <div className="notification-empty">알림이 없습니다.</div>
                 ) : (
-                  notificationList.map((n) => (
+                  notificationList.map((notification) => (
                     <button
-                      key={n.id}
+                      key={notification.id}
                       type="button"
-                      className={`notification-item ${!n.read ? 'unread' : ''}`}
-                      onClick={() => handleNotificationClick(n)}
+                      className={`notification-item ${!notification.read ? 'unread' : ''}`}
+                      onClick={() => handleNotificationClick(notification)}
                     >
-                      <span>{n.message}</span>
-                      <div className="notification-time">{n.createdAt ? new Date(n.createdAt).toLocaleString('ko-KR') : ''}</div>
+                      <span>{notification.message}</span>
+                      <div className="notification-time">
+                        {notification.createdAt ? new Date(notification.createdAt).toLocaleString('ko-KR') : ''}
+                      </div>
                     </button>
                   ))
                 )}
@@ -196,11 +205,13 @@ export default function WatchLayout({ children }: WatchLayoutProps) {
           <Link to="/login" className="btn-login no-auth">로그인</Link>
 
           <div className="header-profile-wrap auth-only" ref={profileRef}>
-            <button type="button" className="header-profile-avatar" onClick={() => setProfileOpen((o) => !o)} aria-label="프로필">
+            <button type="button" className="header-profile-avatar" onClick={() => setProfileOpen((open) => !open)} aria-label="프로필">
               {resolveProfileImageUrl(user?.profileImageUrl) && !profileImgError ? (
                 <img src={resolveProfileImageUrl(user?.profileImageUrl)!} alt="" onError={() => setProfileImgError(true)} />
               ) : (
-                <svg className="avatar-placeholder" viewBox="0 0 24 24" fill="currentColor"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" /></svg>
+                <svg className="avatar-placeholder" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z" />
+                </svg>
               )}
             </button>
 

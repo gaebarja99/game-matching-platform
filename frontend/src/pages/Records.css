@@ -1332,6 +1332,90 @@
   gap: 14px;
 }
 
+.records-game-tabs {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.records-game-tabs .records-game-pill {
+  display: block;
+  padding: 0;
+  min-width: 0;
+  border: 0;
+  background: transparent;
+}
+
+.records-game-poster {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  align-content: end;
+  gap: 10px;
+  min-height: 260px;
+  padding: 22px;
+  border-radius: 24px;
+  overflow: hidden;
+  text-align: left;
+  background-color: #101828;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14);
+}
+
+.records-game-poster-art {
+  position: absolute;
+  inset: 0 0 auto;
+  display: block;
+  width: 100%;
+  height: 58%;
+  z-index: 1;
+  background-position: center top;
+  background-repeat: no-repeat;
+  background-size: cover;
+  filter: saturate(1.04);
+}
+
+.records-game-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  background:
+    linear-gradient(180deg, rgba(7, 13, 28, 0.08) 0%, rgba(7, 13, 28, 0.18) 28%, rgba(7, 13, 28, 0.42) 58%, rgba(7, 13, 28, 0.86) 100%);
+}
+
+.records-game-poster::after {
+  content: '';
+  position: absolute;
+  inset: 50% 0 0;
+  z-index: 2;
+  background: linear-gradient(180deg, rgba(7, 13, 28, 0) 0%, rgba(7, 13, 28, 0.92) 100%);
+}
+
+.records-game-short,
+.records-game-eyebrow,
+.records-game-label {
+  position: relative;
+  z-index: 3;
+}
+
+.records-game-eyebrow,
+.records-game-label {
+  color: #ffffff;
+  text-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
+}
+
+.records-game-eyebrow {
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  opacity: 0.88;
+}
+
+.records-game-label {
+  font-size: 24px;
+  line-height: 1.04;
+  white-space: normal;
+}
+
 .records-landing-card {
   position: relative;
   display: grid;
@@ -1345,29 +1429,31 @@
   cursor: pointer;
   overflow: hidden;
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.14);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 .records-landing-card::before,
 .records-landing-card::after {
   content: '';
   position: absolute;
-  border-radius: 999px;
-  filter: blur(24px);
-  opacity: 0.7;
+  inset: 0;
 }
 
 .records-landing-card::before {
-  width: 120px;
-  height: 120px;
-  top: 18px;
-  left: 18px;
+  background-image:
+    linear-gradient(180deg, rgba(7, 13, 28, 0.1) 0%, rgba(7, 13, 28, 0.3) 45%, rgba(7, 13, 28, 0.82) 100%),
+    var(--records-card-image);
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
 }
 
 .records-landing-card::after {
-  width: 150px;
-  height: 150px;
-  right: -18px;
-  top: 36px;
+  inset: auto 0 0;
+  height: 42%;
+  background: linear-gradient(180deg, rgba(7, 13, 28, 0) 0%, rgba(7, 13, 28, 0.72) 100%);
 }
 
 .records-landing-card.is-active {
@@ -1395,6 +1481,7 @@
   position: relative;
   z-index: 1;
   color: #ffffff;
+  text-shadow: 0 10px 24px rgba(0, 0, 0, 0.28);
 }
 
 .records-landing-card-brand {
@@ -1410,79 +1497,66 @@
 }
 
 .records-landing-card--lol {
-  background: linear-gradient(145deg, #102146 0%, #0d1b36 58%, #142656 100%);
-}
-
-.records-landing-card--lol::before {
-  background: rgba(255, 231, 113, 0.35);
-}
-
-.records-landing-card--lol::after {
-  background: rgba(92, 123, 246, 0.24);
+  background-color: #102146;
 }
 
 .records-landing-card--tft {
-  background: linear-gradient(145deg, #3f1b69 0%, #2c134a 54%, #24103d 100%);
-}
-
-.records-landing-card--tft::before {
-  background: rgba(216, 112, 255, 0.34);
-}
-
-.records-landing-card--tft::after {
-  background: rgba(113, 88, 255, 0.3);
+  background-color: #2c134a;
 }
 
 .records-landing-card--valorant {
-  background: linear-gradient(145deg, #131722 0%, #2c1020 58%, #511322 100%);
-}
-
-.records-landing-card--valorant::before {
-  background: rgba(255, 91, 121, 0.26);
-}
-
-.records-landing-card--valorant::after {
-  background: rgba(180, 63, 95, 0.3);
+  background-color: #2c1020;
 }
 
 .records-landing-card--pubg {
-  background: linear-gradient(145deg, #251b17 0%, #15161d 56%, #2e2013 100%);
-}
-
-.records-landing-card--pubg::before {
-  background: rgba(240, 180, 41, 0.28);
-}
-
-.records-landing-card--pubg::after {
-  background: rgba(255, 173, 78, 0.18);
+  background-color: #15161d;
 }
 
 .records-landing-card--overwatch {
-  background: linear-gradient(145deg, #232b3a 0%, #1b202b 56%, #463120 100%);
-}
-
-.records-landing-card--overwatch::before {
-  background: rgba(255, 155, 61, 0.28);
-}
-
-.records-landing-card--overwatch::after {
-  background: rgba(255, 255, 255, 0.14);
+  background-color: #1b202b;
 }
 
 .records-landing-card--cs2 {
-  background: linear-gradient(145deg, #182225 0%, #0f1419 58%, #1d3228 100%);
+  background-color: #0f1419;
 }
 
-.records-landing-card--cs2::before {
-  background: rgba(97, 177, 90, 0.26);
+.records-opgg-searchbar--valorant {
+  display: grid;
+  grid-template-columns: minmax(150px, 1fr) minmax(0, 2.2fr) minmax(88px, 0.52fr) minmax(96px, 0.62fr) 142px;
+  align-items: stretch;
 }
 
-.records-landing-card--cs2::after {
-  background: rgba(255, 255, 255, 0.08);
+.records-opgg-searchbar--valorant .records-opgg-field-tag--compact {
+  min-width: 0;
+}
+
+.records-opgg-searchbar--valorant .records-opgg-field-tag--compact input {
+  min-width: 0;
+}
+
+.records-opgg-searchbar--valorant > .records-opgg-field-tag--compact {
+  grid-column: 3;
+}
+
+.records-opgg-searchbar--valorant > .records-opgg-field-small {
+  grid-column: 4;
+}
+
+.records-opgg-searchbar--valorant .records-opgg-submit--inline {
+  grid-column: 5;
+  align-self: stretch;
+  justify-self: stretch;
+  width: 100%;
+  min-width: 132px;
+  margin: 0;
 }
 
 @media (max-width: 1400px) {
   .records-landing-cards {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .records-game-tabs {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
@@ -1490,6 +1564,10 @@
 @media (max-width: 1080px) {
   .records-landing-form {
     grid-template-columns: 1fr 1.4fr 1fr;
+  }
+
+  .records-opgg-searchbar--valorant {
+    grid-template-columns: minmax(150px, 1fr) minmax(0, 1.8fr) minmax(82px, 0.48fr) minmax(88px, 0.58fr) 124px;
   }
 
   .records-landing-submit {
@@ -1533,6 +1611,14 @@
   .records-landing-cards {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .records-opgg-searchbar--valorant {
+    grid-template-columns: 1fr;
+  }
+
+  .records-game-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 560px) {
@@ -1546,6 +1632,10 @@
   }
 
   .records-landing-cards {
+    grid-template-columns: 1fr;
+  }
+
+  .records-game-tabs {
     grid-template-columns: 1fr;
   }
 }

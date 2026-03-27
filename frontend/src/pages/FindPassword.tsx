@@ -106,7 +106,7 @@ export default function FindPassword() {
     setSubmitting(true);
     try {
       const recaptchaToken = await getRecaptchaEnterpriseToken('RESET_PASSWORD');
-      const { ok, message } = await resetPasswordByPhone(loginId.trim(), phone.trim(), '', newPassword, recaptchaToken ?? undefined);
+      const { ok, message } = await resetPasswordByPhone(loginId.trim(), phone.trim(), newPassword, recaptchaToken ?? undefined);
       if (ok) {
         setSuccess(true);
         setTimeout(() => navigate('/login', { replace: true }), 2000);

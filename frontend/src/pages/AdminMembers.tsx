@@ -89,6 +89,7 @@ export default function AdminMembers() {
   const [giftLoginId, setGiftLoginId] = useState('');
   const [giftAmount, setGiftAmount] = useState('');
   const [giftMessage, setGiftMessage] = useState('');
+  const [giftAsMileage, setGiftAsMileage] = useState(false);
   const [modalGiftAmount, setModalGiftAmount] = useState('');
   const [modalGiftMessage, setModalGiftMessage] = useState('');
 
@@ -245,7 +246,7 @@ export default function AdminMembers() {
     }
   };
 
-  const submitGift = async (loginId: string, amountText: string, messageText: string, onSuccess: () => void) => {
+  const submitGift = async (loginId: string, amountText: string, messageText: string, sendAsMileage: boolean, onSuccess: () => void) => {
     const trimmedLoginId = loginId.trim();
     const pangAmount = Number(amountText);
     const trimmedMessage = messageText.trim();
@@ -257,9 +258,14 @@ export default function AdminMembers() {
       window.alert('지급할 팡 수량을 정확히 입력해 주세요.');
       return;
     }
-    const response = await giftAdminPang({ loginId: trimmedLoginId, pangAmount, message: trimmedMessage || undefined });
+    const response = await giftAdminPang({
+      loginId: trimmedLoginId,
+      pangAmount,
+      message: trimmedMessage || undefined,
+      sendAsMileage,
+    });
     if (!response.ok) {
-      window.alert(response.message ?? '이벤트 팡 지급에 실패했습니다.');
+      window.alert(response.message ?? `이벤트 ${sendAsMileage ? '마일리지' : '팡'} 지급에 실패했습니다.`);
       return;
     }
     await load();
@@ -268,13 +274,13 @@ export default function AdminMembers() {
       await loadHistory(selectedMember.id);
     }
     if (trimmedLoginId === '/all' && response.data?.recipientCount) {
-      window.alert(`${response.data.recipientCount}명에게 팡을 지급했습니다.`);
+      window.alert(`${response.data.recipientCount}명에게 ${sendAsMileage ? '마일리지' : '팡'}을 지급했습니다.`);
       onSuccess();
       return;
     }
-    window.alert(response.message ?? '이벤트 팡 지급이 완료되었습니다.');
+    window.alert(response.message ?? `${sendAsMileage ? '마일리지' : '팡'} 지급이 완료되었습니다.`);
     if (trimmedLoginId === '/all' && response.data?.recipientCount) {
-      window.alert(`${response.data.recipientCount}명에게 팡을 지급했습니다.`);
+      window.alert(`${response.data.recipientCount}명에게 ${sendAsMileage ? '마일리지' : '팡'}을 지급했습니다.`);
       onSuccess();
       return;
     }
@@ -379,10 +385,23 @@ export default function AdminMembers() {
             onChange={(event) => setGiftMessage(event.target.value)}
             placeholder="알림 문구 입력"
           />
+          <label className="admin-subtext" style={{ display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+            <input
+              type="checkbox"
+              checked={giftAsMileage}
+              onChange={(event) => setGiftAsMileage(event.target.checked)}
+            />
+            마일리지로 지급
+          </label>
           <button
             type="button"
             className="admin-action-btn primary"
-            onClick={() => void submitGift(giftLoginId, giftAmount, giftMessage, () => { setGiftLoginId(''); setGiftAmount(''); setGiftMessage(''); })}
+            onClick={() => void submitGift(giftLoginId, giftAmount, giftMessage, giftAsMileage, () => {
+              setGiftLoginId('');
+              setGiftAmount('');
+              setGiftMessage('');
+              setGiftAsMileage(false);
+            })}
           >
             바로 지급
           </button>
@@ -609,7 +628,7 @@ export default function AdminMembers() {
                 <button
                   type="button"
                   className="admin-action-btn primary"
-                  onClick={() => void submitGift(selectedMember.loginId, modalGiftAmount, modalGiftMessage, () => { setModalGiftAmount(''); setModalGiftMessage(''); })}
+                  onClick={() => void submitGift(selectedMember.loginId, modalGiftAmount, modalGiftMessage, false, () => { setModalGiftAmount(''); setModalGiftMessage(''); })}
                 >
                   팡 지급
                 </button>
@@ -689,3 +708,4 @@ export default function AdminMembers() {
     </AdminLayout>
   );
 }
+

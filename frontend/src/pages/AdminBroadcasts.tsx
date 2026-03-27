@@ -84,7 +84,7 @@ export default function AdminBroadcasts() {
     setActionSubmitting(false);
 
     if (!response.ok) {
-      window.alert(response.error ?? '처리에 실패했습니다.');
+      window.alert(response.message ?? '처리에 실패했습니다.');
       return false;
     }
 

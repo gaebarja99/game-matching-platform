@@ -12,8 +12,6 @@ type OverlayPosition = 'br' | 'bl' | 'tr' | 'tl';
 type ChatPermissionScope = 'ALL' | 'FOLLOWER' | 'MANAGER';
 
 interface ChatSettingsResponse {
-  minVideoPang?: number;
-  minTtsPang?: number;
   chatPermissionScope?: ChatPermissionScope;
   slowModeEnabled?: boolean;
   slowModeSeconds?: number;
@@ -31,9 +29,6 @@ export default function StudioSettings() {
   const [slowOn, setSlowOn] = useState(false);
   const [chatRules, setChatRules] = useState('');
   const [donationOverlayPosition, setDonationOverlayPosition] = useState<OverlayPosition>('br');
-  const [minVideoPang, setMinVideoPang] = useState(0);
-  const [minTtsPang, setMinTtsPang] = useState(0);
-  const [savingDonationLimits, setSavingDonationLimits] = useState(false);
   const [savingChatPreferences, setSavingChatPreferences] = useState(false);
   const [savingChatRules, setSavingChatRules] = useState(false);
   const [updatingAll, setUpdatingAll] = useState(false);
@@ -68,8 +63,6 @@ export default function StudioSettings() {
           .then(([obs, chatSettings]: [{ serverUrl?: string; streamKey?: string } | null, ChatSettingsResponse | null]) => {
             if (obs?.serverUrl) setStreamUrl(obs.serverUrl);
             if (obs?.streamKey) setStreamKey(obs.streamKey);
-            setMinVideoPang(chatSettings?.minVideoPang ?? 0);
-            setMinTtsPang(chatSettings?.minTtsPang ?? 0);
             setChatScope(chatSettings?.chatPermissionScope ?? 'ALL');
             setSlowOn(!!chatSettings?.slowModeEnabled);
             setChatRules(chatSettings?.chatRules ?? '');
@@ -103,30 +96,6 @@ export default function StudioSettings() {
       })
       .catch(() => window.alert('재발급 요청에 실패했습니다.'))
       .finally(() => setReissueLoading(false));
-  };
-
-  const saveDonationLimits = () => {
-    if (!streamId) return;
-    setSavingDonationLimits(true);
-    fetch(apiUrl(`api/streams/${streamId}/chat-settings/donation-limits`), {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        minVideoPang: Math.max(0, minVideoPang || 0),
-        minTtsPang: Math.max(0, minTtsPang || 0),
-      }),
-    })
-      .then((response) => response.json().then((data: { message?: string }) => ({ ok: response.ok, data })))
-      .then((result) => {
-        if (result.ok) {
-          window.alert('후원 제한이 저장되었습니다.');
-        } else {
-          window.alert(result.data?.message ?? '저장에 실패했습니다.');
-        }
-      })
-      .catch(() => window.alert('저장에 실패했습니다.'))
-      .finally(() => setSavingDonationLimits(false));
   };
 
   const saveChatPreferences = () => {
@@ -182,21 +151,6 @@ export default function StudioSettings() {
     if (!streamId || updatingAll) return;
     setUpdatingAll(true);
     try {
-      const donationResponse = await fetch(apiUrl(`api/streams/${streamId}/chat-settings/donation-limits`), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          minVideoPang: Math.max(0, minVideoPang || 0),
-          minTtsPang: Math.max(0, minTtsPang || 0),
-        }),
-      });
-      const donationData = await donationResponse.json().catch(() => ({} as { message?: string }));
-      if (!donationResponse.ok) {
-        window.alert(donationData.message ?? '후원 설정 업데이트에 실패했습니다.');
-        return;
-      }
-
       const preferencesResponse = await fetch(apiUrl(`api/streams/${streamId}/chat-settings/preferences`), {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -362,27 +316,8 @@ export default function StudioSettings() {
               <li>오버레이 URL은 방송을 다시 켜도 그대로 사용할 수 있습니다.</li>
               <li>브라우저 소스 너비는 520px 기준으로 맞추는 것을 권장합니다.</li>
               <li>필요하면 URL의 `position=` 값을 바꿔 위치를 바로 조절할 수 있습니다.</li>
+              <li>후원 사운드 크기는 URL 뒤에 `&volume=0.1` 같은 값을 붙여 조절할 수 있습니다. 범위는 `0`부터 `1`까지이며, `0`은 무음입니다.</li>
             </ul>
-          </div>
-
-          <div className="settings-row">
-            <label className="label">후원 팡 제한</label>
-            <div className="input-row" style={{ alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>영상 후원 최소</span>
-                <input type="number" min={0} value={minVideoPang} onChange={(event) => setMinVideoPang(Number(event.target.value) || 0)} style={{ width: 120 }} />
-                <span>팡</span>
-              </label>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span>TTS 최소</span>
-                <input type="number" min={0} value={minTtsPang} onChange={(event) => setMinTtsPang(Number(event.target.value) || 0)} style={{ width: 120 }} />
-                <span>팡</span>
-              </label>
-              <button type="button" className="btn-save" onClick={saveDonationLimits} disabled={!streamId || savingDonationLimits}>
-                {savingDonationLimits ? '저장 중...' : '저장'}
-              </button>
-            </div>
-            <p className="hint">0이면 제한이 없고, 설정한 값 이상일 때만 영상 후원과 TTS가 허용됩니다.</p>
           </div>
 
           <p className="hint">
@@ -461,20 +396,6 @@ export default function StudioSettings() {
             <div className="banned-row">
               <span className="status">금칙어 관리는 별도 화면에서 설정합니다.</span>
               <Link to="/studio/chat" className="btn-manage">금칙어 관리</Link>
-            </div>
-          </div>
-          <div className="settings-row">
-            <label className="label">활동 제한 해제 요청</label>
-            <div className="banned-row">
-              <span className="status">0건</span>
-              <span className="hint">차단/제한 관리 화면과 연동 예정입니다.</span>
-            </div>
-          </div>
-          <div className="settings-row">
-            <label className="label">주간 후원 랭킹</label>
-            <div className="banned-row">
-              <span className="status">노출</span>
-              <span className="hint">시청 페이지 채팅 영역에 주간 후원 랭킹이 표시됩니다.</span>
             </div>
           </div>
         </div>

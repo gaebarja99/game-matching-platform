@@ -1126,8 +1126,8 @@ export default function Home() {
                     )}
                   </div>
                   <div className="live-card-meta">
-                    <div className="live-card-name">{s.broadcasterNickname || '?'}</div>
-                    <div className="live-card-game">{s.title || '방송 중'}</div>
+                    <div className="live-card-name">{s.title || '방송 중'}</div>
+                    <div className="live-card-game">{s.broadcasterNickname || '?'}</div>
                   </div>
                 </div>
               </Link>

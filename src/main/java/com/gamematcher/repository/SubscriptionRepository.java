@@ -18,4 +18,6 @@ public interface SubscriptionRepository extends JpaRepository<Subscription, Long
 
     /** 해당 스트리머를 구독한 사용자 목록, 최신순 */
     List<Subscription> findByStreamerIdOrderByCreatedAtDesc(Long streamerId);
+
+    List<Subscription> findBySubscriberIdOrderByCreatedAtDesc(Long subscriberId);
 }

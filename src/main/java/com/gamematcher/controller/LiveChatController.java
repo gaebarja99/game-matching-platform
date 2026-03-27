@@ -5,6 +5,7 @@ import com.gamematcher.entity.User;
 import com.gamematcher.service.ChatService;
 import com.gamematcher.service.LevelService;
 import com.gamematcher.service.ProfanityFilterService;
+import com.gamematcher.service.RankService;
 import com.gamematcher.service.StreamChatSettingsService;
 import com.gamematcher.repository.LiveStreamRepository;
 import com.gamematcher.repository.UserRepository;
@@ -31,6 +32,7 @@ public class LiveChatController {
     private final ChatService chatService;
     private final StreamChatSettingsService streamChatSettingsService;
     private final ProfanityFilterService profanityFilterService;
+    private final RankService rankService;
 
     @MessageMapping("/chat/{streamId}")
     @SendTo("/topic/stream/{streamId}")
@@ -60,11 +62,12 @@ public class LiveChatController {
                 .map(stream -> userId.equals(stream.getUserId()))
                 .orElse(false);
         boolean isManager = streamChatSettingsService.isManager(streamId, userId);
+        boolean isFan = rankService.getStreamDonorUserIds(streamId).contains(userId);
         if (streamChatSettingsService.isBanned(streamId, userId)) {
             return null;
         }
         if (liveStreamRepository.findById(streamId)
-                .map(s -> Boolean.TRUE.equals(s.getChatFrozen()) && !isStreamer && !isManager)
+                .map(s -> Boolean.TRUE.equals(s.getChatFrozen()) && !isStreamer && !isManager && !isFan)
                 .orElse(false)) {
             return null;
         }
@@ -83,6 +86,7 @@ public class LiveChatController {
                 .profileImageUrl(profileImageUrl)
                 .text(moderation.getSanitizedText())
                 .streamer(isStreamer)
+                .manager(isManager)
                 .level(level)
                 .build();
     }

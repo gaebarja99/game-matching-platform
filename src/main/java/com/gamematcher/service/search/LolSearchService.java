@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpClientErrorException;
@@ -18,6 +19,7 @@ import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
 import java.net.URLEncoder;
+import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDateTime;
@@ -382,21 +384,27 @@ public class LolSearchService {
     }
 
     private String key(String url) {
-        return url + (url.contains("?") ? "&" : "?") + "api_key=" + riotApiKey.trim();
+        return url;
+    }
+
+    private HttpEntity<Void> riotRequestEntity() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Riot-Token", riotApiKey.trim());
+        return new HttpEntity<>(headers);
     }
 
     private Map<String, Object> getMap(String url) {
-        return restTemplate.exchange(key(url), HttpMethod.GET, HttpEntity.EMPTY,
+        return restTemplate.exchange(URI.create(key(url)), HttpMethod.GET, riotRequestEntity(),
                 new ParameterizedTypeReference<Map<String, Object>>() {}).getBody();
     }
 
     private List<Map<String, Object>> getListOfMap(String url) {
-        return restTemplate.exchange(key(url), HttpMethod.GET, HttpEntity.EMPTY,
+        return restTemplate.exchange(URI.create(key(url)), HttpMethod.GET, riotRequestEntity(),
                 new ParameterizedTypeReference<List<Map<String, Object>>>() {}).getBody();
     }
 
     private List<String> getListOfString(String url) {
-        return restTemplate.exchange(key(url), HttpMethod.GET, HttpEntity.EMPTY,
+        return restTemplate.exchange(URI.create(key(url)), HttpMethod.GET, riotRequestEntity(),
                 new ParameterizedTypeReference<List<String>>() {}).getBody();
     }
 

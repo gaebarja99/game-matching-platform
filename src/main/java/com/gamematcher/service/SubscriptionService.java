@@ -123,6 +123,20 @@ public class SubscriptionService {
                 .collect(Collectors.toList());
     }
 
+    public List<SubscriberItemDto> getMySubscriptionList(Long subscriberId) {
+        if (subscriberId == null) return List.of();
+        return subscriptionRepository.findBySubscriberIdOrderByCreatedAtDesc(subscriberId).stream()
+                .filter(this::isActive)
+                .map(s -> userRepository.findById(s.getStreamerId())
+                        .map(u -> {
+                            String nickname = (u.getNickname() != null && !u.getNickname().isBlank()) ? u.getNickname() : u.getUsername();
+                            return new SubscriberItemDto(u.getId(), nickname, u.getLoginId(), u.getProfileImageUrl(), s.getCreatedAt());
+                        })
+                        .orElse(null))
+                .filter(dto -> dto != null)
+                .collect(Collectors.toList());
+    }
+
     private boolean isActive(Subscription subscription) {
         return resolveExpiresAt(subscription).isAfter(LocalDateTime.now());
     }

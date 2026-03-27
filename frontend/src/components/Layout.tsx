@@ -33,6 +33,12 @@ type NotificationItem = {
 function getNotificationMessage(item: NotificationItem): string {
   const actor = item.actorNickname || '채널 소유자';
   const type = (item.type || '').toUpperCase();
+  if (type === 'ADMIN_PANG_GIFT') {
+    return '운영자가 이벤트 팡을 지급했습니다.';
+  }
+  if (type === 'ADMIN_MILEAGE_GIFT') {
+    return '운영자가 이벤트 마일리지를 지급했습니다.';
+  }
   if (type === 'CHANNEL_PERMISSION_GRANTED') {
     return `${actor}님의 채널 관리 권한이 부여되었습니다.`;
   }
@@ -226,7 +232,10 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
           })
           .catch(() => {});
       }
-      const targetPath = resolveNotificationTargetPath(n);
+      const notificationType = (n.type || '').toUpperCase();
+      const targetPath = notificationType === 'ADMIN_MILEAGE_GIFT'
+        ? '/profile/mileage-shop'
+        : resolveNotificationTargetPath(n);
       if (targetPath) {
         navigate(targetPath);
       }

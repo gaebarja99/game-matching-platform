@@ -5,6 +5,8 @@ export type GameOption = {
   label: string;
   short: string;
   accent: string;
+  cardImage: string;
+  brandLabel?: string;
   fields: string[];
   placeholders: {
     nickname: string;
@@ -16,12 +18,23 @@ export type GameOption = {
   regionOptions?: { value: string; label: string }[];
 };
 
+export type SearchFieldOverrides = {
+  gameId?: string;
+  nickname?: string;
+  tagLine?: string;
+  platform?: string;
+  region?: string;
+  count?: number;
+};
+
 export const GAMES: GameOption[] = [
   {
     id: 'lol',
     label: 'League of Legends',
     short: 'LoL',
     accent: '#2f80ed',
+    cardImage: '/images/lol-card-records.png',
+    brandLabel: 'RIOT GAMES',
     fields: ['nickname', 'tag', 'count'],
     placeholders: { nickname: '소환사명', tag: 'KR1' },
     hint: '리그 오브 레전드는 닉네임과 태그 또는 서버 코드로 최근 전적을 조회합니다.',
@@ -32,6 +45,8 @@ export const GAMES: GameOption[] = [
     label: 'Teamfight Tactics',
     short: 'TFT',
     accent: '#7c5cff',
+    cardImage: '/images/tft-card-records.png',
+    brandLabel: 'RIOT GAMES',
     fields: ['nickname', 'tag', 'count'],
     placeholders: { nickname: '닉네임', tag: 'KR1' },
     hint: 'TFT는 닉네임과 태그 또는 서버 코드 기준으로 최근 매치를 불러옵니다.',
@@ -42,6 +57,8 @@ export const GAMES: GameOption[] = [
     label: 'Valorant',
     short: 'VAL',
     accent: '#ff4d67',
+    cardImage: '/images/valorant-card-records.png',
+    brandLabel: 'VALORANT',
     fields: ['nickname', 'tag', 'count', 'region'],
     placeholders: { nickname: '플레이어명', tag: 'KR1' },
     hint: '발로란트는 닉네임, 태그, 서버를 선택해 계정 API 기준으로 최근 전적을 조회합니다.',
@@ -60,6 +77,8 @@ export const GAMES: GameOption[] = [
     label: 'PUBG',
     short: 'PUBG',
     accent: '#f0b429',
+    cardImage: '/images/pubg-card-records.png',
+    brandLabel: 'BATTLEGROUNDS',
     fields: ['nickname', 'pubg_platform'],
     placeholders: { nickname: 'Steam 또는 Kakao 닉네임' },
     hint: 'PUBG는 플랫폼을 같이 선택해야 더 정확하게 검색됩니다.',
@@ -73,6 +92,8 @@ export const GAMES: GameOption[] = [
     label: 'Overwatch 2',
     short: 'OW2',
     accent: '#ff9b3d',
+    cardImage: '/images/overwatch-card-records.png',
+    brandLabel: 'OVERWATCH 2',
     fields: ['nickname', 'tag'],
     placeholders: { nickname: 'BattleTag 이름', tag: '1234' },
     hint: '오버워치는 BattleTag 이름과 숫자 태그 조합으로 검색합니다.',
@@ -83,6 +104,8 @@ export const GAMES: GameOption[] = [
     label: 'Counter-Strike 2',
     short: 'CS2',
     accent: '#61b15a',
+    cardImage: '/images/cs2-card-records.png',
+    brandLabel: 'COUNTER-STRIKE 2',
     fields: ['nickname'],
     placeholders: { nickname: 'Steam64 ID 또는 Vanity URL' },
     hint: 'CS2는 Steam 계정을 기준으로 검색합니다.',

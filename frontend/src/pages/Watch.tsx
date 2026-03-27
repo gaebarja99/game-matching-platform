@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+﻿import { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import Hls from 'hls.js';
 import { Client } from '@stomp/stompjs';
@@ -61,7 +61,7 @@ function levelBadgeClass(level: number | undefined): string {
 }
 
 type ChatMessageItem =
-  | { type: 'chat'; displayName?: string; text?: string; streamer?: boolean; profileImageUrl?: string; userId?: number; level?: number }
+  | { type: 'chat'; displayName?: string; text?: string; streamer?: boolean; manager?: boolean; profileImageUrl?: string; userId?: number; level?: number }
   | { type: 'donation'; donorName?: string; amount?: number; tier?: string; donorMessage?: string; donorProfileImageUrl?: string; consecutiveDonationDays?: number; donorUserId?: number }
   | { type: 'system'; text?: string };
 
@@ -102,7 +102,6 @@ export default function Watch() {
   const { streamId } = useParams<{ streamId: string }>();
   const [stream, setStream] = useState<StreamInfo | null>(null);
   const [weeklyRank, setWeeklyRank] = useState<WeeklyDonor[]>([]);
-  const [weeklyTotal, setWeeklyTotal] = useState<number | null>(null);
   const [chatInput, setChatInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [isFollowing, setIsFollowing] = useState(true);
@@ -110,7 +109,7 @@ export default function Watch() {
   const [playerLoading, setPlayerLoading] = useState(false);
   const [playerError, setPlayerError] = useState<string | null>(null);
   const [streamDuration, setStreamDuration] = useState('');
-  const [isMuted, setIsMuted] = useState(true);
+  const [isMuted, setIsMuted] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [streamerAvatarError, setStreamerAvatarError] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessageItem[]>([]);
@@ -188,16 +187,15 @@ export default function Watch() {
     }
     Promise.all([
       fetch(apiUrl(`api/streams/${id}`), { credentials: 'include' }).then((r) => (r.ok ? r.json() : null)),
-      fetch(apiUrl(`api/streams/${id}/weekly-donor-rank`), { credentials: 'include' }).then((r) => (r.ok ? r.json() : [])),
+      fetch(apiUrl(`api/streams/${id}/weekly-donor-rank`), { credentials: 'include' }).then((r) => (r.ok ? r.json() : null)),
       fetch(apiUrl(`api/streams/${id}/donors`), { credentials: 'include' }).then((r) => (r.ok ? r.json() : [])),
     ])
-      .then(([s, rankList, donorIds]: [StreamInfo | null, WeeklyDonor[], number[]]) => {
+      .then(([s, rankList, donorIds]: [StreamInfo | null, WeeklyDonor[] | null, number[]]) => {
         if (Array.isArray(donorIds)) donorIds.forEach((uid) => donorUserIdsRef.current.add(uid));
         setStream(s ?? null);
-        const list = Array.isArray(rankList) ? rankList : [];
-        setWeeklyRank(list);
-        const total = list.reduce((sum: number, r: { totalPang?: number }) => sum + (Number(r.totalPang) || 0), 0);
-        setWeeklyTotal(total);
+        if (Array.isArray(rankList)) {
+          setWeeklyRank(rankList);
+        }
       })
       .catch(() => setStream(null))
       .finally(() => setLoading(false));
@@ -208,8 +206,9 @@ export default function Watch() {
     const id = streamId ? Number(streamId) : NaN;
     if (!streamId || Number.isNaN(id) || !stream || stream.status !== 'LIVE') return;
     fetch(apiUrl(`api/streams/${id}/viewer/join`), { method: 'POST', credentials: 'include' })
-      .then((r) => {
-        if (r.ok) {
+      .then((r) => r.json().catch(() => ({})).then((data: { message?: string }) => ({ ok: r.ok, status: r.status, data })))
+      .then(({ ok, status, data }) => {
+        if (ok) {
           joinedStreamIdRef.current = id;
           // 진입 직후 시청자 수 한 번 더 조회해 즉시 반영
           fetch(apiUrl(`api/streams/${id}`), { credentials: 'include' })
@@ -218,6 +217,10 @@ export default function Watch() {
               if (s) setStream((prev) => (prev ? { ...prev, viewerCount: s.viewerCount ?? prev.viewerCount } : null));
             })
             .catch(() => {});
+        } else if (status === 403) {
+          const message = data?.message ?? '강제퇴장 당하셨습니다. 5분 동안 재입장할 수 없습니다.';
+          window.alert(message);
+          navigate('/streams');
         }
       })
       .catch(() => {});
@@ -227,7 +230,7 @@ export default function Watch() {
         joinedStreamIdRef.current = null;
       }
     };
-  }, [streamId, stream?.id, stream?.status]);
+  }, [navigate, streamId, stream?.id, stream?.status]);
 
   // 시청자 수 실시간 갱신 (10초마다)
   useEffect(() => {
@@ -359,6 +362,7 @@ export default function Watch() {
               displayName: item.displayName as string,
               text: item.text as string,
               streamer: !!item.streamer,
+              manager: !!item.manager,
               profileImageUrl: item.profileImageUrl as string,
               userId: item.userId as number,
               level: item.level as number,
@@ -398,17 +402,22 @@ export default function Watch() {
               ]);
               // 주간 후원 랭킹 실시간 반영 (후원 애니메이션은 OBS 전용 URL에서만 표시)
               fetch(apiUrl(`api/streams/${id}/weekly-donor-rank`), { credentials: 'include' })
-                .then((r) => (r.ok ? r.json() : []))
+                .then((r) => (r.ok ? r.json() : null))
                 .then((list: unknown) => {
-                  const arr = Array.isArray(list) ? list : [];
-                  setWeeklyRank(arr);
-                  setWeeklyTotal(arr.reduce((sum: number, r: { totalPang?: number }) => sum + (Number(r.totalPang) || 0), 0));
+                  if (Array.isArray(list)) {
+                    setWeeklyRank(list);
+                  }
                 })
                 .catch(() => {});
               return;
             }
             if (d?.type === 'system' && d.text) {
               setChatMessages((prev) => [...prev, { type: 'system', text: d.text as string }]);
+              return;
+            }
+            if (d?.type === 'kick' && user?.id != null && Number(d.targetUserId) === Number(user.id)) {
+              window.alert((d.message as string) || '강제퇴장 당하셨습니다. 5분 동안 재입장할 수 없습니다.');
+              navigate(typeof d.redirectUrl === 'string' && d.redirectUrl ? d.redirectUrl : '/streams');
               return;
             }
             if (d?.displayName != null && d?.text != null) {
@@ -419,6 +428,7 @@ export default function Watch() {
                   displayName: d.displayName as string,
                   text: d.text as string,
                   streamer: !!d.streamer,
+                  manager: !!d.manager,
                   profileImageUrl: d.profileImageUrl as string,
                   userId: d.userId as number,
                   level: d.level as number,
@@ -444,7 +454,7 @@ export default function Watch() {
       stompClientRef.current = null;
       setChatConnected(false);
     };
-  }, [streamId, user]);
+  }, [navigate, streamId, user, user?.id]);
 
   useEffect(() => {
     const streamerId = stream?.userId;
@@ -509,7 +519,6 @@ export default function Watch() {
           setDonationModalOpen(false);
           setDonationAmount('');
           setDonationMessage('');
-          setWeeklyTotal((prev) => (prev ?? 0) + amount);
           refreshUser().catch(() => {});
         } else {
           setDonationError((data?.message as string) || '후원에 실패했습니다.');
@@ -1095,15 +1104,16 @@ export default function Watch() {
                 <div key={idx} className={`chat-msg ${msg.streamer ? 'chat-msg-streamer' : ''} ${isDonor ? 'chat-msg-donor' : ''}`}>
                   <div className="chat-msg-body">
                     {msg.streamer && <span className="streamer-badge">방송자</span>}
-                    {msg.streamer && stream?.partner && <span className="chat-badge partner-badge" title="파트너">✓</span>}
-                    {(msg.level != null && msg.level >= 1) && (
-                      <span className={`chat-badge level-badge ${levelBadgeClass(msg.level)}`} title={`레벨 ${msg.level}`}>LV.{msg.level}</span>
-                    )}
-                    {isDonor && donorRank === 0 && <span className="chat-badge donor-badge donor-heart" title="후원자">❤</span>}
                     {donorRank === 1 && <span className="chat-badge donor-badge donor-rank-1" title="후원 1등">🥇</span>}
                     {donorRank === 2 && <span className="chat-badge donor-badge donor-rank-2" title="후원 2등">🥈</span>}
                     {donorRank === 3 && <span className="chat-badge donor-badge donor-rank-3" title="후원 3등">🥉</span>}
-                    <span className="user">{msg.displayName ?? '—'}</span>
+                    {isDonor && donorRank === 0 && <span className="chat-badge donor-badge donor-heart" title="팬">❤</span>}
+                    {(msg.level != null && msg.level >= 1) && (
+                      <span className={`chat-badge level-badge ${levelBadgeClass(msg.level)}`} title={`레벨 ${msg.level}`}>LV.{msg.level}</span>
+                    )}
+                    {msg.manager && !msg.streamer && <span className="manager-badge">매니저</span>}
+                    <span className="user">{msg.displayName ?? '익명'}</span>
+                    {msg.streamer && stream?.partner && <span className="chat-badge partner-badge" title="파트너 스트리머">✓</span>}
                     {msg.text}
                   </div>
                 </div>

@@ -10,6 +10,7 @@ type GameOption = {
   short: string;
   accent: string;
   banner: string;
+  cardImage: string;
   eyebrow: string;
   summary: string;
   placeholders: {
@@ -29,6 +30,7 @@ const GAMES: GameOption[] = [
     short: 'LoL',
     accent: '#5383e8',
     banner: 'banner-lol',
+    cardImage: '/images/lol-card-records.png',
     eyebrow: 'Riot Games',
     summary: '게임명과 태그를 입력하면 최근 20경기 전적을 확인할 수 있습니다.',
     placeholders: { nickname: '게임명', tag: 'KR1' },
@@ -41,6 +43,7 @@ const GAMES: GameOption[] = [
     short: 'TFT',
     accent: '#8b5cf6',
     banner: 'banner-tft',
+    cardImage: '/images/tft-card-records.png',
     eyebrow: 'Teamfight Tactics',
     summary: '게임명과 태그를 입력하면 최근 경기와 순위를 확인할 수 있습니다.',
     placeholders: { nickname: '게임명', tag: 'KR1' },
@@ -53,6 +56,7 @@ const GAMES: GameOption[] = [
     short: 'VAL',
     accent: '#ff4655',
     banner: 'banner-valorant',
+    cardImage: '/images/valorant-card-records.png',
     eyebrow: 'Valorant',
     summary: '플레이어명과 태그를 입력하면 최근 20경기 전적을 확인할 수 있습니다.',
     placeholders: { nickname: '플레이어명', tag: 'KR1' },
@@ -73,6 +77,7 @@ const GAMES: GameOption[] = [
     short: 'PUBG',
     accent: '#f59e0b',
     banner: 'banner-pubg',
+    cardImage: '/images/pubg-card-records.png',
     eyebrow: 'Battlegrounds',
     summary: '닉네임과 플랫폼을 입력하면 최근 전적을 확인할 수 있습니다.',
     placeholders: { nickname: 'Steam 또는 Kakao 닉네임' },
@@ -87,6 +92,7 @@ const GAMES: GameOption[] = [
     short: 'OW2',
     accent: '#f97316',
     banner: 'banner-overwatch',
+    cardImage: '/images/overwatch-card-records.png',
     eyebrow: 'Overwatch 2',
     summary: '배틀태그 이름과 숫자 태그를 입력하면 최근 전적을 확인할 수 있습니다.',
     placeholders: { nickname: 'BattleTag 이름', tag: '1234' },
@@ -99,6 +105,7 @@ const GAMES: GameOption[] = [
     short: 'CS2',
     accent: '#22c55e',
     banner: 'banner-cs2',
+    cardImage: '/images/cs2-card-records.png',
     eyebrow: 'Counter-Strike 2',
     summary: 'Steam64 ID 또는 Vanity URL로 최근 전적을 확인할 수 있습니다.',
     placeholders: { nickname: 'Steam64 ID 또는 Vanity URL' },
@@ -352,10 +359,13 @@ export default function Records() {
   const searchbarClassName = useMemo(() => {
     const hasRegion = Boolean(game.regionOptions?.length);
     const hasPlatform = Boolean(game.platformOptions?.length);
-    if (hasRegion) return 'records-opgg-searchbar fields-4';
+    if (hasRegion) {
+      return `records-opgg-searchbar fields-4${game.id === 'valorant' ? ' records-opgg-searchbar--valorant' : ''}`;
+    }
     if (hasPlatform || game.needsTag) return 'records-opgg-searchbar fields-3';
     return 'records-opgg-searchbar fields-2';
   }, [game]);
+  const isValorant = game.id === 'valorant';
 
   useEffect(() => {
     setRegion(game.regionOptions?.[0]?.value || 'kr');
@@ -434,14 +444,17 @@ export default function Records() {
                 </label>
 
                 {game.needsTag ? (
-                  <label className="records-opgg-field records-opgg-field-tag">
+                  <label
+                    className={`records-opgg-field records-opgg-field-tag${isValorant ? ' records-opgg-field-tag--compact' : ''}`}
+                    style={isValorant ? { gridColumn: '3', minWidth: 0 } : undefined}
+                  >
                     <span>{game.tagLabel || '태그'}</span>
                     <input type="text" value={tagLine} onChange={(event) => setTagLine(event.target.value)} placeholder={game.placeholders.tag || 'KR1'} autoComplete="off" />
                   </label>
                 ) : null}
 
                 {game.regionOptions ? (
-                  <label className="records-opgg-field records-opgg-field-small">
+                  <label className="records-opgg-field records-opgg-field-small" style={isValorant ? { gridColumn: '4', minWidth: 0 } : undefined}>
                     <span>지역</span>
                     <select value={region} onChange={(event) => setRegion(event.target.value)}>
                       {game.regionOptions.map((option) => (
@@ -462,7 +475,14 @@ export default function Records() {
                   </label>
                 ) : null}
 
-                <button type="submit" className="records-opgg-submit" disabled={loading}>{loading ? '검색 중...' : '검색'}</button>
+                <button
+                  type="submit"
+                  className={`records-opgg-submit${isValorant ? ' records-opgg-submit--inline' : ''}`}
+                  style={isValorant ? { gridColumn: '5', width: '100%', minWidth: '132px', alignSelf: 'stretch', justifySelf: 'stretch' } : undefined}
+                  disabled={loading}
+                >
+                  {loading ? '검색 중...' : '검색'}
+                </button>
               </div>
 
               <div className="records-opgg-bottom">
@@ -480,7 +500,15 @@ export default function Records() {
         <section className="records-game-tabs" aria-label="지원 게임">
           {GAMES.map((item) => (
             <button key={item.id} type="button" onClick={() => { setGameId(item.id); setResult(null); setError(null); }} className={`records-game-pill ${item.id === gameId ? 'is-active' : ''}`}>
-              <span className={`records-game-poster ${item.banner}`}>
+              <span
+                className={`records-game-poster ${item.banner}`}
+                style={{
+                  backgroundImage: `linear-gradient(180deg, rgba(7, 13, 28, 0.10) 0%, rgba(7, 13, 28, 0.18) 32%, rgba(7, 13, 28, 0.42) 58%, rgba(7, 13, 28, 0.88) 100%), url(${item.cardImage})`,
+                  backgroundPosition: 'center top',
+                  backgroundRepeat: 'no-repeat',
+                  backgroundSize: '100% auto',
+                }}
+              >
                 <span className="records-game-overlay" />
                 <span className="records-game-short">{item.short}</span>
                 <span className="records-game-eyebrow">{item.eyebrow}</span>

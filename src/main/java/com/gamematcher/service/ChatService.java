@@ -11,6 +11,7 @@ import com.gamematcher.repository.LiveStreamRepository;
 import com.gamematcher.repository.UserRepository;
 import com.gamematcher.service.FollowService;
 import com.gamematcher.service.LevelService;
+import com.gamematcher.service.StreamChatSettingsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@ public class ChatService {
     private final UserRepository userRepository;
     private final LiveStreamRepository liveStreamRepository;
     private final FollowService followService;
+    private final StreamChatSettingsService streamChatSettingsService;
 
     @Transactional
     public void saveMessage(Long streamId, Long userId, String text) {
@@ -77,6 +79,7 @@ public class ChatService {
         String profileImageUrl = u != null ? u.getProfileImageUrl() : null;
         String loginId = u != null ? u.getLoginId() : null;
         boolean streamer = streamOwnerId != null && streamOwnerId.equals(m.getUserId());
+        boolean manager = m.getUserId() != null && streamChatSettingsService.isManager(m.getStreamId(), m.getUserId());
         int level = u != null && u.getTotalExperienceTenths() != null
                 ? LevelService.getLevel(u.getTotalExperienceTenths())
                 : 1;
@@ -87,6 +90,7 @@ public class ChatService {
                 .profileImageUrl(profileImageUrl)
                 .text(m.getText())
                 .streamer(streamer)
+                .manager(manager)
                 .level(level)
                 .timestamp(m.getCreatedAt() != null ? m.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() : 0L)
                 .build();
@@ -122,6 +126,7 @@ public class ChatService {
             if (chatUser != null && chatUser.getProfileImageUrl() != null) map.put("profileImageUrl", chatUser.getProfileImageUrl());
             map.put("text", m.getText());
             map.put("streamer", streamOwnerId != null && streamOwnerId.equals(m.getUserId()));
+            map.put("manager", m.getUserId() != null && streamChatSettingsService.isManager(m.getStreamId(), m.getUserId()));
             int level = chatUser != null && chatUser.getTotalExperienceTenths() != null
                     ? LevelService.getLevel(chatUser.getTotalExperienceTenths())
                     : 1;

@@ -138,7 +138,7 @@ public class AuthService {
      * 휴대폰 인증은 프론트엔드에서 Firebase로 수행 후 전화번호만 전달.
      */
     @Transactional(readOnly = true)
-    public java.util.List<String> findLoginIdsByPhone(String phone, String verificationCode) {
+    public java.util.List<String> findLoginIdsByPhone(String phone) {
         if (phone == null || phone.trim().isEmpty()) {
             throw new IllegalArgumentException("휴대폰 번호를 입력해 주세요.");
         }
@@ -160,7 +160,7 @@ public class AuthService {
      * loginId와 phone이 일치하는 계정만 변경. 휴대폰 인증은 프론트엔드 Firebase로 수행 후 전달.
      */
     @Transactional
-    public void resetPasswordByPhone(String loginId, String phone, String verificationCode, String newPassword) {
+    public void resetPasswordByPhone(String loginId, String phone, String newPassword) {
         if (loginId == null || loginId.trim().isEmpty()) {
             throw new IllegalArgumentException("아이디를 입력해 주세요.");
         }

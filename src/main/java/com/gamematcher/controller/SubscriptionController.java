@@ -110,6 +110,24 @@ public class SubscriptionController {
         }
     }
 
+    @GetMapping("/my")
+    public ResponseEntity<?> mySubscriptions(HttpSession session) {
+        Long myId = (Long) session.getAttribute(SESSION_USER_ID);
+        if (myId == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "濡쒓렇?몄씠 ?꾩슂?⑸땲??"));
+        }
+        List<?> list = subscriptionService.getMySubscriptionList(myId).stream()
+                .map(s -> Map.of(
+                        "userId", s.getUserId(),
+                        "nickname", s.getNickname() != null ? s.getNickname() : "",
+                        "loginId", s.getLoginId() != null ? s.getLoginId() : "",
+                        "profileImageUrl", s.getProfileImageUrl() != null ? s.getProfileImageUrl() : "",
+                        "subscribedAt", s.getSubscribedAt() != null ? s.getSubscribedAt().toString() : ""
+                ))
+                .collect(Collectors.toList());
+        return ResponseEntity.ok(Map.of("list", list, "total", list.size()));
+    }
+
     @GetMapping("/subscribers")
     public ResponseEntity<?> subscribers(HttpSession session) {
         Long myId = (Long) session.getAttribute(SESSION_USER_ID);

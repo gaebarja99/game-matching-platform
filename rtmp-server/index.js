@@ -9,6 +9,7 @@
  * ⚠ 브라우저에서 재생이 안 되면 FFmpeg가 PATH에 있는지 확인하세요. (ffmpeg -version)
  */
 const NodeMediaServer = require('node-media-server');
+const fs = require('fs');
 const http = require('http');
 const path = require('path');
 const { execSync } = require('child_process');
@@ -16,9 +17,68 @@ const { execSync } = require('child_process');
 const RTMP_PORT = 1935;
 const HTTP_PORT = 8000;
 const SPRING_BOOT_URL = 'http://127.0.0.1:8080';
-const DEFAULT_FFMPEG_PATH = process.platform === 'win32'
-  ? 'D:/T4 GameMatcher/ffmpeg-2026-03-05-git-74cfcd1c69-full_build/bin/ffmpeg.exe'
-  : 'ffmpeg';
+const DEFAULT_FFMPEG_PATH = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
+const BACKEND_PROPERTIES_PATH = path.resolve(__dirname, '../src/main/resources/application.properties');
+const MEDIA_ROOT = path.resolve(__dirname, 'media').replace(/\\/g, '/');
+
+function loadBackendStreamingProperties() {
+  try {
+    const raw = fs.readFileSync(BACKEND_PROPERTIES_PATH, 'utf8');
+    return raw.split(/\r?\n/).reduce((acc, line) => {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) return acc;
+      const idx = trimmed.indexOf('=');
+      if (idx < 0) return acc;
+      const key = trimmed.slice(0, idx).trim();
+      const value = trimmed.slice(idx + 1).trim();
+      acc[key] = value;
+      return acc;
+    }, {});
+  } catch (_error) {
+    return {};
+  }
+}
+
+function normalizeFsPath(value) {
+  if (!value) return null;
+  const trimmed = String(value).trim();
+  if (!trimmed) return null;
+  const normalized = trimmed.replace(/^['"]|['"]$/g, '');
+  if (path.extname(normalized)) {
+    return normalized;
+  }
+  if (fs.existsSync(normalized) && fs.statSync(normalized).isDirectory()) {
+    return path.join(normalized, process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg');
+  }
+  return normalized;
+}
+
+function resolveFfmpegPath() {
+  const props = loadBackendStreamingProperties();
+  const candidates = [
+    process.env.FFMPEG_PATH,
+    props['app.streaming.ffmpeg-path'],
+    DEFAULT_FFMPEG_PATH,
+  ]
+    .map(normalizeFsPath)
+    .filter(Boolean);
+
+  for (const candidate of candidates) {
+    if (path.isAbsolute(candidate) && fs.existsSync(candidate)) {
+      return candidate;
+    }
+    try {
+      execSync(`where.exe "${candidate}"`, { stdio: 'pipe', timeout: 3000 });
+      return candidate;
+    } catch (_error) {
+      // Try next candidate.
+    }
+  }
+
+  return candidates[0] || DEFAULT_FFMPEG_PATH;
+}
+
+const ffmpegPath = resolveFfmpegPath();
 
 function getStreamKey(streamPath) {
   if (!streamPath || typeof streamPath !== 'string') return null;
@@ -81,11 +141,11 @@ const config = {
   },
   http: {
     port: HTTP_PORT,
-    mediaroot: './media',
+    mediaroot: MEDIA_ROOT,
     allow_origin: '*'
   },
   trans: {
-    ffmpeg: process.env.FFMPEG_PATH || DEFAULT_FFMPEG_PATH,
+    ffmpeg: ffmpegPath,
     tasks: [
       {
         app: 'live',
@@ -97,7 +157,6 @@ const config = {
   }
 };
 
-const ffmpegPath = process.env.FFMPEG_PATH || DEFAULT_FFMPEG_PATH;
 try {
   execSync('"' + ffmpegPath + '" -version', { stdio: 'pipe', timeout: 3000 });
   console.log('[OK] FFmpeg 사용 가능:', ffmpegPath);

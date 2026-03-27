@@ -526,6 +526,7 @@
   display: flex;
   gap: 12px;
   flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .admin-search-input,
@@ -544,6 +545,10 @@
 
 .admin-filter-select {
   min-width: 160px;
+}
+
+.admin-filter-submit {
+  min-width: 110px;
 }
 
 .theme-dark .admin-search-input,

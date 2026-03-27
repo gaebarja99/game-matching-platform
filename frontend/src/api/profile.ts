@@ -1,4 +1,12 @@
 import { apiUrl } from './client';
+import type { AccountConnectionStatus } from './accountLinks';
+
+export type ProfileVisibilityDto = {
+  bio: boolean;
+  bannerImage: boolean;
+  profileImage: boolean;
+  preferredGames: boolean;
+};
 
 export type ProfileDto = {
   userId: number;
@@ -7,6 +15,8 @@ export type ProfileDto = {
   profileImageUrl: string | null;
   bannerImageUrl: string | null;
   preferredGames: string | null;
+  visibility?: ProfileVisibilityDto | null;
+  connections?: AccountConnectionStatus[];
 };
 
 export type ProfilePatchBody = Partial<{
@@ -15,6 +25,7 @@ export type ProfilePatchBody = Partial<{
   profileImageUrl: string | null;
   bannerImageUrl: string | null;
   preferredGames: string | null;
+  preferredGamesVisible: boolean;
 }>;
 
 /** 닉네임 검색 목록 행 */

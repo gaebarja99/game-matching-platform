@@ -99,12 +99,29 @@ export interface AdminRevenueSummary {
   completedPang: number;
   todayCompletedWon: number;
   monthCompletedWon: number;
+  todayPlatformRevenueWon?: number;
+  monthPlatformRevenueWon?: number;
+  mileageSalesWon: number;
   subscriptionSalesWon: number;
   adFreeSalesWon: number;
   platformRevenueWon: number;
   totalDonationPang: number;
   completedSettlementCommissionPang: number;
   completedSettlementPang: number;
+  monthUsedPang?: number;
+  monthCompletedSettlementCommissionPang?: number;
+  monthCompletedSettlementPang?: number;
+  totalIssuedPang?: number;
+  usedPang?: number;
+  remainingPang?: number;
+  grantedMileage?: number;
+  usedMileage?: number;
+  remainingMileage?: number;
+  adminGrantedMileage?: number;
+  selectedYear?: number;
+  selectedMonth?: number;
+  currentYear?: number;
+  currentMonth?: number;
   recentOrders: AdminRevenueRecentOrder[];
 }
 
@@ -223,9 +240,9 @@ export async function updateAdminMember(
   );
 }
 
-export async function giftAdminPang(body: { loginId: string; pangAmount: number; message?: string }) {
-  return apiFetch<{ message?: string; loginId?: string; pangBalance?: number; recipientCount?: number }>(
-    '/api/admin/pang/gift',
+export async function giftAdminPang(body: { loginId: string; pangAmount: number; message?: string; sendAsMileage?: boolean }) {
+  return apiFetch<{ message?: string; loginId?: string; pangBalance?: number; mileageBalance?: number; recipientCount?: number }>(
+    '/api/admin/pang/gift-flex',
     {
       method: 'POST',
       body: JSON.stringify(body),
@@ -233,8 +250,8 @@ export async function giftAdminPang(body: { loginId: string; pangAmount: number;
   );
 }
 
-export async function fetchAdminRevenue() {
-  return apiFetch<AdminRevenueSummary>('/api/admin/revenue');
+export async function fetchAdminRevenue(args?: { year?: number; month?: number }) {
+  return apiFetch<AdminRevenueSummary>(`/api/admin/revenue${qs({ year: args?.year, month: args?.month })}`);
 }
 
 export async function fetchAdminCommunityPosts(args: {

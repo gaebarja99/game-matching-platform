@@ -11,6 +11,8 @@ export interface AccountConnectionStatus {
   displayName?: string | null;
   secondaryValue?: string | null;
   avatarUrl?: string | null;
+  lolRankSummary?: string | null;
+  valorantRankSummary?: string | null;
   ownershipVerified: boolean;
   connectUrl?: string | null;
   note?: string | null;

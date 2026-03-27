@@ -4,7 +4,7 @@ import { apiUrl } from '../api/client';
 
 interface MileagePurchaseRow {
   id?: number;
-  type?: 'PANG' | 'SUBSCRIPTION_TICKET' | 'AD_FREE_30_DAYS' | string;
+  type?: 'ADMIN_GIFT' | 'PANG' | 'SUBSCRIPTION_TICKET' | 'AD_FREE_30_DAYS' | string;
   mileageCost?: number;
   pangAmount?: number;
   targetUserId?: number;
@@ -49,6 +49,7 @@ export default function ProfileMileageShop() {
   const [shopHistory, setShopHistory] = useState<MileagePurchaseRow[]>([]);
   const [shopMsg, setShopMsg] = useState('');
   const [shopLoading, setShopLoading] = useState(false);
+  const [historyTab, setHistoryTab] = useState<'charge' | 'usage'>('charge');
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
 
@@ -74,6 +75,9 @@ export default function ProfileMileageShop() {
         setShopHistory([]);
       });
   };
+
+  const chargeHistory = shopHistory.filter((item) => item.type === 'ADMIN_GIFT');
+  const usageHistory = shopHistory.filter((item) => item.type !== 'ADMIN_GIFT');
 
   useEffect(() => {
     loadPrices();
@@ -302,43 +306,82 @@ export default function ProfileMileageShop() {
 
           <div>
             <h3 style={{ margin: '8px 0' }}>마일리지 내역</h3>
-            <table className="pang-history-table" style={{ display: shopHistory.length ? 'table' : 'none' }}>
-              <thead>
-                <tr>
-                  <th>일시</th>
-                  <th>상품</th>
-                  <th>차감 마일리지</th>
-                  <th>상세</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shopHistory.map((h, idx) => (
-                  <tr key={h.id ?? idx}>
-                    <td className="col-date">{formatDate(h.createdAt)}</td>
-                    <td>
-                      {h.type === 'PANG'
-                        ? '팡 구매'
-                        : h.type === 'SUBSCRIPTION_TICKET'
-                          ? '구독권'
-                          : h.type === 'AD_FREE_30_DAYS'
-                            ? '광고 제거 30일'
-                            : h.type}
-                    </td>
-                    <td>{(h.mileageCost ?? 0).toLocaleString()} M</td>
-                    <td>
-                      {h.type === 'PANG'
-                        ? `${(h.pangAmount ?? 0).toLocaleString()}팡`
-                        : h.type === 'SUBSCRIPTION_TICKET'
-                          ? h.targetUserNickname || (h.targetUserId ? `스트리머 #${h.targetUserId}` : '-')
-                          : '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="pang-history-empty" style={{ display: shopHistory.length ? 'none' : 'block' }}>
-              마일리지 내역이 없습니다.
+            <div className="pang-history-tabs">
+              <button type="button" className={historyTab === 'charge' ? 'active' : ''} onClick={() => { setHistoryTab('charge'); setPage(0); }}>
+                충전 내역
+              </button>
+              <button type="button" className={historyTab === 'usage' ? 'active' : ''} onClick={() => { setHistoryTab('usage'); setPage(0); }}>
+                사용 내역
+              </button>
             </div>
+
+            {historyTab === 'charge' ? (
+              <>
+                <table className="pang-history-table" style={{ display: chargeHistory.length ? 'table' : 'none' }}>
+                  <thead>
+                    <tr>
+                      <th>일시</th>
+                      <th>구분</th>
+                      <th>적립 마일리지</th>
+                      <th>상세</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {chargeHistory.map((h, idx) => (
+                      <tr key={h.id ?? idx}>
+                        <td className="col-date">{formatDate(h.createdAt)}</td>
+                        <td>이벤트 지급</td>
+                        <td>{`+${(h.mileageCost ?? 0).toLocaleString()} M`}</td>
+                        <td>운영자 지급</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="pang-history-empty" style={{ display: chargeHistory.length ? 'none' : 'block' }}>
+                  마일리지 충전 내역이 없습니다.
+                </div>
+              </>
+            ) : (
+              <>
+                <table className="pang-history-table" style={{ display: usageHistory.length ? 'table' : 'none' }}>
+                  <thead>
+                    <tr>
+                      <th>일시</th>
+                      <th>상품</th>
+                      <th>사용 마일리지</th>
+                      <th>상세</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {usageHistory.map((h, idx) => (
+                      <tr key={h.id ?? idx}>
+                        <td className="col-date">{formatDate(h.createdAt)}</td>
+                        <td>
+                          {h.type === 'PANG'
+                            ? '팡 구매'
+                            : h.type === 'SUBSCRIPTION_TICKET'
+                              ? '구독권'
+                              : h.type === 'AD_FREE_30_DAYS'
+                                ? '광고 제거 30일'
+                                : h.type}
+                        </td>
+                        <td>{`-${(h.mileageCost ?? 0).toLocaleString()} M`}</td>
+                        <td>
+                          {h.type === 'PANG'
+                            ? `${(h.pangAmount ?? 0).toLocaleString()}팡`
+                            : h.type === 'SUBSCRIPTION_TICKET'
+                              ? h.targetUserNickname || (h.targetUserId ? `스트리머 #${h.targetUserId}` : '-')
+                              : '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="pang-history-empty" style={{ display: usageHistory.length ? 'none' : 'block' }}>
+                  마일리지 사용 내역이 없습니다.
+                </div>
+              </>
+            )}
             {renderPagination()}
           </div>
         </div>

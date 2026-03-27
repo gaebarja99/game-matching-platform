@@ -99,7 +99,7 @@ export default function FindLoginId() {
     setSubmitting(true);
     try {
       const recaptchaToken = await getRecaptchaEnterpriseToken('FIND_LOGIN_ID');
-      const { ok, loginIds: ids, message } = await findLoginIdByPhone(phone.trim(), code, recaptchaToken ?? undefined);
+      const { ok, loginIds: ids, message } = await findLoginIdByPhone(phone.trim(), recaptchaToken ?? undefined);
       if (ok && ids && ids.length > 0) {
         setLoginIds(ids);
         return;

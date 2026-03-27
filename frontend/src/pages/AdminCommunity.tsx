@@ -82,7 +82,7 @@ export default function AdminCommunity() {
     if (response.ok) {
       await load();
     } else {
-      window.alert(response.error ?? '처리에 실패했습니다.');
+      window.alert(response.message ?? '처리에 실패했습니다.');
     }
   };
 

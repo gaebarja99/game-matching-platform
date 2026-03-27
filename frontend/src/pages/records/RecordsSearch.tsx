@@ -38,7 +38,7 @@ function normalizeSearchInputs(gameId: string, nickname: string, tagLine: string
   if ((gameId === 'lol' || gameId === 'tft') && REGION_HINTS.has(normalizedTag)) {
     return {
       nickname: trimmedNickname,
-      tagLine: '',
+      tagLine: trimmedTag,
       region: normalizedTag,
     };
   }
@@ -71,6 +71,7 @@ export default function RecordsSearch() {
     () => FEATURED_GAMES.map((id) => GAMES.find((item) => item.id === id)).filter(Boolean) as typeof GAMES,
     [],
   );
+  const isValorant = gameId === 'valorant';
 
   useEffect(() => {
     const g = searchParams.get('game');
@@ -194,7 +195,11 @@ export default function RecordsSearch() {
             <span>최근 20경기 기준으로 결과를 보여줍니다.</span>
           </div>
 
-          <form className="records-landing-form" onSubmit={handleSearch}>
+          <form
+            className="records-landing-form"
+            style={isValorant ? { gridTemplateColumns: 'minmax(160px, 1fr) minmax(0, 2.2fr) minmax(88px, 0.52fr) minmax(96px, 0.62fr) 142px' } : undefined}
+            onSubmit={handleSearch}
+          >
             <label className="records-landing-field records-landing-field--game">
               <span>게임</span>
               <select value={gameId} onChange={(event) => selectGame(event.target.value)}>
@@ -219,7 +224,10 @@ export default function RecordsSearch() {
             </label>
 
             {game.fields.includes('tag') ? (
-              <label className="records-landing-field records-landing-field--tag">
+              <label
+                className="records-landing-field records-landing-field--tag"
+                style={isValorant ? { gridColumn: '3' } : undefined}
+              >
                 <span>{game.tagLabel || '태그'}</span>
                 <input
                   type="text"
@@ -232,7 +240,10 @@ export default function RecordsSearch() {
             ) : null}
 
             {game.fields.includes('region') ? (
-              <label className="records-landing-field records-landing-field--tag">
+              <label
+                className="records-landing-field records-landing-field--tag"
+                style={isValorant ? { gridColumn: '4' } : undefined}
+              >
                 <span>서버</span>
                 <select value={region} onChange={(event) => setRegion(event.target.value)}>
                   {game.regionOptions?.map((option) => (
@@ -257,7 +268,12 @@ export default function RecordsSearch() {
               </label>
             ) : null}
 
-            <button type="submit" className="records-landing-submit" disabled={loading}>
+            <button
+              type="submit"
+              className="records-landing-submit"
+              style={isValorant ? { gridColumn: '5' } : undefined}
+              disabled={loading}
+            >
               {loading ? '검색 중' : '검색'}
             </button>
           </form>
@@ -271,18 +287,10 @@ export default function RecordsSearch() {
               key={item.id}
               type="button"
               className={[gameCardClass(item.id), item.id === gameId ? 'is-active' : ''].join(' ')}
+              aria-label={item.label}
+              style={{ ['--records-card-image' as string]: `url(${item.cardImage})` }}
               onClick={() => selectGame(item.id)}
-            >
-              <span className="records-landing-card-orb">{item.short}</span>
-              <span className="records-landing-card-brand">
-                {item.id === 'lol' || item.id === 'tft'
-                  ? 'RIOT GAMES'
-                  : item.id === 'pubg'
-                    ? 'BATTLEGROUNDS'
-                    : item.label.toUpperCase()}
-              </span>
-              <strong className="records-landing-card-title">{item.label}</strong>
-            </button>
+            />
           ))}
         </section>
 

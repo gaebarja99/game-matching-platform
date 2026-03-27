@@ -24,6 +24,7 @@ public class ChatMessageDto {
     private String text;
     /** true면 해당 방송의 스트리머(방송자) */
     private Boolean streamer;
+    private Boolean manager;
     /** 채팅창 뱃지용 레벨 (1~9999). null이면 미표시 */
     private Integer level;
     @Builder.Default

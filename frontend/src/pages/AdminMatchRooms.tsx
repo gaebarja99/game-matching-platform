@@ -60,7 +60,7 @@ export default function AdminMatchRooms() {
     if (response.ok) {
       await load();
     } else {
-      window.alert(response.error ?? '삭제에 실패했습니다.');
+      window.alert(response.message ?? '삭제에 실패했습니다.');
     }
   };
 

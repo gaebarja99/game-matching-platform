@@ -169,9 +169,8 @@ public class AuthController {
             return ResponseEntity.badRequest().body(java.util.Map.of("message", "보안 검증에 실패했습니다. 다시 시도해 주세요."));
         }
         String phone = body != null ? body.get("phone") : null;
-        String code = body != null ? body.get("verificationCode") : null;
         try {
-            java.util.List<String> loginIds = authService.findLoginIdsByPhone(phone, code);
+            java.util.List<String> loginIds = authService.findLoginIdsByPhone(phone);
             return ResponseEntity.ok(java.util.Map.of("loginIds", loginIds));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(java.util.Map.of("message", e.getMessage()));
@@ -190,10 +189,9 @@ public class AuthController {
         }
         String loginId = body != null ? body.get("loginId") : null;
         String phone = body != null ? body.get("phone") : null;
-        String code = body != null ? body.get("verificationCode") : null;
         String newPassword = body != null ? body.get("newPassword") : null;
         try {
-            authService.resetPasswordByPhone(loginId, phone, code, newPassword);
+            authService.resetPasswordByPhone(loginId, phone, newPassword);
             return ResponseEntity.ok(java.util.Map.of("message", "비밀번호가 변경되었습니다. 새 비밀번호로 로그인해 주세요."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(java.util.Map.of("message", e.getMessage()));

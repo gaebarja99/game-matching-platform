@@ -317,7 +317,7 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
                 </li>
                 <li>
                   <Link to="/studio/viewers/blocklist" className={path === '/studio/viewers/blocklist' ? 'active' : ''}>
-                    활동 제한
+                    블랙리스트
                   </Link>
                 </li>
               </ul>

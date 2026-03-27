@@ -1285,6 +1285,7 @@ a.msg-conversation-item { text-decoration: none; color: inherit; }
 .theme-light .watch-page .chat-msg-body .user { color: #00a858; }
 /* 방송자 뱃지: 빨간 배경 + 흰 글씨 */
 .watch-page .chat-msg-body .streamer-badge { font-size: 0.75rem; background: #e91916; color: #fff; padding: 2px 6px; border-radius: 4px; margin-right: 6px; font-weight: 700; }
+.watch-page .chat-msg-body .manager-badge { font-size: 0.75rem; background: #2563eb; color: #fff; padding: 2px 6px; border-radius: 4px; margin-right: 6px; font-weight: 700; }
 .watch-page .chat-msg-body .partner-badge { font-size: 0.8rem; color: #00e676; font-weight: 700; margin-right: 4px; }
 .theme-light .watch-page .chat-msg-body .partner-badge { color: #00a858; }
 /* 방송자 닉네임 빨간색 */
@@ -3807,3 +3808,6 @@ select.random-match-chat-input option {
 .theme-dark .community-upload-chip { background: #23252d; color: #d8d8de; border: 1px solid #38383c; }
 .theme-light .community-upload-chip { background: #f5f7fb; color: #334155; border: 1px solid #d8d8dc; }
 .community-form-actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-top: 8px; }
+.channel-page .channel-info-stack,
+.channel-page .channel-panel,
+.channel-page .channel-panel * { caret-color: transparent; }

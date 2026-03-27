@@ -21,6 +21,8 @@ export function resolveNotificationTargetPath(n: Partial<NavigableNotificationIt
     case 'PAYMENT_REFUNDED':
     case 'ADMIN_PANG_GIFT':
       return '/profile/pang';
+    case 'ADMIN_MILEAGE_GIFT':
+      return '/profile/mileage-shop';
     case 'FRIEND_REQUEST':
       return '/profile';
     case 'ADMIN_STREAM_NOTICE':

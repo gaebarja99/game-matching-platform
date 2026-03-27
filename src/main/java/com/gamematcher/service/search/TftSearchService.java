@@ -16,6 +16,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.net.URI;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -91,7 +92,7 @@ public class TftSearchService {
             }
 
             // ── STEP 2: fallback - Account API ──
-            if (puuid == null && normalizeRegionToken(req.getTagLine()) == null) {
+            if (puuid == null && req.getTagLine() != null && !req.getTagLine().isBlank()) {
                 String accountUrl = String.format(
                         "https://%s.api.riotgames.com/riot/account/v1/accounts/by-riot-id/%s/%s",
                         routing, urlEncode(req.getGameName()), urlEncode(req.getTagLine()));
@@ -244,22 +245,27 @@ public class TftSearchService {
     }
 
     private String withKey(String url) {
-        String sep = url.contains("?") ? "&" : "?";
-        return url + sep + "api_key=" + riotApiKey.trim();
+        return url;
+    }
+
+    private HttpEntity<Void> riotRequestEntity() {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-Riot-Token", riotApiKey.trim());
+        return new HttpEntity<>(headers);
     }
 
     private Map<String, Object> requestMap(String url) {
-        return restTemplate.exchange(withKey(url), HttpMethod.GET, HttpEntity.EMPTY,
+        return restTemplate.exchange(URI.create(withKey(url)), HttpMethod.GET, riotRequestEntity(),
                 new ParameterizedTypeReference<Map<String, Object>>() {}).getBody();
     }
 
     private List<Map<String, Object>> requestListOfMap(String url) {
-        return restTemplate.exchange(withKey(url), HttpMethod.GET, HttpEntity.EMPTY,
+        return restTemplate.exchange(URI.create(withKey(url)), HttpMethod.GET, riotRequestEntity(),
                 new ParameterizedTypeReference<List<Map<String, Object>>>() {}).getBody();
     }
 
     private List<String> requestListOfString(String url) {
-        return restTemplate.exchange(withKey(url), HttpMethod.GET, HttpEntity.EMPTY,
+        return restTemplate.exchange(URI.create(withKey(url)), HttpMethod.GET, riotRequestEntity(),
                 new ParameterizedTypeReference<List<String>>() {}).getBody();
     }
 

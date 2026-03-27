@@ -122,6 +122,7 @@ public class MileageShopController {
             long displayMileageCost = p.getMileageCost() != null ? p.getMileageCost() : 0L;
             if (p.getType() != null) {
                 switch (p.getType()) {
+                    case ADMIN_GIFT -> displayMileageCost = p.getMileageCost() != null ? p.getMileageCost() : 0L;
                     case SUBSCRIPTION_TICKET -> displayMileageCost = mileageShopService.getSubscriptionTicketCost();
                     case AD_FREE_30_DAYS -> displayMileageCost = mileageShopService.getAdFree30DaysCost();
                     default -> {

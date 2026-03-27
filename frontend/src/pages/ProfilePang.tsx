@@ -168,12 +168,6 @@ export default function ProfilePang() {
     return hasOrderRef && positiveCharge;
   };
 
-  const isEventGrantRow = (row: ChargeRow) => {
-    const hasOrderRef = Boolean((row.orderId && row.orderId.trim()) || (row.impUid && row.impUid.trim()));
-    const positiveCharge = (row.pangAmount ?? 0) > 0;
-    return positiveCharge && !hasOrderRef;
-  };
-
   const handleRefund = (row: ChargeRow) => {
     const orderId = row.orderId?.trim() || undefined;
     const impUid = row.impUid?.trim() || undefined;

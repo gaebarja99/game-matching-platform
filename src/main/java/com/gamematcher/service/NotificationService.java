@@ -28,6 +28,7 @@ public class NotificationService {
     public static final String TYPE_PAYMENT_COMPLETED = "PAYMENT_COMPLETED";
     public static final String TYPE_PAYMENT_REFUNDED = "PAYMENT_REFUNDED";
     public static final String TYPE_ADMIN_PANG_GIFT = "ADMIN_PANG_GIFT";
+    public static final String TYPE_ADMIN_MILEAGE_GIFT = "ADMIN_MILEAGE_GIFT";
     public static final String TYPE_ADMIN_STREAM_NOTICE = "ADMIN_STREAM_NOTICE";
     public static final String TYPE_CHANNEL_PERMISSION_GRANTED = "CHANNEL_PERMISSION_GRANTED";
     public static final String TYPE_CHANNEL_PERMISSION_REVOKED = "CHANNEL_PERMISSION_REVOKED";
@@ -54,7 +55,12 @@ public class NotificationService {
         notification.setActorUserId(fromUserId);
         notificationRepository.save(notification);
 
-        pushToUser(toUserId, "친구 요청", "새 친구 요청이 도착했습니다.", "/profile");
+        pushToUser(
+                toUserId,
+                "\uCE5C\uAD6C \uC694\uCCAD",
+                "\uC0C8 \uCE5C\uAD6C \uC694\uCCAD\uC774 \uB3C4\uCC29\uD588\uC2B5\uB2C8\uB2E4.",
+                "/profile"
+        );
     }
 
     @Transactional
@@ -69,8 +75,13 @@ public class NotificationService {
         notification.setActorUserId(fromUserId);
         notificationRepository.save(notification);
 
-        String actorName = userRepository.findById(fromUserId).map(this::displayName).orElse("유저");
-        pushToUser(toUserId, "새 메시지", actorName + "님이 메시지를 보냈습니다.", "/dm?userId=" + fromUserId);
+        String actorName = userRepository.findById(fromUserId).map(this::displayName).orElse("\uC0AC\uC6A9\uC790");
+        pushToUser(
+                toUserId,
+                "\uC0C8 \uB2E4\uC774\uB809\uD2B8 \uBA54\uC2DC\uC9C0",
+                actorName + "\uB2D8\uC774 \uB2E4\uC774\uB809\uD2B8 \uBA54\uC2DC\uC9C0\uB97C \uBCF4\uB0C8\uC2B5\uB2C8\uB2E4.",
+                "/dm?userId=" + fromUserId
+        );
     }
 
     @Transactional
@@ -81,7 +92,7 @@ public class NotificationService {
 
         String streamerName = userRepository.findById(streamerUserId)
                 .map(this::displayName)
-                .orElse("스트리머");
+                .orElse("\uC2A4\uD2B8\uB9AC\uBA38");
 
         List<Follow> follows = followRepository.findByFollowingId(streamerUserId);
         for (Follow follow : follows) {
@@ -97,8 +108,9 @@ public class NotificationService {
             notification.setActorUserId(streamerUserId);
             notificationRepository.save(notification);
 
-            pushToUser(followerId, "방송 시작", streamerName + "님이 방송을 시작했습니다.", "/watch/" + streamId);
-            sendSmsToUser(followerId, "[GameMatcher] " + streamerName + "님이 방송을 시작했습니다. /watch/" + streamId);
+            String message = streamerName + "\uB2D8\uC774 \uBC29\uC1A1\uC744 \uC2DC\uC791\uD588\uC2B5\uB2C8\uB2E4.";
+            pushToUser(followerId, "\uD314\uB85C\uC6B0 \uBC29\uC1A1 \uC2DC\uC791", message, "/watch/" + streamId);
+            sendSmsToUser(followerId, "[GameMatcher] " + message + " /watch/" + streamId);
         }
     }
 
@@ -111,11 +123,11 @@ public class NotificationService {
         Notification notification = new Notification();
         notification.setUserId(userId);
         notification.setType(TYPE_PAYMENT_COMPLETED);
-        notification.setMessage(pangAmount + "팡 충전이 완료되었습니다. (" + amountWon + "원)");
+        notification.setMessage(pangAmount + "\uD31D \uACB0\uC81C\uAC00 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. (" + amountWon + "\uC6D0)");
         notificationRepository.save(notification);
 
-        pushToUser(userId, "결제 완료", notification.getMessage(), "/profile/pang");
-        sendPaymentSms(userId, "[GameMatcher] 결제 완료: " + notification.getMessage());
+        pushToUser(userId, "\uD31D \uACB0\uC81C \uC644\uB8CC", notification.getMessage(), "/profile/pang");
+        sendPaymentSms(userId, "[GameMatcher] " + notification.getMessage());
     }
 
     @Transactional
@@ -127,11 +139,11 @@ public class NotificationService {
         Notification notification = new Notification();
         notification.setUserId(userId);
         notification.setType(TYPE_PAYMENT_REFUNDED);
-        notification.setMessage(pangAmount + "팡 환불이 완료되었습니다. (" + amountWon + "원)");
+        notification.setMessage(pangAmount + "\uD31D \uD658\uBD88\uC774 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4. (" + amountWon + "\uC6D0)");
         notificationRepository.save(notification);
 
-        pushToUser(userId, "환불 완료", notification.getMessage(), "/profile/pang");
-        sendPaymentSms(userId, "[GameMatcher] 환불 완료: " + notification.getMessage());
+        pushToUser(userId, "\uD31D \uD658\uBD88 \uC644\uB8CC", notification.getMessage(), "/profile/pang");
+        sendPaymentSms(userId, "[GameMatcher] " + notification.getMessage());
     }
 
     @Transactional
@@ -147,11 +159,31 @@ public class NotificationService {
         notification.setType(TYPE_ADMIN_PANG_GIFT);
         notification.setActorUserId(adminUserId);
         notification.setMessage(trimmedMessage.isBlank()
-                ? "운영자가 이벤트로 " + pangAmount + "팡을 지급했습니다."
+                ? "\uC6B4\uC601\uC790\uAC00 \uC774\uBCA4\uD2B8\uB85C " + pangAmount + "\uD31D\uC744 \uC9C0\uAE09\uD588\uC2B5\uB2C8\uB2E4."
                 : trimmedMessage);
         notificationRepository.save(notification);
 
-        pushToUser(userId, "이벤트 팡 지급", notification.getMessage(), "/profile/pang");
+        pushToUser(userId, "\uC774\uBCA4\uD2B8 \uD31D \uC9C0\uAE09", notification.getMessage(), "/profile/pang");
+    }
+
+    @Transactional
+    public void createForAdminMileageGift(Long userId, Long adminUserId, long mileageAmount, String customMessage) {
+        if (userId == null || mileageAmount <= 0) {
+            return;
+        }
+
+        String trimmedMessage = customMessage != null ? customMessage.trim() : "";
+
+        Notification notification = new Notification();
+        notification.setUserId(userId);
+        notification.setType(TYPE_ADMIN_MILEAGE_GIFT);
+        notification.setActorUserId(adminUserId);
+        notification.setMessage(trimmedMessage.isBlank()
+                ? "\uC6B4\uC601\uC790\uAC00 \uC774\uBCA4\uD2B8\uB85C \uB9C8\uC77C\uB9AC\uC9C0 " + mileageAmount + "\uC810\uC744 \uC9C0\uAE09\uD588\uC2B5\uB2C8\uB2E4."
+                : trimmedMessage);
+        notificationRepository.save(notification);
+
+        pushToUser(userId, "\uC774\uBCA4\uD2B8 \uB9C8\uC77C\uB9AC\uC9C0 \uC9C0\uAE09", notification.getMessage(), "/profile/mileage-shop");
     }
 
     @Transactional
@@ -167,7 +199,7 @@ public class NotificationService {
         notification.setMessage(message.trim());
         notificationRepository.save(notification);
 
-        pushToUser(userId, "방송 관리 알림", notification.getMessage(), "/studio");
+        pushToUser(userId, "\uBC29\uC1A1 \uAD00\uB828 \uC548\uB0B4", notification.getMessage(), "/studio");
     }
 
     @Transactional
@@ -175,13 +207,17 @@ public class NotificationService {
         if (userId == null || ownerUserId == null) {
             return;
         }
+
+        String safeOwnerName = ownerName == null || ownerName.isBlank() ? "\uCC44\uB110 \uC6B4\uC601\uC790" : ownerName;
+
         Notification notification = new Notification();
         notification.setUserId(userId);
         notification.setType(TYPE_CHANNEL_PERMISSION_GRANTED);
         notification.setActorUserId(ownerUserId);
-        notification.setMessage(ownerName + "님의 채널 관리 권한이 부여되었습니다.");
+        notification.setMessage(safeOwnerName + "\uB2D8\uC774 \uCC44\uB110 \uAD00\uB9AC \uAD8C\uD55C\uC744 \uBD80\uC5EC\uD588\uC2B5\uB2C8\uB2E4.");
         notificationRepository.save(notification);
-        pushToUser(userId, "채널 권한 부여", notification.getMessage(), "/studio/channel/manage");
+
+        pushToUser(userId, "\uCC44\uB110 \uAD00\uB9AC \uAD8C\uD55C \uBD80\uC5EC", notification.getMessage(), "/studio/channel/manage");
     }
 
     @Transactional
@@ -189,13 +225,17 @@ public class NotificationService {
         if (userId == null || ownerUserId == null) {
             return;
         }
+
+        String safeOwnerName = ownerName == null || ownerName.isBlank() ? "\uCC44\uB110 \uC6B4\uC601\uC790" : ownerName;
+
         Notification notification = new Notification();
         notification.setUserId(userId);
         notification.setType(TYPE_CHANNEL_PERMISSION_REVOKED);
         notification.setActorUserId(ownerUserId);
-        notification.setMessage(ownerName + "님의 채널 관리 권한이 해제되었습니다.");
+        notification.setMessage(safeOwnerName + "\uB2D8\uC774 \uCC44\uB110 \uAD00\uB9AC \uAD8C\uD55C\uC744 \uD68C\uC218\uD588\uC2B5\uB2C8\uB2E4.");
         notificationRepository.save(notification);
-        pushToUser(userId, "채널 권한 해제", notification.getMessage(), "/studio");
+
+        pushToUser(userId, "\uCC44\uB110 \uAD00\uB9AC \uAD8C\uD55C \uD68C\uC218", notification.getMessage(), "/studio");
     }
 
     @Transactional
@@ -203,14 +243,17 @@ public class NotificationService {
         if (userId == null || fromUserId == null || roomId == null || userId.equals(fromUserId)) {
             return;
         }
+
         Notification notification = new Notification();
         notification.setUserId(userId);
         notification.setType(TYPE_GROUP_CHAT_INVITE);
         notification.setActorUserId(fromUserId);
         notification.setStreamId(roomId);
-        notification.setMessage((roomName == null || roomName.isBlank() ? "채팅방" : roomName) + " 초대가 도착했습니다.");
+        notification.setMessage((roomName == null || roomName.isBlank() ? "\uCC44\uD305\uBC29" : roomName)
+                + " \uCD08\uB300\uAC00 \uB3C4\uCC29\uD588\uC2B5\uB2C8\uB2E4.");
         notificationRepository.save(notification);
-        pushToUser(userId, "채팅방 초대", notification.getMessage(), "/group-chat/room/" + roomId);
+
+        pushToUser(userId, "\uADF8\uB8F9 \uCC44\uD305 \uCD08\uB300", notification.getMessage(), "/group-chat/room/" + roomId);
     }
 
     @Transactional
@@ -218,16 +261,19 @@ public class NotificationService {
         if (userId == null || fromUserId == null || roomId == null || userId.equals(fromUserId)) {
             return;
         }
-        String actorName = userRepository.findById(fromUserId).map(this::displayName).orElse("유저");
-        String roomLabel = roomName == null || roomName.isBlank() ? "채팅방" : roomName;
+
+        String actorName = userRepository.findById(fromUserId).map(this::displayName).orElse("\uC0AC\uC6A9\uC790");
+        String roomLabel = roomName == null || roomName.isBlank() ? "\uCC44\uD305\uBC29" : roomName;
+
         Notification notification = new Notification();
         notification.setUserId(userId);
         notification.setType(TYPE_GROUP_CHAT_MENTION);
         notification.setActorUserId(fromUserId);
         notification.setStreamId(roomId);
-        notification.setMessage(actorName + "님이 " + roomLabel + "에서 회원님을 멘션했습니다.");
+        notification.setMessage(actorName + "\uB2D8\uC774 " + roomLabel + "\uC5D0\uC11C \uB2F9\uC2E0\uC744 \uBA58\uC158\uD588\uC2B5\uB2C8\uB2E4.");
         notificationRepository.save(notification);
-        pushToUser(userId, "채팅방 멘션", previewMessage(notification.getMessage(), preview), "/group-chat/room/" + roomId);
+
+        pushToUser(userId, "\uADF8\uB8F9 \uCC44\uD305 \uBA58\uC158", previewMessage(notification.getMessage(), preview), "/group-chat/room/" + roomId);
     }
 
     @Transactional
@@ -235,16 +281,21 @@ public class NotificationService {
         if (userId == null || fromUserId == null || sessionId == null || userId.equals(fromUserId)) {
             return;
         }
-        String actorName = userRepository.findById(fromUserId).map(this::displayName).orElse("유저");
-        String roomLabel = gameName == null || gameName.isBlank() ? "매칭 채팅방" : gameName + " 매칭 채팅방";
+
+        String actorName = userRepository.findById(fromUserId).map(this::displayName).orElse("\uC0AC\uC6A9\uC790");
+        String roomLabel = gameName == null || gameName.isBlank()
+                ? "\uB9E4\uCE58 \uCC44\uD305\uBC29"
+                : gameName + " \uB9E4\uCE58 \uCC44\uD305\uBC29";
+
         Notification notification = new Notification();
         notification.setUserId(userId);
         notification.setType(TYPE_MATCH_CHAT_MENTION);
         notification.setActorUserId(fromUserId);
         notification.setStreamId(sessionId);
-        notification.setMessage(actorName + "님이 " + roomLabel + "에서 회원님을 멘션했습니다.");
+        notification.setMessage(actorName + "\uB2D8\uC774 " + roomLabel + "\uC5D0\uC11C \uB2F9\uC2E0\uC744 \uBA58\uC158\uD588\uC2B5\uB2C8\uB2E4.");
         notificationRepository.save(notification);
-        pushToUser(userId, "매칭 채팅 멘션", previewMessage(notification.getMessage(), preview), "/match-chat/" + sessionId);
+
+        pushToUser(userId, "\uB9E4\uCE58 \uCC44\uD305 \uBA58\uC158", previewMessage(notification.getMessage(), preview), "/match-chat/" + sessionId);
     }
 
     public long getUnreadCount(Long userId) {
@@ -327,7 +378,11 @@ public class NotificationService {
         if (userId == null || fromUserId == null) {
             return 0;
         }
-        List<Notification> list = notificationRepository.findByUserIdAndTypeAndActorUserIdAndReadAtIsNull(userId, TYPE_NEW_DM, fromUserId);
+        List<Notification> list = notificationRepository.findByUserIdAndTypeAndActorUserIdAndReadAtIsNull(
+                userId,
+                TYPE_NEW_DM,
+                fromUserId
+        );
         LocalDateTime now = LocalDateTime.now();
         for (Notification notification : list) {
             notification.setReadAt(now);
@@ -356,25 +411,31 @@ public class NotificationService {
             return notification.getMessage();
         }
         if (TYPE_FOLLOWING_STARTED_STREAM.equals(notification.getType())) {
-            return (actorNickname != null ? actorNickname : "스트리머") + "님이 방송을 시작했습니다.";
+            return (actorNickname != null ? actorNickname : "\uC2A4\uD2B8\uB9AC\uBA38")
+                    + "\uB2D8\uC774 \uBC29\uC1A1\uC744 \uC2DC\uC791\uD588\uC2B5\uB2C8\uB2E4.";
         }
         if (TYPE_NEW_DM.equals(notification.getType())) {
-            return (actorNickname != null ? actorNickname : "유저") + "님이 메시지를 보냈습니다.";
+            return (actorNickname != null ? actorNickname : "\uC0AC\uC6A9\uC790")
+                    + "\uB2D8\uC774 \uB2E4\uC774\uB809\uD2B8 \uBA54\uC2DC\uC9C0\uB97C \uBCF4\uB0C8\uC2B5\uB2C8\uB2E4.";
         }
         if (TYPE_FRIEND_REQUEST.equals(notification.getType())) {
-            return (actorNickname != null ? actorNickname : "유저") + "님이 친구 요청을 보냈습니다.";
+            return (actorNickname != null ? actorNickname : "\uC0AC\uC6A9\uC790")
+                    + "\uB2D8\uC774 \uCE5C\uAD6C \uC694\uCCAD\uC744 \uBCF4\uB0C8\uC2B5\uB2C8\uB2E4.";
         }
         if (TYPE_PAYMENT_COMPLETED.equals(notification.getType())) {
-            return "팡 충전 결제가 완료되었습니다.";
+            return "\uD31D \uACB0\uC81C\uAC00 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.";
         }
         if (TYPE_PAYMENT_REFUNDED.equals(notification.getType())) {
-            return "팡 환불이 완료되었습니다.";
+            return "\uD31D \uD658\uBD88\uC774 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.";
         }
         if (TYPE_ADMIN_PANG_GIFT.equals(notification.getType())) {
-            return "운영자가 이벤트 팡을 지급했습니다.";
+            return "\uC6B4\uC601\uC790\uAC00 \uC774\uBCA4\uD2B8 \uD31D\uC744 \uC9C0\uAE09\uD588\uC2B5\uB2C8\uB2E4.";
+        }
+        if (TYPE_ADMIN_MILEAGE_GIFT.equals(notification.getType())) {
+            return "\uC6B4\uC601\uC790\uAC00 \uC774\uBCA4\uD2B8 \uB9C8\uC77C\uB9AC\uC9C0\uB97C \uC9C0\uAE09\uD588\uC2B5\uB2C8\uB2E4.";
         }
         if (TYPE_ADMIN_STREAM_NOTICE.equals(notification.getType())) {
-            return "운영자 방송 관리 알림이 도착했습니다.";
+            return "\uC6B4\uC601\uC790\uAC00 \uBC29\uC1A1 \uAD00\uB828 \uC548\uB0B4\uB97C \uBCF4\uB0C8\uC2B5\uB2C8\uB2E4.";
         }
         if (TYPE_CHANNEL_PERMISSION_GRANTED.equals(notification.getType())
                 || TYPE_CHANNEL_PERMISSION_REVOKED.equals(notification.getType())
@@ -383,7 +444,7 @@ public class NotificationService {
                 || TYPE_MATCH_CHAT_MENTION.equals(notification.getType())) {
             return notification.getMessage();
         }
-        return "알림";
+        return "\uC54C\uB9BC\uC774 \uB3C4\uCC29\uD588\uC2B5\uB2C8\uB2E4.";
     }
 
     private String displayName(User user) {
@@ -407,6 +468,9 @@ public class NotificationService {
                 || TYPE_PAYMENT_REFUNDED.equals(notification.getType())
                 || TYPE_ADMIN_PANG_GIFT.equals(notification.getType())) {
             return "/profile/pang";
+        }
+        if (TYPE_ADMIN_MILEAGE_GIFT.equals(notification.getType())) {
+            return "/profile/mileage-shop";
         }
         if (TYPE_FRIEND_REQUEST.equals(notification.getType())) {
             return "/profile";
@@ -459,7 +523,7 @@ public class NotificationService {
 
         Map<String, String> data = new HashMap<>();
         data.put("url", url != null ? url : "/");
-        data.put("title", title != null ? title : "알림");
+        data.put("title", title != null ? title : "\uC54C\uB9BC");
         data.put("body", body != null ? body : "");
 
         for (String token : tokens) {

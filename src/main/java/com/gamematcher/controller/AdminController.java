@@ -43,6 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -96,6 +97,20 @@ public class AdminController {
             return user.getNickname();
         }
         return Objects.toString(user.getUsername(), "");
+    }
+
+    private List<Map<String, Object>> buildDailyAmountSeries(
+            LocalDate startDate,
+            LocalDate endDate,
+            java.util.function.Function<LocalDate, Map<String, Object>> mapper
+    ) {
+        List<Map<String, Object>> rows = new ArrayList<>();
+        LocalDate cursor = startDate;
+        while (!cursor.isAfter(endDate)) {
+            rows.add(mapper.apply(cursor));
+            cursor = cursor.plusDays(1);
+        }
+        return rows;
     }
 
     private <T> Map<String, Object> paginate(List<T> source, int page, int size) {
@@ -734,7 +749,11 @@ public class AdminController {
     }
 
     @GetMapping("/revenue")
-    public ResponseEntity<?> getRevenueSummary(HttpSession session) {
+    public ResponseEntity<?> getRevenueSummary(
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) Integer month,
+            HttpSession session
+    ) {
         if (!isAdmin(session)) {
             return ResponseEntity.status(403).body(Map.of("message", "권한이 없습니다."));
         }
@@ -742,88 +761,207 @@ public class AdminController {
         List<PaymentOrder> orders = paymentOrderRepository.findAll();
         List<MileagePurchase> mileagePurchases = mileagePurchaseRepository.findAll();
         List<Donation> donations = donationRepository.findAll();
+        List<PangWithdrawal> withdrawals = pangWithdrawalRepository.findAll();
         Map<Long, User> userMap = userRepository.findAll().stream()
                 .collect(Collectors.toMap(User::getId, user -> user));
 
+        LocalDate today = LocalDate.now();
+        int targetYear = year != null ? year : today.getYear();
+        int targetMonth = month != null ? month : today.getMonthValue();
+        LocalDate targetMonthStart = LocalDate.of(targetYear, targetMonth, 1);
+        LocalDate targetMonthEndExclusive = targetMonthStart.plusMonths(1);
+        LocalDate firstDayOfCurrentMonth = today.withDayOfMonth(1);
+
         long totalRequestedWon = orders.stream().mapToLong(PaymentOrder::getAmountWon).sum();
-        long completedSalesWon = orders.stream()
-                .filter(order -> "COMPLETED".equals(order.getStatus()))
-                .mapToLong(PaymentOrder::getAmountWon)
-                .sum();
-        long pendingSalesWon = 0L;
-        long failedSalesWon = orders.stream()
-                .filter(order -> "FAILED".equals(order.getStatus()))
-                .mapToLong(PaymentOrder::getAmountWon)
-                .sum();
-        long cancelledSalesWon = orders.stream()
-                .filter(order -> "CANCELLED".equals(order.getStatus()))
-                .mapToLong(PaymentOrder::getAmountWon)
-                .sum();
         long completedPang = orders.stream()
                 .filter(order -> "COMPLETED".equals(order.getStatus()))
                 .mapToLong(order -> order.getPangAmount() == null ? 0 : order.getPangAmount())
                 .sum();
-
-        LocalDate today = LocalDate.now();
-        LocalDate firstDayOfMonth = today.withDayOfMonth(1);
-
-        long todayCompletedWon = orders.stream()
-                .filter(order -> "COMPLETED".equals(order.getStatus()))
-                .filter(order -> order.getCreatedAt() != null && order.getCreatedAt().toLocalDate().isEqual(today))
-                .mapToLong(PaymentOrder::getAmountWon)
-                .sum();
-        long monthCompletedWon = orders.stream()
-                .filter(order -> "COMPLETED".equals(order.getStatus()))
-                .filter(order -> order.getCreatedAt() != null && !order.getCreatedAt().toLocalDate().isBefore(firstDayOfMonth))
-                .mapToLong(PaymentOrder::getAmountWon)
-                .sum();
-
-        long subscriptionSalesWon = orders.stream()
-                .filter(order -> "COMPLETED".equals(order.getStatus()))
-                .filter(order -> order.getKind() == PaymentOrderKind.SUBSCRIPTION)
-                .mapToLong(PaymentOrder::getAmountWon)
-                .sum()
-                + mileagePurchases.stream()
-                .filter(purchase -> purchase.getType() == MileagePurchaseType.SUBSCRIPTION_TICKET)
-                .mapToLong(purchase -> purchase.getMileageCost() == null ? 0 : purchase.getMileageCost())
-                .sum();
-
-        long adFreeSalesWon = mileagePurchases.stream()
-                .filter(purchase -> purchase.getType() == MileagePurchaseType.AD_FREE_30_DAYS)
-                .mapToLong(purchase -> purchase.getMileageCost() == null ? 0 : purchase.getMileageCost())
-                .sum();
-
         long totalDonationPang = donations.stream()
                 .mapToLong(donation -> donation.getAmount() == null ? 0 : donation.getAmount())
                 .sum();
-        List<PangWithdrawal> withdrawals = pangWithdrawalRepository.findAll();
         long completedSettlementCommissionPang = withdrawals.stream()
                 .mapToLong(withdrawal -> withdrawal.getCommissionPang() == null ? 0 : withdrawal.getCommissionPang())
                 .sum();
         long completedSettlementPang = withdrawals.stream()
                 .mapToLong(withdrawal -> withdrawal.getNetPang() == null ? 0 : withdrawal.getNetPang())
                 .sum();
-        long platformRevenueWon = Math.round(completedSettlementCommissionPang * 1.2d)
-                + adFreeSalesWon;
+        long monthUsedPang = donations.stream()
+                .filter(donation -> donation.getCreatedAt() != null
+                        && !donation.getCreatedAt().toLocalDate().isBefore(targetMonthStart)
+                        && donation.getCreatedAt().toLocalDate().isBefore(targetMonthEndExclusive))
+                .mapToLong(donation -> donation.getAmount() == null ? 0 : donation.getAmount())
+                .sum();
+        long monthCompletedSettlementCommissionPang = withdrawals.stream()
+                .filter(withdrawal -> withdrawal.getCreatedAt() != null
+                        && !withdrawal.getCreatedAt().toLocalDate().isBefore(targetMonthStart)
+                        && withdrawal.getCreatedAt().toLocalDate().isBefore(targetMonthEndExclusive))
+                .mapToLong(withdrawal -> withdrawal.getCommissionPang() == null ? 0 : withdrawal.getCommissionPang())
+                .sum();
+        long monthCompletedSettlementPang = withdrawals.stream()
+                .filter(withdrawal -> withdrawal.getCreatedAt() != null
+                        && !withdrawal.getCreatedAt().toLocalDate().isBefore(targetMonthStart)
+                        && withdrawal.getCreatedAt().toLocalDate().isBefore(targetMonthEndExclusive))
+                .mapToLong(withdrawal -> withdrawal.getNetPang() == null ? 0 : withdrawal.getNetPang())
+                .sum();
+        long remainingPang = userMap.values().stream()
+                .mapToLong(user -> user.getPangBalance() == null ? 0 : user.getPangBalance())
+                .sum();
+        long totalIssuedPang = totalDonationPang + remainingPang;
 
-        List<Map<String, Object>> recentOrders = orders.stream()
-                .filter(order -> "COMPLETED".equals(order.getStatus()) || "CANCELLED".equals(order.getStatus()))
-                .sorted(Comparator.comparing(PaymentOrder::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+        long completedSalesWon = orders.stream()
+                .filter(order -> "COMPLETED".equals(order.getStatus()))
+                .filter(order -> order.getCreatedAt() != null
+                        && !order.getCreatedAt().toLocalDate().isBefore(targetMonthStart)
+                        && order.getCreatedAt().toLocalDate().isBefore(targetMonthEndExclusive))
+                .mapToLong(PaymentOrder::getAmountWon)
+                .sum();
+        long todayCompletedSalesWon = orders.stream()
+                .filter(order -> "COMPLETED".equals(order.getStatus()))
+                .filter(order -> order.getCreatedAt() != null && order.getCreatedAt().toLocalDate().isEqual(today))
+                .mapToLong(PaymentOrder::getAmountWon)
+                .sum();
+        long pendingSalesWon = 0L;
+        long failedSalesWon = orders.stream()
+                .filter(order -> "FAILED".equals(order.getStatus()))
+                .filter(order -> order.getCreatedAt() != null
+                        && !order.getCreatedAt().toLocalDate().isBefore(targetMonthStart)
+                        && order.getCreatedAt().toLocalDate().isBefore(targetMonthEndExclusive))
+                .mapToLong(PaymentOrder::getAmountWon)
+                .sum();
+        long cancelledSalesWon = orders.stream()
+                .filter(order -> "CANCELLED".equals(order.getStatus()))
+                .filter(order -> order.getCreatedAt() != null
+                        && !order.getCreatedAt().toLocalDate().isBefore(targetMonthStart)
+                        && order.getCreatedAt().toLocalDate().isBefore(targetMonthEndExclusive))
+                .mapToLong(PaymentOrder::getAmountWon)
+                .sum();
+
+        long mileageSalesWon = mileagePurchases.stream()
+                .filter(purchase -> purchase.getType() == MileagePurchaseType.PANG
+                        || purchase.getType() == MileagePurchaseType.SUBSCRIPTION_TICKET
+                        || purchase.getType() == MileagePurchaseType.AD_FREE_30_DAYS)
+                .filter(purchase -> purchase.getCreatedAt() != null
+                        && !purchase.getCreatedAt().toLocalDate().isBefore(targetMonthStart)
+                        && purchase.getCreatedAt().toLocalDate().isBefore(targetMonthEndExclusive))
+                .mapToLong(purchase -> purchase.getMileageCost() == null ? 0 : purchase.getMileageCost())
+                .sum();
+        long subscriptionSalesWon = orders.stream()
+                .filter(order -> "COMPLETED".equals(order.getStatus()))
+                .filter(order -> order.getKind() == PaymentOrderKind.SUBSCRIPTION)
+                .filter(order -> order.getCreatedAt() != null
+                        && !order.getCreatedAt().toLocalDate().isBefore(targetMonthStart)
+                        && order.getCreatedAt().toLocalDate().isBefore(targetMonthEndExclusive))
+                .mapToLong(PaymentOrder::getAmountWon)
+                .sum();
+        long usedMileage = mileagePurchases.stream()
+                .filter(purchase -> purchase.getType() == MileagePurchaseType.PANG
+                        || purchase.getType() == MileagePurchaseType.SUBSCRIPTION_TICKET
+                        || purchase.getType() == MileagePurchaseType.AD_FREE_30_DAYS)
+                .mapToLong(purchase -> purchase.getMileageCost() == null ? 0 : purchase.getMileageCost())
+                .sum();
+        long remainingMileage = userMap.values().stream()
+                .mapToLong(user -> user.getMileage() == null ? 0 : user.getMileage())
+                .sum();
+        long grantedMileage = usedMileage + remainingMileage;
+        long adminGrantedMileage = mileagePurchases.stream()
+                .filter(purchase -> purchase.getType() == MileagePurchaseType.ADMIN_GIFT)
+                .mapToLong(purchase -> purchase.getMileageCost() == null ? 0 : purchase.getMileageCost())
+                .sum();
+        long adFreeSalesWon = orders.stream()
+                .filter(order -> "COMPLETED".equals(order.getStatus()))
+                .filter(order -> order.getKind() == PaymentOrderKind.AD_FREE)
+                .filter(order -> order.getCreatedAt() != null
+                        && !order.getCreatedAt().toLocalDate().isBefore(targetMonthStart)
+                        && order.getCreatedAt().toLocalDate().isBefore(targetMonthEndExclusive))
+                .mapToLong(PaymentOrder::getAmountWon)
+                .sum();
+
+        long todaySettlementCommissionWon = Math.round(withdrawals.stream()
+                .filter(withdrawal -> withdrawal.getCreatedAt() != null && withdrawal.getCreatedAt().toLocalDate().isEqual(today))
+                .mapToLong(withdrawal -> withdrawal.getCommissionPang() == null ? 0 : withdrawal.getCommissionPang())
+                .sum() * 1.2d);
+        long todayAdFreeSalesWon = orders.stream()
+                .filter(order -> "COMPLETED".equals(order.getStatus()))
+                .filter(order -> order.getKind() == PaymentOrderKind.AD_FREE)
+                .filter(order -> order.getCreatedAt() != null && order.getCreatedAt().toLocalDate().isEqual(today))
+                .mapToLong(PaymentOrder::getAmountWon)
+                .sum();
+        long todayMileageSalesWon = mileagePurchases.stream()
+                .filter(purchase -> purchase.getType() == MileagePurchaseType.PANG
+                        || purchase.getType() == MileagePurchaseType.SUBSCRIPTION_TICKET
+                        || purchase.getType() == MileagePurchaseType.AD_FREE_30_DAYS)
+                .filter(purchase -> purchase.getCreatedAt() != null && purchase.getCreatedAt().toLocalDate().isEqual(today))
+                .mapToLong(purchase -> purchase.getMileageCost() == null ? 0 : purchase.getMileageCost())
+                .sum();
+        long todayPlatformRevenueWon = Math.max(0L, todaySettlementCommissionWon + todayAdFreeSalesWon - todayMileageSalesWon);
+
+        long monthSettlementCommissionWon = Math.round(withdrawals.stream()
+                .filter(withdrawal -> withdrawal.getCreatedAt() != null
+                        && !withdrawal.getCreatedAt().toLocalDate().isBefore(targetMonthStart)
+                        && withdrawal.getCreatedAt().toLocalDate().isBefore(targetMonthEndExclusive))
+                .mapToLong(withdrawal -> withdrawal.getCommissionPang() == null ? 0 : withdrawal.getCommissionPang())
+                .sum() * 1.2d);
+        long monthPlatformRevenueWon = Math.max(0L, monthSettlementCommissionWon + adFreeSalesWon - mileageSalesWon);
+
+        long platformRevenueWon = Math.max(
+                0L,
+                Math.round(withdrawals.stream()
+                        .filter(withdrawal -> withdrawal.getCreatedAt() != null
+                                && !withdrawal.getCreatedAt().toLocalDate().isBefore(targetMonthStart)
+                                && withdrawal.getCreatedAt().toLocalDate().isBefore(targetMonthEndExclusive))
+                        .mapToLong(withdrawal -> withdrawal.getCommissionPang() == null ? 0 : withdrawal.getCommissionPang())
+                        .sum() * 1.2d)
+                        + adFreeSalesWon
+                        - mileageSalesWon
+        );
+
+        List<Map<String, Object>> recentOrders = java.util.stream.Stream.concat(
+                        orders.stream()
+                                .filter(order -> "COMPLETED".equals(order.getStatus()) || "CANCELLED".equals(order.getStatus()))
+                                .filter(order -> order.getCreatedAt() != null
+                                        && !order.getCreatedAt().toLocalDate().isBefore(targetMonthStart)
+                                        && order.getCreatedAt().toLocalDate().isBefore(targetMonthEndExclusive))
+                                .map(order -> {
+                                    User orderUser = userMap.get(order.getUserId());
+                                    Map<String, Object> row = new LinkedHashMap<>();
+                                    row.put("id", order.getId());
+                                    row.put("orderId", order.getOrderId());
+                                    row.put("loginId", orderUser != null ? Objects.toString(orderUser.getLoginId(), "") : "");
+                                    row.put("displayName", displayName(orderUser));
+                                    row.put("kind", order.getKind().name());
+                                    row.put("amountWon", order.getAmountWon());
+                                    row.put("pangAmount", order.getPangAmount());
+                                    row.put("status", order.getStatus());
+                                    row.put("createdAt", order.getCreatedAt());
+                                    return row;
+                                }),
+                        mileagePurchases.stream()
+                                .filter(purchase -> purchase.getType() == MileagePurchaseType.PANG
+                                        || purchase.getType() == MileagePurchaseType.SUBSCRIPTION_TICKET
+                                        || purchase.getType() == MileagePurchaseType.AD_FREE_30_DAYS)
+                                .filter(purchase -> purchase.getCreatedAt() != null
+                                        && !purchase.getCreatedAt().toLocalDate().isBefore(targetMonthStart)
+                                        && purchase.getCreatedAt().toLocalDate().isBefore(targetMonthEndExclusive))
+                                .map(purchase -> {
+                                    User orderUser = userMap.get(purchase.getUserId());
+                                    Map<String, Object> row = new LinkedHashMap<>();
+                                    row.put("id", purchase.getId());
+                                    row.put("orderId", "MILEAGE-" + purchase.getId());
+                                    row.put("loginId", orderUser != null ? Objects.toString(orderUser.getLoginId(), "") : "");
+                                    row.put("displayName", displayName(orderUser));
+                                    row.put("kind", purchase.getType().name());
+                                    row.put("amountWon", purchase.getMileageCost() == null ? 0L : purchase.getMileageCost());
+                                    row.put("pangAmount", purchase.getPangAmount());
+                                    row.put("status", "COMPLETED");
+                                    row.put("createdAt", purchase.getCreatedAt());
+                                    return row;
+                                }))
+                .sorted(Comparator.comparing(
+                        row -> (LocalDateTime) row.get("createdAt"),
+                        Comparator.nullsLast(Comparator.reverseOrder())
+                ))
                 .limit(8)
-                .map(order -> {
-                    User orderUser = userMap.get(order.getUserId());
-                    Map<String, Object> row = new LinkedHashMap<>();
-                    row.put("id", order.getId());
-                    row.put("orderId", order.getOrderId());
-                    row.put("loginId", orderUser != null ? Objects.toString(orderUser.getLoginId(), "") : "");
-                    row.put("displayName", displayName(orderUser));
-                    row.put("kind", order.getKind().name());
-                    row.put("amountWon", order.getAmountWon());
-                    row.put("pangAmount", order.getPangAmount());
-                    row.put("status", order.getStatus());
-                    row.put("createdAt", order.getCreatedAt());
-                    return row;
-                })
                 .collect(Collectors.toList());
 
         Map<String, Object> response = new LinkedHashMap<>();
@@ -833,15 +971,214 @@ public class AdminController {
         response.put("failedSalesWon", failedSalesWon);
         response.put("cancelledSalesWon", cancelledSalesWon);
         response.put("completedPang", completedPang);
-        response.put("todayCompletedWon", todayCompletedWon);
-        response.put("monthCompletedWon", monthCompletedWon);
+        response.put("todayCompletedWon", todayCompletedSalesWon);
+        response.put("monthCompletedWon", completedSalesWon);
+        response.put("mileageSalesWon", mileageSalesWon);
         response.put("subscriptionSalesWon", subscriptionSalesWon);
         response.put("adFreeSalesWon", adFreeSalesWon);
         response.put("platformRevenueWon", platformRevenueWon);
+        response.put("todayPlatformRevenueWon", todayPlatformRevenueWon);
+        response.put("monthPlatformRevenueWon", monthPlatformRevenueWon);
         response.put("totalDonationPang", totalDonationPang);
         response.put("completedSettlementCommissionPang", completedSettlementCommissionPang);
         response.put("completedSettlementPang", completedSettlementPang);
+        response.put("monthUsedPang", monthUsedPang);
+        response.put("monthCompletedSettlementCommissionPang", monthCompletedSettlementCommissionPang);
+        response.put("monthCompletedSettlementPang", monthCompletedSettlementPang);
+        response.put("totalIssuedPang", totalIssuedPang);
+        response.put("usedPang", totalDonationPang);
+        response.put("remainingPang", remainingPang);
+        response.put("grantedMileage", grantedMileage);
+        response.put("usedMileage", usedMileage);
+        response.put("remainingMileage", remainingMileage);
+        response.put("adminGrantedMileage", adminGrantedMileage);
+        response.put("selectedYear", targetYear);
+        response.put("selectedMonth", targetMonth);
+        response.put("currentYear", today.getYear());
+        response.put("currentMonth", today.getMonthValue());
         response.put("recentOrders", recentOrders);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/revenue-v2")
+    public ResponseEntity<?> getRevenueSummaryV2(HttpSession session) {
+        if (!isAdmin(session)) {
+            return ResponseEntity.status(403).body(Map.of("message", "권한이 없습니다."));
+        }
+
+        List<PaymentOrder> orders = paymentOrderRepository.findAll();
+        List<MileagePurchase> mileagePurchases = mileagePurchaseRepository.findAll();
+        List<Donation> donations = donationRepository.findAll();
+        List<PangWithdrawal> withdrawals = pangWithdrawalRepository.findAll();
+        List<User> users = userRepository.findAll();
+        Map<Long, User> userMap = users.stream().collect(Collectors.toMap(User::getId, user -> user));
+
+        LocalDate today = LocalDate.now();
+        LocalDate firstDayOfMonth = today.withDayOfMonth(1);
+        LocalDate trendStart = today.minusDays(6);
+
+        long totalChargeWon = orders.stream()
+                .filter(order -> "COMPLETED".equals(order.getStatus()))
+                .filter(order -> order.getKind() == PaymentOrderKind.PANG_CHARGE)
+                .mapToLong(PaymentOrder::getAmountWon)
+                .sum();
+        long todayChargeWon = orders.stream()
+                .filter(order -> "COMPLETED".equals(order.getStatus()))
+                .filter(order -> order.getKind() == PaymentOrderKind.PANG_CHARGE)
+                .filter(order -> order.getCreatedAt() != null && order.getCreatedAt().toLocalDate().isEqual(today))
+                .mapToLong(PaymentOrder::getAmountWon)
+                .sum();
+        long monthChargeWon = orders.stream()
+                .filter(order -> "COMPLETED".equals(order.getStatus()))
+                .filter(order -> order.getKind() == PaymentOrderKind.PANG_CHARGE)
+                .filter(order -> order.getCreatedAt() != null && !order.getCreatedAt().toLocalDate().isBefore(firstDayOfMonth))
+                .mapToLong(PaymentOrder::getAmountWon)
+                .sum();
+        long successChargeWon = totalChargeWon;
+        long cancelledChargeWon = orders.stream()
+                .filter(order -> "CANCELLED".equals(order.getStatus()))
+                .filter(order -> order.getKind() == PaymentOrderKind.PANG_CHARGE)
+                .mapToLong(PaymentOrder::getAmountWon)
+                .sum();
+        long failedChargeWon = orders.stream()
+                .filter(order -> "FAILED".equals(order.getStatus()))
+                .filter(order -> order.getKind() == PaymentOrderKind.PANG_CHARGE)
+                .mapToLong(PaymentOrder::getAmountWon)
+                .sum();
+
+        long usedPang = donations.stream()
+                .mapToLong(donation -> donation.getAmount() == null ? 0 : donation.getAmount())
+                .sum();
+        long remainingPang = users.stream()
+                .mapToLong(user -> user.getPangBalance() == null ? 0 : user.getPangBalance())
+                .sum();
+        long totalIssuedPang = usedPang + remainingPang;
+
+        long usedMileage = mileagePurchases.stream()
+                .filter(purchase -> purchase.getType() == MileagePurchaseType.PANG
+                        || purchase.getType() == MileagePurchaseType.SUBSCRIPTION_TICKET
+                        || purchase.getType() == MileagePurchaseType.AD_FREE_30_DAYS)
+                .mapToLong(purchase -> purchase.getMileageCost() == null ? 0 : purchase.getMileageCost())
+                .sum();
+        long remainingMileage = users.stream()
+                .mapToLong(user -> user.getMileage() == null ? 0 : user.getMileage())
+                .sum();
+        long grantedMileage = usedMileage + remainingMileage;
+        long adminGrantedMileage = mileagePurchases.stream()
+                .filter(purchase -> purchase.getType() == MileagePurchaseType.ADMIN_GIFT)
+                .mapToLong(purchase -> purchase.getMileageCost() == null ? 0 : purchase.getMileageCost())
+                .sum();
+
+        long commissionWon = Math.round(withdrawals.stream()
+                .mapToLong(withdrawal -> withdrawal.getCommissionPang() == null ? 0 : withdrawal.getCommissionPang())
+                .sum() * 1.2d);
+        long streamerSettlementWon = Math.round(withdrawals.stream()
+                .mapToLong(withdrawal -> withdrawal.getNetPang() == null ? 0 : withdrawal.getNetPang())
+                .sum() * 1.2d);
+        long adFreeCashWon = orders.stream()
+                .filter(order -> "COMPLETED".equals(order.getStatus()))
+                .filter(order -> order.getKind() == PaymentOrderKind.AD_FREE)
+                .mapToLong(PaymentOrder::getAmountWon)
+                .sum();
+        long platformRevenueWon = Math.max(0L, commissionWon + adFreeCashWon - usedMileage);
+
+        List<Map<String, Object>> cashTrend = buildDailyAmountSeries(trendStart, today, date -> {
+            long amountWon = orders.stream()
+                    .filter(order -> "COMPLETED".equals(order.getStatus()))
+                    .filter(order -> order.getKind() == PaymentOrderKind.PANG_CHARGE)
+                    .filter(order -> order.getCreatedAt() != null && order.getCreatedAt().toLocalDate().isEqual(date))
+                    .mapToLong(PaymentOrder::getAmountWon)
+                    .sum();
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("label", date.toString());
+            row.put("amountWon", amountWon);
+            return row;
+        });
+
+        List<Map<String, Object>> pangTrend = buildDailyAmountSeries(trendStart, today, date -> {
+            long dayUsedPang = donations.stream()
+                    .filter(donation -> donation.getCreatedAt() != null && donation.getCreatedAt().toLocalDate().isEqual(date))
+                    .mapToLong(donation -> donation.getAmount() == null ? 0 : donation.getAmount())
+                    .sum();
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("label", date.toString());
+            row.put("usedPang", dayUsedPang);
+            return row;
+        });
+
+        List<Map<String, Object>> mileageTrend = buildDailyAmountSeries(trendStart, today, date -> {
+            long dayGrantedMileage = mileagePurchases.stream()
+                    .filter(purchase -> purchase.getCreatedAt() != null && purchase.getCreatedAt().toLocalDate().isEqual(date))
+                    .filter(purchase -> purchase.getType() == MileagePurchaseType.ADMIN_GIFT)
+                    .mapToLong(purchase -> purchase.getMileageCost() == null ? 0 : purchase.getMileageCost())
+                    .sum();
+            long dayUsedMileage = mileagePurchases.stream()
+                    .filter(purchase -> purchase.getCreatedAt() != null && purchase.getCreatedAt().toLocalDate().isEqual(date))
+                    .filter(purchase -> purchase.getType() == MileagePurchaseType.PANG
+                            || purchase.getType() == MileagePurchaseType.SUBSCRIPTION_TICKET
+                            || purchase.getType() == MileagePurchaseType.AD_FREE_30_DAYS)
+                    .mapToLong(purchase -> purchase.getMileageCost() == null ? 0 : purchase.getMileageCost())
+                    .sum();
+            Map<String, Object> row = new LinkedHashMap<>();
+            row.put("label", date.toString());
+            row.put("grantedMileage", dayGrantedMileage);
+            row.put("usedMileage", dayUsedMileage);
+            return row;
+        });
+
+        List<Map<String, Object>> topDonationStreamers = donationRepository
+                .findTopUserIdsByTotalDonation(org.springframework.data.domain.PageRequest.of(0, 5))
+                .stream()
+                .map(row -> {
+                    Long userId = row[0] instanceof Number ? ((Number) row[0]).longValue() : null;
+                    long donationPang = row[1] instanceof Number ? ((Number) row[1]).longValue() : 0L;
+                    User targetUser = userId != null ? userMap.get(userId) : null;
+                    Map<String, Object> item = new LinkedHashMap<>();
+                    item.put("userId", userId);
+                    item.put("displayName", displayName(targetUser));
+                    item.put("loginId", targetUser != null ? Objects.toString(targetUser.getLoginId(), "") : "");
+                    item.put("donationPang", donationPang);
+                    return item;
+                })
+                .collect(Collectors.toList());
+
+        Map<String, Object> response = new LinkedHashMap<>();
+        response.put("topKpis", Map.of(
+                "totalChargeWon", totalChargeWon,
+                "platformRevenueWon", platformRevenueWon,
+                "remainingPang", remainingPang,
+                "remainingMileage", remainingMileage
+        ));
+        response.put("cashFlow", Map.of(
+                "totalChargeWon", totalChargeWon,
+                "todayChargeWon", todayChargeWon,
+                "monthChargeWon", monthChargeWon,
+                "successChargeWon", successChargeWon,
+                "cancelledChargeWon", cancelledChargeWon,
+                "refundedChargeWon", cancelledChargeWon,
+                "failedChargeWon", failedChargeWon,
+                "trend", cashTrend
+        ));
+        response.put("pangFlow", Map.of(
+                "totalIssuedPang", totalIssuedPang,
+                "usedPang", usedPang,
+                "remainingPang", remainingPang,
+                "trend", pangTrend,
+                "topDonationStreamers", topDonationStreamers
+        ));
+        response.put("mileageFlow", Map.of(
+                "grantedMileage", grantedMileage,
+                "usedMileage", usedMileage,
+                "remainingMileage", remainingMileage,
+                "adminGrantedMileage", adminGrantedMileage,
+                "trend", mileageTrend
+        ));
+        response.put("profitFlow", Map.of(
+                "platformRevenueWon", platformRevenueWon,
+                "streamerSettlementWon", streamerSettlementWon,
+                "commissionWon", commissionWon,
+                "adFreeCashWon", adFreeCashWon
+        ));
         return ResponseEntity.ok(response);
     }
 

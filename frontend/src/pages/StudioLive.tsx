@@ -30,15 +30,11 @@ export default function StudioLive() {
   const [streamNoData, setStreamNoData] = useState(false);
   const [title, setTitle] = useState('');
   const [game, setGame] = useState('PUBG');
-  const [watchPartyOn, setWatchPartyOn] = useState(false);
-  const [statsOn, setStatsOn] = useState(true);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState('');
   const [ageRestrict, setAgeRestrict] = useState(false);
-  const [country, setCountry] = useState<'all' | 'kr'>('all');
   const [paidPromo, setPaidPromo] = useState(false);
   const [promoAllow, setPromoAllow] = useState<'yes' | 'no'>('no');
-  const [replay, setReplay] = useState<'confirm' | 'auto' | 'none'>('confirm');
   const [registerTab, setRegisterTab] = useState<'easy' | 'obs'>('easy');
   const [regExternalUrl, setRegExternalUrl] = useState('');
   const [registerResult, setRegisterResult] = useState<{ html?: string } | null>(null);
@@ -291,22 +287,6 @@ export default function StudioLive() {
             </select>
           </div>
 
-          <div className="form-block toggle-row">
-            <div>
-              <span className="label">같이보기 방송</span>
-              <p className="toggle-desc">동시 시청형 콘텐츠 여부를 표시하는 토글입니다.</p>
-            </div>
-            <button
-              type="button"
-              className={`toggle-switch ${watchPartyOn ? 'on' : ''}`}
-              role="switch"
-              aria-pressed={watchPartyOn}
-              onClick={() => setWatchPartyOn((value) => !value)}
-            >
-              <span className="knob" />
-            </button>
-          </div>
-
           <div className="form-block">
             <span className="label">방송 상태</span>
             <Link
@@ -328,27 +308,6 @@ export default function StudioLive() {
             >
               방송 페이지 열기 &gt;
             </Link>
-          </div>
-
-          <div className="form-block toggle-row">
-            <span className="label">정보 보기</span>
-            <button
-              type="button"
-              className={`toggle-switch ${statsOn ? 'on' : ''}`}
-              role="switch"
-              aria-pressed={statsOn}
-              onClick={() => setStatsOn((value) => !value)}
-            >
-              <span className="knob" />
-            </button>
-          </div>
-          <div className="stats-row">
-            <div className="stat-item"><span className="stat-label">현재 시청자</span> -</div>
-            <div className="stat-item"><span className="stat-label">최대 동시시청자</span> -</div>
-            <div className="stat-item"><span className="stat-label">평균 동시시청자</span> -</div>
-            <div className="stat-item"><span className="stat-label">채팅 참여자</span> -</div>
-            <div className="stat-item"><span className="stat-label">팔로워 수</span> -</div>
-            <div className="stat-item"><span className="stat-label">구독자 수</span> -</div>
           </div>
 
           <div className="section-title">태그 (최대 5개)</div>
@@ -385,15 +344,6 @@ export default function StudioLive() {
             <p className="hint">공백과 특수문자 없이 최대 15자까지 입력할 수 있습니다.</p>
           </div>
 
-          <div className="section-title">미리보기 이미지</div>
-          <div className="form-block">
-            <div className="upload-area" onClick={() => window.alert('썸네일 업로드 기능은 준비 중입니다.')}>
-              <span className="upload-icon">+</span>
-              <span>업로드 (1280x720)</span>
-            </div>
-            <p className="hint">등록하지 않으면 기본 썸네일이 노출됩니다.</p>
-          </div>
-
           <div className="section-title">연령 제한</div>
           <div className="form-block checkbox-row">
             <input
@@ -404,16 +354,6 @@ export default function StudioLive() {
             />
             <label htmlFor="age-restrict" className="text">
               시청자를 19세 이상으로 제한합니다.
-            </label>
-          </div>
-
-          <div className="section-title">시청 국가 설정</div>
-          <div className="form-block radio-group horizontal">
-            <label>
-              <input type="radio" name="country" value="all" checked={country === 'all'} onChange={() => setCountry('all')} /> 전체 허용
-            </label>
-            <label>
-              <input type="radio" name="country" value="kr" checked={country === 'kr'} onChange={() => setCountry('kr')} /> 한국만 허용
             </label>
           </div>
 
@@ -437,20 +377,6 @@ export default function StudioLive() {
               <input type="radio" name="promo" value="no" checked={promoAllow === 'no'} onChange={() => setPromoAllow('no')} /> 허용 안 함
             </label>
           </div>
-
-          <div className="section-title">다시보기 설정</div>
-          <div className="form-block radio-group horizontal">
-            <label>
-              <input type="radio" name="replay" value="confirm" checked={replay === 'confirm'} onChange={() => setReplay('confirm')} /> 확인 후 게시
-            </label>
-            <label>
-              <input type="radio" name="replay" value="auto" checked={replay === 'auto'} onChange={() => setReplay('auto')} /> 자동 게시
-            </label>
-            <label>
-              <input type="radio" name="replay" value="none" checked={replay === 'none'} onChange={() => setReplay('none')} /> 다시보기 없음
-            </label>
-          </div>
-          <p className="hint">현재는 UI 상태만 제공하며 실제 저장 연동은 추후 확장 가능합니다.</p>
 
           <div className="section-title">방송 등록</div>
           <p className="hint" style={{ marginBottom: 12 }}>
