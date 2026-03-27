@@ -12,7 +12,6 @@ import {
 } from '../constants/games';
 import { formatActivityPeriod } from '../lib/activityPeriod';
 import { effectiveVisibility } from '../lib/profileVisibility';
-import { fetchAccountConnections, type AccountConnectionStatus } from '../api/accountLinks';
 import { RiotLinkedGameStats } from '../components/RiotLinkedGameStats';
 
 const LINKED_PROVIDER_LABELS: Record<string, string> = {
