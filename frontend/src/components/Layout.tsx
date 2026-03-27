@@ -848,7 +848,6 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
                 <div className="sk-grid">
                   <div className="sk-card" />
                   <div className="sk-card" />
-                  <div className="sk-card" />
                 </div>
                 <div className="sk-icons">
                   <div className="sk-dot" />
@@ -881,15 +880,10 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
                       </div>
                       <div className="friend-profile-meta">
                         <div className="friend-profile-name">{displayName}</div>
-                        <div className="friend-profile-sub">@{friendProfileModal.friend.loginId}</div>
                       </div>
                     </div>
 
                     <div className="friend-profile-stats">
-                      <div className="friend-profile-stat">
-                        <div className="label">레벨</div>
-                        <div className="value">LV {summary?.level ?? 1}</div>
-                      </div>
                       <div className="friend-profile-stat">
                         <div className="label">활동 기간</div>
                         <div className="value">{formatActivityPeriod(summary?.createdAt ?? null)}</div>

@@ -195,7 +195,7 @@ a:hover { color: #00e676; }
 .friend-profile-name { font-size: 1.15rem; font-weight: 900; }
 .friend-profile-sub { font-size: 0.85rem; margin-top: 2px; opacity: 0.75; }
 
-.friend-profile-stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.friend-profile-stats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
 @media (max-width: 520px) { .friend-profile-stats { grid-template-columns: 1fr; } }
 .friend-profile-stat { padding: 14px; border-radius: 12px; border: 1px solid; }
 .theme-dark .friend-profile-stat { background: #1e1e21; border-color: #2c2c2e; }
@@ -224,7 +224,7 @@ a:hover { color: #00e676; }
 .friend-profile-skeleton .sk-line { height: 12px; border-radius: 8px; background: rgba(255,255,255,0.08); }
 .friend-profile-skeleton .sk-line.w-60 { width: 60%; }
 .friend-profile-skeleton .sk-line.w-40 { width: 40%; }
-.friend-profile-skeleton .sk-grid { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+.friend-profile-skeleton .sk-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
 @media (max-width: 520px) { .friend-profile-skeleton .sk-grid { grid-template-columns: 1fr; } }
 .friend-profile-skeleton .sk-card { height: 74px; border-radius: 12px; background: rgba(255,255,255,0.08); }
 .friend-profile-skeleton .sk-icons { display: flex; gap: 10px; }
