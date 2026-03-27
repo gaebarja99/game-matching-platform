@@ -10,7 +10,7 @@ import lombok.Getter;
 import java.time.LocalDateTime;
 
 @Getter
-@Builder
+@Builder(toBuilder = true)
 public class StreamResponse {
 
     private Long id;
@@ -44,6 +44,10 @@ public class StreamResponse {
     private Integer minTtsPang;
     /** 파트너 스트리머 여부 (닉네임 옆 체크 표시용) */
     private Boolean partner;
+    /** 채널 공개 목록 노출 여부 */
+    private Boolean visibleInRecent;
+    /** 현재 로그인 사용자가 이 방송을 관리할 수 있는지 여부 */
+    private Boolean canManage;
 
     public static StreamResponse from(LiveStream stream) {
         return from(stream, null);
@@ -87,6 +91,8 @@ public class StreamResponse {
                 .minVideoPang(stream.getMinVideoPang() != null ? stream.getMinVideoPang() : 0)
                 .minTtsPang(stream.getMinTtsPang() != null ? stream.getMinTtsPang() : 0)
                 .partner(streamerTier == StreamerTier.PARTNER)
+                .visibleInRecent(stream.getVisibleInRecent() != null ? stream.getVisibleInRecent() : true)
+                .canManage(false)
                 .build();
     }
 }

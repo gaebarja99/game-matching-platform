@@ -111,6 +111,9 @@ public class ChatService {
             Map<String, Object> map = new HashMap<>();
             map.put("type", "chat");
             map.put("createdAt", m.getCreatedAt() != null ? m.getCreatedAt().format(ISO) : null);
+            map.put("timestamp", m.getCreatedAt() != null
+                    ? m.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+                    : 0L);
             User chatUser = userRepository.findById(m.getUserId()).orElse(null);
             String displayName = chatUser != null ? (chatUser.getNickname() != null && !chatUser.getNickname().isBlank() ? chatUser.getNickname() : chatUser.getUsername()) : "알 수 없음";
             map.put("displayName", displayName);
@@ -129,6 +132,9 @@ public class ChatService {
             Map<String, Object> map = new HashMap<>();
             map.put("type", "donation");
             map.put("createdAt", d.getCreatedAt() != null ? d.getCreatedAt().format(ISO) : null);
+            map.put("timestamp", d.getCreatedAt() != null
+                    ? d.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+                    : 0L);
             User donorUser = userRepository.findById(d.getFromUserId()).orElse(null);
             String donorName = donorUser != null ? (donorUser.getNickname() != null && !donorUser.getNickname().isBlank() ? donorUser.getNickname() : donorUser.getUsername()) : "후원자";
             map.put("donorName", donorName);

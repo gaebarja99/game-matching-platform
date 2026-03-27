@@ -13,5 +13,6 @@ public class SubscriberItemDto {
     private Long userId;
     private String nickname;
     private String loginId;
+    private String profileImageUrl;
     private LocalDateTime subscribedAt;
 }

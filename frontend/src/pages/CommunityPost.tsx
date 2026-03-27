@@ -16,7 +16,6 @@ import {
   recommendPost,
   submitCommunityReport,
   toggleBookmark,
-  toggleLike,
   type CommentNode,
   type PostDetail,
   type ReportReason,
@@ -311,19 +310,6 @@ export default function CommunityPost() {
     }
   };
 
-  const onToggleLike = async () => {
-    if (!user || !post) {
-      showAlert('\uB85C\uADF8\uC778 \uD6C4 \uC774\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.');
-      return;
-    }
-    const { ok, message } = await toggleLike(user.id, post.id);
-    if (!ok) {
-      showAlert(message || '\uCC98\uB9AC\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.');
-      return;
-    }
-    reload();
-  };
-
   const onToggleBookmark = async () => {
     if (!user || !post) {
       showAlert('\uB85C\uADF8\uC778 \uD6C4 \uC774\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.');
@@ -470,9 +456,6 @@ export default function CommunityPost() {
           ) : null}
 
           <div className="community-article-actions">
-            <button type="button" className={post.liked ? "active" : ""} onClick={onToggleLike}>
-              {"\uC88B\uC544\uC694 "}{post.likeCount}
-            </button>
             <button type="button" className={post.bookmarked ? "active" : ""} onClick={onToggleBookmark}>
               {"\uBD81\uB9C8\uD06C"}
             </button>

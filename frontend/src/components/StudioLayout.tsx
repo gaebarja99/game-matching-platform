@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from 'react';
+﻿import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useTheme } from '../contexts/ThemeContext';
 import { useAuth } from '../contexts/AuthContext';
-import { resolveProfileImageUrl } from '../api/client';
+import { apiFetch, resolveProfileImageUrl } from '../api/client';
 
 const STUDIO_SIDEBAR_STORAGE_KEY = 'gamematcher-studio-sidebar-open';
 
@@ -38,6 +38,13 @@ interface StudioLayoutProps {
   children: React.ReactNode;
 }
 
+type ManagedChannel = {
+  ownerUserId: number;
+  ownerNickname: string;
+  ownerLoginId: string;
+  roleName: string;
+};
+
 export default function StudioLayout({ children }: StudioLayoutProps) {
   const { toggleTheme } = useTheme();
   const { user, logout } = useAuth();
@@ -49,8 +56,12 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [profileImgError, setProfileImgError] = useState(false);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(loadStoredOpenGroups);
+  const [managedChannels, setManagedChannels] = useState<ManagedChannel[]>([]);
 
   const path = location.pathname;
+  const ownerUserIdParam = new URLSearchParams(location.search).get('ownerUserId');
+  const parsedOwnerUserId = ownerUserIdParam ? Number(ownerUserIdParam) : NaN;
+  const selectedOwnerUserId = Number.isFinite(parsedOwnerUserId) ? parsedOwnerUserId : null;
   const isDashboard = path === '/studio';
   const isBroadcast = path.startsWith('/studio/live') || path.startsWith('/studio/settings') || path.startsWith('/studio/alerts');
   const isAnalysis = path.startsWith('/studio/analysis');
@@ -61,6 +72,27 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
   useEffect(() => {
     setProfileImgError(false);
   }, [user?.profileImageUrl]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadManagedChannels = async () => {
+      const query = selectedOwnerUserId ? `?ownerUserId=${selectedOwnerUserId}` : '';
+      const response = await apiFetch<{ managedChannels?: ManagedChannel[] }>(`api/studio/channel/context${query}`);
+      if (cancelled) return;
+      if (!response.ok || !response.data) {
+        setManagedChannels([]);
+        return;
+      }
+      setManagedChannels(Array.isArray(response.data.managedChannels) ? response.data.managedChannels : []);
+    };
+
+    loadManagedChannels();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedOwnerUserId]);
 
   useEffect(() => {
     const close = (event: MouseEvent) => {
@@ -104,9 +136,11 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
     navigate('/streams');
   };
 
-  const showPending = (label: string) => {
-    alert(`${label}은(는) 준비 중입니다.`);
-  };
+  const buildManagedChannelLink = (ownerUserId: number, section: 'manage' | 'permissions' = 'manage') =>
+    `/studio/channel/${section}?ownerUserId=${ownerUserId}`;
+
+  const isManagedChannelActive = (ownerUserId: number) =>
+    isChannel && selectedOwnerUserId === ownerUserId;
 
   return (
     <div className="studio-page">
@@ -179,6 +213,15 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
                   <Link to="/profile" onClick={() => setProfileOpen(false)}>내 프로필</Link>
                   <Link to="/studio" onClick={() => setProfileOpen(false)}>스튜디오</Link>
                   <Link to="/channel" onClick={() => setProfileOpen(false)}>내 채널</Link>
+                  {managedChannels.map((channel) => (
+                    <Link
+                      key={channel.ownerUserId}
+                      to={buildManagedChannelLink(channel.ownerUserId)}
+                      onClick={() => setProfileOpen(false)}
+                    >
+                      {channel.ownerNickname}의 채널
+                    </Link>
+                  ))}
                   <Link to="/following" onClick={() => setProfileOpen(false)}>팔로잉 채널</Link>
                   {isAdmin ? <Link to="/admin" onClick={() => setProfileOpen(false)}>관리자</Link> : null}
                   <button type="button" onClick={handleLogout}>로그아웃</button>
@@ -309,15 +352,25 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
               </button>
               <ul className="nav-sub">
                 <li>
-                  <Link to="/studio/channel/manage" className={path === '/studio/channel/manage' ? 'active' : ''}>
+                  <Link to="/studio/channel/manage" className={path === '/studio/channel/manage' && !selectedOwnerUserId ? 'active' : ''}>
                     채널 관리
                   </Link>
                 </li>
                 <li>
-                  <Link to="/studio/channel/permissions" className={path === '/studio/channel/permissions' ? 'active' : ''}>
+                  <Link to="/studio/channel/permissions" className={path === '/studio/channel/permissions' && !selectedOwnerUserId ? 'active' : ''}>
                     권한 관리
                   </Link>
                 </li>
+                {managedChannels.map((channel) => (
+                  <li key={channel.ownerUserId}>
+                    <Link
+                      to={buildManagedChannelLink(channel.ownerUserId)}
+                      className={isManagedChannelActive(channel.ownerUserId) ? 'active' : ''}
+                    >
+                      {channel.ownerNickname}의 채널
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
           </div>

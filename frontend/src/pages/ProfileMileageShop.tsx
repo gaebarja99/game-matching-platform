@@ -8,6 +8,7 @@ interface MileagePurchaseRow {
   mileageCost?: number;
   pangAmount?: number;
   targetUserId?: number;
+  targetUserNickname?: string;
   createdAt?: string;
 }
 
@@ -44,7 +45,7 @@ export default function ProfileMileageShop() {
   const [streamerQuery, setStreamerQuery] = useState('');
   const [streamerResults, setStreamerResults] = useState<StreamerSearchItem[]>([]);
   const [selectedStreamer, setSelectedStreamer] = useState<StreamerSearchItem | null>(null);
-  const [shopPrices, setShopPrices] = useState<{ subscriptionTicketCost?: number; adFree30DaysCost?: number }>({});
+  const [shopPrices, setShopPrices] = useState<{ pangMileageCostPerPang?: number; subscriptionTicketCost?: number; adFree30DaysCost?: number }>({});
   const [shopHistory, setShopHistory] = useState<MileagePurchaseRow[]>([]);
   const [shopMsg, setShopMsg] = useState('');
   const [shopLoading, setShopLoading] = useState(false);
@@ -54,9 +55,11 @@ export default function ProfileMileageShop() {
   const loadPrices = () => {
     fetch(apiUrl('api/mileage-shop/prices'), { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : {}))
-      .then((d: { subscriptionTicketCost?: number; adFree30DaysCost?: number }) => setShopPrices(d))
+      .then((d: { pangMileageCostPerPang?: number; subscriptionTicketCost?: number; adFree30DaysCost?: number }) => setShopPrices(d))
       .catch(() => setShopPrices({}));
   };
+
+  const pangMileageCostPerPang = shopPrices.pangMileageCostPerPang ?? 2;
 
   const loadHistory = (pageIndex: number) => {
     fetch(apiUrl(`api/mileage-shop/history?page=${pageIndex}&size=${PAGE_SIZE}`), { credentials: 'include' })
@@ -215,7 +218,7 @@ export default function ProfileMileageShop() {
       <section className="pang-history-section">
         <div className="pang-history-table-wrap mileage-shop-layout">
           <div className="profile-edit-field mileage-shop-item">
-            <label>팡 구매 (1팡 = 2M)</label>
+            <label>팡 구매 (1팡 = {pangMileageCostPerPang}M)</label>
             <p className="pang-charge-desc">최소 1,000팡부터 구매할 수 있습니다.</p>
             <div className="mileage-shop-row">
               <input
@@ -326,7 +329,7 @@ export default function ProfileMileageShop() {
                       {h.type === 'PANG'
                         ? `${(h.pangAmount ?? 0).toLocaleString()}팡`
                         : h.type === 'SUBSCRIPTION_TICKET'
-                          ? `스트리머 #${h.targetUserId ?? '-'}`
+                          ? h.targetUserNickname || (h.targetUserId ? `스트리머 #${h.targetUserId}` : '-')
                           : '-'}
                     </td>
                   </tr>

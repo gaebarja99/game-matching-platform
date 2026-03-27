@@ -50,6 +50,7 @@ export default function Profile() {
   const [publicProfile, setPublicProfile] = useState<ProfileDto | null>(null);
   const [publicLoading, setPublicLoading] = useState(false);
   const [publicErr, setPublicErr] = useState('');
+  const [revenueSummary, setRevenueSummary] = useState<{ withdrawablePang?: number } | null>(null);
   const [fBannerUrl, setFBannerUrl] = useState('');
   const [selectedGames, setSelectedGames] = useState<string[]>([]);
   const [gamesModalOpen, setGamesModalOpen] = useState(false);
@@ -73,6 +74,17 @@ export default function Profile() {
   useEffect(() => {
     void loadPublicProfile();
   }, [loadPublicProfile]);
+
+  useEffect(() => {
+    if (!user?.id) {
+      setRevenueSummary(null);
+      return;
+    }
+    fetch(apiUrl('api/revenue/me'), { credentials: 'include' })
+      .then((response) => (response.ok ? response.json() : null))
+      .then((data) => setRevenueSummary(data))
+      .catch(() => setRevenueSummary(null));
+  }, [user?.id]);
 
   useEffect(() => {
     if (!editOpen) setGamesModalOpen(false);
@@ -113,6 +125,8 @@ export default function Profile() {
   ]);
 
   const pangBalance = user?.pangBalance ?? 0;
+  const receivedRevenuePang = revenueSummary?.withdrawablePang ?? 0;
+  const totalUsablePang = pangBalance + receivedRevenuePang;
   const displayName =
     repairMojibakeText(user?.nickname) ??
     repairMojibakeText(user?.username) ??
@@ -307,7 +321,7 @@ export default function Profile() {
         </div>
         <div className="profile-stat-card" id="profile-pang-card">
           <div className="label">보유중인 팡</div>
-          <div className="value">{Number(pangBalance).toLocaleString()}</div>
+          <div className="value">{Number(totalUsablePang).toLocaleString()}</div>
           <div className="sub">후원받은 팡까지 포함한 현재 사용 가능 팡입니다.</div>
         </div>
         <div className="profile-stat-card">

@@ -48,17 +48,13 @@ export default function ProfileCommunityPosts({ mode }: ProfileCommunityPostsPro
   return (
     <div className="community-page profile-community-page">
       <div className="community-page-head">
-        <h1 className="community-page-title">
-          {mode === 'mine' ? '작성한 글' : '저장한 글'}
-        </h1>
+        <h1 className="community-page-title">{mode === 'mine' ? '작성한 글' : '저장한 글'}</h1>
       </div>
 
       {loading ? (
         <p className="community-muted">불러오는 중입니다.</p>
       ) : rows.length === 0 ? (
-        <p className="community-muted">
-          {mode === 'mine' ? '작성한 글이 없습니다.' : '저장한 글이 없습니다.'}
-        </p>
+        <p className="community-muted">{mode === 'mine' ? '작성한 글이 없습니다.' : '저장한 글이 없습니다.'}</p>
       ) : (
         <ul className="community-post-list">
           {rows.map((post) => (
@@ -67,8 +63,7 @@ export default function ProfileCommunityPosts({ mode }: ProfileCommunityPostsPro
                 <span className="community-post-cat">{BOARD_LABELS[post.boardCategory]}</span>
                 <span className="community-post-title">{post.title}</span>
                 <span className="community-post-meta">
-                  {post.authorUsername} · 조회 {post.viewCount} · 댓글 {post.commentCount} ·{' '}
-                  {formatTime(post.createdAt)}
+                  {post.authorUsername} · 조회 {post.viewCount} · 댓글 {post.commentCount} · {formatTime(post.createdAt)}
                 </span>
               </Link>
             </li>
@@ -84,11 +79,7 @@ export default function ProfileCommunityPosts({ mode }: ProfileCommunityPostsPro
           <span>
             {page + 1} / {totalPages}
           </span>
-          <button
-            type="button"
-            disabled={page >= totalPages - 1}
-            onClick={() => setPage((current) => current + 1)}
-          >
+          <button type="button" disabled={page >= totalPages - 1} onClick={() => setPage((current) => current + 1)}>
             다음
           </button>
         </div>

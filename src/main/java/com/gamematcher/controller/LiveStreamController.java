@@ -127,12 +127,42 @@ public class LiveStreamController {
         if (uid == null) {
             return ResponseEntity.status(401).body(List.of());
         }
-        return ResponseEntity.ok(liveStreamService.listByUser(uid));
+        return ResponseEntity.ok(liveStreamService.listByUser(uid, uid));
     }
 
     @GetMapping("/by-user/{userId}")
-    public ResponseEntity<List<StreamResponse>> listUserStreams(@PathVariable Long userId) {
-        return ResponseEntity.ok(liveStreamService.listByUser(userId));
+    public ResponseEntity<List<StreamResponse>> listUserStreams(@PathVariable Long userId, HttpSession session) {
+        return ResponseEntity.ok(liveStreamService.listByUser(userId, getCurrentUserId(session)));
+    }
+
+    @PatchMapping("/{streamId}/channel-visibility")
+    public ResponseEntity<?> updateChannelVisibility(@PathVariable Long streamId,
+                                                     @RequestBody Map<String, Boolean> body,
+                                                     HttpSession session) {
+        Long uid = getCurrentUserId(session);
+        if (uid == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
+        }
+        try {
+            boolean visibleInRecent = body == null || !Boolean.FALSE.equals(body.get("visibleInRecent"));
+            return ResponseEntity.ok(liveStreamService.updateVisibility(streamId, uid, visibleInRecent));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    @DeleteMapping("/{streamId}/channel")
+    public ResponseEntity<?> deleteFromChannel(@PathVariable Long streamId, HttpSession session) {
+        Long uid = getCurrentUserId(session);
+        if (uid == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
+        }
+        try {
+            liveStreamService.deleteFromChannel(streamId, uid);
+            return ResponseEntity.ok(Map.of("message", "채널에서 영상을 삭제했습니다."));
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
     }
 
     /**

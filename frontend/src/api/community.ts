@@ -49,6 +49,7 @@ export interface PostListItem {
   authorUsername: string;
   viewCount: number;
   likeCount: number;
+  recommendCount: number;
   commentCount: number;
   isNotice: boolean;
   isPopular: boolean;
@@ -236,13 +237,6 @@ export async function deletePost(userId: number, postId: number) {
   });
 }
 
-export async function toggleLike(userId: number, postId: number) {
-  return apiFetch<void>(`/api/users/${userId}/community/posts/${postId}/like`, {
-    method: 'POST',
-    body: '{}',
-  });
-}
-
 export async function toggleBookmark(userId: number, postId: number) {
   return apiFetch<void>(`/api/users/${userId}/community/posts/${postId}/bookmark`, {
     method: 'POST',
@@ -284,6 +278,14 @@ export async function submitCommunityReport(
     method: 'POST',
     body: JSON.stringify(body),
   });
+}
+
+export async function fetchMyCommunityPosts(userId: number, page = 0, size = 20) {
+  return apiFetch<PageResult<PostListItem>>(`/api/users/${userId}/community/my-posts${qs({ page, size })}`);
+}
+
+export async function fetchSavedCommunityPosts(userId: number, page = 0, size = 20) {
+  return apiFetch<PageResult<PostListItem>>(`/api/users/${userId}/community/bookmarks${qs({ page, size })}`);
 }
 
 export function attachmentUrl(filePath: string): string {

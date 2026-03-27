@@ -8,6 +8,7 @@ import com.gamematcher.dto.stream.ObsSetupResponse;
 import com.gamematcher.dto.stream.StreamResponse;
 import com.gamematcher.dto.stream.UpdateStreamRequest;
 import com.gamematcher.entity.LiveStream;
+import com.gamematcher.repository.ChannelPermissionRepository;
 import com.gamematcher.repository.FollowRepository;
 import com.gamematcher.repository.LiveStreamRepository;
 import com.gamematcher.repository.UserRepository;
@@ -27,6 +28,7 @@ public class LiveStreamService {
     private final LiveStreamRepository liveStreamRepository;
     private final UserRepository userRepository;
     private final FollowRepository followRepository;
+    private final ChannelPermissionRepository channelPermissionRepository;
     private final StreamingProperties streamingProperties;
     private final StreamViewerCountService streamViewerCountService;
     private final NotificationService notificationService;
@@ -59,29 +61,7 @@ public class LiveStreamService {
      */
     @Transactional
     public StreamResponse create(Long userId, CreateStreamRequest request) {
-        LiveStream stream = liveStreamRepository.findFirstByUserIdOrderByIdAsc(userId).orElse(null);
-
-        if (stream != null) {
-            stream.setTitle(request.getTitle());
-            stream.setGame(request.getGame());
-            if (request.getExternalUrl() != null && !request.getExternalUrl().isBlank()) {
-                stream.setExternalUrl(request.getExternalUrl().trim());
-                stream.setStreamKey(null);
-                stream.setPlaybackUrl(null);
-            } else {
-                stream.setExternalUrl(null);
-                if (stream.getStreamKey() == null || stream.getStreamKey().isBlank()) {
-                    String streamKey = UUID.randomUUID().toString().replace("-", "");
-                    String baseUrl = streamingProperties.getHlsBaseUrl().replaceAll("/$", "");
-                    stream.setStreamKey(streamKey);
-                    stream.setPlaybackUrl(baseUrl + "/live/" + streamKey + "/index.m3u8");
-                }
-            }
-            liveStreamRepository.save(stream);
-            return StreamResponse.from(stream);
-        }
-
-        stream = new LiveStream();
+        LiveStream stream = new LiveStream();
         stream.setUserId(userId);
         stream.setTitle(request.getTitle());
         stream.setGame(request.getGame());
@@ -237,15 +217,47 @@ public class LiveStreamService {
     }
 
     public List<StreamResponse> listByUser(Long userId) {
+        return listByUser(userId, null);
+    }
+
+    public List<StreamResponse> listByUser(Long userId, Long actorUserId) {
         String name = getBroadcasterDisplayName(userId);
         String profileImageUrl = getBroadcasterProfileImageUrl(userId);
+        boolean canManage = canManageChannel(userId, actorUserId);
         return liveStreamRepository.findByUserIdOrderByCreatedAtDesc(userId)
                 .stream()
+                .filter(stream -> canManage || Boolean.TRUE.equals(stream.getVisibleInRecent()))
                 .map(s -> {
                     int vc = streamViewerCountService.getViewerCount(s.getId());
-                    return StreamResponse.from(s, name, null, vc, profileImageUrl);
+                    return StreamResponse.from(s, name, null, vc, profileImageUrl).toBuilder()
+                            .canManage(canManage)
+                            .build();
                 })
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public StreamResponse updateVisibility(Long streamId, Long actorUserId, boolean visibleInRecent) {
+        LiveStream stream = requireManageableStream(streamId, actorUserId);
+        stream.setVisibleInRecent(visibleInRecent);
+        liveStreamRepository.save(stream);
+        return StreamResponse.from(
+                stream,
+                getBroadcasterDisplayName(stream.getUserId()),
+                null,
+                streamViewerCountService.getViewerCount(stream.getId()),
+                getBroadcasterProfileImageUrl(stream.getUserId()),
+                getBroadcasterStreamerTier(stream.getUserId())
+        ).toBuilder().canManage(true).build();
+    }
+
+    @Transactional
+    public void deleteFromChannel(Long streamId, Long actorUserId) {
+        LiveStream stream = requireManageableStream(streamId, actorUserId);
+        if (stream.getStatus() == StreamStatus.LIVE) {
+            throw new IllegalArgumentException("진행 중인 방송은 삭제할 수 없습니다. 먼저 방송을 종료해 주세요.");
+        }
+        liveStreamRepository.delete(stream);
     }
 
     public StreamResponse getById(Long id) {
@@ -254,6 +266,24 @@ public class LiveStreamService {
         long followerCount = stream.getUserId() != null ? followRepository.countByFollowingId(stream.getUserId()) : 0L;
         int viewerCount = streamViewerCountService.getViewerCount(id);
         return StreamResponse.from(stream, getBroadcasterDisplayName(stream.getUserId()), followerCount, viewerCount, getBroadcasterProfileImageUrl(stream.getUserId()), getBroadcasterStreamerTier(stream.getUserId()));
+    }
+
+    private boolean canManageChannel(Long ownerUserId, Long actorUserId) {
+        if (ownerUserId == null || actorUserId == null) return false;
+        return ownerUserId.equals(actorUserId)
+                || channelPermissionRepository.existsByOwnerUserIdAndManagerUserId(ownerUserId, actorUserId);
+    }
+
+    private LiveStream requireManageableStream(Long streamId, Long actorUserId) {
+        if (actorUserId == null) {
+            throw new IllegalArgumentException("로그인이 필요합니다.");
+        }
+        LiveStream stream = liveStreamRepository.findById(streamId)
+                .orElseThrow(() -> new IllegalArgumentException("방송을 찾을 수 없습니다."));
+        if (!canManageChannel(stream.getUserId(), actorUserId)) {
+            throw new IllegalArgumentException("이 방송을 관리할 권한이 없습니다.");
+        }
+        return stream;
     }
 
     /** 최근 방송 목록 - 종료된 방송만 (지금 라이브와 중복되지 않음) */

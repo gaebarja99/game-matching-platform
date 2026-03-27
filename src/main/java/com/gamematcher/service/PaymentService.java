@@ -4,7 +4,9 @@ import com.gamematcher.config.PaymentProperties;
 import com.gamematcher.constant.PangConstants;
 import com.gamematcher.constant.PaymentOrderKind;
 import com.gamematcher.entity.PaymentOrder;
+import com.gamematcher.entity.User;
 import com.gamematcher.repository.PaymentOrderRepository;
+import com.gamematcher.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
@@ -21,6 +23,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.time.LocalDateTime;
 
 /**
  * PortOne V1 결제 연동 및 결제 검증/취소 처리를 담당한다.
@@ -32,6 +35,7 @@ public class PaymentService {
 
     private static final int MIN_PANG = 100;
     private static final int MAX_PANG = 999_999_999;
+    private static final long AD_FREE_PRICE_WON = 8_900L;
 
     private static final String IAMPORT_GET_TOKEN = "https://api.iamport.kr/users/getToken";
     private static final String IAMPORT_GET_PAYMENT = "https://api.iamport.kr/payments/";
@@ -42,6 +46,7 @@ public class PaymentService {
     private final SubscriptionService subscriptionService;
     private final NotificationService notificationService;
     private final PaymentProperties paymentProperties;
+    private final UserRepository userRepository;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Transactional
@@ -108,6 +113,33 @@ public class PaymentService {
     }
 
     @Transactional
+    public CreateOrderResult createAdFreeOrder(Long userId) {
+        if (userId == null) {
+            throw new IllegalArgumentException("결제를 진행할 사용자 정보가 올바르지 않습니다.");
+        }
+        if (paymentProperties.getApiKey() == null || paymentProperties.getApiKey().isBlank()) {
+            throw new IllegalStateException("결제 설정이 비어 있습니다. 관리자에게 문의해 주세요.");
+        }
+
+        String orderId = "GM-AD-" + UUID.randomUUID().toString().replace("-", "").substring(0, 20);
+
+        PaymentOrder order = new PaymentOrder();
+        order.setOrderId(orderId);
+        order.setUserId(userId);
+        order.setKind(PaymentOrderKind.AD_FREE);
+        order.setPangAmount(0);
+        order.setAmountWon(AD_FREE_PRICE_WON);
+        order.setStatus("PENDING");
+        paymentOrderRepository.save(order);
+
+        String storeId = resolveClientStoreId();
+        String pg = paymentProperties.getPg() != null ? paymentProperties.getPg() : "html5_inicis.INIpayTest";
+        String payMethod = paymentProperties.getPayMethod() != null ? paymentProperties.getPayMethod() : "card";
+
+        return new CreateOrderResult(orderId, AD_FREE_PRICE_WON, "GameMatcher 광고 제거 30일권", storeId, pg, payMethod);
+    }
+
+    @Transactional
     public ConfirmResult confirmPangPayment(Long userId, String orderId, String impUid) {
         PaymentOrder order = paymentOrderRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new IllegalArgumentException("해당 주문 정보를 찾을 수 없습니다."));
@@ -159,6 +191,37 @@ public class PaymentService {
         verifyAndMarkPayment(order, orderId, impUid);
         subscriptionService.grantSubscription(subscriberId, order.getTargetUserId(), true);
         return new ConfirmResult(true, 0L, "구독 결제가 완료되었습니다.");
+    }
+
+    @Transactional
+    public ConfirmResult confirmAdFreePayment(Long userId, String orderId, String impUid) {
+        PaymentOrder order = paymentOrderRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new IllegalArgumentException("해당 주문 정보를 찾을 수 없습니다."));
+
+        if (!order.getUserId().equals(userId)) {
+            throw new IllegalArgumentException("현재 사용자와 주문 정보가 일치하지 않습니다.");
+        }
+        if (order.getKind() != PaymentOrderKind.AD_FREE) {
+            throw new IllegalArgumentException("광고 제거 주문이 아닙니다.");
+        }
+        if ("COMPLETED".equals(order.getStatus())) {
+            return new ConfirmResult(true, 0L, "이미 결제가 완료된 주문입니다.");
+        }
+        if (!"PENDING".equals(order.getStatus())) {
+            throw new IllegalArgumentException("현재 상태에서는 결제 확인을 진행할 수 없습니다.");
+        }
+
+        verifyAndMarkPayment(order, orderId, impUid);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
+        LocalDateTime base = user.getAdFreeUntil() != null && user.getAdFreeUntil().isAfter(LocalDateTime.now())
+                ? user.getAdFreeUntil()
+                : LocalDateTime.now();
+        user.setAdFreeUntil(base.plusDays(30));
+        userRepository.save(user);
+
+        return new ConfirmResult(true, 0L, "광고 제거 결제가 완료되었습니다.");
     }
 
     @Transactional

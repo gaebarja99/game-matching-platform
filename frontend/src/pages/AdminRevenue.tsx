@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchAdminRevenue } from '../api/admin';
@@ -48,13 +48,11 @@ function shortenLoginId(loginId: string) {
 function orderStatusTone(status: string) {
   switch (status) {
     case 'COMPLETED':
-      return { label: '완료', tone: 'tone-success' };
-    case 'PENDING':
-      return { label: '대기', tone: 'tone-warning' };
+      return { label: '결제완료', tone: 'tone-success' };
     case 'FAILED':
       return { label: '실패', tone: 'tone-danger' };
     case 'CANCELLED':
-      return { label: '취소', tone: 'tone-muted' };
+      return { label: '환불', tone: 'tone-muted' };
     default:
       return { label: status, tone: 'tone-neutral' };
   }
@@ -104,7 +102,6 @@ export default function AdminRevenue() {
     if (!summary) return [];
     const rows = [
       { key: 'completed', label: '완료 매출', value: summary.completedSalesWon, tone: 'tone-success' },
-      { key: 'pending', label: '정산 대기', value: summary.pendingSalesWon, tone: 'tone-warning' },
       { key: 'cancelled', label: '취소 금액', value: summary.cancelledSalesWon, tone: 'tone-muted' },
       { key: 'failed', label: '실패 금액', value: summary.failedSalesWon, tone: 'tone-danger' },
     ];
@@ -213,7 +210,7 @@ export default function AdminRevenue() {
           <strong>{formatWon(summary?.platformRevenueWon)}</strong>
         </article>
         <article className="admin-metric-card">
-          <span>스트리머 정산 추정</span>
+          <span>스트리머 정산</span>
           <strong>{formatPang(summary?.completedSettlementPang)}</strong>
         </article>
       </section>
@@ -321,11 +318,11 @@ export default function AdminRevenue() {
           <div className="admin-section-head">
             <div>
               <h3>운영 메모</h3>
-              <p>플랫폼 매출은 후원 수수료 환산액과 상품 매출을 합산한 운영 기준치입니다.</p>
+              <p>플랫폼 매출은 정산 완료된 팡/구독권 수수료와 광고 제거 매출만 반영한 운영 기준치입니다.</p>
             </div>
           </div>
           <p className="admin-subtext">
-            일반 스트리머는 30%, 파트너 스트리머는 20% 기준으로 후원 수수료를 계산했고, 여기에 구독권/광고제거 매출을 더했습니다.
+            일반 스트리머는 30%, 파트너 스트리머는 20% 기준으로 정산 완료분의 수수료를 계산합니다.
           </p>
           <p className="admin-subtext">
             실제 회계 확정 금액과 다를 수 있으므로 운영 참고 지표로 보면 됩니다.
@@ -336,7 +333,7 @@ export default function AdminRevenue() {
             <div><strong>광고제거 매출</strong><span>{formatWon(summary?.adFreeSalesWon)}</span></div>
             <div><strong>완료 팡 수량</strong><span>{formatPang(summary?.completedPang)}</span></div>
             <div><strong>누적 후원 팡</strong><span>{formatPang(summary?.totalDonationPang)}</span></div>
-            <div><strong>정산 대기</strong><span>{formatWon(summary?.pendingSalesWon)}</span></div>
+            <div><strong>정산 완료 수수료</strong><span>{formatWon((summary?.completedSettlementCommissionPang ?? 0) * 1.2)}</span></div>
           </div>
         </article>
       </section>

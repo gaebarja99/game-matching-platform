@@ -1,5 +1,33 @@
 export const IMAGE_BASE = 'images';
 
+// LoL 공식 포지션 아이콘 (Community Dragon 최신 자산)
+// - role key: TOP/JUNGLE/MIDDLE/BOTTOM/UTILITY
+// - UI 텍스트(탑/정글/미드/원딜/서포터) ↔ role key 매핑도 함께 제공
+export const LOL_ROLE_KEY_BY_KO: Record<string, 'TOP' | 'JUNGLE' | 'MIDDLE' | 'BOTTOM' | 'UTILITY'> = {
+  탑: 'TOP',
+  정글: 'JUNGLE',
+  미드: 'MIDDLE',
+  원딜: 'BOTTOM',
+  서포터: 'UTILITY',
+};
+
+export const LOL_OFFICIAL_ROLE_ICON_URL_BY_KEY: Record<
+  'TOP' | 'JUNGLE' | 'MIDDLE' | 'BOTTOM' | 'UTILITY',
+  string
+> = {
+  // NOTE: static-assets/svg는 간헐적으로 500이 발생할 수 있어
+  // 더 안정적인 position-selector PNG를 사용 (공식 RCP 자산)
+  TOP: 'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-top.png',
+  JUNGLE:
+    'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-jungle.png',
+  MIDDLE:
+    'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-middle.png',
+  BOTTOM:
+    'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-bottom.png',
+  UTILITY:
+    'https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-clash/global/default/assets/images/position-selector/positions/icon-position-utility.png',
+};
+
 const LEAGUE_POSITION_IMAGES: Record<string, string> = {
   TOP: 'leagueoflegends/top.png',
   JUNGLE: 'leagueoflegends/jg.png',
@@ -59,6 +87,14 @@ export function getPositionImagePath(
   const gameKey = game?.trim().toUpperCase() || '';
   const posKey = normalizeKey(position);
   if (!posKey) return null;
+
+  // LoL은 공식 포지션 아이콘(SVG)을 우선 사용
+  // - 기존 로컬 PNG는 유지(만약 외부 리소스 실패 시, PositionIcon에서 자동 fallback 가능)
+  if (gameKey === 'LEAGUE_OF_LEGENDS') {
+    const k = posKey as keyof typeof LOL_OFFICIAL_ROLE_ICON_URL_BY_KEY;
+    if (k in LOL_OFFICIAL_ROLE_ICON_URL_BY_KEY) return LOL_OFFICIAL_ROLE_ICON_URL_BY_KEY[k];
+  }
+
   const map = GAME_IMAGE_MAP[gameKey];
   if (!map) return null;
   const path = map[posKey];

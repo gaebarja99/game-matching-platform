@@ -24,6 +24,7 @@ export default function ChannelLayout({ children }: ChannelLayoutProps) {
         <nav className="header-nav">
           <Link to="/streams">전체 방송</Link>
           <Link to="/streams">게임</Link>
+          <Link to="/streams">e스포츠</Link>
           <Link to="/channel" className="active">내 채널</Link>
         </nav>
         <div className="header-right">

@@ -16,6 +16,9 @@ const { execSync } = require('child_process');
 const RTMP_PORT = 1935;
 const HTTP_PORT = 8000;
 const SPRING_BOOT_URL = 'http://127.0.0.1:8080';
+const DEFAULT_FFMPEG_PATH = process.platform === 'win32'
+  ? 'D:/T4 GameMatcher/ffmpeg-2026-03-05-git-74cfcd1c69-full_build/bin/ffmpeg.exe'
+  : 'ffmpeg';
 
 function getStreamKey(streamPath) {
   if (!streamPath || typeof streamPath !== 'string') return null;
@@ -82,9 +85,7 @@ const config = {
     allow_origin: '*'
   },
   trans: {
-    ffmpeg: process.env.FFMPEG_PATH || (process.platform === 'win32'
-      ? 'D:\\T4 GameMatcher\\ffmpeg-2026-03-05-git-74cfcd1c69-full_build\\bin\\ffmpeg.exe'
-      : 'ffmpeg'),
+    ffmpeg: process.env.FFMPEG_PATH || DEFAULT_FFMPEG_PATH,
     tasks: [
       {
         app: 'live',
@@ -96,9 +97,7 @@ const config = {
   }
 };
 
-const ffmpegPath = process.env.FFMPEG_PATH || (process.platform === 'win32'
-  ? 'D:\\T4 GameMatcher\\ffmpeg-2026-03-05-git-74cfcd1c69-full_build\\bin\\ffmpeg.exe'
-  : 'ffmpeg');
+const ffmpegPath = process.env.FFMPEG_PATH || DEFAULT_FFMPEG_PATH;
 try {
   execSync('"' + ffmpegPath + '" -version', { stdio: 'pipe', timeout: 3000 });
   console.log('[OK] FFmpeg 사용 가능:', ffmpegPath);

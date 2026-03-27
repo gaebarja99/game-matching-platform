@@ -17,6 +17,8 @@ import ProfilePang from './pages/ProfilePang';
 import ProfileMileageShop from './pages/ProfileMileageShop';
 import ProfileAdFree from './pages/ProfileAdFree';
 import ProfileSubscriptions from './pages/ProfileSubscriptions';
+import ProfileMyPosts from './pages/ProfileMyPosts';
+import ProfileSavedPosts from './pages/ProfileSavedPosts';
 import Studio from './pages/Studio';
 import StudioLive from './pages/StudioLive';
 import StudioSettings from './pages/StudioSettings';
@@ -49,7 +51,8 @@ import GroupChat from './pages/GroupChat';
 import GroupChatRoom from './pages/GroupChatRoom';
 import MatchChat from './pages/MatchChat';
 import MatchHistory from './pages/MatchHistory';
-import Records from './pages/Records';
+import RecordsSearch from './pages/records/RecordsSearch';
+import RecordsResult from './pages/records/RecordsResult';
 import Esports from './pages/Esports';
 import Chatbot from './pages/Chatbot';
 import DirectMessages from './pages/DirectMessages';
@@ -78,7 +81,9 @@ function App() {
           <BrowserRouter>
             <Routes>
               <Route path="/" element={<Home />} />
-              <Route path="/records" element={<Records />} />
+              <Route path="/records" element={<RecordsSearch />} />
+              <Route path="/records/:gameId" element={<RecordsResult />} />
+              <Route path="/records/:gameId/:playerSlug" element={<RecordsResult />} />
               <Route path="/esports" element={<Esports />} />
               <Route path="/login" element={<Login />} />
               <Route path="/find-login-id" element={<FindLoginId />} />
@@ -95,6 +100,8 @@ function App() {
                 <Route path="mileage-shop" element={<ProfileMileageShop />} />
                 <Route path="adfree" element={<ProfileAdFree />} />
                 <Route path="subscriptions" element={<ProfileSubscriptions />} />
+                <Route path="my-posts" element={<ProfileMyPosts />} />
+                <Route path="saved-posts" element={<ProfileSavedPosts />} />
               </Route>
               <Route path="/studio" element={<Studio />} />
               <Route path="/studio/live" element={<StudioLive />} />

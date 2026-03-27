@@ -750,10 +750,7 @@ public class AdminController {
                 .filter(order -> "COMPLETED".equals(order.getStatus()))
                 .mapToLong(PaymentOrder::getAmountWon)
                 .sum();
-        long pendingSalesWon = orders.stream()
-                .filter(order -> "PENDING".equals(order.getStatus()))
-                .mapToLong(PaymentOrder::getAmountWon)
-                .sum();
+        long pendingSalesWon = 0L;
         long failedSalesWon = orders.stream()
                 .filter(order -> "FAILED".equals(order.getStatus()))
                 .mapToLong(PaymentOrder::getAmountWon)
@@ -807,10 +804,10 @@ public class AdminController {
                 .mapToLong(withdrawal -> withdrawal.getNetPang() == null ? 0 : withdrawal.getNetPang())
                 .sum();
         long platformRevenueWon = Math.round(completedSettlementCommissionPang * 1.2d)
-                + subscriptionSalesWon
                 + adFreeSalesWon;
 
         List<Map<String, Object>> recentOrders = orders.stream()
+                .filter(order -> "COMPLETED".equals(order.getStatus()) || "CANCELLED".equals(order.getStatus()))
                 .sorted(Comparator.comparing(PaymentOrder::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
                 .limit(8)
                 .map(order -> {

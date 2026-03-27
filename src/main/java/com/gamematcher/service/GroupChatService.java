@@ -10,6 +10,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,6 +29,9 @@ public class GroupChatService {
     private final FriendRequestService friendRequestService;
     private final SimpMessagingTemplate messagingTemplate;
     private final ProfanityFilterService profanityFilterService;
+    private final NotificationService notificationService;
+
+    private static final Pattern MENTION_PATTERN = Pattern.compile("@([\\p{L}\\p{N}_.-]+)");
 
     /** 방 생성 (생성자를 멤버로 추가) */
     @Transactional
@@ -108,6 +113,7 @@ public class GroupChatService {
                 "fromUserId", fromUserId,
                 "fromNickname", fromNickname != null ? fromNickname : ""
         ));
+        notificationService.createForGroupChatInvite(toUserId, fromUserId, roomId, roomName);
         return "sent";
     }
 
@@ -195,6 +201,7 @@ public class GroupChatService {
         }
         Map<String, Object> payload = toMessagePayload(msg, fromNickname, fromProfileImageUrl, false);
         messagingTemplate.convertAndSend("/topic/group-room/" + roomId, payload);
+        notifyMentionedMembers(roomId, userId, msg.getText());
         return msg;
     }
 
@@ -298,5 +305,54 @@ public class GroupChatService {
                 "userId", targetUserId
         ));
         return "ok";
+    }
+
+    private void notifyMentionedMembers(Long roomId, Long fromUserId, String text) {
+        if (roomId == null || fromUserId == null || text == null || text.isBlank()) {
+            return;
+        }
+        String roomName = roomRepository.findById(roomId).map(GroupChatRoom::getName).orElse("채팅방");
+        Map<String, Long> mentionMap = buildMentionMap(
+                memberRepository.findByRoomId(roomId).stream()
+                        .map(GroupChatRoomMember::getUserId)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .map(userRepository::findById)
+                        .filter(Optional::isPresent)
+                        .map(Optional::get)
+                        .collect(Collectors.toList())
+        );
+        for (Long mentionedUserId : extractMentionedUserIds(text, mentionMap, fromUserId)) {
+            notificationService.createForGroupChatMention(mentionedUserId, fromUserId, roomId, roomName, text);
+        }
+    }
+
+    private Map<String, Long> buildMentionMap(List<User> users) {
+        Map<String, Long> mentionMap = new LinkedHashMap<>();
+        for (User user : users) {
+            registerMentionKey(mentionMap, user.getNickname(), user.getId());
+            registerMentionKey(mentionMap, user.getLoginId(), user.getId());
+            registerMentionKey(mentionMap, user.getUsername(), user.getId());
+        }
+        return mentionMap;
+    }
+
+    private void registerMentionKey(Map<String, Long> mentionMap, String rawKey, Long userId) {
+        if (rawKey == null || rawKey.isBlank() || userId == null) {
+            return;
+        }
+        mentionMap.putIfAbsent(rawKey.trim().toLowerCase(Locale.ROOT), userId);
+    }
+
+    private Set<Long> extractMentionedUserIds(String text, Map<String, Long> mentionMap, Long fromUserId) {
+        Set<Long> result = new LinkedHashSet<>();
+        Matcher matcher = MENTION_PATTERN.matcher(text);
+        while (matcher.find()) {
+            Long mentionedUserId = mentionMap.get(matcher.group(1).trim().toLowerCase(Locale.ROOT));
+            if (mentionedUserId != null && !mentionedUserId.equals(fromUserId)) {
+                result.add(mentionedUserId);
+            }
+        }
+        return result;
     }
 }

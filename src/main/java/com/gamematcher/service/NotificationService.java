@@ -29,6 +29,11 @@ public class NotificationService {
     public static final String TYPE_PAYMENT_REFUNDED = "PAYMENT_REFUNDED";
     public static final String TYPE_ADMIN_PANG_GIFT = "ADMIN_PANG_GIFT";
     public static final String TYPE_ADMIN_STREAM_NOTICE = "ADMIN_STREAM_NOTICE";
+    public static final String TYPE_CHANNEL_PERMISSION_GRANTED = "CHANNEL_PERMISSION_GRANTED";
+    public static final String TYPE_CHANNEL_PERMISSION_REVOKED = "CHANNEL_PERMISSION_REVOKED";
+    public static final String TYPE_GROUP_CHAT_INVITE = "GROUP_CHAT_INVITE";
+    public static final String TYPE_GROUP_CHAT_MENTION = "GROUP_CHAT_MENTION";
+    public static final String TYPE_MATCH_CHAT_MENTION = "MATCH_CHAT_MENTION";
 
     private final NotificationRepository notificationRepository;
     private final FollowRepository followRepository;
@@ -49,7 +54,7 @@ public class NotificationService {
         notification.setActorUserId(fromUserId);
         notificationRepository.save(notification);
 
-        pushToUser(toUserId, "친구 요청", "새 친구 요청이 도착했습니다.", "/profile/friends");
+        pushToUser(toUserId, "친구 요청", "새 친구 요청이 도착했습니다.", "/profile");
     }
 
     @Transactional
@@ -64,7 +69,8 @@ public class NotificationService {
         notification.setActorUserId(fromUserId);
         notificationRepository.save(notification);
 
-        pushToUser(toUserId, "새 메시지", "DM이 도착했습니다.", "/messages");
+        String actorName = userRepository.findById(fromUserId).map(this::displayName).orElse("유저");
+        pushToUser(toUserId, "새 메시지", actorName + "님이 메시지를 보냈습니다.", "/dm?userId=" + fromUserId);
     }
 
     @Transactional
@@ -91,7 +97,7 @@ public class NotificationService {
             notification.setActorUserId(streamerUserId);
             notificationRepository.save(notification);
 
-            pushToUser(followerId, "방송 시작", "팔로우한 스트리머가 방송을 시작했습니다.", "/watch/" + streamId);
+            pushToUser(followerId, "방송 시작", streamerName + "님이 방송을 시작했습니다.", "/watch/" + streamId);
             sendSmsToUser(followerId, "[GameMatcher] " + streamerName + "님이 방송을 시작했습니다. /watch/" + streamId);
         }
     }
@@ -105,11 +111,11 @@ public class NotificationService {
         Notification notification = new Notification();
         notification.setUserId(userId);
         notification.setType(TYPE_PAYMENT_COMPLETED);
+        notification.setMessage(pangAmount + "팡 충전이 완료되었습니다. (" + amountWon + "원)");
         notificationRepository.save(notification);
 
-        String body = pangAmount + "팡 충전이 완료되었습니다. (" + amountWon + "원)";
-        pushToUser(userId, "결제 완료", body, "/profile/pang");
-        sendPaymentSms(userId, "[GameMatcher] 결제 완료: " + body);
+        pushToUser(userId, "결제 완료", notification.getMessage(), "/profile/pang");
+        sendPaymentSms(userId, "[GameMatcher] 결제 완료: " + notification.getMessage());
     }
 
     @Transactional
@@ -121,11 +127,11 @@ public class NotificationService {
         Notification notification = new Notification();
         notification.setUserId(userId);
         notification.setType(TYPE_PAYMENT_REFUNDED);
+        notification.setMessage(pangAmount + "팡 환불이 완료되었습니다. (" + amountWon + "원)");
         notificationRepository.save(notification);
 
-        String body = pangAmount + "팡 환불이 완료되었습니다. (" + amountWon + "원)";
-        pushToUser(userId, "환불 완료", body, "/profile/pang");
-        sendPaymentSms(userId, "[GameMatcher] 환불 완료: " + body);
+        pushToUser(userId, "환불 완료", notification.getMessage(), "/profile/pang");
+        sendPaymentSms(userId, "[GameMatcher] 환불 완료: " + notification.getMessage());
     }
 
     @Transactional
@@ -164,6 +170,83 @@ public class NotificationService {
         pushToUser(userId, "방송 관리 알림", notification.getMessage(), "/studio");
     }
 
+    @Transactional
+    public void createForChannelPermissionGranted(Long userId, Long ownerUserId, String ownerName) {
+        if (userId == null || ownerUserId == null) {
+            return;
+        }
+        Notification notification = new Notification();
+        notification.setUserId(userId);
+        notification.setType(TYPE_CHANNEL_PERMISSION_GRANTED);
+        notification.setActorUserId(ownerUserId);
+        notification.setMessage(ownerName + "님의 채널 관리 권한이 부여되었습니다.");
+        notificationRepository.save(notification);
+        pushToUser(userId, "채널 권한 부여", notification.getMessage(), "/studio/channel/manage");
+    }
+
+    @Transactional
+    public void createForChannelPermissionRevoked(Long userId, Long ownerUserId, String ownerName) {
+        if (userId == null || ownerUserId == null) {
+            return;
+        }
+        Notification notification = new Notification();
+        notification.setUserId(userId);
+        notification.setType(TYPE_CHANNEL_PERMISSION_REVOKED);
+        notification.setActorUserId(ownerUserId);
+        notification.setMessage(ownerName + "님의 채널 관리 권한이 해제되었습니다.");
+        notificationRepository.save(notification);
+        pushToUser(userId, "채널 권한 해제", notification.getMessage(), "/studio");
+    }
+
+    @Transactional
+    public void createForGroupChatInvite(Long userId, Long fromUserId, Long roomId, String roomName) {
+        if (userId == null || fromUserId == null || roomId == null || userId.equals(fromUserId)) {
+            return;
+        }
+        Notification notification = new Notification();
+        notification.setUserId(userId);
+        notification.setType(TYPE_GROUP_CHAT_INVITE);
+        notification.setActorUserId(fromUserId);
+        notification.setStreamId(roomId);
+        notification.setMessage((roomName == null || roomName.isBlank() ? "채팅방" : roomName) + " 초대가 도착했습니다.");
+        notificationRepository.save(notification);
+        pushToUser(userId, "채팅방 초대", notification.getMessage(), "/group-chat/room/" + roomId);
+    }
+
+    @Transactional
+    public void createForGroupChatMention(Long userId, Long fromUserId, Long roomId, String roomName, String preview) {
+        if (userId == null || fromUserId == null || roomId == null || userId.equals(fromUserId)) {
+            return;
+        }
+        String actorName = userRepository.findById(fromUserId).map(this::displayName).orElse("유저");
+        String roomLabel = roomName == null || roomName.isBlank() ? "채팅방" : roomName;
+        Notification notification = new Notification();
+        notification.setUserId(userId);
+        notification.setType(TYPE_GROUP_CHAT_MENTION);
+        notification.setActorUserId(fromUserId);
+        notification.setStreamId(roomId);
+        notification.setMessage(actorName + "님이 " + roomLabel + "에서 회원님을 멘션했습니다.");
+        notificationRepository.save(notification);
+        pushToUser(userId, "채팅방 멘션", previewMessage(notification.getMessage(), preview), "/group-chat/room/" + roomId);
+    }
+
+    @Transactional
+    public void createForMatchChatMention(Long userId, Long fromUserId, Long sessionId, String gameName, String preview) {
+        if (userId == null || fromUserId == null || sessionId == null || userId.equals(fromUserId)) {
+            return;
+        }
+        String actorName = userRepository.findById(fromUserId).map(this::displayName).orElse("유저");
+        String roomLabel = gameName == null || gameName.isBlank() ? "매칭 채팅방" : gameName + " 매칭 채팅방";
+        Notification notification = new Notification();
+        notification.setUserId(userId);
+        notification.setType(TYPE_MATCH_CHAT_MENTION);
+        notification.setActorUserId(fromUserId);
+        notification.setStreamId(sessionId);
+        notification.setMessage(actorName + "님이 " + roomLabel + "에서 회원님을 멘션했습니다.");
+        notificationRepository.save(notification);
+        pushToUser(userId, "매칭 채팅 멘션", previewMessage(notification.getMessage(), preview), "/match-chat/" + sessionId);
+    }
+
     public long getUnreadCount(Long userId) {
         if (userId == null) {
             return 0;
@@ -196,15 +279,14 @@ public class NotificationService {
                                 .orElse(null);
                     }
 
-                    String message = buildMessage(notification, actorNickname);
-
                     Map<String, Object> map = new LinkedHashMap<>();
                     map.put("id", notification.getId());
                     map.put("type", notification.getType() != null ? notification.getType() : "");
                     map.put("streamId", notification.getStreamId() != null ? notification.getStreamId() : 0L);
                     map.put("actorUserId", notification.getActorUserId() != null ? notification.getActorUserId() : 0L);
                     map.put("actorNickname", actorNickname != null ? actorNickname : "");
-                    map.put("message", message);
+                    map.put("message", buildMessage(notification, actorNickname));
+                    map.put("targetPath", resolveTargetPath(notification));
                     map.put("read", notification.getReadAt() != null);
                     map.put("createdAt", notification.getCreatedAt() != null ? notification.getCreatedAt().toString() : "");
                     return map;
@@ -217,7 +299,6 @@ public class NotificationService {
         if (notificationId == null || userId == null) {
             return;
         }
-
         notificationRepository.findById(notificationId).ifPresent(notification -> {
             if (userId.equals(notification.getUserId())) {
                 notification.setReadAt(LocalDateTime.now());
@@ -231,7 +312,6 @@ public class NotificationService {
         if (userId == null) {
             return;
         }
-
         List<Notification> list = notificationRepository.findByUserIdOrderByCreatedAtDesc(userId, PageRequest.of(0, 500));
         LocalDateTime now = LocalDateTime.now();
         for (Notification notification : list) {
@@ -247,7 +327,6 @@ public class NotificationService {
         if (userId == null || fromUserId == null) {
             return 0;
         }
-
         List<Notification> list = notificationRepository.findByUserIdAndTypeAndActorUserIdAndReadAtIsNull(userId, TYPE_NEW_DM, fromUserId);
         LocalDateTime now = LocalDateTime.now();
         for (Notification notification : list) {
@@ -280,10 +359,10 @@ public class NotificationService {
             return (actorNickname != null ? actorNickname : "스트리머") + "님이 방송을 시작했습니다.";
         }
         if (TYPE_NEW_DM.equals(notification.getType())) {
-            return (actorNickname != null ? actorNickname : "누군가") + "님이 메시지를 보냈습니다.";
+            return (actorNickname != null ? actorNickname : "유저") + "님이 메시지를 보냈습니다.";
         }
         if (TYPE_FRIEND_REQUEST.equals(notification.getType())) {
-            return (actorNickname != null ? actorNickname : "누군가") + "님이 친구 요청을 보냈습니다.";
+            return (actorNickname != null ? actorNickname : "유저") + "님이 친구 요청을 보냈습니다.";
         }
         if (TYPE_PAYMENT_COMPLETED.equals(notification.getType())) {
             return "팡 충전 결제가 완료되었습니다.";
@@ -297,6 +376,13 @@ public class NotificationService {
         if (TYPE_ADMIN_STREAM_NOTICE.equals(notification.getType())) {
             return "운영자 방송 관리 알림이 도착했습니다.";
         }
+        if (TYPE_CHANNEL_PERMISSION_GRANTED.equals(notification.getType())
+                || TYPE_CHANNEL_PERMISSION_REVOKED.equals(notification.getType())
+                || TYPE_GROUP_CHAT_INVITE.equals(notification.getType())
+                || TYPE_GROUP_CHAT_MENTION.equals(notification.getType())
+                || TYPE_MATCH_CHAT_MENTION.equals(notification.getType())) {
+            return notification.getMessage();
+        }
         return "알림";
     }
 
@@ -304,7 +390,61 @@ public class NotificationService {
         if (user.getNickname() != null && !user.getNickname().isBlank()) {
             return user.getNickname();
         }
-        return user.getUsername();
+        if (user.getUsername() != null && !user.getUsername().isBlank()) {
+            return user.getUsername();
+        }
+        return user.getLoginId();
+    }
+
+    private String resolveTargetPath(Notification notification) {
+        if (notification == null) {
+            return "/";
+        }
+        if (TYPE_FOLLOWING_STARTED_STREAM.equals(notification.getType())) {
+            return notification.getStreamId() != null ? "/watch/" + notification.getStreamId() : "/streams";
+        }
+        if (TYPE_PAYMENT_COMPLETED.equals(notification.getType())
+                || TYPE_PAYMENT_REFUNDED.equals(notification.getType())
+                || TYPE_ADMIN_PANG_GIFT.equals(notification.getType())) {
+            return "/profile/pang";
+        }
+        if (TYPE_FRIEND_REQUEST.equals(notification.getType())) {
+            return "/profile";
+        }
+        if (TYPE_ADMIN_STREAM_NOTICE.equals(notification.getType())) {
+            return "/studio";
+        }
+        if (TYPE_CHANNEL_PERMISSION_GRANTED.equals(notification.getType())) {
+            return "/studio/channel/manage";
+        }
+        if (TYPE_CHANNEL_PERMISSION_REVOKED.equals(notification.getType())) {
+            return "/studio";
+        }
+        if (TYPE_NEW_DM.equals(notification.getType())) {
+            return notification.getActorUserId() != null
+                    ? "/dm?userId=" + notification.getActorUserId()
+                    : "/dm";
+        }
+        if (TYPE_GROUP_CHAT_INVITE.equals(notification.getType())
+                || TYPE_GROUP_CHAT_MENTION.equals(notification.getType())) {
+            return notification.getStreamId() != null
+                    ? "/group-chat/room/" + notification.getStreamId()
+                    : "/group-chat";
+        }
+        if (TYPE_MATCH_CHAT_MENTION.equals(notification.getType())) {
+            return notification.getStreamId() != null
+                    ? "/match-chat/" + notification.getStreamId()
+                    : "/match-history";
+        }
+        return "/";
+    }
+
+    private String previewMessage(String fallback, String preview) {
+        String trimmedPreview = preview != null ? preview.trim() : "";
+        if (trimmedPreview.isBlank()) {
+            return fallback;
+        }
+        return fallback + " " + trimmedPreview;
     }
 
     private void pushToUser(Long userId, String title, String body, String url) {

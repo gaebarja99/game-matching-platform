@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { apiUrl, resolveProfileImageUrl } from '../api/client';
 import { sendChatMessage } from '../api/chat';
+import { fetchAccountConnectionsForUser, type AccountConnectionStatus } from '../api/accountLinks';
 import ChatbotMessageContent from './ChatbotMessageContent';
 import { CHATBOT_STARTER_PROMPTS } from '../constants/chatbotStarterPrompts';
 import { useDirectMessages, type FriendRow } from '../hooks/useDirectMessages';
@@ -309,11 +310,15 @@ function FloatingOneOnOnePanel() {
     loading: false,
     text: '',
   });
+  const [friendProfileConnections, setFriendProfileConnections] = useState<AccountConnectionStatus[] | null>(null);
+  const [friendProfileConnectionsLoading, setFriendProfileConnectionsLoading] = useState(false);
   const [blockBusy, setBlockBusy] = useState(false);
 
   useEffect(() => {
     if (!friendProfileModal) {
       setFriendProfileBio({ loading: false, text: '' });
+      setFriendProfileConnections(null);
+      setFriendProfileConnectionsLoading(false);
       return;
     }
     setFriendProfileBio({ loading: true, text: '' });
@@ -326,6 +331,15 @@ function FloatingOneOnOnePanel() {
       .catch((e: Error) => {
         setFriendProfileBio({ loading: false, text: '', error: e.message || '오류가 발생했습니다.' });
       });
+
+    setFriendProfileConnectionsLoading(true);
+    fetchAccountConnectionsForUser(friendProfileModal.id)
+      .then((res) => {
+        if (res.ok && res.data?.connections) setFriendProfileConnections(res.data.connections);
+        else setFriendProfileConnections([]);
+      })
+      .catch(() => setFriendProfileConnections([]))
+      .finally(() => setFriendProfileConnectionsLoading(false));
   }, [friendProfileModal?.id]);
 
   const closeFriendProfileModal = useCallback(() => {
@@ -583,6 +597,61 @@ function FloatingOneOnOnePanel() {
                   </p>
                 )}
               </div>
+
+            <div className="friend-profile-links" style={{ marginTop: 14 }}>
+              <div className="friend-profile-links-title">연동된 계정</div>
+              <div className="friend-profile-links-row" aria-label="연동된 외부 서비스">
+                {friendProfileConnectionsLoading ? (
+                  <span className="friend-profile-links-empty">불러오는 중…</span>
+                ) : (() => {
+                    const conns = friendProfileConnections ?? [];
+                    const connected = new Set(
+                      conns
+                        .filter((c) => Boolean(c.connected))
+                        .map((c) => (c.provider ?? '').toUpperCase())
+                        .filter(Boolean),
+                    );
+                    const providers = ['DISCORD', 'STEAM', 'BLIZZARD', 'RIOT'] as const;
+                    const visible = providers.filter((p) => connected.has(p));
+                    if (visible.length === 0) {
+                      return <span className="friend-profile-links-empty">연동된 계정이 없습니다.</span>;
+                    }
+                    return visible.map((p) => (
+                      <span key={p} className={`friend-link-icon ${p.toLowerCase()}`} title={p}>
+                        {p === 'DISCORD' ? (
+                          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden focusable="false">
+                            <path
+                              fill="currentColor"
+                              d="M19.54 6.46A15.93 15.93 0 0 0 15.5 5l-.2.4a14.58 14.58 0 0 1 3.07 1.02 12.46 12.46 0 0 0-4.79-1.48 12.4 12.4 0 0 0-3.16 0 12.46 12.46 0 0 0-4.79 1.48A14.6 14.6 0 0 1 8.77 5.4L8.57 5A15.93 15.93 0 0 0 4.54 6.46C2.65 9.28 2.2 12.03 2.4 14.73c1.66 1.22 3.27 1.97 4.83 2.46l.59-.81a9.86 9.86 0 0 1-1.52-.71l.37-.29c2.98 1.36 6.2 1.36 9.18 0l.37.29c-.48.28-1 .52-1.52.71l.59.81c1.56-.49 3.17-1.24 4.83-2.46.27-2.83-.25-5.57-2.28-8.27ZM9.35 13.66c-.75 0-1.36-.68-1.36-1.52 0-.84.6-1.52 1.36-1.52s1.36.68 1.36 1.52c0 .84-.6 1.52-1.36 1.52Zm5.3 0c-.75 0-1.36-.68-1.36-1.52 0-.84.6-1.52 1.36-1.52s1.36.68 1.36 1.52c0 .84-.6 1.52-1.36 1.52Z"
+                            />
+                          </svg>
+                        ) : p === 'STEAM' ? (
+                          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden focusable="false">
+                            <path
+                              fill="currentColor"
+                              d="M12 2a10 10 0 1 0 10 10A10.02 10.02 0 0 0 12 2Zm4.87 14.8a3.42 3.42 0 0 1-1.9-.58l-2.66 1.94a.9.9 0 0 1-.84.1l-4.05-1.72a2.5 2.5 0 1 1 1.05-1.82l3.48 1.48 2.28-1.66a3.42 3.42 0 1 1 2.64 2.26Zm-10.07-1.5a1.35 1.35 0 1 0-1.35 1.35A1.35 1.35 0 0 0 6.8 15.3Zm10.07-.72a2.07 2.07 0 1 0-2.07-2.07 2.07 2.07 0 0 0 2.07 2.07Z"
+                            />
+                          </svg>
+                        ) : p === 'BLIZZARD' ? (
+                          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden focusable="false">
+                            <path
+                              fill="currentColor"
+                              d="M12.02 2.5c-3.28 0-5.94 2.66-5.94 5.94 0 .7.12 1.36.35 1.98-1.78.76-3.03 2.52-3.03 4.58 0 2.75 2.23 4.98 4.98 4.98.95 0 1.84-.26 2.6-.72a5.92 5.92 0 0 0 8.99-5.12c0-.55-.08-1.08-.22-1.58 1.42-.84 2.37-2.38 2.37-4.14 0-2.67-2.16-4.84-4.84-4.84-.55 0-1.08.09-1.58.26a5.9 5.9 0 0 0-3.68-1.32Zm0 1.8c1.27 0 2.42.5 3.3 1.31a4.83 4.83 0 0 0-1.19 3.17 4.8 4.8 0 0 0 1.31 3.3 4.12 4.12 0 0 1-3.42 6.52 4.12 4.12 0 0 1-3.6-2.12 4.95 4.95 0 0 0 2.08-4.03 4.95 4.95 0 0 0-2.12-4.06 4.12 4.12 0 0 1 3.63-4.09Zm6.03 1.74c1.67 0 3.04 1.36 3.04 3.04a3.03 3.03 0 0 1-1.86 2.79 5.92 5.92 0 0 0-2.79-1.86 3.02 3.02 0 0 1-.59-1.82c0-1.68 1.36-3.04 3.04-3.04ZM7.15 10.2c1.8.62 3.09 2.32 3.09 4.3a3.15 3.15 0 0 1-3.15 3.15A3.15 3.15 0 0 1 3.94 14.5c0-1.98 1.3-3.68 3.21-4.3Z"
+                            />
+                          </svg>
+                        ) : (
+                          <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden focusable="false">
+                            <path
+                              fill="currentColor"
+                              d="M4 3h8.2L9.2 8.3h3.7L7.6 21H4.9l3.2-7.3H4.4L9.3 3H4zm10.2 0H20l-4.1 6.2H20L12.9 21h-2.8l3.6-6.8H9.9L14.2 3z"
+                            />
+                          </svg>
+                        )}
+                      </span>
+                    ));
+                  })()}
+              </div>
+            </div>
             </div>
           </div>
       ) : null}
@@ -592,9 +661,10 @@ function FloatingOneOnOnePanel() {
 
 export default function FloatingChatWidget() {
   const { user } = useAuth();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
   const [activeMode, setActiveMode] = useState<ActiveChatMode | null>(null);
   const [dmUnreadCount, setDmUnreadCount] = useState(0);
+  const rootRef = useRef<HTMLDivElement | null>(null);
 
   const fetchDmUnreadCount = useCallback(() => {
     fetch(apiUrl('api/notifications/dm-count'), { credentials: 'include' })
@@ -628,8 +698,14 @@ export default function FloatingChatWidget() {
     fetchDmUnreadCount();
   }, [fetchDmUnreadCount]);
 
+  const closeAll = useCallback(() => {
+    setActiveMode(null);
+    fetchDmUnreadCount();
+    setIsChatOpen(false);
+  }, [fetchDmUnreadCount]);
+
   const toggleMenu = useCallback(() => {
-    setIsOpen((wasOpen) => {
+    setIsChatOpen((wasOpen) => {
       if (wasOpen) {
         setActiveMode(null);
         fetchDmUnreadCount();
@@ -643,16 +719,33 @@ export default function FloatingChatWidget() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
       if (activeMode !== null) closePanel();
-      else setIsOpen(false);
+      else setIsChatOpen(false);
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [activeMode, closePanel]);
 
+  useEffect(() => {
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      if (!isChatOpen && activeMode === null) return;
+      const root = rootRef.current;
+      const t = e.target as Node | null;
+      if (!root || !t) return;
+      if (root.contains(t)) return;
+      closeAll();
+    };
+    window.addEventListener('mousedown', onDown, { capture: true });
+    window.addEventListener('touchstart', onDown, { capture: true, passive: true });
+    return () => {
+      window.removeEventListener('mousedown', onDown, { capture: true } as unknown as boolean);
+      window.removeEventListener('touchstart', onDown, { capture: true } as unknown as boolean);
+    };
+  }, [activeMode, closeAll, isChatOpen]);
+
   const panelOpen = activeMode !== null;
 
   return (
-    <div className="floating-chat-widget-root">
+    <div className="floating-chat-widget-root" ref={rootRef}>
       {panelOpen && activeMode && (
         <ChatPopup title={MODE_TITLES[activeMode]} onClose={closePanel} titleId="floating-chat-popup-title">
           {activeMode === 'ONE_ON_ONE' && <FloatingOneOnOnePanel />}
@@ -667,7 +760,7 @@ export default function FloatingChatWidget() {
       )}
 
       <div className="floating-chat-widget-buttons">
-        <div className={`floating-chat-widget-menu ${isOpen ? 'is-open' : ''}`} aria-hidden={!isOpen}>
+        <div className={`floating-chat-widget-menu ${isChatOpen ? 'is-open' : ''}`} aria-hidden={!isChatOpen}>
           {MENU.map(({ key, label, Icon }) => (
             <div className="floating-chat-widget-row" key={key}>
               <span className="floating-chat-widget-label">{label}</span>
@@ -686,8 +779,8 @@ export default function FloatingChatWidget() {
         <button
           type="button"
           className={`floating-chat-widget-toggle ${user && dmUnreadCount > 0 ? 'has-dm-unread' : ''}`}
-          aria-label={isOpen ? '메뉴 닫기' : '메뉴 열기'}
-          aria-expanded={isOpen}
+          aria-label={isChatOpen ? '메뉴 닫기' : '메뉴 열기'}
+          aria-expanded={isChatOpen}
           onClick={toggleMenu}
         >
           {user && dmUnreadCount > 0 ? (
@@ -695,7 +788,7 @@ export default function FloatingChatWidget() {
               N
             </span>
           ) : null}
-          {isOpen ? (
+          {isChatOpen ? (
             <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden className="floating-chat-widget-toggle-icon">
               <path d="M6 6l12 12M18 6L6 18" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" />
             </svg>

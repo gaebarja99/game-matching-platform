@@ -2,7 +2,9 @@ package com.gamematcher.controller;
 
 import com.gamematcher.dto.search.*;
 import com.gamematcher.service.PlayerSearchService;
+import com.gamematcher.service.search.RecordsAiEvaluationService;
 import com.gamematcher.service.search.RecordsMatchDetailService;
+import com.gamematcher.service.valorant.ValorantApiService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +27,8 @@ public class PlayerSearchController {
 
     private final PlayerSearchService playerSearchService;
     private final RecordsMatchDetailService recordsMatchDetailService;
+    private final RecordsAiEvaluationService recordsAiEvaluationService;
+    private final ValorantApiService valorantApiService;
 
 
 
@@ -37,7 +41,9 @@ public class PlayerSearchController {
      *   "tagLine": "KR1",       // Riot 계열만 필요 (lol, tft, valorant)
      *   "region": "kr",         // 선택 (기본값: kr)
      *   "count": 5,             // 조회할 매치 수 (기본값: 5, 최대: 20)
-     *   "forceRefresh": false  // true면 LoL/TFT/발로/PUBG 매치 DB 캐시 무시 후 API 갱신
+     *   "forceRefresh": false, // true면 LoL/TFT/발로/PUBG 매치 DB 캐시 무시 후 API 갱신
+     *   "matchListOnly": false, // true면 LoL/TFT는 매치 ID만(상세는 POST /api/search/match-detail)
+     *   "deferValorantMmr": false // true면 발로란트는 매치·통계만 먼저, 티어는 POST /api/search/valorant/mmr
      * }
      */
     @PostMapping("/player")
@@ -59,6 +65,16 @@ public class PlayerSearchController {
     }
 
     /**
+     * 발로란트 전적 1차 응답({@code deferValorantMmr}) 후 티어만 보강.
+     */
+    @PostMapping("/valorant/mmr")
+    public ResponseEntity<ValorantSearchMmrResponse> valorantSearchMmr(@RequestBody ValorantSearchMmrRequest request) {
+        request.normalize();
+        log.info("발로란트 MMR 지연 로드 - region: {}", request.getRegion());
+        return ResponseEntity.ok(valorantApiService.resolveMmrForSearch(request));
+    }
+
+    /**
      * JSON 파일 업로드 배치 전적 검색
      * JSON 형식:
      * [
@@ -67,6 +83,17 @@ public class PlayerSearchController {
      *   { "game": "steam", "steamId": "76561198000000000" }
      * ]
      */
+    @PostMapping("/lol/evaluations/match/{matchId}")
+    public ResponseEntity<RecordsAiEvaluationResponse> evaluateLolMatch(
+            @PathVariable String matchId,
+            @RequestParam String puuid,
+            @RequestParam(required = false) String model,
+            @RequestParam(defaultValue = "40") int maxTimelineEvents) {
+        return ResponseEntity.ok(
+                recordsAiEvaluationService.evaluateLolMatch(matchId, puuid, model, maxTimelineEvents)
+        );
+    }
+
     @PostMapping("/batch")
     public ResponseEntity<List<PlayerSearchResponse>> batchSearch(
             @RequestParam("file") MultipartFile file) {

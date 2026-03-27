@@ -1,4 +1,4 @@
-import StudioLayout from '../components/StudioLayout';
+﻿import StudioLayout from '../components/StudioLayout';
 
 const ITEMS: { icon: string; title: string; value: string; link?: boolean }[] = [
   { icon: '🤖', title: '클린봇', value: '켜짐' },

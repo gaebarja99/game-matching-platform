@@ -16,6 +16,8 @@ interface StreamItem {
   createdAt?: string;
   startedAt?: string;
   endedAt?: string;
+  visibleInRecent?: boolean;
+  canManage?: boolean;
 }
 
 interface ChannelCommunityPost {
@@ -115,7 +117,7 @@ export default function Channel() {
     return () => window.removeEventListener('storage', syncPosts);
   }, [channelUserId, isOwnChannel]);
 
-  const name = profile?.nickname || profile?.username || profile?.loginId || '유저';
+  const name = profile?.nickname || profile?.username || profile?.loginId || '사용자';
   const followerCount = Number(profile?.followerCount ?? 0);
   const hasStreams = streams.length > 0;
 
@@ -150,6 +152,38 @@ export default function Channel() {
         </div>
       </ChannelLayout>
     );
+  }
+
+  async function toggleVisibility(stream: StreamItem) {
+    const nextVisible = stream.visibleInRecent === false;
+    const response = await fetch(apiUrl(`api/streams/${stream.id}/channel-visibility`), {
+      method: 'PATCH',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ visibleInRecent: nextVisible }),
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      alert(payload?.message || '영상 공개 상태를 변경하지 못했습니다.');
+      return;
+    }
+    setStreams((current) =>
+      current.map((item) => (item.id === stream.id ? { ...item, ...(payload as StreamItem) } : item))
+    );
+  }
+
+  async function deleteStream(stream: StreamItem) {
+    if (!window.confirm(`"${stream.title || '이 영상'}"을(를) 삭제할까요?`)) return;
+    const response = await fetch(apiUrl(`api/streams/${stream.id}/channel`), {
+      method: 'DELETE',
+      credentials: 'include',
+    });
+    const payload = await response.json().catch(() => null);
+    if (!response.ok) {
+      alert(payload?.message || '영상을 삭제하지 못했습니다.');
+      return;
+    }
+    setStreams((current) => current.filter((item) => item.id !== stream.id));
   }
 
   return (
@@ -192,18 +226,30 @@ export default function Channel() {
             <div className="channel-grid">
               {streams.map((stream) => {
                 const isLive = (stream.status || '').toUpperCase() === 'LIVE';
+                const isHidden = stream.visibleInRecent === false;
                 return (
-                  <div key={stream.id} className="channel-card">
-                    <Link to={`/watch/${stream.id}`}>
+                  <div key={stream.id} className={`channel-card${isHidden ? ' is-hidden' : ''}`}>
+                    <Link to={`/watch/${stream.id}`} className="channel-card-link">
                       <div className="channel-card-thumb">
                         {stream.thumbnailUrl ? <img src={stream.thumbnailUrl} alt="" /> : null}
                         {isLive ? <span className="live-badge">LIVE</span> : <div className="ended">종료</div>}
+                        {isHidden ? <span className="channel-hidden-badge">숨김</span> : null}
                       </div>
                       <div className="channel-card-body">
                         <div className="channel-card-title">{stream.title || '방송'}</div>
                         <div className="channel-card-meta">{name} · {stream.game ?? ''}</div>
                       </div>
                     </Link>
+                    {stream.canManage ? (
+                      <div className="channel-card-actions">
+                        <button type="button" className="channel-card-action" onClick={() => toggleVisibility(stream)}>
+                          {isHidden ? '다시 공개' : '숨기기'}
+                        </button>
+                        <button type="button" className="channel-card-action danger" onClick={() => deleteStream(stream)}>
+                          삭제
+                        </button>
+                      </div>
+                    ) : null}
                   </div>
                 );
               })}
@@ -217,7 +263,7 @@ export default function Channel() {
               <div className="channel-panel-header">
                 <div>
                   <h2>채널 커뮤니티</h2>
-                  <p>스트리머가 팬들과 방송 소식, 공지, 일상을 나누는 내 채널 전용 소통 공간입니다.</p>
+                  <p>스트리머가 팬들과 방송 소식, 공지, 일상을 나누는 채널 전용 소통 공간입니다.</p>
                 </div>
                 {isOwnChannel ? (
                   <Link to="/channel/write" className="channel-panel-action">

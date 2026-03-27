@@ -6,12 +6,8 @@ src/main/resources/application-oauth-local.properties
 application-portone-local.properties
 src/main/resources/application-portone-local.properties
 
-# local runtime artifacts
-.codex_tmp/
-.vscode/
-.mvn/
-frontend/.env
-secrets/
-effective-pom
-rtmp-server/node_modules/
-rtmp-server/media/
+# Maven / Java 빌드 결과물
+target/
+
+# 루트 또는 임시로 생긴 컴파일 산출
+*.class

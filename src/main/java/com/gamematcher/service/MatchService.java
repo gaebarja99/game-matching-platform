@@ -12,6 +12,8 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,6 +32,9 @@ public class MatchService {
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
     private final ProfanityFilterService profanityFilterService;
+    private final NotificationService notificationService;
+
+    private static final Pattern MENTION_PATTERN = Pattern.compile("@([\\p{L}\\p{N}_.-]+)");
 
     /** 대기열 참가 → 매칭 시도 */
     @Transactional
@@ -264,6 +269,7 @@ public class MatchService {
                 messagingTemplate.convertAndSend("/topic/user/" + m.getUserId(), notifyPayload);
             }
         }
+        notifyMentionedMembers(sessionId, userId, msg.getText(), gameName);
         return msg;
     }
 
@@ -280,5 +286,53 @@ public class MatchService {
         sessionMemberRepository.deleteBySessionId(sessionId);
         sessionRepository.deleteById(sessionId);
         return true;
+    }
+
+    private void notifyMentionedMembers(Long sessionId, Long fromUserId, String text, String gameName) {
+        if (sessionId == null || fromUserId == null || text == null || text.isBlank()) {
+            return;
+        }
+        Map<String, Long> mentionMap = buildMentionMap(
+                sessionMemberRepository.findBySessionId(sessionId).stream()
+                        .map(MatchSessionMember::getUserId)
+                        .filter(Objects::nonNull)
+                        .distinct()
+                        .map(userRepository::findById)
+                        .filter(Optional::isPresent)
+                        .map(Optional::get)
+                        .collect(Collectors.toList())
+        );
+        for (Long mentionedUserId : extractMentionedUserIds(text, mentionMap, fromUserId)) {
+            notificationService.createForMatchChatMention(mentionedUserId, fromUserId, sessionId, gameName, text);
+        }
+    }
+
+    private Map<String, Long> buildMentionMap(List<User> users) {
+        Map<String, Long> mentionMap = new LinkedHashMap<>();
+        for (User user : users) {
+            registerMentionKey(mentionMap, user.getNickname(), user.getId());
+            registerMentionKey(mentionMap, user.getLoginId(), user.getId());
+            registerMentionKey(mentionMap, user.getUsername(), user.getId());
+        }
+        return mentionMap;
+    }
+
+    private void registerMentionKey(Map<String, Long> mentionMap, String rawKey, Long userId) {
+        if (rawKey == null || rawKey.isBlank() || userId == null) {
+            return;
+        }
+        mentionMap.putIfAbsent(rawKey.trim().toLowerCase(Locale.ROOT), userId);
+    }
+
+    private Set<Long> extractMentionedUserIds(String text, Map<String, Long> mentionMap, Long fromUserId) {
+        Set<Long> result = new LinkedHashSet<>();
+        Matcher matcher = MENTION_PATTERN.matcher(text);
+        while (matcher.find()) {
+            Long mentionedUserId = mentionMap.get(matcher.group(1).trim().toLowerCase(Locale.ROOT));
+            if (mentionedUserId != null && !mentionedUserId.equals(fromUserId)) {
+                result.add(mentionedUserId);
+            }
+        }
+        return result;
     }
 }

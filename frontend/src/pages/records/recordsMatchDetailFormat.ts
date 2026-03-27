@@ -43,16 +43,24 @@ function firstStr(obj: Record<string, unknown>, keys: string[]): string | undefi
 }
 
 function extractAiBlocks(payload: Record<string, unknown>): MatchDetailBlock[] {
-  const raw =
-    payload.records_ai_evaluation ??
-    payload.recordsAiEvaluation ??
-    payload.ai_evaluation ??
-    payload.aiEvaluation;
-  if (!isRecord(raw)) return [];
+  const aiKeys = ['records_ai_evaluation', 'recordsAiEvaluation', 'ai_evaluation', 'aiEvaluation'] as const;
+  let raw: Record<string, unknown> | undefined;
+  for (const k of aiKeys) {
+    if (!Object.prototype.hasOwnProperty.call(payload, k)) continue;
+    const v = payload[k];
+    if (v === null || v === undefined) return [];
+    if (isRecord(v)) {
+      raw = v;
+      break;
+    }
+  }
+  if (!raw) return [];
   const items: [string, string][] = [];
+  const model = firstStr(raw, ['llmModel', 'llm_model']);
   const status = firstStr(raw, ['status']);
   const grade = firstStr(raw, ['grade']);
   const scoreRaw = raw.score;
+  if (model) items.push(['모델', model]);
   if (status) items.push(['상태', status]);
   if (grade) items.push(['등급', grade]);
   if (scoreRaw != null && String(scoreRaw).trim() !== '') items.push(['점수', String(scoreRaw)]);
@@ -170,7 +178,6 @@ function formatValorant(payload: Record<string, unknown>, puuid?: string): Forma
 function formatLol(payload: Record<string, unknown>, puuid?: string): FormattedMatchDetail {
   const matchBlocks: MatchDetailBlock[] = [];
   const playerBlocks: MatchDetailBlock[] = [];
-  const meta = isRecord(payload.metadata) ? payload.metadata : {};
   const info = isRecord(payload.info) ? payload.info : {};
   const kv: [string, string][] = [];
   const mode = firstStr(info, ['gameMode', 'game_mode']);
@@ -204,7 +211,6 @@ function formatLol(payload: Record<string, unknown>, puuid?: string): FormattedM
 function formatTft(payload: Record<string, unknown>, puuid?: string): FormattedMatchDetail {
   const matchBlocks: MatchDetailBlock[] = [];
   const playerBlocks: MatchDetailBlock[] = [];
-  const meta = isRecord(payload.metadata) ? payload.metadata : {};
   const info = isRecord(payload.info) ? payload.info : {};
   const kv: [string, string][] = [];
   const gl = num(info.game_length ?? info.gameLength);
@@ -257,6 +263,26 @@ function formatPubg(payload: Record<string, unknown>): FormattedMatchDetail {
     items: [['안내', 'PUBG는 스쿼드·킬 등 세부가 많아 이 화면에서는 매치 요약만 표시합니다.']],
   });
   return withAi({ matchBlocks, playerBlocks }, payload);
+}
+
+/**
+ * 전적 목록 행의 gameMode가 비어 있을 때, 상세 API payload로 표시 문자열 보강.
+ */
+export function extractValorantRowModeFromDetailPayload(
+  payload: Record<string, unknown> | null | undefined,
+): string | undefined {
+  if (!payload || !isRecord(payload)) return undefined;
+  const meta = payload.metadata;
+  if (!isRecord(meta)) return undefined;
+  const fromMeta = firstStr(meta, ['mode', 'queue']);
+  if (fromMeta?.trim()) return fromMeta.trim();
+  const mapName = firstStr(meta, ['map']);
+  if (mapName) {
+    const lower = mapName.trim().toLowerCase();
+    if (lower.startsWith('skirmish')) return 'Skirmish';
+    if (lower.includes('deathmatch')) return 'Deathmatch';
+  }
+  return undefined;
 }
 
 export function formatRecordsMatchDetail(

@@ -15,21 +15,60 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [theme, setThemeState] = useState<Theme>(() => {
     try {
       const s = localStorage.getItem(THEME_KEY);
-      return s === 'light' ? 'light' : 'dark';
+      if (s === 'light' || s === 'dark') return s;
+      if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: light)').matches) {
+        return 'light';
+      }
+      return 'dark';
     } catch {
+      if (typeof window !== 'undefined' && window.matchMedia?.('(prefers-color-scheme: light)').matches) {
+        return 'light';
+      }
       return 'dark';
     }
   });
 
   useEffect(() => {
-    document.documentElement.setAttribute('data-theme', theme);
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    let hasManualPreference = false;
     try {
-      localStorage.setItem(THEME_KEY, theme);
-    } catch {}
+      const s = localStorage.getItem(THEME_KEY);
+      hasManualPreference = s === 'light' || s === 'dark';
+    } catch {
+      hasManualPreference = false;
+    }
+    if (hasManualPreference) return;
+    const mql = window.matchMedia('(prefers-color-scheme: light)');
+    const onChange = (e: MediaQueryListEvent) => {
+      setThemeState(e.matches ? 'light' : 'dark');
+    };
+    if (mql.addEventListener) mql.addEventListener('change', onChange);
+    else mql.addListener(onChange);
+    return () => {
+      if (mql.removeEventListener) mql.removeEventListener('change', onChange);
+      else mql.removeListener(onChange);
+    };
+  }, []);
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
   }, [theme]);
 
-  const setTheme = useCallback((t: Theme) => setThemeState(t), []);
-  const toggleTheme = useCallback(() => setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark')), []);
+  const setTheme = useCallback((t: Theme) => {
+    setThemeState(t);
+    try {
+      localStorage.setItem(THEME_KEY, t);
+    } catch {}
+  }, []);
+  const toggleTheme = useCallback(() => {
+    setThemeState((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      try {
+        localStorage.setItem(THEME_KEY, next);
+      } catch {}
+      return next;
+    });
+  }, []);
 
   return (
     <ThemeContext.Provider value={{ theme, setTheme, toggleTheme }}>

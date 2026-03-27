@@ -39,6 +39,11 @@ public class AccountConnectionController {
         return accountConnectionService.getConnections(authToken);
     }
 
+    @GetMapping("/users/{userId}")
+    public AccountConnectionsResponseDto getConnectionsForUser(@PathVariable Long userId) {
+        return accountConnectionService.getConnectionsForUser(userId);
+    }
+
     @DeleteMapping("/{provider}")
     public ResponseEntity<Void> unlink(
             @RequestHeader(value = "X-Auth-Token", required = false) String authToken,

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { useParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import Hls from 'hls.js';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
@@ -43,12 +43,6 @@ interface WeeklyDonor {
   displayName?: string;
   totalPang?: number;
   consecutiveDonationDays?: number;
-}
-
-interface WhisperTarget {
-  userId: number;
-  displayName: string;
-  profileImageUrl?: string | null;
 }
 
 /** 팡 금액별 채팅 카드 tier 클래스: 1000=초록, 10000=보라, 100000=핑크 */
@@ -129,15 +123,17 @@ export default function Watch() {
   const [donationError, setDonationError] = useState('');
   const [subscriptionModalOpen, setSubscriptionModalOpen] = useState(false);
   const [subscriptionAgree, setSubscriptionAgree] = useState(false);
+  const [subscriptionUseMileage, setSubscriptionUseMileage] = useState(false);
   const [subscriptionSubmitting, setSubscriptionSubmitting] = useState(false);
   const [subscriptionError, setSubscriptionError] = useState('');
+  const [subscriptionExpiresAt, setSubscriptionExpiresAt] = useState<string | null>(null);
+  const [chargeModalOpen, setChargeModalOpen] = useState(false);
+  const [chargeUseMileage, setChargeUseMileage] = useState(false);
+  const [chargeAmount, setChargeAmount] = useState('1000');
+  const [chargeSubmitting, setChargeSubmitting] = useState(false);
+  const [chargeError, setChargeError] = useState('');
   const [controlsVisible, setControlsVisible] = useState(false);
   const [chatPanelOpen, setChatPanelOpen] = useState(true);
-  const [whisperModalOpen, setWhisperModalOpen] = useState(false);
-  const [whisperTargetId, setWhisperTargetId] = useState<number | ''>('');
-  const [whisperMessage, setWhisperMessage] = useState('');
-  const [whisperSending, setWhisperSending] = useState(false);
-  const [whisperError, setWhisperError] = useState('');
   /** 주간 후원 랭킹 표시: collapsed(접힘) | expanded(펼침) | full(전체+접기) */
   const [weeklyRankView, setWeeklyRankView] = useState<'collapsed' | 'expanded' | 'full'>('collapsed');
   const donorUserIdsRef = useRef<Set<number>>(new Set());
@@ -148,81 +144,37 @@ export default function Watch() {
   const stompClientRef = useRef<Client | null>(null);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const joinedStreamIdRef = useRef<number | null>(null);
-  const { user } = useAuth();
-  const whisperTargets: WhisperTarget[] = (() => { // whisper-targets
-    const seen = new Set<number>();
-    const targets: WhisperTarget[] = [];
-
-    if (stream?.userId && stream.userId !== user?.id) {
-      seen.add(stream.userId);
-      targets.push({
-        userId: stream.userId,
-        displayName: stream.broadcasterNickname || '스트리머',
-        profileImageUrl: stream.broadcasterProfileImageUrl,
-      });
-    }
-
-    chatMessages.forEach((msg) => {
-      if (msg.type !== 'chat') return;
-      if (!msg.userId || msg.userId === user?.id || seen.has(msg.userId)) return;
-      seen.add(msg.userId);
-      targets.push({
-        userId: msg.userId,
-        displayName: msg.displayName || `유저 ${msg.userId}`,
-        profileImageUrl: msg.profileImageUrl ?? null,
-      });
-    });
-
-    return targets;
-  })();
-
-  const resetWhisperModal = useCallback(() => {
-    setWhisperModalOpen(false);
-    setWhisperTargetId('');
-    setWhisperMessage('');
-    setWhisperError('');
-    setWhisperSending(false);
-  }, []);
-
-  const submitWhisper = useCallback(() => {
-    if (!user) {
-      setWhisperError('로그인 후 귓속말을 보낼 수 있습니다.');
-      return;
-    }
-    if (!whisperTargetId) {
-      setWhisperError('귓속말 대상을 선택해 주세요.');
-      return;
-    }
-    const text = whisperMessage.trim();
-    if (!text) {
-      setWhisperError('귓속말 내용을 입력해 주세요.');
-      return;
-    }
-    setWhisperSending(true);
-    setWhisperError('');
-    fetch(apiUrl('api/dm'), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({ toUserId: whisperTargetId, text }),
-    })
-      .then((r) => r.json().then((d) => ({ ok: r.ok, data: d as { message?: string } })))
-      .then((res) => {
-        if (!res.ok) {
-          setWhisperError(res.data?.message || '귓속말 전송에 실패했습니다.');
-          return;
-        }
-        setChatNotice('귓속말을 보냈습니다.');
-        resetWhisperModal();
-      })
-      .catch(() => setWhisperError('귓속말 전송 중 오류가 발생했습니다.'))
-      .finally(() => setWhisperSending(false));
-  }, [resetWhisperModal, user, whisperMessage, whisperTargetId]);
-
+  const { user, refreshUser } = useAuth();
+  const navigate = useNavigate();
   const clearChatWindow = useCallback(() => {
     setChatMessages([]);
     setChatNotice('채팅창을 지웠습니다.');
   }, []);
+  const moveToStreamerChannel = useCallback(() => {
+    if (!stream?.userId) return;
+    navigate(`/channel?userId=${stream.userId}`);
+  }, [navigate, stream?.userId]);
+  const openDonationModal = useCallback(() => {
+    setDonationError('');
+    setDonationModalOpen(true);
+  }, []);
+  const closeDonationModal = useCallback(() => {
+    if (donationSubmitting) return;
+    setDonationModalOpen(false);
+    setDonationError('');
+  }, [donationSubmitting]);
+  const openChargeModal = useCallback(() => {
+    setDonationModalOpen(false);
+    setChargeError('');
+    setChargeAmount('1000');
+    setChargeUseMileage(false);
+    setChargeModalOpen(true);
+  }, []);
+  const closeChargeModal = useCallback(() => {
+    if (chargeSubmitting) return;
+    setChargeModalOpen(false);
+    setChargeError('');
+  }, [chargeSubmitting]);
 
   useEffect(() => {
     if (!streamId) {
@@ -281,14 +233,16 @@ export default function Watch() {
   useEffect(() => {
     const id = streamId ? Number(streamId) : NaN;
     if (!streamId || Number.isNaN(id) || !stream) return;
-    const interval = setInterval(() => {
-      fetch(apiUrl(`api/streams/${id}`), { credentials: 'include' })
-        .then((r) => (r.ok ? r.json() : null))
-        .then((s: StreamInfo | null) => {
-          if (s && stream) setStream((prev) => (prev ? { ...prev, viewerCount: s.viewerCount ?? prev.viewerCount } : null));
-        })
-        .catch(() => {});
-    }, 10000);
+      const interval = setInterval(() => {
+        fetch(apiUrl(`api/streams/${id}`), { credentials: 'include' })
+          .then((r) => (r.ok ? r.json() : null))
+          .then((s: StreamInfo | null) => {
+            if (s) {
+              setStream((prev) => (prev ? { ...prev, ...s } : s));
+            }
+          })
+          .catch(() => {});
+      }, 10000);
     return () => clearInterval(interval);
   }, [streamId, stream?.id]);
 
@@ -496,12 +450,19 @@ export default function Watch() {
     const streamerId = stream?.userId;
     if (!user || !streamerId) {
       setIsSubscribed(false);
+      setSubscriptionExpiresAt(null);
       return;
     }
     fetch(apiUrl(`api/subscription/check?userId=${encodeURIComponent(String(streamerId))}`), { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : { subscribed: false }))
-      .then((d: { subscribed?: boolean }) => setIsSubscribed(!!d.subscribed))
-      .catch(() => setIsSubscribed(false));
+      .then((d: { subscribed?: boolean; expiresAt?: string | null }) => {
+        setIsSubscribed(!!d.subscribed);
+        setSubscriptionExpiresAt(d.expiresAt ?? null);
+      })
+      .catch(() => {
+        setIsSubscribed(false);
+        setSubscriptionExpiresAt(null);
+      });
   }, [user, stream?.userId]);
 
   const sendChat = useCallback(() => {
@@ -549,13 +510,14 @@ export default function Watch() {
           setDonationAmount('');
           setDonationMessage('');
           setWeeklyTotal((prev) => (prev ?? 0) + amount);
+          refreshUser().catch(() => {});
         } else {
           setDonationError((data?.message as string) || '후원에 실패했습니다.');
         }
       })
       .catch(() => setDonationError('요청에 실패했습니다.'))
       .finally(() => setDonationSubmitting(false));
-  }, [streamId, user, donationAmount, donationMessage]);
+  }, [streamId, user, donationAmount, donationMessage, refreshUser]);
 
   const submitSubscription = useCallback(() => {
     const streamerId = stream?.userId;
@@ -616,8 +578,10 @@ export default function Watch() {
               .then((confirmRes) => {
                 if (confirmRes.ok && confirmRes.data?.subscribed) {
                   setIsSubscribed(true);
+                  setSubscriptionExpiresAt(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString());
                   setSubscriptionModalOpen(false);
                   setSubscriptionAgree(false);
+                  refreshUser().catch(() => {});
                 } else {
                   setSubscriptionError(confirmRes.data?.message ?? '구독 처리에 실패했습니다.');
                 }
@@ -631,7 +595,142 @@ export default function Watch() {
         setSubscriptionError('네트워크 오류가 발생했습니다.');
         setSubscriptionSubmitting(false);
       });
-  }, [stream?.userId, user, subscriptionAgree]);
+  }, [stream?.userId, user, subscriptionAgree, refreshUser]);
+
+  const submitSubscriptionWithSelectedMethod = useCallback(() => {
+    const streamerId = stream?.userId;
+    if (!user) {
+      setSubscriptionError('로그인 후 구독할 수 있습니다.');
+      return;
+    }
+    if (!streamerId) {
+      setSubscriptionError('스트리머 정보를 찾을 수 없습니다.');
+      return;
+    }
+    if (subscriptionUseMileage) {
+      setSubscriptionError('');
+      setSubscriptionSubmitting(true);
+      fetch(apiUrl('api/mileage-shop/subscription'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ userId: streamerId }),
+      })
+        .then((r) => r.json().then((d: { message?: string }) => ({ ok: r.ok, data: d })))
+        .then((res) => {
+          if (!res.ok) {
+            setSubscriptionError(res.data?.message ?? '마일리지 구독 구매에 실패했습니다.');
+            return;
+          }
+          setIsSubscribed(true);
+          setSubscriptionExpiresAt(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString());
+          setSubscriptionModalOpen(false);
+          setSubscriptionAgree(false);
+          setSubscriptionUseMileage(false);
+          refreshUser().catch(() => {});
+        })
+        .catch(() => setSubscriptionError('마일리지 구독 구매 중 오류가 발생했습니다.'))
+        .finally(() => setSubscriptionSubmitting(false));
+      return;
+    }
+
+    submitSubscription();
+  }, [stream?.userId, user, subscriptionUseMileage, refreshUser, submitSubscription]);
+
+  const submitPangCharge = useCallback(() => {
+    const pangAmount = Math.floor(Number(chargeAmount) || 0);
+    if (!user) {
+      setChargeError('로그인 후 충전할 수 있습니다.');
+      return;
+    }
+    if (pangAmount < 1000) {
+      setChargeError('팡 충전은 최소 1,000팡부터 가능합니다.');
+      return;
+    }
+    setChargeError('');
+    setChargeSubmitting(true);
+
+    if (chargeUseMileage) {
+      fetch(apiUrl('api/mileage-shop/pang'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ pangAmount }),
+      })
+        .then((r) => r.json().then((d: { message?: string }) => ({ ok: r.ok, data: d })))
+        .then((res) => {
+          if (!res.ok) {
+            setChargeError(res.data?.message ?? '마일리지 충전에 실패했습니다.');
+            return;
+          }
+          setChargeModalOpen(false);
+          refreshUser().catch(() => {});
+        })
+        .catch(() => setChargeError('마일리지 충전 중 오류가 발생했습니다.'))
+        .finally(() => setChargeSubmitting(false));
+      return;
+    }
+
+    fetch(apiUrl('api/payment/orders'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ pangAmount }),
+    })
+      .then((r) => r.json().then((d: { orderId?: string; amount?: number; orderName?: string; storeId?: string; pg?: string; payMethod?: string; message?: string }) => ({ status: r.status, data: d })))
+      .then((res) => {
+        if (res.status !== 200 || !res.data?.orderId || res.data.amount == null) {
+          setChargeError(res.data?.message ?? '충전 주문 생성에 실패했습니다.');
+          setChargeSubmitting(false);
+          return;
+        }
+        const { orderId, amount, orderName, storeId, pg, payMethod } = res.data;
+        if (!storeId || typeof window.IMP === 'undefined') {
+          setChargeError('결제 설정이 비어 있습니다. 관리자에게 문의해 주세요.');
+          setChargeSubmitting(false);
+          return;
+        }
+        window.IMP.init(storeId);
+        window.IMP.request_pay(
+          {
+            pg: pg || 'html5_inicis.INIpayTest',
+            pay_method: payMethod || 'card',
+            merchant_uid: orderId,
+            amount,
+            name: orderName || `GameMatcher 팡 ${pangAmount}개 충전`,
+            buyer_name: user?.nickname || user?.username || undefined,
+          },
+          (response) => {
+            if (!response.success || !response.imp_uid) {
+              setChargeError(response.error_msg || '결제가 취소되었거나 실패했습니다.');
+              setChargeSubmitting(false);
+              return;
+            }
+            fetch(apiUrl('api/payment/confirm'), {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ orderId, impUid: response.imp_uid }),
+            })
+              .then((r) => r.json().then((d: { success?: boolean; message?: string }) => ({ ok: r.ok, data: d })))
+              .then((confirmRes) => {
+                if (!confirmRes.ok || !confirmRes.data?.success) {
+                  setChargeError(confirmRes.data?.message ?? '충전 처리에 실패했습니다.');
+                  return;
+                }
+                setChargeModalOpen(false);
+                refreshUser().catch(() => {});
+              })
+              .catch(() => setChargeError('충전 확인 중 오류가 발생했습니다.'))
+              .finally(() => setChargeSubmitting(false));
+          }
+        );
+      })
+      .catch(() => {
+        setChargeError('네트워크 오류가 발생했습니다.');
+        setChargeSubmitting(false);
+      });
+  }, [chargeAmount, chargeUseMileage, refreshUser, user]);
 
   // 스트리밍 경과 시간 1초마다 갱신
   useEffect(() => {
@@ -850,7 +949,7 @@ export default function Watch() {
                 {isLive && <span className="live-badge">LIVE</span>}
               </div>
               <div className="streamer-row">
-                <div className="streamer-avatar-wrap">
+                <button type="button" className="streamer-avatar-wrap streamer-link-btn" onClick={moveToStreamerChannel}>
                   {resolveProfileImageUrl(stream.broadcasterProfileImageUrl) && !streamerAvatarError ? (
                     <img
                       className="streamer-avatar"
@@ -861,14 +960,14 @@ export default function Watch() {
                   ) : (
                     <span className="streamer-avatar-fallback">{(stream.broadcasterNickname || '?')[0]}</span>
                   )}
-                </div>
-                <div className="streamer-info-col">
+                </button>
+                <button type="button" className="streamer-info-col streamer-link-btn" onClick={moveToStreamerChannel}>
                   <div className="streamer-name">
                     {stream.broadcasterNickname || '스트리머'}
                     {stream.partner && <span className="streamer-partner-badge" title="파트너 스트리머">✓</span>}
                   </div>
                   <div className="streamer-followers">팔로워 {stream.followerCount ?? 0}명</div>
-                </div>
+                </button>
                 <div className="stream-actions">
                   <button
                     type="button"
@@ -886,14 +985,11 @@ export default function Watch() {
                         setSubscriptionModalOpen(true);
                         return;
                       }
-                      if (!stream?.userId) return;
-                      fetch(apiUrl(`api/subscription/${stream.userId}`), { method: 'DELETE', credentials: 'include' })
-                        .then((r) => (r.ok ? r.json() : { subscribed: true }))
-                        .then((d: { subscribed?: boolean }) => setIsSubscribed(!!d.subscribed))
-                        .catch(() => {});
+                      setSubscriptionError('구독은 이용 기간이 끝날 때까지 유지되며 중도 취소할 수 없습니다.');
+                      setSubscriptionModalOpen(true);
                     }}
                   >
-                    구독
+                    {isSubscribed ? '구독중' : '구독'}
                   </button>
                 </div>
               </div>
@@ -1047,18 +1143,6 @@ export default function Watch() {
               disabled={!user || !chatConnected}
             />
             <div className="chat-toolbar">
-              <button
-                type="button"
-                className="chat-toolbar-icon chat-toolbar-whisper-trigger"
-                title="귓속말"
-                aria-label="귓속말"
-                onClick={() => {
-                  setWhisperError('');
-                  setWhisperModalOpen(true);
-                }}
-              >
-                ?뮠
-              </button>
               <button type="button" className="chat-toolbar-icon chat-toolbar-eraser-trigger" title="채팅창 지우기" aria-label="채팅창 지우기" onClick={clearChatWindow}>
                 <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" strokeWidth="2" aria-hidden="true">
                   <path d="M3 21h6" />
@@ -1066,20 +1150,8 @@ export default function Watch() {
                   <path d="M21 8L8 21l-5-5L16 3z" />
                 </svg>
               </button>
-              <button type="button" className="btn-donate" onClick={() => setDonationModalOpen(true)}>
+              <button type="button" className="btn-donate" onClick={openDonationModal}>
                 후원하기
-              </button>
-              <button type="button" className="chat-toolbar-icon" title="채팅" aria-label="채팅">
-                💬
-              </button>
-              <button type="button" className="chat-toolbar-icon" title="이미지" aria-label="이미지">
-                🖼
-              </button>
-              <button type="button" className="chat-toolbar-icon" title="공유" aria-label="공유">
-                ↗
-              </button>
-              <button type="button" className="chat-toolbar-icon" title="설정" aria-label="설정">
-                ⚙
               </button>
             </div>
           </div>
@@ -1118,11 +1190,24 @@ export default function Watch() {
                   <input type="checkbox" checked={subscriptionAgree} onChange={(e) => setSubscriptionAgree(e.target.checked)} />
                   <span>정기구독 자동결제에 동의합니다.</span>
                 </label>
-                <button type="button" className="sub-guide-link">안내보기</button>
               </p>
+              <p>
+                <label className="subscription-checkbox-label">
+                  <input type="checkbox" checked={subscriptionUseMileage} onChange={(e) => setSubscriptionUseMileage(e.target.checked)} />
+                  <span>마일리지로 구매하기 (8,200M)</span>
+                </label>
+              </p>
+              {subscriptionExpiresAt && isSubscribed && (
+                <p className="subscription-expire-text">구독 만료 예정: {new Date(subscriptionExpiresAt).toLocaleString()}</p>
+              )}
               {subscriptionError && <p className="modal-error" style={{ marginBottom: 10 }}>{subscriptionError}</p>}
-              <button type="button" className="btn-subscribe-submit" onClick={submitSubscription} disabled={!subscriptionAgree || subscriptionSubmitting}>
-                {subscriptionSubmitting ? '처리 중…' : '매월 4,900원에 정기구독하기'}
+              <button
+                type="button"
+                className="btn-subscribe-submit"
+                onClick={submitSubscriptionWithSelectedMethod}
+                disabled={(!subscriptionUseMileage && !subscriptionAgree) || subscriptionSubmitting}
+              >
+                {subscriptionSubmitting ? '처리 중…' : subscriptionUseMileage ? '8,200M으로 구독하기' : '매월 4,900원에 정기구독하기'}
               </button>
             </div>
           </div>
@@ -1130,11 +1215,18 @@ export default function Watch() {
       )}
 
       {donationModalOpen && (
-        <div className="main-modal-backdrop show" role="dialog" aria-modal="true" onClick={() => !donationSubmitting && setDonationModalOpen(false)}>
+        <div className="main-modal-backdrop show" role="dialog" aria-modal="true" onClick={closeDonationModal}>
           <div className="main-modal-box" onClick={(e) => e.stopPropagation()}>
             <h2 className="modal-title">후원하기</h2>
             <p className="modal-footer" style={{ marginBottom: 16 }}>팡으로 스트리머를 후원합니다. (1팡 = 1.2원)</p>
             {!user && <p className="modal-error">로그인 후 후원할 수 있습니다.</p>}
+            <div className="watch-balance-row">
+              <span className="watch-balance-label">현재 보유 팡</span>
+              <strong className="watch-balance-value">{(user?.pangBalance ?? 0).toLocaleString()} P</strong>
+              <button type="button" className="watch-charge-open-btn" onClick={openChargeModal} disabled={!user}>
+                충전하기
+              </button>
+            </div>
             <div className="modal-field">
               <label htmlFor="watch-donation-amount">팡 개수 (최소 1,000팡)</label>
               <input
@@ -1176,7 +1268,7 @@ export default function Watch() {
               <button type="button" className="btn-primary" onClick={submitDonation} disabled={!user || donationSubmitting}>
                 {donationSubmitting ? '처리 중…' : '후원하기'}
               </button>
-              <button type="button" className="btn-secondary" onClick={() => { if (!donationSubmitting) setDonationModalOpen(false); }} disabled={donationSubmitting}>
+              <button type="button" className="btn-secondary" onClick={closeDonationModal} disabled={donationSubmitting}>
                 취소
               </button>
             </div>
@@ -1184,73 +1276,60 @@ export default function Watch() {
         </div>
       )}
 
-      {whisperModalOpen && (
-        <div className="main-modal-backdrop show" role="dialog" aria-modal="true" onClick={() => !whisperSending && resetWhisperModal()}>
-          <div className="main-modal-box watch-whisper-modal" onClick={(e) => e.stopPropagation()}>
-            <h2 className="modal-title">귓속말 보내기</h2>
-            <p className="modal-footer" style={{ marginBottom: 16 }}>현재 라이브에 참여한 사람에게만 귓속말을 보낼 수 있습니다.</p>
-            <div className="modal-field">
-              <label htmlFor="watch-whisper-target">대상</label>
-              <select
-                id="watch-whisper-target"
-                value={whisperTargetId}
-                onChange={(e) => setWhisperTargetId(e.target.value ? Number(e.target.value) : '')}
-                disabled={!user || whisperTargets.length === 0}
-              >
-                <option value="">대상을 선택해 주세요</option>
-                {whisperTargets.map((target) => (
-                  <option key={target.userId} value={target.userId}>
-                    {target.displayName}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="watch-whisper-target-list">
-              {whisperTargets.length > 0 ? (
-                whisperTargets.map((target) => (
-                  <button
-                    key={target.userId}
-                    type="button"
-                    className={`watch-whisper-target-chip ${whisperTargetId === target.userId ? 'active' : ''}`}
-                    onClick={() => setWhisperTargetId(target.userId)}
-                  >
-                    {resolveProfileImageUrl(target.profileImageUrl) ? (
-                      <img src={resolveProfileImageUrl(target.profileImageUrl)!} alt="" />
-                    ) : (
-                      <span className="watch-whisper-target-fallback">{target.displayName[0]}</span>
-                    )}
-                    <span>{target.displayName}</span>
-                  </button>
-                ))
-              ) : (
-                <div className="watch-whisper-empty">아직 채팅에 참여한 다른 사용자가 없습니다.</div>
-              )}
+      {chargeModalOpen && (
+        <div className="main-modal-backdrop show" role="dialog" aria-modal="true" onClick={closeChargeModal}>
+          <div className="main-modal-box" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title">팡 충전</h2>
+            <p className="modal-footer" style={{ marginBottom: 16 }}>충전할 팡 개수를 입력하고, 마일리지 또는 일반 결제로 구매할 수 있습니다.</p>
+            {!user && <p className="modal-error">로그인 후 충전할 수 있습니다.</p>}
+            <div className="watch-balance-row">
+              <span className="watch-balance-label">현재 보유 팡</span>
+              <strong className="watch-balance-value">{(user?.pangBalance ?? 0).toLocaleString()} P</strong>
             </div>
             <div className="modal-field">
-              <label htmlFor="watch-whisper-message">메시지</label>
-              <textarea
-                id="watch-whisper-message"
-                className="watch-whisper-textarea"
-                placeholder="귓속말 내용을 입력해 주세요"
-                value={whisperMessage}
-                onChange={(e) => setWhisperMessage(e.target.value)}
+              <label htmlFor="watch-charge-amount">팡 개수 (최소 1,000팡)</label>
+              <input
+                id="watch-charge-amount"
+                type="number"
+                min={1000}
+                placeholder="1000"
+                value={chargeAmount}
+                onChange={(e) => setChargeAmount(e.target.value)}
                 disabled={!user}
-                rows={5}
-                maxLength={500}
               />
+              <div className="donation-quick-btns">
+                {[1000, 5000, 10000, 50000, 100000].map((amt) => (
+                  <button
+                    key={`charge-${amt}`}
+                    type="button"
+                    className="donation-quick-btn"
+                    onClick={() => setChargeAmount(String(amt))}
+                    disabled={!user}
+                  >
+                    {amt >= 10000 ? amt / 10000 + '만' : amt.toLocaleString()}
+                  </button>
+                ))}
+              </div>
             </div>
-            {whisperError && <p className="modal-error">{whisperError}</p>}
+            <div className="modal-field">
+              <label className="watch-charge-checkbox-label">
+                <input type="checkbox" checked={chargeUseMileage} onChange={(e) => setChargeUseMileage(e.target.checked)} />
+                <span>마일리지로 구매하기</span>
+              </label>
+            </div>
+            {chargeError && <p className="modal-error">{chargeError}</p>}
             <div className="modal-actions">
-              <button type="button" className="btn-primary" onClick={submitWhisper} disabled={!user || whisperSending || whisperTargets.length === 0}>
-                {whisperSending ? '보내는 중...' : '보내기'}
+              <button type="button" className="btn-primary" onClick={submitPangCharge} disabled={!user || chargeSubmitting}>
+                {chargeSubmitting ? '처리 중…' : chargeUseMileage ? '마일리지로 충전하기' : '결제하기'}
               </button>
-              <button type="button" className="btn-secondary" onClick={resetWhisperModal} disabled={whisperSending}>
+              <button type="button" className="btn-secondary" onClick={closeChargeModal} disabled={chargeSubmitting}>
                 취소
               </button>
             </div>
           </div>
         </div>
       )}
+
     </WatchLayout>
   );
 }

@@ -13,6 +13,7 @@ export type GameOption = {
   hint: string;
   tagLabel?: string;
   platformOptions?: { value: string; label: string }[];
+  regionOptions?: { value: string; label: string }[];
 };
 
 export const GAMES: GameOption[] = [
@@ -23,8 +24,8 @@ export const GAMES: GameOption[] = [
     accent: '#2f80ed',
     fields: ['nickname', 'tag', 'count'],
     placeholders: { nickname: '소환사명', tag: 'KR1' },
-    hint: '닉네임과 태그를 입력하면 최근 전적을 조회합니다.',
-    tagLabel: '태그',
+    hint: '리그 오브 레전드는 닉네임과 태그 또는 서버 코드로 최근 전적을 조회합니다.',
+    tagLabel: '태그/서버',
   },
   {
     id: 'tft',
@@ -32,19 +33,27 @@ export const GAMES: GameOption[] = [
     short: 'TFT',
     accent: '#7c5cff',
     fields: ['nickname', 'tag', 'count'],
-    placeholders: { nickname: '소환사명', tag: 'KR1' },
-    hint: 'TFT 닉네임과 태그 기준으로 최근 매치를 불러옵니다.',
-    tagLabel: '태그',
+    placeholders: { nickname: '닉네임', tag: 'KR1' },
+    hint: 'TFT는 닉네임과 태그 또는 서버 코드 기준으로 최근 매치를 불러옵니다.',
+    tagLabel: '태그/서버',
   },
   {
     id: 'valorant',
     label: 'Valorant',
     short: 'VAL',
     accent: '#ff4d67',
-    fields: ['nickname', 'tag', 'count'],
+    fields: ['nickname', 'tag', 'count', 'region'],
     placeholders: { nickname: '플레이어명', tag: 'KR1' },
-    hint: '닉네임과 태그를 입력하면 계정 API 기준 전적을 조회합니다.',
+    hint: '발로란트는 닉네임, 태그, 서버를 선택해 계정 API 기준으로 최근 전적을 조회합니다.',
     tagLabel: '태그',
+    regionOptions: [
+      { value: 'kr', label: 'KR' },
+      { value: 'ap', label: 'AP' },
+      { value: 'na', label: 'NA' },
+      { value: 'eu', label: 'EU' },
+      { value: 'latam', label: 'LATAM' },
+      { value: 'br', label: 'BR' },
+    ],
   },
   {
     id: 'pubg',
@@ -53,7 +62,7 @@ export const GAMES: GameOption[] = [
     accent: '#f0b429',
     fields: ['nickname', 'pubg_platform'],
     placeholders: { nickname: 'Steam 또는 Kakao 닉네임' },
-    hint: 'PUBG는 플랫폼을 함께 선택해야 정확한 검색이 가능합니다.',
+    hint: 'PUBG는 플랫폼을 같이 선택해야 더 정확하게 검색됩니다.',
     platformOptions: [
       { value: 'steam', label: 'Steam' },
       { value: 'kakao', label: 'Kakao' },
@@ -76,7 +85,7 @@ export const GAMES: GameOption[] = [
     accent: '#61b15a',
     fields: ['nickname'],
     placeholders: { nickname: 'Steam64 ID 또는 Vanity URL' },
-    hint: 'CS2는 Steam 계정 기준으로 검색합니다.',
+    hint: 'CS2는 Steam 계정을 기준으로 검색합니다.',
   },
 ];
 
@@ -95,45 +104,28 @@ export function parseProfileSlug(
   }
 
   const rawHash = urlHash?.startsWith('#') ? urlHash.slice(1) : (urlHash ?? '');
-  let tagFromHash = '';
-  if (rawHash) {
-    try {
-      tagFromHash = decodeURIComponent(rawHash);
-    } catch {
-      tagFromHash = rawHash;
-    }
-  }
-  if (tagFromHash.trim()) {
-    try {
-      return { nickname: decodeURIComponent(playerSlug), tagLine: tagFromHash.trim() };
-    } catch {
-      return { nickname: playerSlug, tagLine: tagFromHash.trim() };
-    }
+  const hashTag = rawHash ? decodeURIComponent(rawHash) : '';
+  if (hashTag.trim()) {
+    return { nickname: decodeURIComponent(playerSlug), tagLine: hashTag.trim() };
   }
 
-  let decodedSlug = playerSlug;
-  try {
-    decodedSlug = decodeURIComponent(playerSlug);
-  } catch {
-    decodedSlug = playerSlug;
-  }
-
-  const hashInSlug = decodedSlug.indexOf('#');
-  if (hashInSlug > 0 && hashInSlug < decodedSlug.length - 1) {
+  const decodedSlug = decodeURIComponent(playerSlug);
+  const hashIndex = decodedSlug.indexOf('#');
+  if (hashIndex > 0 && hashIndex < decodedSlug.length - 1) {
     return {
-      nickname: decodedSlug.slice(0, hashInSlug).trim(),
-      tagLine: decodedSlug.slice(hashInSlug + 1).trim(),
+      nickname: decodedSlug.slice(0, hashIndex).trim(),
+      tagLine: decodedSlug.slice(hashIndex + 1).trim(),
     };
   }
 
-  const lastDash = decodedSlug.lastIndexOf('-');
-  if (lastDash <= 0) {
+  const dashIndex = decodedSlug.lastIndexOf('-');
+  if (dashIndex <= 0) {
     return { nickname: decodedSlug, tagLine: '' };
   }
 
   return {
-    nickname: decodedSlug.slice(0, lastDash).trim(),
-    tagLine: decodedSlug.slice(lastDash + 1).trim(),
+    nickname: decodedSlug.slice(0, dashIndex).trim(),
+    tagLine: decodedSlug.slice(dashIndex + 1).trim(),
   };
 }
 
@@ -143,22 +135,42 @@ export function buildRecordsProfileUrl(
   tagLine: string,
   platform: string,
   count: number,
+  region?: string,
 ): string {
   const meta = GAMES.find((g) => g.id === gameId);
   const qs = new URLSearchParams();
+
   if (meta?.fields.includes('pubg_platform') && platform) {
     qs.set('platform', platform);
+  }
+  if (region) {
+    qs.set('region', region);
   }
   if (meta?.fields.includes('count') && count !== 5) {
     qs.set('count', String(count));
   }
+
   const suffix = qs.toString() ? `?${qs.toString()}` : '';
   const nick = nickname.trim();
   if (!nick) return `/records/${gameId}${suffix}`;
+
   if (meta?.fields.includes('tag') && tagLine.trim()) {
     return `/records/${gameId}/${encodeURIComponent(nick)}${suffix}#${encodeURIComponent(tagLine.trim())}`;
   }
   return `/records/${gameId}/${encodeURIComponent(nick)}${suffix}`;
+}
+
+export function parseRiotDisplayName(displayName: string | null | undefined):
+  | { gameName: string; tagLine: string }
+  | null {
+  const text = displayName?.trim();
+  if (!text) return null;
+  const index = text.indexOf('#');
+  if (index <= 0 || index >= text.length - 1) return null;
+  return {
+    gameName: text.slice(0, index).trim(),
+    tagLine: text.slice(index + 1).trim(),
+  };
 }
 
 export const GAMES_WITH_MATCH_DETAIL = new Set(['valorant', 'lol', 'tft', 'pubg']);
@@ -174,14 +186,6 @@ export function getInitials(name?: string | null) {
   return name.slice(0, 1).toUpperCase();
 }
 
-export type SearchFieldOverrides = {
-  gameId?: string;
-  nickname?: string;
-  tagLine?: string;
-  platform?: string;
-  count?: number;
-};
-
 export async function fetchRecordsPlayerSearch(
   gameId: string,
   nickname: string,
@@ -189,6 +193,7 @@ export async function fetchRecordsPlayerSearch(
   platform: string,
   count: number,
   forceRefresh: boolean,
+  region?: string,
 ): Promise<PlayerSearchResponse> {
   const game = GAMES.find((item) => item.id === gameId) || GAMES[0];
   return searchPlayer({
@@ -196,8 +201,11 @@ export async function fetchRecordsPlayerSearch(
     gameName: nickname.trim(),
     tagLine: game.fields.includes('tag') ? tagLine.trim() || undefined : undefined,
     platform: game.fields.includes('pubg_platform') ? platform : undefined,
+    region: region || undefined,
     count: game.fields.includes('count') ? count : undefined,
     forceRefresh: forceRefresh || undefined,
+    matchListOnly: gameId === 'lol' || gameId === 'tft' ? true : undefined,
+    deferValorantMmr: gameId === 'valorant' ? true : undefined,
   });
 }
 

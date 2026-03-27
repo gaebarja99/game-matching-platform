@@ -25,6 +25,8 @@ public interface DonationRepository extends JpaRepository<Donation, Long> {
 
     long countByFromUserId(Long fromUserId);
 
+    long countByStreamId(Long streamId);
+
     /** 연속후원 일수 계산용: 후원자→스트리머 후원 내역 최신순 */
     List<Donation> findByFromUserIdAndToUserIdOrderByCreatedAtDesc(Long fromUserId, Long toUserId, Pageable pageable);
 
@@ -43,4 +45,16 @@ public interface DonationRepository extends JpaRepository<Donation, Long> {
     /** 스트리머가 방송별로 받은 팡 합계 (streamId, sum(amount)) - toUserId 기준 */
     @Query("SELECT d.streamId, SUM(d.amount) FROM Donation d WHERE d.toUserId = :toUserId GROUP BY d.streamId ORDER BY SUM(d.amount) DESC")
     List<Object[]> findStreamIdAndSumByToUserId(@Param("toUserId") Long toUserId);
+
+    @Query("SELECT COALESCE(SUM(d.amount), 0) FROM Donation d WHERE d.streamId = :streamId")
+    long sumAmountByStreamId(@Param("streamId") Long streamId);
+
+    @Query("""
+            SELECT d.fromUserId, COUNT(d), COALESCE(SUM(d.amount), 0), MAX(d.createdAt)
+            FROM Donation d
+            WHERE d.toUserId = :toUserId
+            GROUP BY d.fromUserId
+            ORDER BY COALESCE(SUM(d.amount), 0) DESC, MAX(d.createdAt) DESC
+            """)
+    List<Object[]> summarizeFansByToUserId(@Param("toUserId") Long toUserId);
 }

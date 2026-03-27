@@ -68,12 +68,16 @@ public class AccountConnectionService {
 
     public AccountConnectionsResponseDto getConnections(String authToken) {
         User user = currentUserService.requireUser(authToken);
+        return getConnectionsForUser(user.getId());
+    }
+
+    public AccountConnectionsResponseDto getConnectionsForUser(Long userId) {
         List<AccountConnectionStatusDto> connections = new ArrayList<>();
-        connections.add(buildDiscordStatus(user.getId()));
-        connections.add(buildSteamStatus(user.getId()));
-        connections.add(buildBlizzardStatus(user.getId()));
-        connections.add(buildRiotStatus(user.getId()));
-        return new AccountConnectionsResponseDto(user.getId(), connections);
+        connections.add(buildDiscordStatus(userId));
+        connections.add(buildSteamStatus(userId));
+        connections.add(buildBlizzardStatus(userId));
+        connections.add(buildRiotStatus(userId));
+        return new AccountConnectionsResponseDto(userId, connections);
     }
 
     @Transactional

@@ -52,6 +52,7 @@ public class MileageShopController {
     @GetMapping("/prices")
     public ResponseEntity<?> prices() {
         return ResponseEntity.ok(Map.of(
+                "pangMileageCostPerPang", mileageShopService.getPangMileageCostPerPang(),
                 "subscriptionTicketCost", mileageShopService.getSubscriptionTicketCost(),
                 "adFree30DaysCost", mileageShopService.getAdFree30DaysCost()
         ));
@@ -118,9 +119,23 @@ public class MileageShopController {
             Map<String, Object> m = new HashMap<>();
             m.put("id", p.getId());
             m.put("type", p.getType() != null ? p.getType().name() : "");
-            m.put("mileageCost", p.getMileageCost());
+            long displayMileageCost = p.getMileageCost() != null ? p.getMileageCost() : 0L;
+            if (p.getType() != null) {
+                switch (p.getType()) {
+                    case SUBSCRIPTION_TICKET -> displayMileageCost = mileageShopService.getSubscriptionTicketCost();
+                    case AD_FREE_30_DAYS -> displayMileageCost = mileageShopService.getAdFree30DaysCost();
+                    default -> {
+                    }
+                }
+            }
+            m.put("mileageCost", displayMileageCost);
             m.put("pangAmount", p.getPangAmount());
             m.put("targetUserId", p.getTargetUserId());
+            m.put("targetUserNickname", p.getTargetUserId() == null
+                    ? null
+                    : userRepository.findById(p.getTargetUserId())
+                            .map(u -> u.getNickname() != null && !u.getNickname().isBlank() ? u.getNickname() : u.getLoginId())
+                            .orElse(null));
             m.put("createdAt", p.getCreatedAt() != null ? p.getCreatedAt().format(ISO_FORMAT) : null);
             return m;
         }).collect(Collectors.toList());

@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 
 import java.time.Instant;
@@ -62,7 +63,7 @@ public class TftSearchService {
         }
 
         try {
-            String rawRegion = req.getRegion() != null ? req.getRegion().toLowerCase() : "kr";
+            String rawRegion = resolveRegionHint(req);
             String platform  = PLATFORM_NORMALIZE.getOrDefault(rawRegion, rawRegion);
             String routing   = REGION_ROUTING.getOrDefault(platform, "asia");
 
@@ -90,10 +91,10 @@ public class TftSearchService {
             }
 
             // ── STEP 2: fallback - Account API ──
-            if (puuid == null) {
+            if (puuid == null && normalizeRegionToken(req.getTagLine()) == null) {
                 String accountUrl = String.format(
                         "https://%s.api.riotgames.com/riot/account/v1/accounts/by-riot-id/%s/%s",
-                        routing, req.getGameName(), req.getTagLine());
+                        routing, urlEncode(req.getGameName()), urlEncode(req.getTagLine()));
                 log.info("TFT Account API URL: {}", accountUrl);
                 Map<String, Object> accountData = requestMap(accountUrl);
                 if (accountData == null) throw new RuntimeException("계정 정보를 찾을 수 없습니다.");
@@ -113,6 +114,10 @@ public class TftSearchService {
             }
 
             // ── STEP 3: TFT 랭크 ──
+            if (puuid == null) {
+                throw new RuntimeException("계정을 찾을 수 없습니다. 닉네임과 서버/태그 형식을 확인하세요.");
+            }
+
             String tier = "UNRANKED", rank = "", lp = "0";
             if (summonerId != null) {
                 try {
@@ -167,6 +172,13 @@ public class TftSearchService {
                     .success(true).game("tft").nickname(nickname)
                     .playerInfo(playerInfo).matches(matches).stats(stats).build();
 
+        } catch (HttpClientErrorException e) {
+            if (e.getStatusCode() == HttpStatus.UNAUTHORIZED) {
+                log.error("TFT Riot API key unauthorized: {}", e.getResponseBodyAsString());
+                return PlayerSearchResponse.error("tft", nickname, "Riot API 키가 만료되었거나 올바르지 않습니다. 새 RIOT_API_KEY로 교체해 주세요.");
+            }
+            log.error("TFT 전적 검색 오류 - {}", nickname, e);
+            return PlayerSearchResponse.error("tft", nickname, e.getMessage());
         } catch (Exception e) {
             log.error("TFT 전적 검색 오류 - {}", nickname, e);
             return PlayerSearchResponse.error("tft", nickname, e.getMessage());
@@ -256,5 +268,19 @@ public class TftSearchService {
     private String urlEncode(String s) {
         try { return java.net.URLEncoder.encode(s, "UTF-8").replace("+", "%20"); }
         catch (Exception e) { return s; }
+    }
+
+    private String resolveRegionHint(PlayerSearchRequest req) {
+        String region = normalizeRegionToken(req.getRegion());
+        if (region != null) return region;
+        String tagRegion = normalizeRegionToken(req.getTagLine());
+        if (tagRegion != null) return tagRegion;
+        return "kr";
+    }
+
+    private String normalizeRegionToken(String value) {
+        if (value == null || value.isBlank()) return null;
+        String normalized = value.trim().toLowerCase();
+        return PLATFORM_NORMALIZE.containsKey(normalized) ? normalized : null;
     }
 }

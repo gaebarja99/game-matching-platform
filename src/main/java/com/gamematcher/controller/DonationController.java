@@ -3,6 +3,8 @@ package com.gamematcher.controller;
 import com.gamematcher.dto.donation.DonationResponse;
 import com.gamematcher.dto.stream.StreamResponse;
 import com.gamematcher.entity.Donation;
+import com.gamematcher.repository.DonationRepository;
+import com.gamematcher.repository.UserRepository;
 import com.gamematcher.service.DonationService;
 import com.gamematcher.service.LiveStreamService;
 import jakarta.servlet.http.HttpSession;
@@ -27,6 +29,8 @@ public class DonationController {
     private final DonationService donationService;
     private final LiveStreamService liveStreamService;
     private final SimpMessagingTemplate messagingTemplate;
+    private final DonationRepository donationRepository;
+    private final UserRepository userRepository;
 
     @PostMapping
     public ResponseEntity<?> donate(@RequestBody Map<String, Object> body, HttpSession session) {
@@ -136,5 +140,45 @@ public class DonationController {
             return m;
         }).collect(Collectors.toList());
         return ResponseEntity.ok(Map.of("items", items, "total", total));
+    }
+
+    @GetMapping("/fans")
+    public ResponseEntity<?> fans(HttpSession session) {
+        Long userId = (Long) session.getAttribute(SESSION_USER_ID);
+        if (userId == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
+        }
+
+        List<Map<String, Object>> list = donationRepository.summarizeFansByToUserId(userId).stream()
+                .map(row -> {
+                    Long fanUserId = row[0] instanceof Number ? ((Number) row[0]).longValue() : null;
+                    if (fanUserId == null) {
+                        return null;
+                    }
+                    long donationCount = row[1] instanceof Number ? ((Number) row[1]).longValue() : 0L;
+                    long totalAmount = row[2] instanceof Number ? ((Number) row[2]).longValue() : 0L;
+                    String lastDonatedAt = row[3] != null ? row[3].toString() : null;
+
+                    return userRepository.findById(fanUserId)
+                            .map(user -> {
+                                String nickname = (user.getNickname() != null && !user.getNickname().isBlank())
+                                        ? user.getNickname()
+                                        : user.getUsername();
+                                Map<String, Object> item = new HashMap<>();
+                                item.put("userId", user.getId());
+                                item.put("nickname", nickname);
+                                item.put("loginId", user.getLoginId());
+                                item.put("profileImageUrl", user.getProfileImageUrl());
+                                item.put("donationCount", donationCount);
+                                item.put("totalAmount", totalAmount);
+                                item.put("lastDonatedAt", lastDonatedAt);
+                                return item;
+                            })
+                            .orElse(null);
+                })
+                .filter(item -> item != null)
+                .collect(Collectors.toList());
+
+        return ResponseEntity.ok(Map.of("list", list, "total", list.size()));
     }
 }

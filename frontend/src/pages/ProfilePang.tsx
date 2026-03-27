@@ -12,6 +12,7 @@ interface ChargeRow {
   impUid?: string;
   refundable?: boolean;
   refunded?: boolean;
+  detail?: string;
 }
 
 interface UsageRow {
@@ -301,7 +302,8 @@ export default function ProfilePang() {
                     const won = r.priceWon != null ? r.priceWon : Math.round(pang * PRICE_PER_PANG * 10) / 10;
                     const refunded = r.refunded === true;
                     const refundable = !refunded && isRefundableRow(r);
-                    const isEventGrant = isEventGrantRow(r);
+                    const detailText = r.detail?.trim() || '--';
+                    const isEventGrant = detailText === '이벤트';
                     const isRefunding = refundingRowId != null && r.id != null && refundingRowId === r.id;
                     return (
                       <tr key={r.id ?? `${r.createdAt}-${pang}`}>
@@ -325,7 +327,7 @@ export default function ProfilePang() {
                               {isRefunding ? '처리중' : '환불'}
                             </button>
                           ) : (
-                            '--'
+                            detailText
                           )}
                         </td>
                       </tr>

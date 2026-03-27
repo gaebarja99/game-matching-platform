@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   fetchMatchDetail,
+  runLolMatchAiEvaluation,
+  runPubgMatchAiEvaluation,
   runValorantMatchAiEvaluation,
   type PlayerSearchResponse,
 } from '../../api/search';
@@ -11,12 +13,14 @@ import {
   RECORDS_AI_MODEL_OPTIONS,
 } from './recordsShared';
 import {
+  extractValorantRowModeFromDetailPayload,
   formatRecordsMatchDetail,
   type FormattedMatchDetail,
   type MatchDetailBlock,
 } from './recordsMatchDetailFormat';
 
 type ParsedAiSavedBlocks = {
+  model?: string;
   status?: string;
   grade?: string;
   score?: string;
@@ -30,7 +34,8 @@ function parseAiSavedBlocks(blocks: MatchDetailBlock[]): ParsedAiSavedBlocks {
   for (const block of blocks) {
     if (block.kind !== 'kv') continue;
     for (const [k, v] of block.items) {
-      if (k === '상태') out.status = v;
+      if (k === '모델') out.model = v;
+      else if (k === '상태') out.status = v;
       else if (k === '등급') out.grade = v;
       else if (k === '점수') out.score = v;
       else if (k === '요약') out.summary = v;
@@ -143,43 +148,80 @@ function RecordsMatchAiTab({
   gameId,
   matchId,
   puuid,
+  playerName,
   savedBlocks,
   onMergeDetailPayload,
+  aiModel,
+  onAiModelChange,
 }: {
   gameId: string;
   matchId: string;
   puuid?: string;
+  playerName?: string;
   savedBlocks: MatchDetailBlock[];
   onMergeDetailPayload: (patch: Record<string, unknown>) => void;
+  aiModel: string;
+  onAiModelChange: (model: string) => void;
 }) {
-  const [model, setModel] = useState(RECORDS_AI_MODEL_OPTIONS[0]?.value ?? 'gpt-5-mini');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const supported = gameId === 'valorant';
+  const supported = ['valorant', 'lol', 'pubg'].includes(gameId);
   const parsed = useMemo(() => parseAiSavedBlocks(savedBlocks), [savedBlocks]);
   const hasResultContent = Boolean(
-    parsed.status || parsed.grade || parsed.score || parsed.summary || parsed.detailed,
+    parsed.model || parsed.status || parsed.grade || parsed.score || parsed.summary || parsed.detailed,
   );
 
   const run = async () => {
-    if (!supported || !puuid) return;
+    if (!supported) return;
     setError(null);
     setLoading(true);
     try {
-      const rows = await runValorantMatchAiEvaluation({
-        matchId,
-        puuid,
-        model,
-        force: true,
-      });
-      const row = rows.find((r) => r.playerPuuid === puuid) ?? rows[0];
+      let row:
+        | {
+            llmModel?: string | null;
+            status?: string | null;
+            grade?: string | null;
+            score?: number | null;
+            summary?: string | null;
+            detailedComment?: string | null;
+          }
+        | undefined;
+      if (gameId === 'valorant') {
+        if (!puuid) return;
+        const rows = await runValorantMatchAiEvaluation({
+          matchId,
+          puuid,
+          model: aiModel,
+          force: true,
+        });
+        const pid = puuid.trim().toLowerCase();
+        row = rows.find((r) => (r.playerPuuid ?? '').trim().toLowerCase() === pid) ?? rows[0];
+      } else if (gameId === 'lol') {
+        if (!puuid) return;
+        row = await runLolMatchAiEvaluation({
+          matchId,
+          puuid,
+          model: aiModel,
+        });
+      } else if (gameId === 'pubg') {
+        if (!playerName) return;
+        const rows = await runPubgMatchAiEvaluation({
+          matchId,
+          playerName,
+        });
+        row = rows[0];
+      }
       if (!row) {
-        setError('분석 결과가 없습니다. 매치가 DB에 없거나 대상 플레이어를 찾지 못했습니다.');
+        setError(
+          '분석 결과가 없습니다. 매치가 DB에 없거나 대상 플레이어를 찾지 못했습니다. 상세 전적을 한 번 연 뒤(매치 저장) 다시 시도해 주세요.',
+        );
+        onMergeDetailPayload({ records_ai_evaluation: null });
         return;
       }
       onMergeDetailPayload({
         records_ai_evaluation: {
+          llmModel: row.llmModel ?? (gameId === 'pubg' ? undefined : aiModel),
           status: row.status ?? undefined,
           grade: row.grade ?? undefined,
           score: row.score ?? undefined,
@@ -189,6 +231,7 @@ function RecordsMatchAiTab({
       });
     } catch (e) {
       setError(e instanceof Error ? e.message : '분석 실패');
+      onMergeDetailPayload({ records_ai_evaluation: null });
     } finally {
       setLoading(false);
     }
@@ -203,9 +246,9 @@ function RecordsMatchAiTab({
               <span className="records-match-detail-ai-model-caption">모델</span>
               <select
                 className="records-match-detail-ai-model-select"
-                value={model}
-                onChange={(e) => setModel(e.target.value)}
-                disabled={loading}
+                value={aiModel}
+                onChange={(e) => onAiModelChange(e.target.value)}
+                disabled={loading || gameId === 'pubg'}
               >
                 {RECORDS_AI_MODEL_OPTIONS.map((opt) => (
                   <option key={opt.value} value={opt.value}>
@@ -217,16 +260,19 @@ function RecordsMatchAiTab({
             <button
               type="button"
               className="records-match-detail-ai-run-btn"
-              disabled={loading || !puuid}
+              disabled={loading || ((gameId === 'valorant' || gameId === 'lol') ? !puuid : !playerName)}
               onClick={() => void run()}
             >
               {loading ? '분석 중…' : '분석'}
             </button>
           </div>
-          {!puuid ? (
+          {!puuid && (gameId === 'valorant' || gameId === 'lol') ? (
             <p className="records-match-detail-ai-hint">
               플레이어 식별 정보(puuid)가 없어 분석을 실행할 수 없습니다.
             </p>
+          ) : null}
+          {!playerName && gameId === 'pubg' ? (
+            <p className="records-match-detail-ai-hint">PUBG 닉네임 정보가 없어 AI 분석을 실행할 수 없습니다.</p>
           ) : null}
           {error ? <p className="records-match-detail-error">{error}</p> : null}
           <div
@@ -262,8 +308,14 @@ function RecordsMatchAiTab({
               </div>
             ) : null}
 
-            {(parsed.status || parsed.grade || parsed.score) && (!loading || hasResultContent) ? (
+            {(parsed.model || parsed.status || parsed.grade || parsed.score) && (!loading || hasResultContent) ? (
               <div className="records-ai-result-meta">
+                {parsed.model ? (
+                  <span className="records-ai-meta-chip is-model">
+                    <span className="records-ai-meta-label">모델</span>
+                    <span className="records-ai-meta-value">{parsed.model}</span>
+                  </span>
+                ) : null}
                 {parsed.status ? (
                   <span
                     className={[
@@ -350,13 +402,19 @@ function MatchDetailFormattedView({
   gameId,
   matchId,
   puuid,
+  playerName,
   onMergeDetailPayload,
+  aiModel,
+  onAiModelChange,
 }: {
   detail: FormattedMatchDetail;
   gameId: string;
   matchId: string;
   puuid?: string;
+  playerName?: string;
   onMergeDetailPayload: (patch: Record<string, unknown>) => void;
+  aiModel: string;
+  onAiModelChange: (model: string) => void;
 }) {
   const [tab, setTab] = useState<'match' | 'players' | 'ai'>('match');
 
@@ -416,8 +474,11 @@ function MatchDetailFormattedView({
             gameId={gameId}
             matchId={matchId}
             puuid={puuid}
+            playerName={playerName}
             savedBlocks={detail.aiBlocks ?? []}
             onMergeDetailPayload={onMergeDetailPayload}
+            aiModel={aiModel}
+            onAiModelChange={onAiModelChange}
           />
         )}
       </div>
@@ -432,15 +493,21 @@ export function MatchRow({
 }: {
   gameId: string;
   match: NonNullable<PlayerSearchResponse['matches']>[number];
-  detailContext: { puuid?: string; platform?: string };
+  detailContext: { puuid?: string; platform?: string; playerName?: string };
 }) {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailPayload, setDetailPayload] = useState<Record<string, unknown> | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
+  const [detailAiModel, setDetailAiModel] = useState(RECORDS_AI_MODEL_OPTIONS[0]?.value ?? 'gpt-5-mini');
+  const lastDetailFetchKey = useRef<string | null>(null);
+
+  const buildDetailFetchKey = (model: string) =>
+    `${match.matchId ?? ''}|${gameId}|${gameId === 'valorant' ? model : '-'}|${detailContext.puuid ?? ''}`;
 
   const duration = match.playtime ? `${Math.floor(match.playtime / 60)}m` : null;
   const canDetail = GAMES_WITH_MATCH_DETAIL.has(gameId) && Boolean(match.matchId);
+  const listOnlyRow = Boolean(match.extras && (match.extras as { listOnly?: boolean }).listOnly);
 
   const formattedDetail = useMemo(
     () =>
@@ -450,6 +517,16 @@ export function MatchRow({
     [gameId, detailPayload, detailContext.puuid],
   );
 
+  const summaryGameMode = useMemo(() => {
+    const fromList = match.gameMode?.trim();
+    if (fromList) return fromList;
+    if (gameId === 'valorant' && detailPayload) {
+      const fromDetail = extractValorantRowModeFromDetailPayload(detailPayload);
+      if (fromDetail) return fromDetail;
+    }
+    return '';
+  }, [match.gameMode, gameId, detailPayload]);
+
   const toggleDetail = async () => {
     if (!canDetail) return;
     if (detailOpen) {
@@ -457,7 +534,8 @@ export function MatchRow({
       return;
     }
     setDetailOpen(true);
-    if (detailPayload != null) return;
+    const fetchKey = buildDetailFetchKey(detailAiModel);
+    if (detailPayload != null && lastDetailFetchKey.current === fetchKey) return;
     setDetailLoading(true);
     setDetailError(null);
     try {
@@ -466,11 +544,40 @@ export function MatchRow({
         matchId: match.matchId!,
         puuid: detailContext.puuid,
         platform: detailContext.platform,
+        llmModel: gameId === 'valorant' ? detailAiModel : undefined,
       });
       if (!res.success) {
         setDetailError(res.errorMessage || '상세를 불러오지 못했습니다.');
         return;
       }
+      lastDetailFetchKey.current = fetchKey;
+      setDetailPayload((res.payload ?? {}) as Record<string, unknown>);
+    } catch (e) {
+      setDetailError(e instanceof Error ? e.message : '상세 요청 오류');
+    } finally {
+      setDetailLoading(false);
+    }
+  };
+
+  const handleAiModelChange = async (model: string) => {
+    setDetailAiModel(model);
+    if (!detailOpen || !match.matchId) return;
+    const fetchKey = buildDetailFetchKey(model);
+    setDetailLoading(true);
+    setDetailError(null);
+    try {
+      const res = await fetchMatchDetail({
+        game: gameId,
+        matchId: match.matchId,
+        puuid: detailContext.puuid,
+        platform: detailContext.platform,
+        llmModel: gameId === 'valorant' ? model : undefined,
+      });
+      if (!res.success) {
+        setDetailError(res.errorMessage || '상세를 불러오지 못했습니다.');
+        return;
+      }
+      lastDetailFetchKey.current = fetchKey;
       setDetailPayload((res.payload ?? {}) as Record<string, unknown>);
     } catch (e) {
       setDetailError(e instanceof Error ? e.message : '상세 요청 오류');
@@ -481,10 +588,23 @@ export function MatchRow({
 
   return (
     <div className="records-match-block">
-      <div className={`records-match-row ${match.win ? 'is-win' : 'is-loss'}`}>
+      <div
+        className={[
+          'records-match-row',
+          listOnlyRow ? 'is-list-only' : match.win ? 'is-win' : 'is-loss',
+        ]
+          .filter(Boolean)
+          .join(' ')}
+      >
         <div className="records-match-status">
-          <span className={match.win ? 'records-win-badge' : 'records-loss-badge'}>{match.win ? 'WIN' : 'LOSS'}</span>
-          <span className="records-match-mode">{match.gameMode || 'Mode'}</span>
+          {listOnlyRow ? (
+            <span className="records-list-only-badge">요약 없음</span>
+          ) : (
+            <span className={match.win ? 'records-win-badge' : 'records-loss-badge'}>
+              {match.win ? 'WIN' : 'LOSS'}
+            </span>
+          )}
+          <span className="records-match-mode">{summaryGameMode || 'Unknown mode'}</span>
         </div>
         <div
           className={
@@ -495,7 +615,11 @@ export function MatchRow({
         >
           <div className="records-match-stat-block records-match-stat-block--agent">
             <span className="records-match-stat-label">{gameId === 'valorant' ? '에이전트' : '픽'}</span>
-            <strong className="records-match-title">{match.champion || match.agent || 'Unknown'}</strong>
+            <strong className="records-match-title">
+              {listOnlyRow
+                ? '상세 전적에서 확인'
+                : match.champion || match.agent || 'Unknown'}
+            </strong>
           </div>
           {match.kills != null ? (
             <div className="records-match-stat-block">
@@ -527,10 +651,16 @@ export function MatchRow({
           ) : null}
         </div>
         <div className="records-match-meta-chips">
+          {listOnlyRow && match.matchId ? (
+            <span className="records-meta-chip records-meta-chip--id" title={match.matchId}>
+              {match.matchId.length > 14 ? `${match.matchId.slice(0, 12)}…` : match.matchId}
+            </span>
+          ) : null}
           {duration ? <span className="records-meta-chip">{duration}</span> : null}
           {match.cs != null ? <span className="records-meta-chip">CS {match.cs}</span> : null}
-          {match.extras && gameId !== 'valorant'
+          {match.extras && gameId !== 'valorant' && !listOnlyRow
             ? Object.entries(match.extras)
+                .filter(([key]) => key !== 'listOnly')
                 .slice(0, 2)
                 .map(([key, value]) => (
                   <span key={key} className="records-meta-chip">
@@ -557,9 +687,12 @@ export function MatchRow({
               gameId={gameId}
               matchId={match.matchId!}
               puuid={detailContext.puuid}
+              playerName={detailContext.playerName}
               onMergeDetailPayload={(patch) =>
                 setDetailPayload((prev) => (prev ? { ...prev, ...patch } : prev))
               }
+              aiModel={detailAiModel}
+              onAiModelChange={(m) => void handleAiModelChange(m)}
             />
           ) : null}
         </div>
@@ -575,7 +708,10 @@ export function ResultPanel({
   title,
   loading,
   onRefresh,
+  showLoadMore,
+  onLoadMore,
   detailContext,
+  valorantMmrPending,
 }: {
   result: PlayerSearchResponse;
   gameId: string;
@@ -583,7 +719,10 @@ export function ResultPanel({
   title: string;
   loading: boolean;
   onRefresh: () => void;
-  detailContext: { puuid?: string; platform?: string };
+  showLoadMore?: boolean;
+  onLoadMore?: () => void;
+  detailContext: { puuid?: string; platform?: string; playerName?: string };
+  valorantMmrPending?: boolean;
 }) {
   const info = result.playerInfo ?? {};
   const stats = result.stats ?? {};
@@ -591,7 +730,17 @@ export function ResultPanel({
     { label: '총 게임', value: stats.totalGames ?? '-' },
     { label: '승률', value: formatWinRate(stats.winRate) },
     { label: '승리', value: stats.wins ?? '-' },
-    { label: '평균 KDA', value: stats.avgKda != null ? Number(stats.avgKda).toFixed(2) : '-' },
+    {
+      label: gameId === 'pubg' ? '평균 딜량' : '평균 KDA',
+      value:
+        gameId === 'pubg'
+          ? stats.avgDamage != null
+            ? Number(stats.avgDamage).toFixed(0)
+            : '-'
+          : stats.avgKda != null
+            ? Number(stats.avgKda).toFixed(2)
+            : '-',
+    },
     { label: '주력 픽', value: stats.mostUsedChampionOrAgent || '-' },
   ];
 
@@ -611,7 +760,10 @@ export function ResultPanel({
               {info.tagLine ? <span className="records-tag-line">#{info.tagLine}</span> : null}
             </h2>
             <div className="records-rank-row">
-              {info.tier ? (
+              {valorantMmrPending && gameId === 'valorant' ? (
+                <span className="records-soft-badge records-tier-loading">티어 불러오는 중…</span>
+              ) : null}
+              {!valorantMmrPending && info.tier && info.tier !== '…' ? (
                 <span className="records-rank-badge">
                   {info.tier} {info.rank || ''}
                 </span>
@@ -632,14 +784,20 @@ export function ResultPanel({
         </button>
       </div>
 
-      <div className="records-stat-grid">
-        {statCards.map((item) => (
-          <div key={item.label} className="records-stat-card">
-            <span className="records-stat-label">{item.label}</span>
-            <strong className="records-stat-value">{item.value}</strong>
-          </div>
-        ))}
-      </div>
+      {result.matchListOnly ? (
+        <p className="records-match-list-hint">
+          최근 매치는 ID만 불러왔습니다. 각 행에서 「상세 전적」을 누르면 그때 매치 상세 API를 호출합니다.
+        </p>
+      ) : (
+        <div className="records-stat-grid">
+          {statCards.map((item) => (
+            <div key={item.label} className="records-stat-card">
+              <span className="records-stat-label">{item.label}</span>
+              <strong className="records-stat-value">{item.value}</strong>
+            </div>
+          ))}
+        </div>
+      )}
 
       <div className="records-result-body">
         <div className="records-section-card">
@@ -648,16 +806,30 @@ export function ResultPanel({
             <span>{result.matches?.length || 0} games</span>
           </div>
           {result.matches?.length ? (
-            <div className="records-match-list">
-              {result.matches.map((match, index) => (
-                <MatchRow
-                  key={match.matchId || `${index}-${match.gameMode || 'match'}`}
-                  gameId={gameId}
-                  match={match}
-                  detailContext={detailContext}
-                />
-              ))}
-            </div>
+            <>
+              <div className="records-match-list">
+                {result.matches.map((match, index) => (
+                  <MatchRow
+                    key={match.matchId || `${index}-${match.gameMode || 'match'}`}
+                    gameId={gameId}
+                    match={match}
+                    detailContext={detailContext}
+                  />
+                ))}
+              </div>
+              {showLoadMore && onLoadMore ? (
+                <div className="records-load-more-wrap">
+                  <button
+                    type="button"
+                    className="records-load-more-btn"
+                    disabled={loading}
+                    onClick={onLoadMore}
+                  >
+                    {loading ? '불러오는 중…' : '더보기'}
+                  </button>
+                </div>
+              ) : null}
+            </>
           ) : (
             <p className="records-empty-matches">표시할 최근 전적이 없습니다.</p>
           )}

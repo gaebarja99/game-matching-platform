@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 public class CommunityService {
 
     private static final List<PostStatus> VISIBLE_STATUSES = List.of(PostStatus.ACTIVE, PostStatus.BLIND);
-    private static final int POPULAR_LIKE_THRESHOLD = 10;
+    private static final int POPULAR_RECOMMEND_THRESHOLD = 10;
 
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
@@ -120,8 +120,8 @@ public class CommunityService {
                     : postRepository.findByStatusIn(VISIBLE_STATUSES, pageable);
         }
 
-        // popular 여부 확인 (likeCount >= 10)
-        return postPage.map(p -> PostListResponseDto.from(p, p.getLikeCount() >= POPULAR_LIKE_THRESHOLD));
+        // popular 여부 확인 (recommendCount >= 10)
+        return postPage.map(p -> PostListResponseDto.from(p, p.getRecommendCount() >= POPULAR_RECOMMEND_THRESHOLD));
     }
 
     @Transactional(readOnly = true)
@@ -325,7 +325,15 @@ public class CommunityService {
         User user = getUser(userId);
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<PostBookmark> bookmarks = postBookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
-        return bookmarks.map(b -> PostListResponseDto.from(b.getPost(), b.getPost().getLikeCount() >= POPULAR_LIKE_THRESHOLD));
+        return bookmarks.map(b -> PostListResponseDto.from(b.getPost(), b.getPost().getRecommendCount() >= POPULAR_RECOMMEND_THRESHOLD));
+    }
+
+    @Transactional(readOnly = true)
+    public Page<PostListResponseDto> getMyPosts(Long userId, int page, int size) {
+        getUser(userId);
+        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
+        Page<Post> posts = postRepository.findByAuthorIdAndStatusIn(userId, VISIBLE_STATUSES, pageable);
+        return posts.map(post -> PostListResponseDto.from(post, post.getRecommendCount() >= POPULAR_RECOMMEND_THRESHOLD));
     }
 
     // ========== 추천/비추천 ==========
@@ -474,7 +482,7 @@ public class CommunityService {
         if (sortBy != null) {
             switch (sortBy.toLowerCase()) {
                 case "view" -> sort = Sort.by(Sort.Direction.DESC, "viewCount", "createdAt");
-                case "like" -> sort = Sort.by(Sort.Direction.DESC, "likeCount", "createdAt");
+                case "like", "recommend" -> sort = Sort.by(Sort.Direction.DESC, "recommendCount", "createdAt");
                 case "comment" -> sort = Sort.by(Sort.Direction.DESC, "commentCount", "createdAt");
             }
         }

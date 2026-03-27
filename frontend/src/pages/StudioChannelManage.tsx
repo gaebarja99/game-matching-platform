@@ -1,62 +1,86 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import StudioLayout from '../components/StudioLayout';
-import { resolveProfileImageUrl } from '../api/client';
-import { useAuth } from '../contexts/AuthContext';
+import { apiFetch, resolveProfileImageUrl } from '../api/client';
 
-const STORAGE_KEY = 'gamematcher-studio-channel-manage';
+type ChannelManageResponse = {
+  ownerUserId: number;
+  ownerNickname: string;
+  ownerLoginId: string;
+  actingAsManager: boolean;
+  canManagePermissions: boolean;
+  myUserId: number;
+  nickname: string;
+  bio: string;
+  profileImageUrl?: string | null;
+  socialLinks: string[];
+  cafeEnabled: boolean;
+  sponsorRankingVisible: boolean;
+  missionVisible: boolean;
+};
 
-interface ChannelManageState {
+type ChannelManageState = {
   nickname: string;
   bio: string;
   socialLinks: string[];
   cafeEnabled: boolean;
   sponsorRankingVisible: boolean;
   missionVisible: boolean;
-}
+};
 
 export default function StudioChannelManage() {
-  const { user } = useAuth();
+  const [searchParams] = useSearchParams();
   const [socialInput, setSocialInput] = useState('');
   const [savedMessage, setSavedMessage] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [context, setContext] = useState<ChannelManageResponse | null>(null);
+  const [profileImageUrl, setProfileImageUrl] = useState<string | null>(null);
+  const [form, setForm] = useState<ChannelManageState>({
+    nickname: '',
+    bio: '',
+    socialLinks: [],
+    cafeEnabled: false,
+    sponsorRankingVisible: false,
+    missionVisible: false,
+  });
+  const ownerUserIdParam = searchParams.get('ownerUserId');
+  const parsedOwnerUserId = ownerUserIdParam ? Number(ownerUserIdParam) : NaN;
+  const ownerUserId = Number.isFinite(parsedOwnerUserId) ? parsedOwnerUserId : null;
+  const manageEndpoint = ownerUserId ? `api/studio/channel/manage?ownerUserId=${ownerUserId}` : 'api/studio/channel/manage';
 
-  const defaultState = useMemo<ChannelManageState>(
-    () => ({
-      nickname: user?.nickname ?? user?.username ?? user?.loginId ?? '',
-      bio: '안녕하세요!',
-      socialLinks: [],
-      cafeEnabled: false,
-      sponsorRankingVisible: false,
-      missionVisible: false,
-    }),
-    [user],
-  );
-
-  const [form, setForm] = useState<ChannelManageState>(defaultState);
-
-  useEffect(() => {
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) {
-        const parsed = JSON.parse(raw) as Partial<ChannelManageState>;
-        setForm({
-          ...defaultState,
-          ...parsed,
-          nickname: parsed.nickname ?? defaultState.nickname,
-          bio: parsed.bio ?? defaultState.bio,
-          socialLinks: Array.isArray(parsed.socialLinks) ? parsed.socialLinks : defaultState.socialLinks,
-        });
-        return;
-      }
-    } catch {
-      /* ignore */
+  const loadManage = async () => {
+    setLoading(true);
+    setError('');
+    const response = await apiFetch<ChannelManageResponse>(manageEndpoint);
+    if (!response.ok || !response.data) {
+      setError(response.message ?? '채널 정보를 불러오지 못했습니다.');
+      setLoading(false);
+      return;
     }
 
-    setForm(defaultState);
-  }, [defaultState]);
+    setContext(response.data);
+    setProfileImageUrl(response.data.profileImageUrl ?? null);
+    setForm({
+      nickname: response.data.nickname ?? '',
+      bio: response.data.bio ?? '',
+      socialLinks: Array.isArray(response.data.socialLinks) ? response.data.socialLinks : [],
+      cafeEnabled: Boolean(response.data.cafeEnabled),
+      sponsorRankingVisible: Boolean(response.data.sponsorRankingVisible),
+      missionVisible: Boolean(response.data.missionVisible),
+    });
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    loadManage();
+  }, [manageEndpoint]);
 
   const setField = <K extends keyof ChannelManageState>(key: K, value: ChannelManageState[K]) => {
     setForm((prev) => ({ ...prev, [key]: value }));
     setSavedMessage('');
+    setError('');
   };
 
   const handleAddLink = () => {
@@ -66,9 +90,46 @@ export default function StudioChannelManage() {
     setSocialInput('');
   };
 
-  const handleSave = () => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(form));
-    setSavedMessage('채널 정보가 저장되었습니다.');
+  const handleRemoveLink = (index: number) => {
+    setField(
+      'socialLinks',
+      form.socialLinks.filter((_, currentIndex) => currentIndex !== index),
+    );
+  };
+
+  const handleSave = async () => {
+    if (saving) return;
+    setSaving(true);
+    setSavedMessage('');
+    setError('');
+    const response = await apiFetch<ChannelManageResponse>('api/studio/channel/manage', {
+      method: 'PUT',
+      body: JSON.stringify({
+        ...form,
+        ownerUserId,
+      }),
+    });
+    if (!response.ok || !response.data) {
+      setError(response.message ?? '채널 정보 저장에 실패했습니다.');
+      setSaving(false);
+      return;
+    }
+    setContext(response.data);
+    setProfileImageUrl(response.data.profileImageUrl ?? null);
+    setForm({
+      nickname: response.data.nickname ?? '',
+      bio: response.data.bio ?? '',
+      socialLinks: Array.isArray(response.data.socialLinks) ? response.data.socialLinks : [],
+      cafeEnabled: Boolean(response.data.cafeEnabled),
+      sponsorRankingVisible: Boolean(response.data.sponsorRankingVisible),
+      missionVisible: Boolean(response.data.missionVisible),
+    });
+    setSavedMessage(
+      response.data.actingAsManager
+        ? `${response.data.ownerNickname}님의 채널 정보가 저장되었습니다.`
+        : '채널 정보가 저장되었습니다.',
+    );
+    setSaving(false);
   };
 
   return (
@@ -77,13 +138,19 @@ export default function StudioChannelManage() {
         <div>
           <h1 className="page-title">채널 관리</h1>
           <p className="step-desc" style={{ marginTop: -8 }}>
-            채널 프로필과 노출 정보를 치지직 예시처럼 한 곳에서 관리할 수 있습니다.
+            채널 프로필과 노출 정보를 한 곳에서 관리할 수 있습니다.
           </p>
         </div>
-        <button type="button" className="btn-copy" onClick={handleSave}>
+        <button type="button" className="btn-copy" onClick={handleSave} disabled={saving || loading}>
           저장
         </button>
       </div>
+
+      {context?.actingAsManager ? (
+        <div className="settings-card" style={{ marginBottom: 20, maxWidth: 1080, background: '#f7f3ff' }}>
+          <strong>{context.ownerNickname}</strong>님의 채널을 대신 관리 중입니다. 저장하면 해당 채널 정보에 바로 반영됩니다.
+        </div>
+      ) : null}
 
       <div className="settings-card" style={{ marginBottom: 24, maxWidth: 1080 }}>
         <h2>기본 정보</h2>
@@ -103,16 +170,16 @@ export default function StudioChannelManage() {
                 justifyContent: 'center',
               }}
             >
-              {resolveProfileImageUrl(user?.profileImageUrl) ? (
+              {resolveProfileImageUrl(profileImageUrl) ? (
                 <img
-                  src={resolveProfileImageUrl(user?.profileImageUrl)!}
+                  src={resolveProfileImageUrl(profileImageUrl)!}
                   alt=""
                   style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                 />
               ) : null}
             </div>
-            <button type="button" className="btn-secondary">
-              이미지 수정
+            <button type="button" className="btn-secondary" disabled>
+              이미지 수정 준비 중
             </button>
           </div>
         </div>
@@ -126,6 +193,7 @@ export default function StudioChannelManage() {
               maxLength={30}
               onChange={(e) => setField('nickname', e.target.value)}
               style={{ width: '100%' }}
+              disabled={loading || saving}
             />
             <div className="hint" style={{ textAlign: 'right' }}>
               {form.nickname.length}/30
@@ -151,6 +219,7 @@ export default function StudioChannelManage() {
                 fontFamily: 'inherit',
                 resize: 'vertical',
               }}
+              disabled={loading || saving}
             />
             <div className="hint" style={{ textAlign: 'right' }}>
               {form.bio.length}/500
@@ -172,17 +241,21 @@ export default function StudioChannelManage() {
                 onChange={(e) => setSocialInput(e.target.value)}
                 placeholder="https://"
                 style={{ flex: 1 }}
+                disabled={loading || saving}
               />
-              <button type="button" className="btn-copy" onClick={handleAddLink}>
+              <button type="button" className="btn-copy" onClick={handleAddLink} disabled={loading || saving}>
                 링크 추가
               </button>
             </div>
-            <p className="hint">내 채널에 소셜 링크를 최대 5개까지 등록할 수 있습니다.</p>
+            <p className="hint">채널에 표시할 소셜 링크를 최대 5개까지 등록할 수 있습니다.</p>
             {form.socialLinks.length > 0 ? (
               <ul style={{ margin: '10px 0 0', paddingLeft: 18 }}>
                 {form.socialLinks.map((link, index) => (
-                  <li key={`${link}-${index}`} style={{ marginBottom: 6 }}>
-                    {link}
+                  <li key={`${link}-${index}`} style={{ marginBottom: 6, display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ flex: 1, wordBreak: 'break-all' }}>{link}</span>
+                    <button type="button" className="btn-secondary" onClick={() => handleRemoveLink(index)} disabled={loading || saving}>
+                      제거
+                    </button>
                   </li>
                 ))}
               </ul>
@@ -191,29 +264,23 @@ export default function StudioChannelManage() {
         </div>
 
         <div className="settings-row studio-toggle-row">
-          <label>카페 연결</label>
-          <div className="studio-toggle-options">
-            <label><input type="radio" checked={!form.cafeEnabled} onChange={() => setField('cafeEnabled', false)} /> OFF</label>
-            <label><input type="radio" checked={form.cafeEnabled} onChange={() => setField('cafeEnabled', true)} /> ON</label>
-          </div>
-        </div>
-
-        <div className="settings-row studio-toggle-row">
           <label>후원 랭킹 노출</label>
           <div className="studio-toggle-options">
-            <label><input type="radio" checked={!form.sponsorRankingVisible} onChange={() => setField('sponsorRankingVisible', false)} /> 비노출</label>
-            <label><input type="radio" checked={form.sponsorRankingVisible} onChange={() => setField('sponsorRankingVisible', true)} /> 노출</label>
+            <label><input type="radio" checked={!form.sponsorRankingVisible} onChange={() => setField('sponsorRankingVisible', false)} disabled={loading || saving} /> 비노출</label>
+            <label><input type="radio" checked={form.sponsorRankingVisible} onChange={() => setField('sponsorRankingVisible', true)} disabled={loading || saving} /> 노출</label>
           </div>
         </div>
 
         <div className="settings-row studio-toggle-row" style={{ marginBottom: 0 }}>
           <label>미션 후원 목록 노출</label>
           <div className="studio-toggle-options">
-            <label><input type="radio" checked={!form.missionVisible} onChange={() => setField('missionVisible', false)} /> 비노출</label>
-            <label><input type="radio" checked={form.missionVisible} onChange={() => setField('missionVisible', true)} /> 노출</label>
+            <label><input type="radio" checked={!form.missionVisible} onChange={() => setField('missionVisible', false)} disabled={loading || saving} /> 비노출</label>
+            <label><input type="radio" checked={form.missionVisible} onChange={() => setField('missionVisible', true)} disabled={loading || saving} /> 노출</label>
           </div>
         </div>
 
+        {loading ? <p className="hint">채널 정보를 불러오는 중입니다...</p> : null}
+        {error ? <p className="revenue-msg error">{error}</p> : null}
         {savedMessage ? <p className="revenue-msg ok">{savedMessage}</p> : null}
       </div>
     </StudioLayout>
