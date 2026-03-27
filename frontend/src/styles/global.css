@@ -3010,6 +3010,171 @@ select.random-match-chat-input option {
   pointer-events: none;
 }
 
+/* 포지션/역할 아이콘 UI (방 목록/방 만들기/랜덤 매칭 공통) */
+.position-icon {
+  --pos-accent: #9ca3af;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  vertical-align: middle;
+}
+.position-icon-img {
+  width: 18px;
+  height: 18px;
+  display: block;
+  object-fit: contain;
+  transition: filter 0.18s ease, transform 0.18s ease, opacity 0.18s ease;
+}
+.position-icon-mask {
+  /* LoL 공식 포지션 SVG를 mask-image로 렌더링(테마/선택 틴트 용이) */
+  background-color: currentColor;
+  -webkit-mask-image: var(--pos-mask-image);
+  mask-image: var(--pos-mask-image);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+.theme-dark .position-icon-mask { color: rgba(255, 255, 255, 0.92); }
+.theme-light .position-icon-mask { color: rgba(17, 24, 39, 0.9); }
+.position-icon-label {
+  font-weight: 700;
+  font-size: 0.9em;
+}
+.theme-dark .position-icon-label { color: #e5e7eb; }
+.theme-light .position-icon-label { color: #111827; }
+
+.position-picker {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.position-picker-btn {
+  --pos-accent: #9ca3af;
+  width: 42px;
+  height: 42px;
+  border: 1px solid;
+  border-radius: 12px;
+  background: transparent;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  transition: transform 0.15s ease, box-shadow 0.18s ease, border-color 0.18s ease, background 0.18s ease;
+}
+.theme-dark .position-picker-btn { border-color: rgba(255,255,255,0.12); }
+.theme-light .position-picker-btn { border-color: rgba(17,24,39,0.16); }
+.position-picker-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--pos-accent) 28%, transparent), 0 0 18px color-mix(in srgb, var(--pos-accent) 24%, transparent);
+}
+.position-picker-btn.active {
+  border-color: color-mix(in srgb, var(--pos-accent) 70%, transparent);
+  background: color-mix(in srgb, var(--pos-accent) 14%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--pos-accent) 35%, transparent), 0 0 22px color-mix(in srgb, var(--pos-accent) 35%, transparent);
+}
+.position-picker-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; box-shadow: none; }
+.position-picker-btn .position-icon-img {
+  width: 18px;
+  height: 18px;
+  filter: drop-shadow(0 0 0 transparent);
+}
+.position-picker-btn .position-icon-mask {
+  /* picker 안에서는 더 선명하게 */
+  color: rgba(255, 255, 255, 0.9);
+}
+.theme-light .position-picker-btn .position-icon-mask {
+  color: rgba(17, 24, 39, 0.9);
+}
+.position-picker-btn.active .position-icon-mask {
+  /* 기본(비게임별): 선택 시 포인트 컬러 */
+  color: #2ECC71;
+}
+.position-picker-btn[data-game='LEAGUE_OF_LEGENDS'].active {
+  /* LoL 상징색(골드) */
+  border-color: rgba(200, 155, 60, 0.88);
+  background: rgba(200, 155, 60, 0.1);
+  box-shadow: 0 0 0 2px rgba(200, 155, 60, 0.35), 0 0 22px rgba(200, 155, 60, 0.28);
+}
+.position-picker-btn[data-game='LEAGUE_OF_LEGENDS']:hover:not(:disabled) {
+  box-shadow: 0 0 0 2px rgba(200, 155, 60, 0.24), 0 0 18px rgba(200, 155, 60, 0.22);
+}
+.position-picker-btn[data-game='LEAGUE_OF_LEGENDS'].active .position-icon-mask {
+  color: #c89b3c;
+}
+.position-picker-btn[data-game='LEAGUE_OF_LEGENDS'].active .position-icon-img {
+  /* LoL mask 아닌 이미지(예: all.png 등)도 골드 느낌 */
+  filter: drop-shadow(0 0 12px rgba(200, 155, 60, 0.55)) saturate(1.15);
+}
+.position-picker-btn[data-game='VALORANT'].active {
+  /* Valorant 상징색(레드) */
+  border-color: rgba(255, 70, 85, 0.9);
+  background: rgba(255, 70, 85, 0.1);
+  box-shadow: 0 0 0 2px rgba(255, 70, 85, 0.35), 0 0 22px rgba(255, 70, 85, 0.28);
+}
+.position-picker-btn[data-game='VALORANT']:hover:not(:disabled) {
+  box-shadow: 0 0 0 2px rgba(255, 70, 85, 0.24), 0 0 18px rgba(255, 70, 85, 0.22);
+}
+.position-picker-btn[data-game='VALORANT'].active .position-icon-mask {
+  color: #ff4655;
+}
+.position-picker-btn[data-game='VALORANT'].active .position-icon-img {
+  filter: drop-shadow(0 0 12px rgba(255, 70, 85, 0.55)) saturate(1.15);
+}
+.position-picker-btn[data-game='OVERWATCH'].active {
+  border-color: rgba(255, 156, 0, 0.88);
+  background: rgba(255, 156, 0, 0.1);
+  box-shadow: 0 0 0 2px rgba(255, 156, 0, 0.38), 0 0 20px rgba(255, 156, 0, 0.28);
+}
+.position-picker-btn[data-game='OVERWATCH'].active .position-icon-img:not(.ow-role-svg) {
+  filter: drop-shadow(0 0 12px rgba(255, 156, 0, 0.45)) saturate(1.15);
+}
+.position-picker-btn:hover:not(:disabled) .position-icon-img:not(.ow-role-svg):not(.cs2-role-svg),
+.position-picker-btn.active .position-icon-img:not(.ow-role-svg):not(.cs2-role-svg) {
+  filter: drop-shadow(0 0 10px color-mix(in srgb, var(--pos-accent) 55%, transparent)) saturate(1.15);
+}
+
+/* 오버워치 역할 SVG: 기본 연한 회색 계열, hover/선택 시 OW 오렌지 (#ff9c00) */
+.position-picker-btn .ow-role-svg {
+  display: block;
+  flex-shrink: 0;
+  color: rgba(230, 230, 235, 0.88);
+  transition: color 0.18s ease, filter 0.18s ease;
+  filter: none;
+}
+.theme-light .position-picker-btn .ow-role-svg {
+  color: rgba(55, 65, 81, 0.9);
+}
+.position-picker-btn[data-game='OVERWATCH']:hover:not(:disabled) .ow-role-svg,
+.position-picker-btn[data-game='OVERWATCH'].active .ow-role-svg {
+  color: #ff9c00;
+}
+
+/* CS2 역할 SVG: 다크=화이트, 라이트=진회색, active=골드 */
+.position-picker-btn[data-game='COUNTER_STRIKE_2'].active {
+  border-color: rgba(255, 215, 0, 0.9);
+  background: rgba(255, 215, 0, 0.1);
+  box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.35), 0 0 22px rgba(255, 215, 0, 0.28);
+}
+.position-picker-btn .cs2-role-svg {
+  display: block;
+  flex-shrink: 0;
+  color: #ffffff;
+  transition: color 0.18s ease, filter 0.18s ease;
+  filter: none;
+}
+.theme-light .position-picker-btn .cs2-role-svg {
+  color: #333333;
+}
+.position-picker-btn[data-game='COUNTER_STRIKE_2']:hover:not(:disabled) .cs2-role-svg,
+.position-picker-btn[data-game='COUNTER_STRIKE_2'].active .cs2-role-svg {
+  color: #FFD700;
+}
+
 .random-match-chat-start-btn {
   margin-top: 10px;
   padding: 12px 14px;

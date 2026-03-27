@@ -3,7 +3,7 @@
  * 게임 context 있으면 백엔드 static(/images/...) PNG 사용 (apiUrl 경유)
  */
 import { useState } from 'react';
-import { getPositionImagePath } from '../utils/positionImages';
+import { getPositionImagePath, LOL_OFFICIAL_ROLE_ICON_URL_BY_KEY } from '../utils/positionImages';
 import { apiUrl } from '../api/client';
 
 const POSITION_ICONS: Record<string, string> = {
@@ -80,19 +80,77 @@ interface PositionIconProps {
   className?: string;
 }
 
+function positionAccent(game: string | null | undefined, posKey: string): string {
+  const g = (game ?? '').toUpperCase();
+  const p = posKey.toUpperCase();
+  if (g === 'LEAGUE_OF_LEGENDS') {
+    if (p === 'TOP') return '#3B82F6';
+    if (p === 'JUNGLE') return '#22C55E';
+    if (p === 'MID' || p === 'MIDDLE') return '#A855F7';
+    if (p === 'ADC' || p === 'BOTTOM') return '#EF4444';
+    if (p === 'SUPPORT' || p === 'SUP') return '#10B981';
+  }
+  if (g === 'VALORANT') {
+    if (p === 'DUELIST') return '#EF4444';
+    if (p === 'SCOUT' || p === 'INITIATOR') return '#3B82F6';
+    if (p === 'STRATEGIST' || p === 'CONTROLLER') return '#22C55E';
+    if (p === 'WATCHER' || p === 'SENTINEL') return '#F59E0B';
+  }
+  if (g === 'OVERWATCH') {
+    if (p === 'TANK') return '#3B82F6';
+    if (p === 'DAMAGE') return '#EF4444';
+    if (p === 'SUPPORT') return '#F59E0B';
+  }
+  if (g === 'COUNTER_STRIKE_2') {
+    if (p === 'ENTRY') return '#EF4444';
+    if (p === 'AWPER') return '#38BDF8';
+    if (p === 'IGL') return '#A855F7';
+    if (p === 'SUPPORT') return '#22C55E';
+    if (p === 'LURKER') return '#F59E0B';
+  }
+  if (g === 'PUBG') {
+    if (p === 'DUO') return '#38BDF8';
+    if (p === 'SQUAD') return '#F59E0B';
+    if (p === 'ALL') return '#9CA3AF';
+  }
+  return '#9CA3AF';
+}
+
 export default function PositionIcon({ position, game, showLabel = true, className = '' }: PositionIconProps) {
   const key = normalizeKey(position);
   const [imgFailed, setImgFailed] = useState(false);
   const imagePath = game && key && !imgFailed ? getPositionImagePath(game, position) : null;
-  const imageUrl = imagePath ? apiUrl(imagePath) : null;
+  const imageUrl = imagePath
+    ? imagePath.startsWith('http://') || imagePath.startsWith('https://')
+      ? imagePath
+      : apiUrl(imagePath)
+    : null;
 
   if (!key) return <span className={`position-icon ${className}`}>{position || '—'}</span>;
   const icon = POSITION_ICONS[key] ?? '•';
   const label = POSITION_LABELS[key] ?? position;
+  const gameKey = (game ?? '').toUpperCase();
+
+  const isLolOfficialRole =
+    gameKey === 'LEAGUE_OF_LEGENDS' &&
+    key in (LOL_OFFICIAL_ROLE_ICON_URL_BY_KEY as Record<string, string>);
 
   return (
-    <span className={`position-icon ${className}`} title={label}>
+    <span
+      className={`position-icon ${className}`}
+      title={label}
+      style={{ ['--pos-accent' as any]: positionAccent(game, key) }}
+      data-game={(game ?? '').toUpperCase()}
+      data-position={key}
+    >
       {imageUrl ? (
+        isLolOfficialRole ? (
+          <span
+            className="position-icon-img position-icon-mask"
+            style={{ ['--pos-mask-image' as any]: `url("${imageUrl}")` }}
+            aria-hidden
+          />
+        ) : (
         <img
           src={imageUrl}
           alt=""
@@ -100,6 +158,7 @@ export default function PositionIcon({ position, game, showLabel = true, classNa
           aria-hidden
           onError={() => setImgFailed(true)}
         />
+        )
       ) : (
         <span className="position-icon-emoji" aria-hidden>{icon}</span>
       )}

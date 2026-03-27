@@ -32,7 +32,6 @@ import {
   PUBG_MODE_OPTIONS,
   GAME_OPTIONS,
   getMatchModeOptions,
-  getControlledPartyOptions,
   tierOptionsForGame,
   createFormShowTier,
   rankLabel,
@@ -40,13 +39,52 @@ import {
   showPositionForRoom,
   partySizeLabel,
   isLolAram,
-  isLolSoloRank,
   positionRequiredForRandomMatch,
 } from '../utils/randomMatchHelpers';
 import { saveRandomMatchPending, clearRandomMatchPending } from '../utils/randomMatchPendingStorage';
 import { isHiddenGameRoomHost } from '../utils/gameRoomVisibility';
 import { getRoomCapacityMeta } from '../utils/gameRoomCapacity';
 import './Home.css';
+
+function defaultRandomMatchPosition(game: string): string {
+  switch (game) {
+    case 'VALORANT':
+      return 'DUELIST';
+    case 'OVERWATCH':
+      return 'TANK';
+    case 'COUNTER_STRIKE_2':
+      return 'ENTRY';
+    default:
+      return 'TOP';
+  }
+}
+
+function isRandomMatchPositionValid(game: string, pos: string | null): boolean {
+  if (pos == null || pos === '') return false;
+  const p = pos.toUpperCase();
+  switch (game) {
+    case 'LEAGUE_OF_LEGENDS':
+      return ['TOP', 'JUNGLE', 'MID', 'MIDDLE', 'ADC', 'BOTTOM', 'SUPPORT', 'SUP', 'UTILITY'].includes(
+        p,
+      );
+    case 'VALORANT':
+      return [
+        'DUELIST',
+        'SCOUT',
+        'STRATEGIST',
+        'WATCHER',
+        'INITIATOR',
+        'CONTROLLER',
+        'SENTINEL',
+      ].includes(p);
+    case 'OVERWATCH':
+      return ['TANK', 'DAMAGE', 'SUPPORT', 'DPS', 'HEALER'].includes(p);
+    case 'COUNTER_STRIKE_2':
+      return ['ENTRY', 'SUPPORT', 'IGL', 'AWPER', 'LURKER', 'ALL'].includes(p);
+    default:
+      return true;
+  }
+}
 
 function parseGameOptions(s?: string | null): {
   tier?: string;
@@ -122,6 +160,71 @@ function formatRelativeCreatedAt(s: string) {
   } catch {
     return s;
   }
+}
+
+function UserGlyph({ className = '' }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      width={14}
+      height={14}
+      className={className}
+      aria-hidden
+      focusable="false"
+    >
+      <path
+        fill="currentColor"
+        d="M12 12.4a4.2 4.2 0 1 0-4.2-4.2 4.2 4.2 0 0 0 4.2 4.2Zm0 2.1c-3.5 0-6.7 1.8-8.1 4.7a1 1 0 0 0 .9 1.5h14.4a1 1 0 0 0 .9-1.5c-1.4-2.9-4.6-4.7-8.1-4.7Z"
+      />
+    </svg>
+  );
+}
+
+function PubgPartySizeButtons({
+  value,
+  onChange,
+  ariaLabel,
+}: {
+  value: string;
+  onChange: (next: 'DUO' | 'SQUAD') => void;
+  ariaLabel: string;
+}) {
+  const isDuo = value === 'DUO' || value === '';
+  const isSquad = value === 'SQUAD';
+  return (
+    <div className="pubg-party-size" role="radiogroup" aria-label={ariaLabel}>
+      <button
+        type="button"
+        className={`pubg-party-size-btn ${isDuo ? 'active' : ''}`}
+        onClick={() => onChange('DUO')}
+        role="radio"
+        aria-checked={isDuo}
+        aria-label="듀오 2인"
+        title="듀오 2인"
+      >
+        <span className="pubg-party-size-icons" aria-hidden>
+          <UserGlyph />
+          <UserGlyph />
+        </span>
+      </button>
+      <button
+        type="button"
+        className={`pubg-party-size-btn ${isSquad ? 'active' : ''}`}
+        onClick={() => onChange('SQUAD')}
+        role="radio"
+        aria-checked={isSquad}
+        aria-label="스쿼드 4인"
+        title="스쿼드 4인"
+      >
+        <span className="pubg-party-size-icons" aria-hidden>
+          <UserGlyph />
+          <UserGlyph />
+          <UserGlyph />
+          <UserGlyph />
+        </span>
+      </button>
+    </div>
+  );
 }
 
 type TeamPanelType = 'match' | 'create';
@@ -239,10 +342,8 @@ export default function Home() {
   }, [matchGame, matchMode, matchPartySize]);
   const [liveStreams, setLiveStreams] = useState<StreamItem[]>([]);
   const [loadingLive, setLoadingLive] = useState(false);
-  const controlledPartyOptions = getControlledPartyOptions(matchGame, matchMode);
   const positionRequired = positionRequiredForRandomMatch(matchGame, matchMode);
   const positionDisabled = isLolAram(matchGame, matchMode);
-  const partySizeDisabled = isLolSoloRank(matchGame, matchMode);
 
   const [createGame, setCreateGame] = useState('LEAGUE_OF_LEGENDS');
   const [createTitle, setCreateTitle] = useState('');
@@ -452,22 +553,27 @@ export default function Home() {
   }, [matchGame, matchMode]);
 
   useEffect(() => {
-    if (controlledPartyOptions.length === 0) {
+    if (matchGame !== 'PUBG') {
       if (matchPartySize !== '') setMatchPartySize('');
       return;
     }
-    if (!controlledPartyOptions.some((o) => o.value === matchPartySize)) {
-      setMatchPartySize(controlledPartyOptions[0]?.value ?? '');
+    if (matchPartySize !== 'DUO' && matchPartySize !== 'SQUAD') {
+      setMatchPartySize('DUO');
     }
-  }, [controlledPartyOptions, matchPartySize]);
+  }, [matchGame, matchPartySize]);
 
+  // matchPosition을 matchGame/positionRequired에만 맞춤 (의존에 matchPosition 넣지 않음 → 불필요한 루프 방지)
   useEffect(() => {
-    if (positionRequired) {
-      if (!matchPosition) setMatchPosition('TOP');
+    if (!positionRequired) {
+      setMatchPosition((p) => (p == null ? p : null));
       return;
     }
-    if (matchPosition != null) setMatchPosition(null);
-  }, [positionRequired, matchPosition]);
+    setMatchPosition((prev) =>
+      prev != null && isRandomMatchPositionValid(matchGame, prev)
+        ? prev
+        : defaultRandomMatchPosition(matchGame),
+    );
+  }, [matchGame, positionRequired]);
 
   useEffect(() => {
     // LoL 전용 매칭 API는 tier가 필수라 UI에서 숨겨도 기본값을 유지
@@ -721,19 +827,14 @@ export default function Home() {
                   </select>
                 </>
               )}
-              {matchGame !== 'LEAGUE_OF_LEGENDS' && matchGame !== 'VALORANT' && matchGame !== 'OVERWATCH' && matchGame !== 'COUNTER_STRIKE_2' && controlledPartyOptions.length > 0 && (
+              {matchGame === 'PUBG' && (
                 <>
                   <label className="sidebar-form-label">인원</label>
-                  <select
-                    className="sidebar-form-input"
+                  <PubgPartySizeButtons
                     value={matchPartySize}
-                    onChange={(e) => setMatchPartySize(e.target.value)}
-                    disabled={partySizeDisabled}
-                  >
-                    {controlledPartyOptions.map((o) => (
-                      <option key={o.value || '_'} value={o.value}>{o.label}</option>
-                    ))}
-                  </select>
+                    onChange={setMatchPartySize}
+                    ariaLabel="PUBG 인원 선택"
+                  />
                 </>
               )}
               {matchGame !== 'PUBG' && (
@@ -781,7 +882,22 @@ export default function Home() {
           <legend className="create-room-legend">방 정보</legend>
 
           <label className="sidebar-form-label">게임</label>
-          <select className="sidebar-form-input" value={createGame} onChange={(e) => setCreateGame(e.target.value)}>
+          <select
+            className="sidebar-form-input"
+            value={createGame}
+            onChange={(e) => {
+              setCreateGame(e.target.value);
+              setCreateMode('');
+              setCreateTier('');
+              setCreatePosition(null);
+              setCreateMyPosition(null);
+              setCreatePartnerPosition(null);
+              setCreatePrimaryRole(null);
+              setCreateSecondaryRole(null);
+              setCreateFindPosition(null);
+              setCreateError('');
+            }}
+          >
             {GAME_OPTIONS.map((o) => (
               <option key={o.key} value={o.key}>{o.label}</option>
             ))}
@@ -902,22 +1018,11 @@ export default function Home() {
               </div>
 
               <label className="sidebar-form-label">파티</label>
-              <div className="create-toggle-row" role="radiogroup" aria-label="파티 선택">
-                <button
-                  type="button"
-                  className={`create-toggle-btn ${createPartySize === 'DUO' || !createPartySize ? 'active' : ''}`}
-                  onClick={() => setCreatePartySize('DUO')}
-                >
-                  듀오(2인)
-                </button>
-                <button
-                  type="button"
-                  className={`create-toggle-btn ${createPartySize === 'SQUAD' ? 'active' : ''}`}
-                  onClick={() => setCreatePartySize('SQUAD')}
-                >
-                  스쿼드(4인)
-                </button>
-              </div>
+              <PubgPartySizeButtons
+                value={createPartySize}
+                onChange={setCreatePartySize}
+                ariaLabel="PUBG 파티 인원 선택"
+              />
 
               <label className="sidebar-form-label">모드</label>
               <select className="sidebar-form-input" value={createMode} onChange={(e) => setCreateMode(e.target.value)}>
