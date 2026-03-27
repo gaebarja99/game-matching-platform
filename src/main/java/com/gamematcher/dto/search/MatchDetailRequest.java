@@ -27,7 +27,7 @@ public class MatchDetailRequest {
     private String puuid;
 
     /**
-     * 발로란트: DB에 저장된 AI 분석 중 표시할 모델(gpt-5-mini 등). 비우면 서버 기본 {@code ai.llm.model}.
+     * 발로란트·LoL·PUBG: DB에 저장된 AI 분석 중 표시할 모델(gpt-5-mini 등). 비우면 서버 기본 {@code ai.llm.model}.
      */
     private String llmModel;
 

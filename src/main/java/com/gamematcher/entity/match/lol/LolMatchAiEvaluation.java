@@ -1,4 +1,4 @@
-package com.gamematcher.entity.match.pubg;
+package com.gamematcher.entity.match.lol;
 
 import com.gamematcher.constant.ai.evaluation.EvaluationStatus;
 import com.gamematcher.constant.ai.evaluation.Grade;
@@ -10,28 +10,27 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 /**
- * PUBG 매치 참가자별 AI 평가. 모델({@code llm_model})마다 별도 행 (발로/롤과 동일 계열).
+ * LoL 매치 참가자별 AI 평가 (규칙 기반 점수 + LLM 요약/상세).
  */
 @Entity
-@Table(
-        name = "pubg_match_ai_evaluation",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_pubg_ai_eval_participant_model",
-                columnNames = {"pubg_match_participant_id", "llm_model"}
+@Table(name = "lol_match_ai_evaluation", uniqueConstraints = {
+        @UniqueConstraint(
+                name = "uk_lol_ai_eval_participant_model",
+                columnNames = {"lol_match_participant_id", "llm_model"}
         )
-)
+})
 @Getter
 @Setter
 @NoArgsConstructor
-public class PubgMatchAiEvaluation {
+public class LolMatchAiEvaluation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "pubg_match_participant_id", nullable = false)
-    private PubgMatchParticipant pubgMatchParticipant;
+    @JoinColumn(name = "lol_match_participant_id", nullable = false)
+    private LolMatchParticipant lolMatchParticipant;
 
     @Column(name = "llm_model", nullable = false, length = 128)
     private String llmModel = "";
@@ -40,7 +39,6 @@ public class PubgMatchAiEvaluation {
     @Column(nullable = false, length = 20)
     private EvaluationStatus status = EvaluationStatus.PENDING;
 
-    /** 규칙 기반 점수 */
     private Integer score;
 
     @Enumerated(EnumType.STRING)
@@ -60,22 +58,29 @@ public class PubgMatchAiEvaluation {
     @Column(name = "evaluated_at")
     private LocalDateTime evaluatedAt;
 
-    public PubgMatchAiEvaluation(PubgMatchParticipant pubgMatchParticipant) {
-        this.pubgMatchParticipant = pubgMatchParticipant;
+    @PrePersist
+    protected void onCreate() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+    }
+
+    public LolMatchAiEvaluation(LolMatchParticipant participant) {
+        this.lolMatchParticipant = participant;
         this.llmModel = "";
         this.status = EvaluationStatus.PENDING;
         this.createdAt = LocalDateTime.now();
     }
 
-    public PubgMatchAiEvaluation(
-            PubgMatchParticipant pubgMatchParticipant,
+    public LolMatchAiEvaluation(
+            LolMatchParticipant participant,
             String llmModel,
             EvaluationStatus status,
             Integer score,
             String summary,
             String detailedComment
     ) {
-        this.pubgMatchParticipant = pubgMatchParticipant;
+        this.lolMatchParticipant = participant;
         this.llmModel = llmModel != null ? llmModel : "";
         this.status = status;
         this.score = score;
@@ -84,18 +89,5 @@ public class PubgMatchAiEvaluation {
         this.detailedComment = detailedComment;
         this.createdAt = LocalDateTime.now();
         this.evaluatedAt = LocalDateTime.now();
-    }
-
-    @PrePersist
-    protected void onCreate() {
-        if (createdAt == null) {
-            createdAt = LocalDateTime.now();
-        }
-        if (llmModel == null) {
-            llmModel = "";
-        }
-        if (evaluatedAt == null && (summary != null || detailedComment != null)) {
-            evaluatedAt = LocalDateTime.now();
-        }
     }
 }

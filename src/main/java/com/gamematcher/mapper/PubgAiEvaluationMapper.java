@@ -25,6 +25,12 @@ public class PubgAiEvaluationMapper {
                 .summary(entity.getSummary())
                 .detailedComment(entity.getDetailedComment())
                 .debugTimelinePreview(debugTimelinePreview != null ? debugTimelinePreview : List.of())
+                .llmModel(entity.getLlmModel() != null && !entity.getLlmModel().isBlank()
+                        ? entity.getLlmModel()
+                        : null)
+                .status(entity.getStatus() != null ? entity.getStatus().name() : null)
+                .grade(entity.getGrade() != null ? entity.getGrade().name() : null)
+                .score(entity.getScore())
                 .build();
     }
 }

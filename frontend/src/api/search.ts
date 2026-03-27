@@ -117,7 +117,7 @@ export async function fetchMatchDetail(request: {
   region?: string;
   platform?: string;
   puuid?: string;
-  /** 발로란트: 저장된 AI 분석 중 이 모델 행만 붙임. 생략 시 서버 기본 모델 */
+  /** 발로란트·LoL·PUBG: 저장된 AI 분석 중 이 모델 행만 붙임. 생략 시 서버 기본 모델 */
   llmModel?: string;
   forceRefresh?: boolean;
 }): Promise<MatchDetailResponse> {
@@ -172,6 +172,64 @@ export async function runValorantMatchAiEvaluation(request: {
  * GET /api/valorant/evaluations/match/{matchId}/saved — DB에만 있는 저장 분석(LLM 미호출).
  * 해당 모델 행이 없으면 null (404).
  */
+/** POST /api/pubg/evaluations/match/{matchId} 한 행 */
+export interface PubgAiEvaluationApiRow {
+  matchId?: string;
+  accountId?: string;
+  playerName?: string;
+  summary?: string | null;
+  detailedComment?: string | null;
+  llmModel?: string | null;
+  status?: string | null;
+  grade?: string | null;
+  score?: number | null;
+  debugTimelinePreview?: string[];
+}
+
+/**
+ * PUBG 매치 AI 평가 실행·DB 저장 후 결과 목록.
+ * `accountId`는 전적 검색 응답의 `playerInfo.puuid`(PUBG account id)와 동일해야 한다.
+ */
+export async function runPubgMatchAiEvaluation(request: {
+  matchId: string;
+  accountId: string;
+  maxTimelineLines?: number;
+  model?: string;
+  force?: boolean;
+}): Promise<PubgAiEvaluationApiRow[]> {
+  const q = new URLSearchParams();
+  q.set('accountId', request.accountId);
+  if (request.maxTimelineLines != null) {
+    q.set('maxTimelineLines', String(request.maxTimelineLines));
+  }
+  if (request.model) q.set('model', request.model);
+  if (request.force) q.set('force', 'true');
+  const path = `/api/pubg/evaluations/match/${encodeURIComponent(request.matchId)}?${q}`;
+  const response = await apiFetch<PubgAiEvaluationApiRow[]>(path, { method: 'POST' });
+  if (!response.ok || !response.data) {
+    throw new Error(response.message ?? 'PUBG AI 분석 요청에 실패했습니다.');
+  }
+  return response.data;
+}
+
+/** GET /api/pubg/evaluations/match/{matchId}/saved */
+export async function fetchPubgSavedAiEvaluation(request: {
+  matchId: string;
+  accountId: string;
+  model?: string;
+}): Promise<PubgAiEvaluationApiRow | null> {
+  const q = new URLSearchParams();
+  q.set('accountId', request.accountId);
+  if (request.model) q.set('model', request.model);
+  const path = `/api/pubg/evaluations/match/${encodeURIComponent(request.matchId)}/saved?${q}`;
+  const response = await apiFetch<PubgAiEvaluationApiRow>(path, { method: 'GET' });
+  if (response.status === 404) return null;
+  if (!response.ok || !response.data) {
+    throw new Error(response.message ?? '저장된 PUBG AI 분석 조회에 실패했습니다.');
+  }
+  return response.data;
+}
+
 export async function fetchValorantSavedAiEvaluation(request: {
   matchId: string;
   puuid: string;
@@ -185,6 +243,48 @@ export async function fetchValorantSavedAiEvaluation(request: {
   if (response.status === 404) return null;
   if (!response.ok || !response.data) {
     throw new Error(response.message ?? '저장된 AI 분석 조회에 실패했습니다.');
+  }
+  return response.data;
+}
+
+/**
+ * LoL 매치 AI 평가 실행·DB 저장. 응답 필드는 발로와 동일 계열.
+ */
+export async function runLolMatchAiEvaluation(request: {
+  matchId: string;
+  puuid?: string;
+  riotId?: string;
+  model?: string;
+  force?: boolean;
+}): Promise<ValorantAiEvaluationApiRow[]> {
+  const q = new URLSearchParams();
+  if (request.puuid) q.set('puuid', request.puuid);
+  if (request.riotId) q.set('riotId', request.riotId);
+  if (request.model) q.set('model', request.model);
+  if (request.force) q.set('force', 'true');
+  const qs = q.toString();
+  const path = `/api/lol/evaluations/match/${encodeURIComponent(request.matchId)}${qs ? `?${qs}` : ''}`;
+  const response = await apiFetch<ValorantAiEvaluationApiRow[]>(path, { method: 'POST' });
+  if (!response.ok || !response.data) {
+    throw new Error(response.message ?? 'LoL AI 분석 요청에 실패했습니다.');
+  }
+  return response.data;
+}
+
+/** GET /api/lol/evaluations/match/{matchId}/saved */
+export async function fetchLolSavedAiEvaluation(request: {
+  matchId: string;
+  puuid: string;
+  model?: string;
+}): Promise<ValorantAiEvaluationApiRow | null> {
+  const q = new URLSearchParams();
+  q.set('puuid', request.puuid);
+  if (request.model) q.set('model', request.model);
+  const path = `/api/lol/evaluations/match/${encodeURIComponent(request.matchId)}/saved?${q}`;
+  const response = await apiFetch<ValorantAiEvaluationApiRow>(path, { method: 'GET' });
+  if (response.status === 404) return null;
+  if (!response.ok || !response.data) {
+    throw new Error(response.message ?? '저장된 LoL AI 분석 조회에 실패했습니다.');
   }
   return response.data;
 }

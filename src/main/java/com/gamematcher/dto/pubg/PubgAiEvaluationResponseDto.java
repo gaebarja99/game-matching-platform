@@ -7,7 +7,7 @@ import lombok.ToString;
 import java.util.List;
 
 /**
- * PUBG AI 평가 API 응답 DTO (LLM 결과만 포함하는 간단형).
+ * PUBG AI 평가 API 응답 DTO (전적 화면·LLM 결과 연동).
  */
 @Getter
 @ToString
@@ -22,5 +22,12 @@ public class PubgAiEvaluationResponseDto {
 
     /** LLM 프롬프트 입력에 포함된 핵심 라인(디버깅/검증용, 필요 시 클라이언트에서 사용). */
     private final List<String> debugTimelinePreview;
+
+    /** 저장 시 사용한 LLM 모델 ID */
+    private final String llmModel;
+
+    private final String status;
+    private final String grade;
+    private final Integer score;
 }
 

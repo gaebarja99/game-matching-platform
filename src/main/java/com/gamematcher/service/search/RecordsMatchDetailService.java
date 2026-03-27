@@ -5,7 +5,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamematcher.dto.search.MatchDetailRequest;
 import com.gamematcher.dto.search.MatchDetailResponse;
 import com.gamematcher.dto.valorant.ValorantMatchDetailDto;
+import com.gamematcher.dto.lol.LolAiEvaluationResponseDto;
+import com.gamematcher.service.lol.LolAiEvaluationService;
 import com.gamematcher.service.lol.LolApiService;
+import com.gamematcher.dto.pubg.PubgAiEvaluationResponseDto;
+import com.gamematcher.service.pubg.PubgAiEvaluationService;
 import com.gamematcher.service.pubg.PubgApiService;
 import com.gamematcher.service.tft.TftApiService;
 import com.gamematcher.entity.match.valorant.ValorantMatchAiEvaluation;
@@ -42,6 +46,8 @@ public class RecordsMatchDetailService {
     private final ObjectMapper objectMapper;
     private final ValorantMatchPlayerRepository valorantMatchPlayerRepository;
     private final ValorantMatchAiEvaluationRepository valorantMatchAiEvaluationRepository;
+    private final PubgAiEvaluationService pubgAiEvaluationService;
+    private final LolAiEvaluationService lolAiEvaluationService;
 
     public MatchDetailResponse load(MatchDetailRequest req) {
         req.normalize();
@@ -56,9 +62,9 @@ public class RecordsMatchDetailService {
         try {
             return switch (game) {
                 case "valorant" -> loadValorant(matchId, req.getPuuid(), req.getLlmModel());
-                case "lol" -> loadLol(matchId, req.getRegion());
+                case "lol" -> loadLol(matchId, req.getRegion(), req.getPuuid(), req.getLlmModel());
                 case "tft" -> loadTft(matchId, req.getRegion(), req.getPuuid());
-                case "pubg" -> loadPubg(matchId, req.getPlatform());
+                case "pubg" -> loadPubg(matchId, req.getPlatform(), req.getPuuid(), req.getLlmModel());
                 default -> MatchDetailResponse.error(game, matchId,
                         "이 게임은 매치 상세 지연 로드를 지원하지 않습니다: " + game);
             };
@@ -145,12 +151,86 @@ public class RecordsMatchDetailService {
         payload.put("records_ai_evaluation", ai);
     }
 
-    private MatchDetailResponse loadLol(String matchId, String region) {
+    /**
+     * DB에 저장된 해당 매치·PUBG accountId·모델 AI 평가가 있으면 payload에 넣는다.
+     * {@code puuid} 자리에 전적 검색 시 내려온 account id(account.xxx)가 온다.
+     */
+    private void attachPubgAiEvaluationIfPresent(
+            Map<String, Object> payload, String matchId, String accountId, String llmModel) {
+        if (accountId == null || accountId.isBlank()) {
+            return;
+        }
+        Optional<PubgAiEvaluationResponseDto> dtoOpt =
+                pubgAiEvaluationService.findSavedEvaluation(matchId, accountId.trim(), llmModel);
+        if (dtoOpt.isEmpty()) {
+            return;
+        }
+        PubgAiEvaluationResponseDto e = dtoOpt.get();
+        Map<String, Object> ai = new LinkedHashMap<>();
+        if (e.getLlmModel() != null && !e.getLlmModel().isBlank()) {
+            ai.put("llmModel", e.getLlmModel());
+        }
+        if (e.getStatus() != null) {
+            ai.put("status", e.getStatus());
+        }
+        if (e.getGrade() != null) {
+            ai.put("grade", e.getGrade());
+        }
+        if (e.getScore() != null) {
+            ai.put("score", e.getScore());
+        }
+        if (e.getSummary() != null && !e.getSummary().isBlank()) {
+            ai.put("summary", e.getSummary());
+        }
+        if (e.getDetailedComment() != null && !e.getDetailedComment().isBlank()) {
+            ai.put("detailedComment", e.getDetailedComment());
+        }
+        payload.put("records_ai_evaluation", ai);
+    }
+
+    /**
+     * LoL: 저장된 참가자별 AI 평가가 있으면 payload에 붙인다.
+     */
+    private void attachLolAiEvaluationIfPresent(
+            Map<String, Object> payload, String matchId, String puuid, String llmModel) {
+        if (puuid == null || puuid.isBlank()) {
+            return;
+        }
+        Optional<LolAiEvaluationResponseDto> dtoOpt =
+                lolAiEvaluationService.findSavedEvaluation(matchId, puuid.trim(), llmModel);
+        if (dtoOpt.isEmpty()) {
+            return;
+        }
+        LolAiEvaluationResponseDto e = dtoOpt.get();
+        Map<String, Object> ai = new LinkedHashMap<>();
+        if (e.getLlmModel() != null && !e.getLlmModel().isBlank()) {
+            ai.put("llmModel", e.getLlmModel());
+        }
+        if (e.getStatus() != null) {
+            ai.put("status", e.getStatus().name());
+        }
+        if (e.getGrade() != null) {
+            ai.put("grade", e.getGrade().name());
+        }
+        if (e.getScore() != null) {
+            ai.put("score", e.getScore());
+        }
+        if (e.getSummary() != null && !e.getSummary().isBlank()) {
+            ai.put("summary", e.getSummary());
+        }
+        if (e.getDetailedComment() != null && !e.getDetailedComment().isBlank()) {
+            ai.put("detailedComment", e.getDetailedComment());
+        }
+        payload.put("records_ai_evaluation", ai);
+    }
+
+    private MatchDetailResponse loadLol(String matchId, String region, String puuid, String llmModel) {
         Map<String, Object> raw = lolApiService.fetchMatchV5RawForRecords(matchId, region);
         if (raw == null || raw.isEmpty()) {
             return MatchDetailResponse.error("lol", matchId, "매치를 불러올 수 없습니다.");
         }
         lolApiService.persistMatchV5FromSearchMap(raw);
+        attachLolAiEvaluationIfPresent(raw, matchId, puuid, llmModel);
         return MatchDetailResponse.builder()
                 .success(true)
                 .game("lol")
@@ -179,7 +259,7 @@ public class RecordsMatchDetailService {
                 .build();
     }
 
-    private MatchDetailResponse loadPubg(String matchId, String platform) {
+    private MatchDetailResponse loadPubg(String matchId, String platform, String accountIdForAi, String llmModel) {
         if (platform == null || platform.isBlank()) {
             return MatchDetailResponse.error("pubg", matchId, "PUBG는 platform(steam/kakao 등)이 필요합니다.");
         }
@@ -188,6 +268,7 @@ public class RecordsMatchDetailService {
             return MatchDetailResponse.error("pubg", matchId, "매치를 불러올 수 없습니다.");
         }
         pubgApiService.persistMatchFromSearchMap(raw);
+        attachPubgAiEvaluationIfPresent(raw, matchId, accountIdForAi, llmModel);
         return MatchDetailResponse.builder()
                 .success(true)
                 .game("pubg")
