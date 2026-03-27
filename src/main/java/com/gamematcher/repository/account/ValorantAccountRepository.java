@@ -12,4 +12,6 @@ public interface ValorantAccountRepository extends JpaRepository<ValorantAccount
     Optional<ValorantAccount> findByPuuid(String puuid);
 
     Optional<ValorantAccount> findByNameAndTag(String name, String tag);
+
+    Optional<ValorantAccount> findByNameIgnoreCaseAndTagIgnoreCase(String name, String tag);
 }

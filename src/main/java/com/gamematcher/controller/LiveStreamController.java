@@ -7,8 +7,6 @@ import com.gamematcher.dto.stream.UpdateStreamRequest;
 import com.gamematcher.service.ChatService;
 import com.gamematcher.service.FollowService;
 import com.gamematcher.service.LiveStreamService;
-import com.gamematcher.service.LevelService;
-import com.gamematcher.service.ProfanityFilterService;
 import com.gamematcher.service.RankService;
 import com.gamematcher.service.StreamChatSettingsService;
 import com.gamematcher.service.SubscriptionService;
@@ -47,7 +45,6 @@ public class LiveStreamController {
     private final ChatService chatService;
     private final StreamChatSettingsService streamChatSettingsService;
     private final SubscriptionService subscriptionService;
-    private final ProfanityFilterService profanityFilterService;
     private final UserRepository userRepository;
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -133,6 +130,11 @@ public class LiveStreamController {
         return ResponseEntity.ok(liveStreamService.listByUser(uid));
     }
 
+    @GetMapping("/by-user/{userId}")
+    public ResponseEntity<List<StreamResponse>> listUserStreams(@PathVariable Long userId) {
+        return ResponseEntity.ok(liveStreamService.listByUser(userId));
+    }
+
     /**
      * 현재 라이브 중인 스트림 목록.
      */
@@ -191,60 +193,6 @@ public class LiveStreamController {
     public ResponseEntity<List<Map<String, Object>>> getChatTimeline(@PathVariable Long streamId,
                                                                       @RequestParam(defaultValue = "100") int limit) {
         return ResponseEntity.ok(chatService.getRecentTimeline(streamId, limit));
-    }
-
-    @PostMapping("/{streamId}/chat")
-    public ResponseEntity<?> sendChat(@PathVariable Long streamId, @RequestBody Map<String, Object> body, HttpSession session) {
-        Long uid = getCurrentUserId(session);
-        if (uid == null) {
-            return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
-        }
-        String text = body != null && body.get("text") != null ? body.get("text").toString().trim() : "";
-        if (text.isBlank()) {
-            return ResponseEntity.badRequest().body(Map.of("message", "메시지를 입력해주세요."));
-        }
-        if (text.length() > 500) {
-            return ResponseEntity.badRequest().body(Map.of("message", "메시지는 500자까지 보낼 수 있습니다."));
-        }
-
-        StreamResponse stream = liveStreamService.getById(streamId);
-        boolean isStreamer = stream.getUserId() != null && uid.equals(stream.getUserId());
-        boolean isManager = streamChatSettingsService.isManager(streamId, uid);
-        if (streamChatSettingsService.isBanned(streamId, uid)) {
-            return ResponseEntity.badRequest().body(Map.of("message", "채팅이 금지된 사용자입니다."));
-        }
-        if (Boolean.TRUE.equals(stream.getChatFrozen()) && !isStreamer && !isManager) {
-            return ResponseEntity.badRequest().body(Map.of("message", "현재 채팅이 일시 중지되었습니다."));
-        }
-
-        try {
-            text = profanityFilterService.moderateChat(uid, text).getSanitizedText();
-        } catch (IllegalArgumentException e) {
-            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
-        }
-
-        User user = userRepository.findById(uid).orElse(null);
-        String displayName = user != null && user.getNickname() != null && !user.getNickname().isBlank()
-                ? user.getNickname()
-                : (user != null ? user.getUsername() : "알 수 없음");
-        String profileImageUrl = user != null ? user.getProfileImageUrl() : null;
-        String loginId = user != null ? user.getLoginId() : null;
-        int level = user != null && user.getTotalExperienceTenths() != null
-                ? LevelService.getLevel(user.getTotalExperienceTenths())
-                : 1;
-
-        chatService.saveMessage(streamId, uid, text);
-        ChatMessageDto dto = ChatMessageDto.builder()
-                .userId(uid)
-                .loginId(loginId)
-                .displayName(displayName)
-                .profileImageUrl(profileImageUrl)
-                .text(text)
-                .streamer(isStreamer)
-                .level(level)
-                .build();
-        messagingTemplate.convertAndSend("/topic/stream/" + streamId, dto);
-        return ResponseEntity.ok(dto);
     }
 
     /**

@@ -27,24 +27,10 @@
 .app-header .profile-dropdown .dropdown-menu a, .app-header .profile-dropdown .dropdown-menu button { display: flex; align-items: center; gap: 10px; width: 100%; padding: 10px 16px; border: none; background: none; cursor: pointer; font-size: 0.9rem; text-align: left; text-decoration: none; font-family: inherit; color: var(--text); }
 .app-header .profile-dropdown .dropdown-menu a:hover, .app-header .profile-dropdown .dropdown-menu button:hover { background: var(--hover); }
 
-.page-body { display: flex; flex: 1; min-height: 0; align-items: stretch; position: relative; }
-.page-body.has-friend-sidebar { padding-right: 280px; }
+.page-body { display: flex; flex: 1; min-height: 0; }
 .page-main { flex: 1; min-width: 0; padding: 24px; }
-.page-main.with-friend-sidebar { width: 100%; }
-.friend-sidebar { width: 280px; min-width: 280px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--card-bg); display: flex; flex-direction: column; position: fixed; top: 52px; right: 0; bottom: 0; height: auto; max-height: none; overflow: hidden; z-index: 40; }
+.friend-sidebar { width: 280px; min-width: 280px; flex-shrink: 0; border-left: 1px solid var(--border); background: var(--card-bg); display: flex; flex-direction: column; }
 .friend-sidebar-header { padding: 16px; border-bottom: 1px solid var(--border); font-weight: 700; font-size: 1rem; color: var(--text); }
 .friend-sidebar-login { padding: 24px 16px; text-align: center; font-size: 0.9rem; color: var(--text-muted); }
 .friend-sidebar-login .btn-login-side { margin-top: 12px; padding: 8px 16px; background: #00e676; color: #0d0d0f; border: none; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 0.9rem; text-decoration: none; display: inline-block; }
 .friend-sidebar-login .btn-login-side:hover { background: #33eb91; }
-.friend-sidebar-body { display: flex; flex: 1; min-height: 0; overflow: hidden; flex-direction: column; }
-.friend-list-grouped { display: flex; flex-direction: column; gap: 18px; padding: 10px 0 18px; }
-.friend-list-legacy { display: none; }
-.friend-section { display: flex; flex-direction: column; gap: 8px; }
-.friend-section-heading { display: flex; align-items: center; justify-content: space-between; padding: 0 16px; font-size: 0.82rem; font-weight: 700; color: var(--text-muted); }
-.friend-section-count { color: var(--text); }
-.friend-empty-inline { padding: 6px 16px; text-align: left; }
-.friend-status { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-muted); }
-.friend-login-id { margin-left: auto; font-size: 0.75rem; opacity: 0.9; }
-.friend-presence-dot { width: 8px; height: 8px; border-radius: 999px; flex: 0 0 8px; }
-.friend-presence-dot.is-online { background: #22c55e; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.16); }
-.friend-presence-dot.is-offline { background: #94a3b8; box-shadow: 0 0 0 3px rgba(148, 163, 184, 0.16); }

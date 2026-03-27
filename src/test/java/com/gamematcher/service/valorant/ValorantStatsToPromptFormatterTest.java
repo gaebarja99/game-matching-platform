@@ -16,6 +16,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,13 +38,13 @@ class ValorantStatsToPromptFormatterTest {
     class FormatSingleTest {
 
         @Test
-        @DisplayName("null이 주어지면 빈 문자열 반환")
+        @DisplayName("null 이면 빈 문자열 반환")
         void format_null_returnsEmpty() {
             assertThat(formatter.format(null)).isEmpty();
         }
 
         @Test
-        @DisplayName("최소 DTO로 플레이어 정보와 기본 라벨만 출력")
+        @DisplayName("최소 DTO로 플레이어 정보와 기본 블록만 출력")
         void format_minimalDto_outputsPlayerInfo() {
             var dto = ValorantPlayerMatchStatsDTO.builder()
                     .playerDisplayName("Test#1234")
@@ -64,7 +66,7 @@ class ValorantStatsToPromptFormatterTest {
         }
 
         @Test
-        @DisplayName("matchStats가 있으면 K/D/A, ADR, KAST, 멀티킬 등 출력")
+        @DisplayName("matchStats 가 있으면 핵심 지표를 모두 출력")
         void format_withMatchStats_outputsAllIndicators() {
             var matchStats = ValorantMatchStatsDTO.builder()
                     .game("VALORANT")
@@ -108,11 +110,11 @@ class ValorantStatsToPromptFormatterTest {
             assertThat(result).contains("멀티킬: 2");
             assertThat(result).contains("2K:2");
             assertThat(result).contains("DDΔ: 45.2");
-            assertThat(result).contains("매치 평균 기여도 점수]: 105");
+            assertThat(result).contains("[매치 평균 기여도 점수]: 105");
         }
 
         @Test
-        @DisplayName("라운드 스탯이 있으면 예시 라운드 출력 (기본 2개)")
+        @DisplayName("라운드 스탯이 있으면 예시 라운드를 출력")
         void format_withRoundStats_outputsRoundExamples() {
             var round1 = ValorantRoundStatsDTO.builder()
                     .roundIndex(0)
@@ -155,7 +157,7 @@ class ValorantStatsToPromptFormatterTest {
         }
 
         @Test
-        @DisplayName("maxRoundExamples=0이면 라운드 예시 제외")
+        @DisplayName("maxRoundExamples 가 0 이면 라운드 예시는 제외")
         void format_maxRoundExamplesZero_excludesRoundExamples() {
             var round = ValorantRoundStatsDTO.builder()
                     .roundIndex(0)
@@ -170,12 +172,12 @@ class ValorantStatsToPromptFormatterTest {
             String result = formatter.format(dto, 0);
 
             assertThat(result).contains("[라운드 수]: 1");
-            assertThat(result).doesNotContain("[라운드별 예시");
+            assertThat(result).doesNotContain("[라운드통계 예시");
             assertThat(result).doesNotContain("R0:");
         }
 
         @Test
-        @DisplayName("displayName·agent null 시 기본값 출력")
+        @DisplayName("displayName 과 agent 가 null 이면 fallback 출력")
         void format_nullDisplayName_outputsFallback() {
             var dto = ValorantPlayerMatchStatsDTO.builder()
                     .playerPuuid("puuid")
@@ -194,7 +196,7 @@ class ValorantStatsToPromptFormatterTest {
     class FormatAllTest {
 
         @Test
-        @DisplayName("null이 주어지면 빈 문자열 반환")
+        @DisplayName("null 이면 빈 문자열 반환")
         void formatAll_null_returnsEmpty() {
             assertThat(formatter.formatAll(null)).isEmpty();
         }
@@ -206,7 +208,7 @@ class ValorantStatsToPromptFormatterTest {
         }
 
         @Test
-        @DisplayName("여러 플레이어 시 각각 포맷 후 줄바꿈으로 연결")
+        @DisplayName("여러 플레이어는 줄바꿈으로 연결")
         void formatAll_multiplePlayers_joinsWithNewline() {
             var p1 = ValorantPlayerMatchStatsDTO.builder()
                     .playerDisplayName("P1#t1")
@@ -226,17 +228,17 @@ class ValorantStatsToPromptFormatterTest {
     }
 
     @Nested
-    @DisplayName("formatSummary - LLM용 압축 요약")
+    @DisplayName("formatSummary - LLM 요약")
     class FormatSummaryTest {
 
         @Test
-        @DisplayName("null이 주어지면 빈 문자열 반환")
+        @DisplayName("null 이면 빈 문자열 반환")
         void formatSummary_null_returnsEmpty() {
             assertThat(formatter.formatSummary(null)).isEmpty();
         }
 
         @Test
-        @DisplayName("matchStats만 있으면 [매치 요약] 블록 출력")
+        @DisplayName("matchStats 만 있으면 매치 요약 블록 출력")
         void formatSummary_matchStatsOnly_outputsMatchBlock() {
             var matchStats = ValorantMatchStatsDTO.builder()
                     .game("VALORANT")
@@ -279,14 +281,14 @@ class ValorantStatsToPromptFormatterTest {
             assertThat(result).contains("ADR: 81");
             assertThat(result).contains("평균피해격차: -46");
             assertThat(result).contains("헤드샷율: 22%");
-            assertThat(result).contains("First Blood: 1회");
+            assertThat(result).contains("first kill: 1회");
             assertThat(result).contains("First Death: 4회");
             assertThat(result).contains("멀티킬: 1 (더블킬 1회)");
             assertThat(result).doesNotContain("[라운드별]");
         }
 
         @Test
-        @DisplayName("라운드 스탯 있으면 [라운드별] 블록에 라운드당 한 줄 출력")
+        @DisplayName("라운드 스탯이 있으면 라운드별 블록과 라인 출력")
         void formatSummary_withRoundStats_outputsRoundLines() {
             var round1 = ValorantRoundStatsDTO.builder()
                     .roundIndex(0)
@@ -327,12 +329,12 @@ class ValorantStatsToPromptFormatterTest {
             String result = formatter.formatSummary(dto);
 
             assertThat(result).contains("[라운드별]");
-            assertThat(result).contains("R0: 패배 킬1 데스1 딜159 기여도97");
-            assertThat(result).contains("R1: 패배 킬0 데스1 딜0 기여도90");
+            assertThat(result).contains("R0: 패배 킬1 데스1 딜159 승리기여도97");
+            assertThat(result).contains("R1: 패배 킬0 데스1 딜0 승리기여도90");
         }
 
         @Test
-        @DisplayName("maxRoundLines=0이면 라운드 블록 제외")
+        @DisplayName("maxRoundLines 가 0 이면 라운드 블록 제외")
         void formatSummary_maxRoundLinesZero_excludesRounds() {
             var round = ValorantRoundStatsDTO.builder()
                     .roundIndex(0)
@@ -358,7 +360,7 @@ class ValorantStatsToPromptFormatterTest {
         }
 
         @Test
-        @DisplayName("maxRoundLines=1이면 첫 라운드만 출력")
+        @DisplayName("maxRoundLines 가 1 이면 첫 라운드만 출력")
         void formatSummary_maxRoundLinesOne_outputsFirstRoundOnly() {
             var r0 = ValorantRoundStatsDTO.builder().roundIndex(0).roundContributionScore(100).build();
             var r1 = ValorantRoundStatsDTO.builder().roundIndex(1).roundContributionScore(90).build();
@@ -376,24 +378,24 @@ class ValorantStatsToPromptFormatterTest {
     }
 
     @Nested
-    @DisplayName("통합 - 샘플 데이터")
+    @DisplayName("integration - sample data")
     class IntegrationTest {
 
         @Test
-        @DisplayName("샘플 JSON → DTO → format 결과에 필수 필드 포함")
+        @DisplayName("샘플 JSON 기반 format 결과에 핵심 필드 포함")
         void format_sampleData_containsExpectedFields() throws Exception {
             var jsonService = new ValorantMatchJsonService();
             var matchMapper = new ValorantMatchMapper();
             var roundStatsMapper = new ValorantRoundStatsMapper();
-            var scoreService = new com.gamematcher.service.ai.score.ValorantScoreService(
-                    new com.gamematcher.service.ai.score.KillContextExtractor(),
-                    new com.gamematcher.service.ai.score.ValorantRoundScoreEngine(),
-                    new com.gamematcher.service.ai.score.RoundScoreInputBuilder()
+            var scoreService = new ValorantScoreService(
+                    new KillContextExtractor(),
+                    new ValorantRoundScoreEngine(),
+                    new RoundScoreInputBuilder()
             );
             var statsMapper = new ValorantMatchStatsMapper(roundStatsMapper, scoreService);
 
-            String json = java.nio.file.Files.readString(
-                    java.nio.file.Paths.get("src/test/resources/samples/valorant/valorant_match_sample.json"));
+            String json = Files.readString(
+                    Paths.get("src/test/resources/samples/valorant/valorant_match_sample.json"));
             var matchDto = jsonService.parseFirstMatch(json);
             var entity = matchMapper.toEntity(matchDto);
             var playerStats = statsMapper.toPlayerMatchStatsDtos(entity);

@@ -48,11 +48,11 @@ public class DmService {
         String trimmed = text != null ? text.trim() : "";
         if (trimmed.isEmpty()) throw new IllegalArgumentException("메시지를 입력해 주세요.");
         if (trimmed.length() > MAX_TEXT_LENGTH) trimmed = trimmed.substring(0, MAX_TEXT_LENGTH);
-        trimmed = profanityFilterService.moderateChat(fromUserId, trimmed).getSanitizedText();
+        ProfanityFilterService.ModerationResult moderation = profanityFilterService.moderateChat(fromUserId, trimmed);
         DmMessage msg = new DmMessage();
         msg.setFromUserId(fromUserId);
         msg.setToUserId(toUserId);
-        msg.setText(trimmed);
+        msg.setText(moderation.getSanitizedText());
         msg = dmMessageRepository.save(msg);
         notificationService.createForNewDm(toUserId, fromUserId);
         Map<String, Object> payload = Map.of(

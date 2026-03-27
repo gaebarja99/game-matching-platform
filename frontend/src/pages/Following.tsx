@@ -31,7 +31,6 @@ const GAME_LABELS: Record<string, string> = {
   OVERWATCH: '오버워치',
   PUBG: 'PUBG',
   COUNTER_STRIKE_2: '카운터 스트라이크 2',
-  APEX_LEGENDS: '에이펙스 레전드',
   OTHERS: '기타',
 };
 
@@ -93,12 +92,12 @@ export default function Following() {
         <div className="following-tabs">
           <button type="button" className="active">전체</button>
           <button type="button">라이브</button>
-          <button type="button">최근 동영상</button>
+          <button type="button">최근 영상</button>
         </div>
         <div className="following-content">
           <div className="following-empty">
             <div className="following-empty-icon">♥</div>
-            <p className="following-empty-msg">로그인하면 팔로우한 채널의 방송을 모아볼 수 있습니다.</p>
+            <p className="following-empty-msg">로그인하면 팔로우한 채널과 방송을 모아볼 수 있습니다.</p>
             <Link to="/login" className="btn-go">로그인하기</Link>
           </div>
         </div>
@@ -116,11 +115,9 @@ export default function Following() {
       <Link key={s.id} to={`/watch/${s.id}`} className="card">
         <div className="card-thumb">
           {isLive && <span className="live-badge">LIVE</span>}
-          {isLive && s.viewerCount != null && (
-            <span className="viewers">{s.viewerCount}명 시청 중</span>
-          )}
+          {isLive && s.viewerCount != null && <span className="viewers">{s.viewerCount}명 시청 중</span>}
           <div className="thumb-placeholder">
-            {isLive ? '🔴 방송 중' : ''}
+            {isLive ? '생방송 중' : ''}
             {s.game && <br />}
             {s.game && <span style={{ fontSize: '0.75rem' }}>{gameLabel(s.game)}</span>}
           </div>
@@ -197,33 +194,17 @@ export default function Following() {
       );
     }
 
-    if (tab === 'live') {
-      if (streams.length === 0) {
-        return (
-          <div className="following-empty">
-            <div className="following-empty-icon">♥</div>
-            <p className="following-empty-msg">진행 중인 라이브가 없습니다.</p>
-            <Link to="/streams" className="btn-go">다른 방송 보러 가기</Link>
-          </div>
-        );
-      }
-      return <div className="grid">{streams.map(renderStreamCard)}</div>;
+    if (streams.length === 0) {
+      return (
+        <div className="following-empty">
+          <div className="following-empty-icon">♥</div>
+          <p className="following-empty-msg">{tab === 'live' ? '진행 중인 라이브가 없습니다.' : '팔로우한 채널이 없습니다.'}</p>
+          <Link to="/streams" className="btn-go">다른 방송 보러 가기</Link>
+        </div>
+      );
     }
 
-    if (tab === 'recent') {
-      if (streams.length === 0) {
-        return (
-          <div className="following-empty">
-            <div className="following-empty-icon">♥</div>
-            <p className="following-empty-msg">팔로우한 채널이 없습니다.</p>
-            <Link to="/streams" className="btn-go">다른 방송 보러 가기</Link>
-          </div>
-        );
-      }
-      return <div className="grid">{streams.map(renderStreamCard)}</div>;
-    }
-
-    return null;
+    return <div className="grid">{streams.map(renderStreamCard)}</div>;
   };
 
   return (
@@ -232,7 +213,7 @@ export default function Following() {
       <div className="following-tabs">
         <button type="button" className={tab === 'all' ? 'active' : ''} onClick={() => setTab('all')}>전체</button>
         <button type="button" className={tab === 'live' ? 'active' : ''} onClick={() => setTab('live')}>라이브</button>
-        <button type="button" className={tab === 'recent' ? 'active' : ''} onClick={() => setTab('recent')}>최근 동영상</button>
+        <button type="button" className={tab === 'recent' ? 'active' : ''} onClick={() => setTab('recent')}>최근 영상</button>
       </div>
       <div className="following-content">{renderContent()}</div>
     </StreamsLayout>

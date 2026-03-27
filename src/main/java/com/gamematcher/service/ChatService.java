@@ -5,7 +5,6 @@ import com.gamematcher.entity.Donation;
 import com.gamematcher.entity.LiveStream;
 import com.gamematcher.entity.LiveStreamChatMessage;
 import com.gamematcher.entity.User;
-import com.gamematcher.constant.StreamStatus;
 import com.gamematcher.repository.DonationRepository;
 import com.gamematcher.repository.LiveStreamChatMessageRepository;
 import com.gamematcher.repository.LiveStreamRepository;
@@ -17,7 +16,6 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -63,16 +61,11 @@ public class ChatService {
     @Transactional(readOnly = true)
     public List<ChatMessageDto> getRecentMessages(Long streamId, int limit) {
         int safeLimit = Math.min(Math.max(limit, 1), 200);
-        LiveStream stream = liveStreamRepository.findById(streamId).orElse(null);
-        LocalDateTime sessionStart = currentSessionStart(stream);
-        List<LiveStreamChatMessage> list = sessionStart != null
-                ? chatMessageRepository.findByStreamIdAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(
-                        streamId, sessionStart, PageRequest.of(0, safeLimit))
-                : chatMessageRepository.findByStreamIdOrderByCreatedAtDesc(
-                        streamId, PageRequest.of(0, safeLimit));
+        List<LiveStreamChatMessage> list = chatMessageRepository.findByStreamIdOrderByCreatedAtDesc(
+                streamId, PageRequest.of(0, safeLimit));
         if (list.isEmpty()) return List.of();
         Collections.reverse(list);
-        Long streamOwnerId = stream != null ? stream.getUserId() : null;
+        Long streamOwnerId = liveStreamRepository.findById(streamId).map(LiveStream::getUserId).orElse(null);
         return list.stream()
                 .map(m -> toDto(m, streamOwnerId))
                 .collect(Collectors.toList());
@@ -106,20 +99,12 @@ public class ChatService {
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getRecentTimeline(Long streamId, int limit) {
         int safeLimit = Math.min(Math.max(limit, 1), 200);
-        LiveStream stream = liveStreamRepository.findById(streamId).orElse(null);
-        Long streamOwnerId = stream != null ? stream.getUserId() : null;
-        LocalDateTime sessionStart = currentSessionStart(stream);
+        Long streamOwnerId = liveStreamRepository.findById(streamId).map(LiveStream::getUserId).orElse(null);
 
-        List<LiveStreamChatMessage> chats = sessionStart != null
-                ? chatMessageRepository.findByStreamIdAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(
-                        streamId, sessionStart, PageRequest.of(0, safeLimit))
-                : chatMessageRepository.findByStreamIdOrderByCreatedAtDesc(
-                        streamId, PageRequest.of(0, safeLimit));
-        List<Donation> donations = sessionStart != null
-                ? donationRepository.findByStreamIdAndCreatedAtGreaterThanEqualOrderByCreatedAtDesc(
-                        streamId, sessionStart, PageRequest.of(0, safeLimit))
-                : donationRepository.findByStreamIdOrderByCreatedAtDesc(
-                        streamId, PageRequest.of(0, safeLimit));
+        List<LiveStreamChatMessage> chats = chatMessageRepository.findByStreamIdOrderByCreatedAtDesc(
+                streamId, PageRequest.of(0, safeLimit));
+        List<Donation> donations = donationRepository.findByStreamIdOrderByCreatedAtDesc(
+                streamId, PageRequest.of(0, safeLimit));
 
         List<Map<String, Object>> out = new ArrayList<>();
         for (LiveStreamChatMessage m : chats) {
@@ -148,11 +133,9 @@ public class ChatService {
             String donorName = donorUser != null ? (donorUser.getNickname() != null && !donorUser.getNickname().isBlank() ? donorUser.getNickname() : donorUser.getUsername()) : "후원자";
             map.put("donorName", donorName);
             if (donorUser != null && donorUser.getProfileImageUrl() != null) map.put("donorProfileImageUrl", donorUser.getProfileImageUrl());
-            map.put("donorUserId", d.getFromUserId());
             map.put("amount", d.getAmount());
             map.put("tier", DonationService.getPangTier(d.getAmount() != null ? d.getAmount() : 0));
             map.put("donorMessage", d.getMessage());
-            map.put("videoUrl", d.getVideoUrl());
             out.add(map);
         }
         out.sort(Comparator.comparing(m -> {
@@ -163,11 +146,5 @@ public class ChatService {
             out = out.subList(out.size() - safeLimit, out.size());
         }
         return out;
-    }
-
-    private LocalDateTime currentSessionStart(LiveStream stream) {
-        if (stream == null) return null;
-        if (stream.getStatus() != StreamStatus.LIVE) return null;
-        return stream.getStartedAt();
     }
 }

@@ -53,7 +53,6 @@ export default function DirectMessages() {
   const [input, setInput] = useState('');
   const inputResize = useAutoResizeTextarea(input);
   const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState('');
   const [friendProfileModal, setFriendProfileModal] = useState<FriendRow | null>(null);
   const [friendProfileBio, setFriendProfileBio] = useState<{ loading: boolean; text: string; error?: string }>({
     loading: false,
@@ -192,18 +191,11 @@ export default function DirectMessages() {
     setSearchParams({});
   };
 
-  const selectFriend = (f: FriendRow) => {
-    if (!user || isDmWithSelf(user.id, f.id)) return;
-    setSelected(f);
-    setSearchParams({});
-  };
-
   const handleSend = () => {
     if (!user || !selected || sending) return;
     if (isDmWithSelf(user.id, selected.id)) return;
     const text = input.trim();
     if (!text) return;
-    setSendError('');
     setSending(true);
     fetch(apiUrl('api/dm'), {
       method: 'POST',
@@ -213,10 +205,7 @@ export default function DirectMessages() {
     })
       .then((r) => r.json().then((d) => ({ ok: r.ok, data: d as DmMsg & { message?: string } })))
       .then((res) => {
-        if (!res.ok) {
-          setSendError(res.data.message || '메시지를 전송할 수 없습니다.');
-          return;
-        }
+        if (!res.ok) return;
         const sent: DmMsg = {
           id: res.data.id,
           fromUserId: user.id,
@@ -228,7 +217,6 @@ export default function DirectMessages() {
         setInput('');
         loadConversations();
       })
-      .catch(() => setSendError('메시지를 전송할 수 없습니다.'))
       .finally(() => setSending(false));
   };
 
@@ -462,10 +450,7 @@ export default function DirectMessages() {
                   <textarea
                     ref={inputResize.ref}
                     value={input}
-                    onChange={(e) => {
-                      setInput(e.target.value);
-                      if (sendError) setSendError('');
-                    }}
+                    onChange={(e) => setInput(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && !e.shiftKey) {
                         e.preventDefault();
@@ -480,7 +465,6 @@ export default function DirectMessages() {
                     전송
                   </button>
                 </div>
-                {sendError && <div className="group-chat-send-error">{sendError}</div>}
               </>
             )}
           </section>

@@ -22,7 +22,7 @@ public class MileageShopService {
     private static final int MIN_PANG = 1_000;
     private static final int MAX_PANG = 999_999_999;
     private static final long SUBSCRIPTION_TICKET_COST = 4_900L;
-    private static final long AD_FREE_30_DAYS_COST = 8_900L;
+    private static final long AD_FREE_30_DAYS_COST = 4_900L;
 
     private final UserRepository userRepository;
     private final PangService pangService;

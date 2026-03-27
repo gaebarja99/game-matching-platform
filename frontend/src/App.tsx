@@ -8,17 +8,15 @@ import FindLoginId from './pages/FindLoginId';
 import FindPassword from './pages/FindPassword';
 import Register from './pages/Register';
 import Streams from './pages/Streams';
+import Categories from './pages/Categories';
 import Watch from './pages/Watch';
 import Profile from './pages/Profile';
 import ProfileMyInfo from './pages/ProfileMyInfo';
+import ProfileAccountLinks from './pages/ProfileAccountLinks';
 import ProfilePang from './pages/ProfilePang';
 import ProfileMileageShop from './pages/ProfileMileageShop';
 import ProfileAdFree from './pages/ProfileAdFree';
 import ProfileSubscriptions from './pages/ProfileSubscriptions';
-import ProfileMyPosts from './pages/ProfileMyPosts';
-import ProfileSavedPosts from './pages/ProfileSavedPosts';
-import ProfileEsportsPredictions from './pages/ProfileEsportsPredictions';
-import ProfileEsportsRewards from './pages/ProfileEsportsRewards';
 import Studio from './pages/Studio';
 import StudioLive from './pages/StudioLive';
 import StudioSettings from './pages/StudioSettings';
@@ -26,22 +24,26 @@ import StudioAlerts from './pages/StudioAlerts';
 import StudioChatSettings from './pages/StudioChatSettings';
 import StudioAnalysisLive from './pages/StudioAnalysisLive';
 import StudioAnalysisVideo from './pages/StudioAnalysisVideo';
+import StudioChannelManage from './pages/StudioChannelManage';
+import StudioChannelPermissions from './pages/StudioChannelPermissions';
 import StudioViewersFollowers from './pages/StudioViewersFollowers';
+import StudioViewersFans from './pages/StudioViewersFans';
 import StudioViewersSubscribers from './pages/StudioViewersSubscribers';
 import StudioViewersBlocklist from './pages/StudioViewersBlocklist';
 import StudioRevenue from './pages/StudioRevenue';
+import StudioAdminStreamers from './pages/StudioAdminStreamers';
 import Admin from './pages/Admin';
-import AdminReports from './pages/AdminReports';
-import AdminMembers from './pages/AdminMembers';
-import AdminSettlements from './pages/AdminSettlements';
-import AdminRevenue from './pages/AdminRevenue';
+import AdminBroadcasts from './pages/AdminBroadcasts';
 import AdminCommunity from './pages/AdminCommunity';
 import AdminMatchRooms from './pages/AdminMatchRooms';
-import AdminBroadcasts from './pages/AdminBroadcasts';
-import StudioAdminStreamers from './pages/StudioAdminStreamers';
+import AdminMembers from './pages/AdminMembers';
+import AdminReports from './pages/AdminReports';
+import AdminRevenue from './pages/AdminRevenue';
+import AdminSettlements from './pages/AdminSettlements';
 import Following from './pages/Following';
 import History from './pages/History';
 import Channel from './pages/Channel';
+import ChannelWrite from './pages/ChannelWrite';
 import GameRooms from './pages/GameRooms';
 import GroupChat from './pages/GroupChat';
 import GroupChatRoom from './pages/GroupChatRoom';
@@ -83,27 +85,28 @@ function App() {
               <Route path="/find-password" element={<FindPassword />} />
               <Route path="/register" element={<Register />} />
               <Route path="/streams" element={<Streams />} />
+              <Route path="/categories" element={<Categories />} />
               <Route path="/watch/:streamId" element={<Watch />} />
               <Route path="/profile" element={<ProfileLayout />}>
                 <Route index element={<Profile />} />
                 <Route path="my-info" element={<ProfileMyInfo />} />
+                <Route path="account-links" element={<ProfileAccountLinks />} />
                 <Route path="pang" element={<ProfilePang />} />
                 <Route path="mileage-shop" element={<ProfileMileageShop />} />
                 <Route path="adfree" element={<ProfileAdFree />} />
                 <Route path="subscriptions" element={<ProfileSubscriptions />} />
-                <Route path="my-posts" element={<ProfileMyPosts />} />
-                <Route path="saved-posts" element={<ProfileSavedPosts />} />
-                <Route path="esports-predictions" element={<ProfileEsportsPredictions />} />
-                <Route path="esports-rewards" element={<ProfileEsportsRewards />} />
               </Route>
               <Route path="/studio" element={<Studio />} />
               <Route path="/studio/live" element={<StudioLive />} />
               <Route path="/studio/settings" element={<StudioSettings />} />
               <Route path="/studio/alerts" element={<StudioAlerts />} />
               <Route path="/studio/chat" element={<StudioChatSettings />} />
+              <Route path="/studio/channel/manage" element={<StudioChannelManage />} />
+              <Route path="/studio/channel/permissions" element={<StudioChannelPermissions />} />
               <Route path="/studio/analysis/live" element={<StudioAnalysisLive />} />
               <Route path="/studio/analysis/video" element={<StudioAnalysisVideo />} />
               <Route path="/studio/viewers/followers" element={<StudioViewersFollowers />} />
+              <Route path="/studio/viewers/fans" element={<StudioViewersFans />} />
               <Route path="/studio/viewers/subscribers" element={<StudioViewersSubscribers />} />
               <Route path="/studio/viewers/blocklist" element={<StudioViewersBlocklist />} />
               <Route path="/studio/revenue" element={<StudioRevenue />} />
@@ -120,6 +123,7 @@ function App() {
               <Route path="/following" element={<Following />} />
               <Route path="/history" element={<History />} />
               <Route path="/channel" element={<Channel />} />
+              <Route path="/channel/write" element={<ChannelWrite />} />
               <Route path="/game-rooms" element={<GameRooms />} />
               <Route path="/group-chat" element={<GroupChat />} />
               <Route path="/group-chat/room/:roomId" element={<GroupChatRoom />} />

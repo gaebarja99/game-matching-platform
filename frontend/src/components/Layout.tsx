@@ -20,7 +20,6 @@ type NotificationItem = {
   message: string;
   read: boolean;
   createdAt: string;
-  streamId?: number;
 };
 
 type DmMessageItem = {
@@ -50,6 +49,7 @@ type FriendMenuState = { friend: FriendItem; x: number; y: number } | null;
 
 export default function Layout({ children, showFriendSidebar = true, topSection }: LayoutProps) {
   const { user, logout } = useAuth();
+  const isAdmin = ['ADMIN', 'ROLE_ADMIN'].includes((user?.role ?? '').toUpperCase());
   useMatchCompleteNotification(user?.id);
   const { toggleTheme } = useTheme();
   const navigate = useNavigate();
@@ -63,7 +63,6 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
 
   const [activeFriendTab, setActiveFriendTab] = useState<FriendTab>('list');
   const [friends, setFriends] = useState<FriendItem[]>([]);
-  const [onlineFriendIds, setOnlineFriendIds] = useState<Set<number>>(new Set());
   const [receivedRequests, setReceivedRequests] = useState<FriendRequestItem[]>([]);
   const [blockedList, setBlockedList] = useState<FriendItem[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -122,25 +121,6 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
         setFriends(filterFriendsExcludingSelf(arr, user.id));
       })
       .catch(() => setFriends([]));
-  }, [user]);
-
-  const fetchOnlineFriendIds = useCallback(() => {
-    if (!user) {
-      setOnlineFriendIds(new Set());
-      return;
-    }
-    fetch(apiUrl('api/friends/online-ids'), { credentials: 'include' })
-      .then((r) => (r.ok ? r.json() : []))
-      .then((list: number[]) => {
-        const ids = Array.isArray(list) ? list.filter((id): id is number => Number.isFinite(id)) : [];
-        setOnlineFriendIds(new Set(ids));
-      })
-      .catch(() => setOnlineFriendIds(new Set()));
-  }, [user]);
-
-  const heartbeatSession = useCallback(() => {
-    if (!user) return;
-    fetch(apiUrl('api/auth/ping'), { credentials: 'include' }).catch(() => {});
   }, [user]);
 
   const fetchReceivedRequests = useCallback(() => {
@@ -208,17 +188,8 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
           .catch(() => {});
       }
 
-      if (n.type === 'FOLLOWING_STARTED_STREAM' && n.streamId && n.streamId > 0) {
-        navigate(`/watch/${n.streamId}`);
-        return;
-      }
-      if (n.type === 'PAYMENT_COMPLETED' || n.type === 'PAYMENT_REFUNDED' || n.type === 'ADMIN_PANG_GIFT') {
-        navigate('/profile/pang');
-        return;
-      }
-      if (n.type === 'FRIEND_REQUEST') {
-        navigate('/profile');
-      }
+      if (n.type === 'PAYMENT_COMPLETED' || n.type === 'PAYMENT_REFUNDED') navigate('/profile/pang');
+      if (n.type === 'FRIEND_REQUEST') navigate('/profile');
     },
     [fetchNotificationCount, navigate],
   );
@@ -243,31 +214,18 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
     }
     fetchNotificationCount();
     fetchFriends();
-    fetchOnlineFriendIds();
     fetchReceivedRequests();
     fetchBlocked();
 
     const onFriendsChanged = () => {
       fetchFriends();
-      fetchOnlineFriendIds();
       fetchBlocked();
     };
     window.addEventListener('gamematcher-friends-changed', onFriendsChanged);
     return () => {
       window.removeEventListener('gamematcher-friends-changed', onFriendsChanged);
     };
-  }, [user, fetchNotificationCount, fetchFriends, fetchOnlineFriendIds, fetchReceivedRequests, fetchBlocked]);
-
-  useEffect(() => {
-    if (!user) return;
-    heartbeatSession();
-    fetchOnlineFriendIds();
-    const timer = window.setInterval(() => {
-      heartbeatSession();
-      fetchOnlineFriendIds();
-    }, 25000);
-    return () => window.clearInterval(timer);
-  }, [user, heartbeatSession, fetchOnlineFriendIds]);
+  }, [user, fetchNotificationCount, fetchFriends, fetchReceivedRequests, fetchBlocked]);
 
   useEffect(() => () => {
     if (toastTimerRef.current) {
@@ -491,54 +449,12 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
     dmMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [dmMessages, dmOpen]);
 
-  const onlineFriends = friends.filter((friend) => onlineFriendIds.has(friend.id));
-  const offlineFriends = friends.filter((friend) => !onlineFriendIds.has(friend.id));
-
-  const renderFriendListItem = (friend: FriendItem, isOnline: boolean) => (
-    <li className="friend-list-item" key={friend.id}>
-      <div className="friend-avatar-wrap" onClick={(e) => e.stopPropagation()}>
-        <button
-          type="button"
-          className="friend-avatar-btn"
-          onClick={(e) => {
-            const rect = e.currentTarget.getBoundingClientRect();
-            const menuWidth = 132;
-            const menuHeight = 126;
-            const x = Math.max(8, Math.min(window.innerWidth - menuWidth - 8, rect.left - menuWidth - 8));
-            const y = Math.max(8, Math.min(window.innerHeight - menuHeight - 8, rect.top));
-            setFriendMenu((prev) => (prev?.friend.id === friend.id ? null : { friend, x, y }));
-          }}
-          title="친구 메뉴"
-        >
-          <div className="friend-avatar">
-            {resolveProfileImageUrl(friend.profileImageUrl) ? (
-              <img src={resolveProfileImageUrl(friend.profileImageUrl)!} alt="" />
-            ) : (
-              <span className="friend-avatar-fallback">{(friend.nickname || friend.loginId || '?')[0]}</span>
-            )}
-          </div>
-        </button>
-      </div>
-      <div className="friend-meta-wrap">
-        <div className="friend-meta">
-          <div className="friend-name">{friend.nickname || friend.loginId}</div>
-          <div className="friend-status">
-            <span className={`friend-presence-dot ${isOnline ? 'is-online' : 'is-offline'}`} aria-hidden />
-            <span>{isOnline ? '온라인' : '오프라인'}</span>
-            <span className="friend-login-id">@{friend.loginId}</span>
-          </div>
-        </div>
-      </div>
-    </li>
-  );
-
   return (
     <>
       <header className="main-header">
         <Link to="/" className="logo">GameMatcher</Link>
         <nav className="main-nav">
           <Link to="/streams">전체 방송</Link>
-          <Link to="/esports">e스포츠</Link>
           <Link to="/records">전적검색</Link>
           <Link to="/community">커뮤니티</Link>
         </nav>
@@ -608,9 +524,7 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
               <div className="dropdown-menu">
                 <Link to="/profile" onClick={() => setDropdownOpen(false)}>내 프로필</Link>
                 <Link to="/studio" onClick={() => setDropdownOpen(false)}>스튜디오</Link>
-                {user?.role === 'ADMIN' && (
-                  <Link to="/admin" onClick={() => setDropdownOpen(false)}>{'\uAD00\uB9AC'}</Link>
-                )}
+                {isAdmin ? <Link to="/admin" onClick={() => setDropdownOpen(false)}>관리자</Link> : null}
                 <button type="button" onClick={handleLogout}>로그아웃</button>
               </div>
             </div>
@@ -620,8 +534,8 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
 
       {topSection}
 
-      <div className={`page-layout ${showFriendSidebar ? 'has-friend-sidebar' : ''}`}>
-        <main className={`main-container ${showFriendSidebar ? 'with-friend-sidebar' : ''}`}>{children}</main>
+      <div className="page-layout">
+        <main className="main-container">{children}</main>
         {showFriendSidebar && (
           <aside className="friend-sidebar">
             <div className="friend-sidebar-header">친구</div>
@@ -644,41 +558,7 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
 
               <div className={`friend-sidebar-panel ${activeFriendTab === 'list' ? 'active' : ''}`}>
                 <div className="friend-list-wrap">
-                  <div className="friend-list-grouped">
-                    {friends.length === 0 ? (
-                      <div className="friend-empty">친구가 없습니다.</div>
-                    ) : (
-                      <>
-                        <div className="friend-section">
-                          <div className="friend-section-heading">
-                            <span>온라인</span>
-                            <span className="friend-section-count">{onlineFriends.length}</span>
-                          </div>
-                          <ul className="friend-list">
-                            {onlineFriends.length === 0 ? (
-                              <li className="friend-empty friend-empty-inline">온라인 친구가 없습니다.</li>
-                            ) : (
-                              onlineFriends.map((friend) => renderFriendListItem(friend, true))
-                            )}
-                          </ul>
-                        </div>
-                        <div className="friend-section">
-                          <div className="friend-section-heading">
-                            <span>오프라인</span>
-                            <span className="friend-section-count">{offlineFriends.length}</span>
-                          </div>
-                          <ul className="friend-list">
-                            {offlineFriends.length === 0 ? (
-                              <li className="friend-empty friend-empty-inline">오프라인 친구가 없습니다.</li>
-                            ) : (
-                              offlineFriends.map((friend) => renderFriendListItem(friend, false))
-                            )}
-                          </ul>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  <ul className="friend-list friend-list-legacy">
+                  <ul className="friend-list">
                     {friends.length === 0 ? (
                       <li className="friend-empty">친구가 없습니다.</li>
                     ) : friends.map((f) => (

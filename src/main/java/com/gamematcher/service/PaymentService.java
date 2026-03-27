@@ -23,7 +23,8 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * PortOne V1(?????밸븶??ｋ뜦???? ??β뼯援?????????댄뱼癲???癲ル슢怡??귦룈?? */
+ * PortOne V1 결제 연동 및 결제 검증/취소 처리를 담당한다.
+ */
 @Service
 @RequiredArgsConstructor
 @Slf4j
@@ -46,10 +47,10 @@ public class PaymentService {
     @Transactional
     public CreateOrderResult createPangOrder(Long userId, int pangAmount) {
         if (pangAmount < MIN_PANG || pangAmount > MAX_PANG) {
-            throw new IllegalArgumentException("??濡ろ뜐筌?쓣?????? 100 ?????鶯??????⑤챷竊??????용츧????ロ뒌??");
+            throw new IllegalArgumentException("충전 가능한 팡 수량은 100 이상 999,999,999 이하여야 합니다.");
         }
         if (paymentProperties.getApiKey() == null || paymentProperties.getApiKey().isBlank()) {
-            throw new IllegalStateException("??β뼯援???????濚밸Ŧ?????????룸??????????????낆젵. ????댁삩????숆강???????????筌?????????용츧????ロ뒌??");
+            throw new IllegalStateException("결제 설정이 비어 있습니다. 관리자에게 문의해 주세요.");
         }
 
         long amountWon = Math.round(pangAmount * PangConstants.PRICE_WON_PER_PANG);
@@ -64,26 +65,26 @@ public class PaymentService {
         order.setStatus("PENDING");
         paymentOrderRepository.save(order);
 
-        String storeId = paymentProperties.getClientInitKey();
+        String storeId = resolveClientStoreId();
         String pg = paymentProperties.getPg() != null ? paymentProperties.getPg() : "html5_inicis.INIpayTest";
         String payMethod = paymentProperties.getPayMethod() != null ? paymentProperties.getPayMethod() : "card";
 
-        return new CreateOrderResult(orderId, amountWon, "GameMatcher ??" + pangAmount + "媛?異⑹쟾", storeId, pg, payMethod);
+        return new CreateOrderResult(orderId, amountWon, "GameMatcher 팡 " + pangAmount + "개 충전", storeId, pg, payMethod);
     }
 
     @Transactional
     public CreateOrderResult createSubscriptionOrder(Long subscriberId, Long streamerId) {
         if (subscriberId == null || streamerId == null) {
-            throw new IllegalArgumentException("???????꿔꺂??????쒐춯誘↔데鸚????쎛 ????癲?? ???????????낆젵.");
+            throw new IllegalArgumentException("구독 결제를 진행할 대상 정보가 올바르지 않습니다.");
         }
         if (subscriberId.equals(streamerId)) {
-            throw new IllegalArgumentException("???ㅼ뒧?戮レ땡??????嶺?? ?????節뉗땡?????????욱룏???????낆젵.");
+            throw new IllegalArgumentException("본인 채널에는 구독할 수 없습니다.");
         }
         if (paymentProperties.getApiKey() == null || paymentProperties.getApiKey().isBlank()) {
-            throw new IllegalStateException("??β뼯援???????濚밸Ŧ?????????룸??????????????낆젵. ????댁삩????숆강???????????筌?????????용츧????ロ뒌??");
+            throw new IllegalStateException("결제 설정이 비어 있습니다. 관리자에게 문의해 주세요.");
         }
         if (subscriptionService.isSubscribed(subscriberId, streamerId)) {
-            throw new IllegalArgumentException("???? ?????節뉗땡??μ떝?띄몭??袁㏉떋???????낆젵.");
+            throw new IllegalArgumentException("이미 구독 중인 스트리머입니다.");
         }
 
         long amountWon = subscriptionService.getSubscriptionPriceWon();
@@ -99,7 +100,7 @@ public class PaymentService {
         order.setStatus("PENDING");
         paymentOrderRepository.save(order);
 
-        String storeId = paymentProperties.getClientInitKey();
+        String storeId = resolveClientStoreId();
         String pg = paymentProperties.getPg() != null ? paymentProperties.getPg() : "html5_inicis.INIpayTest";
         String payMethod = paymentProperties.getPayMethod() != null ? paymentProperties.getPayMethod() : "card";
 
@@ -109,77 +110,77 @@ public class PaymentService {
     @Transactional
     public ConfirmResult confirmPangPayment(Long userId, String orderId, String impUid) {
         PaymentOrder order = paymentOrderRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("????용츧?嶺뚮?援ο쭩???꿔꺂?????????轅붽틓?????????????욱룏???????낆젵."));
+                .orElseThrow(() -> new IllegalArgumentException("해당 주문 정보를 찾을 수 없습니다."));
 
         if (!order.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("???ㅼ뒧?戮レ땡??????용츧?嶺뚮?援ο쭩?좎녇???꿔꺂??틝???????????????????낆젵.");
+            throw new IllegalArgumentException("현재 사용자와 주문 정보가 일치하지 않습니다.");
         }
         if (order.getKind() != PaymentOrderKind.PANG_CHARGE) {
-            throw new IllegalArgumentException("????濡ろ뜐筌?쓣???????용츧?嶺뚮?援ο쭩???????밸븶?癲??????낆젵.");
+            throw new IllegalArgumentException("팡 충전 주문이 아닙니다.");
         }
         if ("COMPLETED".equals(order.getStatus())) {
             long balance = pangService.getBalance(userId);
-            return new ConfirmResult(true, balance, "???? ?轅붽틓??影?뽧걤?????β뼯援?????????뽯쨦??");
+            return new ConfirmResult(true, balance, "이미 결제가 완료된 주문입니다.");
         }
         if (!"PENDING".equals(order.getStatus())) {
-            throw new IllegalArgumentException("?轅붽틓??影?뽧걤?????????筌뤾쑵??????용츧?嶺뚮?援ο쭩?????釉먮빱???????뽯쨦??");
+            throw new IllegalArgumentException("현재 상태에서는 결제 확인을 진행할 수 없습니다.");
         }
         if (paymentProperties.getApiKey() == null || paymentProperties.getApiKey().isBlank()) {
-            throw new IllegalStateException("??β뼯援???????濚밸Ŧ?????????룸??????????????낆젵.");
+            throw new IllegalStateException("결제 설정이 비어 있습니다.");
         }
 
         verifyAndMarkPayment(order, orderId, impUid);
         long newBalance = pangService.charge(userId, order.getPangAmount(), order.getOrderId(), impUid);
         notificationService.createForPaymentCompleted(userId, order.getPangAmount(), order.getAmountWon());
-        return new ConfirmResult(true, newBalance, "?????꼧 ?野껊챶爾???筌???????");
+        return new ConfirmResult(true, newBalance, "팡 충전이 완료되었습니다.");
     }
 
     @Transactional
     public ConfirmResult confirmSubscriptionPayment(Long subscriberId, String orderId, String impUid) {
         PaymentOrder order = paymentOrderRepository.findByOrderId(orderId)
-                .orElseThrow(() -> new IllegalArgumentException("????용츧?嶺뚮?援ο쭩???꿔꺂?????????轅붽틓?????????????욱룏???????낆젵."));
+                .orElseThrow(() -> new IllegalArgumentException("해당 주문 정보를 찾을 수 없습니다."));
 
         if (!order.getUserId().equals(subscriberId)) {
-            throw new IllegalArgumentException("???ㅼ뒧?戮レ땡??????용츧?嶺뚮?援ο쭩?좎녇???꿔꺂??틝???????????????????낆젵.");
+            throw new IllegalArgumentException("현재 사용자와 주문 정보가 일치하지 않습니다.");
         }
         if (order.getKind() != PaymentOrderKind.SUBSCRIPTION) {
-            throw new IllegalArgumentException("?????節뉗땡?????용츧?嶺뚮?援ο쭩???????밸븶?癲??????낆젵.");
+            throw new IllegalArgumentException("구독 주문이 아닙니다.");
         }
         if (order.getTargetUserId() == null) {
-            throw new IllegalArgumentException("?????節뉗땡???????꿔꺂??????쒐춯誘↔데鸚????쎛 ?????욱룏???????낆젵.");
+            throw new IllegalArgumentException("구독 대상 정보가 누락되었습니다.");
         }
         if ("COMPLETED".equals(order.getStatus())) {
-            return new ConfirmResult(true, 0L, "???? ?轅붽틓??影?뽧걤?????β뼯援?????????뽯쨦??");
+            return new ConfirmResult(true, 0L, "이미 결제가 완료된 주문입니다.");
         }
         if (!"PENDING".equals(order.getStatus())) {
-            throw new IllegalArgumentException("?轅붽틓??影?뽧걤?????????筌뤾쑵??????용츧?嶺뚮?援ο쭩?????釉먮빱???????뽯쨦??");
+            throw new IllegalArgumentException("현재 상태에서는 결제 확인을 진행할 수 없습니다.");
         }
 
         verifyAndMarkPayment(order, orderId, impUid);
         subscriptionService.grantSubscription(subscriberId, order.getTargetUserId(), true);
-        return new ConfirmResult(true, 0L, "?????節뉗땡???????밸븶???癲???????");
+        return new ConfirmResult(true, 0L, "구독 결제가 완료되었습니다.");
     }
 
     @Transactional
     public ConfirmResult refundPangPayment(Long userId, String orderId, String impUid, String reason) {
         PaymentOrder order = findOrderForRefund(orderId, impUid);
         if (!order.getUserId().equals(userId)) {
-            throw new IllegalArgumentException("???ㅼ뒧?戮レ땡??????용츧?嶺뚮?援ο쭩?좎녇????棺??????????????????낆젵.");
+            throw new IllegalArgumentException("현재 사용자와 환불 대상 주문이 일치하지 않습니다.");
         }
         if (order.getKind() != PaymentOrderKind.PANG_CHARGE) {
-            throw new IllegalArgumentException("????濡ろ뜐筌?쓣???????용츧?嶺뚮?援ο쭩?좎녇????棺??????????????????낆젵.");
+            throw new IllegalArgumentException("팡 충전 주문만 환불할 수 있습니다.");
         }
         if ("CANCELLED".equalsIgnoreCase(order.getStatus())) {
             long balance = pangService.getBalance(userId);
-            return new ConfirmResult(true, balance, "???? ???棺?????????용츧?嶺뚮?援ο쭩??????뽯쨦??");
+            return new ConfirmResult(true, balance, "이미 환불된 주문입니다.");
         }
         if (!"COMPLETED".equalsIgnoreCase(order.getStatus())) {
-            throw new IllegalArgumentException("?????밸븶?????β뼯援???鶯ㅺ동???볥궚?????棺??????????????????낆젵.");
+            throw new IllegalArgumentException("결제가 완료된 주문만 환불할 수 있습니다.");
         }
 
         String targetImpUid = impUid != null && !impUid.isBlank() ? impUid : order.getImpUid();
         if (targetImpUid == null || targetImpUid.isBlank()) {
-            throw new IllegalArgumentException("???棺????????impUid???轅붽틓?????????????욱룏???????낆젵.");
+            throw new IllegalArgumentException("환불에 필요한 impUid 정보를 찾을 수 없습니다.");
         }
 
         cancelPaymentAtPortOne(targetImpUid, order.getOrderId(), reason);
@@ -187,7 +188,7 @@ public class PaymentService {
         order.setStatus("CANCELLED");
         paymentOrderRepository.save(order);
         notificationService.createForPaymentRefunded(order.getUserId(), order.getPangAmount(), order.getAmountWon());
-        return new ConfirmResult(true, balance, "???棺??????????밸븶???癲???????");
+        return new ConfirmResult(true, balance, "환불이 완료되었습니다.");
     }
 
     @Transactional
@@ -240,10 +241,10 @@ public class PaymentService {
 
     private void verifyAndMarkPayment(PaymentOrder order, String orderId, String impUid) {
         if (impUid == null || impUid.isBlank()) {
-            throw new IllegalArgumentException("??β뼯援??????癲ル슢?뤷쳞???imp_uid)???ル봿?? ?????룸??????????????낆젵.");
+            throw new IllegalArgumentException("결제 검증에 필요한 imp_uid 값이 없습니다.");
         }
         if (!impUid.startsWith("imp_")) {
-            throw new IllegalArgumentException("??β뼯援??????癲ル슢?뤷쳞?????꿔꺂??틝???놁뗄??????癲?? ???????????낆젵. imp_uid(imp_...) ???ル봿?????????밸븶????????용츧????ロ뒌??");
+            throw new IllegalArgumentException("imp_uid 형식이 올바르지 않습니다.");
         }
 
         String token = getPortOneAccessToken();
@@ -259,13 +260,13 @@ public class PaymentService {
             paymentOrderRepository.save(order);
             log.warn("Payment mismatch. orderId={}, impUid={}, merchant_uid={}, paid={}, expected={}",
                     orderId, impUid, respMerchantUid, amountPaid, order.getAmountWon());
-            throw new IllegalArgumentException("??β뼯援??????꿔꺂??????쒐춯誘↔데鸚????쎛 ????용츧?嶺뚮?援ο쭩????嚥싲갭큔?딆뼍留??? ???????????낆젵.");
+            throw new IllegalArgumentException("결제 금액 또는 주문 정보가 일치하지 않습니다.");
         }
 
         if (!"paid".equalsIgnoreCase(status)) {
             order.setStatus("FAILED");
             paymentOrderRepository.save(order);
-            throw new IllegalArgumentException("??β뼯援???鶯ㅺ동???怨?? ?????밸븶???? ?????源낅돹?????? (status=" + status + ")");
+            throw new IllegalArgumentException("결제 상태가 paid가 아닙니다. status=" + status);
         }
 
         order.setStatus("COMPLETED");
@@ -283,51 +284,60 @@ public class PaymentService {
                 "imp_secret", paymentProperties.getApiSecret()
         );
 
-        ResponseEntity<?> resp;
+        ResponseEntity<?> response;
         try {
-            resp = restTemplate.postForEntity(IAMPORT_GET_TOKEN, new HttpEntity<>(body, headers), Map.class);
-        } catch (HttpStatusCodeException e) {
-            log.warn("PortOne token request failed: status={}, body={}", e.getStatusCode(), e.getResponseBodyAsString());
-            throw new IllegalStateException("?????????節떷????ш끽維뽳쭩?좊쐪???????怨뚯댅 (HTTP " + e.getStatusCode().value() + ")");
-        } catch (Exception e) {
-            log.warn("PortOne token request failed", e);
-            throw new IllegalStateException("?????????節떷????ш끽維뽳쭩?좊쐪???????怨뚯댅");
+            response = restTemplate.postForEntity(IAMPORT_GET_TOKEN, new HttpEntity<>(body, headers), Map.class);
+        } catch (HttpStatusCodeException exception) {
+            log.warn("PortOne token request failed: status={}, body={}", exception.getStatusCode(), exception.getResponseBodyAsString());
+            throw new IllegalStateException("PortOne 토큰 발급에 실패했습니다. HTTP " + exception.getStatusCode().value());
+        } catch (Exception exception) {
+            log.warn("PortOne token request failed", exception);
+            throw new IllegalStateException("PortOne 토큰 발급 중 알 수 없는 오류가 발생했습니다.");
         }
 
-        if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null) {
-            throw new IllegalStateException("?????????節떷????ш끽維뽳쭩?좊쐪???????怨뚯댅 (HTTP " + resp.getStatusCode().value() + ")");
+        if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+            throw new IllegalStateException("PortOne 토큰 발급에 실패했습니다. HTTP " + response.getStatusCode().value());
         }
 
-        Object bodyObj = resp.getBody();
+        Object bodyObj = response.getBody();
         if (!(bodyObj instanceof Map<?, ?> bodyMap)) {
-            throw new IllegalStateException("?????????節떷????ш끽維뽳쭩?좊쐪???????????꿔꺂??틝???놁뗄??????癲?? ???????????낆젵.");
+            throw new IllegalStateException("PortOne 토큰 응답 형식이 올바르지 않습니다.");
         }
 
-        Number code = bodyMap.get("code") instanceof Number n ? n : null;
+        Number code = bodyMap.get("code") instanceof Number number ? number : null;
         String message = bodyMap.get("message") != null ? bodyMap.get("message").toString() : null;
         if (code != null && code.intValue() != 0) {
-            throw new IllegalStateException("?????????節떷????ш끽維뽳쭩?좊쐪???????怨뚯댅: " + (message != null ? message : "unknown") + " (code=" + code.intValue() + ")");
+            throw new IllegalStateException("PortOne 토큰 발급에 실패했습니다. "
+                    + (message != null ? message : "unknown")
+                    + " (code=" + code.intValue() + ")");
         }
 
-        Object response = bodyMap.get("response");
-        if (response instanceof Map<?, ?> responseMap) {
+        Object responseObj = bodyMap.get("response");
+        if (responseObj instanceof Map<?, ?> responseMap) {
             Object accessToken = responseMap.get("access_token");
             if (accessToken != null) return accessToken.toString();
         }
 
-        throw new IllegalStateException("?????????節떷??access_token)?????ル봿????꿔꺂????紐꾩뮏?β뼯猷????깆궔? ?轅붽틓??彛?臾믪뮏?鶯??????");
+        throw new IllegalStateException("PortOne 토큰 응답에 access_token이 없습니다.");
+    }
+
+    private String resolveClientStoreId() {
+        if (paymentProperties.getCustomerCode() != null && !paymentProperties.getCustomerCode().isBlank()) {
+            return paymentProperties.getCustomerCode().trim();
+        }
+        return paymentProperties.getStoreId() != null ? paymentProperties.getStoreId().trim() : "";
     }
 
     private PaymentOrder findOrderForRefund(String orderId, String impUid) {
         if (orderId != null && !orderId.isBlank()) {
             return paymentOrderRepository.findByOrderId(orderId)
-                    .orElseThrow(() -> new IllegalArgumentException("????용츧?嶺뚮?援ο쭩???꿔꺂?????????轅붽틓?????????????욱룏???????낆젵."));
+                    .orElseThrow(() -> new IllegalArgumentException("해당 주문 정보를 찾을 수 없습니다."));
         }
         if (impUid != null && !impUid.isBlank()) {
             return paymentOrderRepository.findByImpUid(impUid)
-                    .orElseThrow(() -> new IllegalArgumentException("????용츧?嶺뚮?援ο쭩???꿔꺂?????????轅붽틓?????????????욱룏???????낆젵."));
+                    .orElseThrow(() -> new IllegalArgumentException("해당 주문 정보를 찾을 수 없습니다."));
         }
-        throw new IllegalArgumentException("orderId ?????impUid???ル봿?? ?????밸븶???癲ル슢?????");
+        throw new IllegalArgumentException("orderId 또는 impUid 중 하나는 반드시 필요합니다.");
     }
 
     @SuppressWarnings("unchecked")
@@ -341,36 +351,38 @@ public class PaymentService {
         Map<String, Object> body = new HashMap<>();
         body.put("imp_uid", impUid);
         body.put("merchant_uid", orderId);
-        body.put("reason", (reason != null && !reason.isBlank()) ? reason : "?ъ슜???붿껌 ?섎텋");
+        body.put("reason", (reason != null && !reason.isBlank()) ? reason : "사용자 요청 환불");
 
         try {
-            ResponseEntity<?> resp = restTemplate.postForEntity(
+            ResponseEntity<?> response = restTemplate.postForEntity(
                     IAMPORT_CANCEL_PAYMENT,
                     new HttpEntity<>(body, headers),
                     Map.class
             );
-            if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null) {
-                throw new IllegalStateException("????????棺?????????怨뚯댅 (HTTP " + resp.getStatusCode().value() + ")");
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                throw new IllegalStateException("PortOne 결제 취소에 실패했습니다. HTTP " + response.getStatusCode().value());
             }
 
-            Object bodyObj = resp.getBody();
+            Object bodyObj = response.getBody();
             if (!(bodyObj instanceof Map<?, ?> bodyMap)) {
-                throw new IllegalStateException("????????棺?????????????꿔꺂??틝???놁뗄??????癲?? ???????????낆젵.");
+                throw new IllegalStateException("PortOne 결제 취소 응답 형식이 올바르지 않습니다.");
             }
 
-            Number code = bodyMap.get("code") instanceof Number n ? n : null;
+            Number code = bodyMap.get("code") instanceof Number number ? number : null;
             String message = bodyMap.get("message") != null ? bodyMap.get("message").toString() : null;
             if (code != null && code.intValue() != 0) {
-                throw new IllegalStateException("????????棺?????????怨뚯댅: " + (message != null ? message : "unknown") + " (code=" + code.intValue() + ")");
+                throw new IllegalStateException("PortOne 결제 취소에 실패했습니다. "
+                        + (message != null ? message : "unknown")
+                        + " (code=" + code.intValue() + ")");
             }
-        } catch (HttpStatusCodeException e) {
-            log.warn("PortOne cancel failed: imp_uid={}, status={}, body={}", impUid, e.getStatusCode(), e.getResponseBodyAsString());
-            throw new IllegalStateException("????????棺?????????怨뚯댅 (HTTP " + e.getStatusCode().value() + ")");
-        } catch (Exception e) {
-            if (e instanceof IllegalStateException ise) {
-                throw ise;
+        } catch (HttpStatusCodeException exception) {
+            log.warn("PortOne cancel failed: imp_uid={}, status={}, body={}", impUid, exception.getStatusCode(), exception.getResponseBodyAsString());
+            throw new IllegalStateException("PortOne 결제 취소에 실패했습니다. HTTP " + exception.getStatusCode().value());
+        } catch (Exception exception) {
+            if (exception instanceof IllegalStateException illegalStateException) {
+                throw illegalStateException;
             }
-            throw new IllegalStateException("????????棺???????????⑤챷逾???ル봿?? ??ш끽維뽳쭩?좊쐪筌먲퐢?????????????낆젵.");
+            throw new IllegalStateException("PortOne 결제 취소 중 알 수 없는 오류가 발생했습니다.");
         }
     }
 
@@ -381,42 +393,44 @@ public class PaymentService {
         String paymentLookupUrl = IAMPORT_GET_PAYMENT + impUid + (isSandboxPg() ? "?include_sandbox=true" : "");
 
         try {
-            ResponseEntity<?> resp = restTemplate.exchange(
+            ResponseEntity<?> response = restTemplate.exchange(
                     paymentLookupUrl,
                     HttpMethod.GET,
                     new HttpEntity<>(headers),
                     Map.class
             );
 
-            if (!resp.getStatusCode().is2xxSuccessful() || resp.getBody() == null) {
-                throw new IllegalArgumentException("???????β뼯援???????곗뒭?????????怨뚯댅 (HTTP " + resp.getStatusCode().value() + ")");
+            if (!response.getStatusCode().is2xxSuccessful() || response.getBody() == null) {
+                throw new IllegalArgumentException("PortOne 결제 조회에 실패했습니다. HTTP " + response.getStatusCode().value());
             }
 
-            Object bodyObj = resp.getBody();
+            Object bodyObj = response.getBody();
             if (!(bodyObj instanceof Map<?, ?> bodyMap)) {
-                throw new IllegalArgumentException("???????β뼯援???????곗뒭?????????????꿔꺂??틝???놁뗄??????癲?? ???????????낆젵.");
+                throw new IllegalArgumentException("PortOne 결제 조회 응답 형식이 올바르지 않습니다.");
             }
 
-            Number code = bodyMap.get("code") instanceof Number n ? n : null;
+            Number code = bodyMap.get("code") instanceof Number number ? number : null;
             String message = bodyMap.get("message") != null ? bodyMap.get("message").toString() : null;
             if (code != null && code.intValue() != 0) {
-                throw new IllegalArgumentException("???????β뼯援???????곗뒭?????????怨뚯댅: " + (message != null ? message : "unknown") + " (code=" + code.intValue() + ")");
+                throw new IllegalArgumentException("PortOne 결제 조회에 실패했습니다. "
+                        + (message != null ? message : "unknown")
+                        + " (code=" + code.intValue() + ")");
             }
 
-            Object response = bodyMap.get("response");
-            if (!(response instanceof Map<?, ?> responseMap)) {
-                throw new IllegalArgumentException("???????β뼯援???????곗뒭??????β뼯援?????筌믨퀣?? ?????룸??????????????낆젵.");
+            Object responseObj = bodyMap.get("response");
+            if (!(responseObj instanceof Map<?, ?> responseMap)) {
+                throw new IllegalArgumentException("PortOne 결제 조회 응답에 결제 정보가 없습니다.");
             }
             return (Map<String, Object>) responseMap;
-        } catch (HttpStatusCodeException e) {
-            log.warn("PortOne getPayment failed: imp_uid={}, status={}, body={}", impUid, e.getStatusCode(), e.getResponseBodyAsString());
-            throw new IllegalArgumentException("???????β뼯援???????곗뒭?????????怨뚯댅 (HTTP " + e.getStatusCode().value() + ")");
-        } catch (Exception e) {
-            log.warn("PortOne getPayment failed: imp_uid={}", impUid, e);
-            if (e instanceof IllegalArgumentException iae) {
-                throw iae;
+        } catch (HttpStatusCodeException exception) {
+            log.warn("PortOne getPayment failed: imp_uid={}, status={}, body={}", impUid, exception.getStatusCode(), exception.getResponseBodyAsString());
+            throw new IllegalArgumentException("PortOne 결제 조회에 실패했습니다. HTTP " + exception.getStatusCode().value());
+        } catch (Exception exception) {
+            log.warn("PortOne getPayment failed: imp_uid={}", impUid, exception);
+            if (exception instanceof IllegalArgumentException illegalArgumentException) {
+                throw illegalArgumentException;
             }
-            throw new IllegalArgumentException("???????β뼯援???????곗뒭???????????⑤챷逾???ル봿?? ??ш끽維뽳쭩?좊쐪筌먲퐢?????????????낆젵.");
+            throw new IllegalArgumentException("PortOne 결제 조회 중 알 수 없는 오류가 발생했습니다.");
         }
     }
 

@@ -1,7 +1,10 @@
-﻿let appInstance: unknown = null;
-let authInstance: unknown = null;
+import type { FirebaseApp, FirebaseOptions } from 'firebase/app';
+import type { Auth } from 'firebase/auth';
 
-function getFirebaseConfig() {
+let appInstance: FirebaseApp | null = null;
+let authInstance: Auth | null = null;
+
+function getFirebaseConfig(): FirebaseOptions {
   return {
     apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
     authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
@@ -19,7 +22,7 @@ function hasFirebaseConfig(cfg: ReturnType<typeof getFirebaseConfig>): boolean {
   return Boolean(cfg.apiKey && String(cfg.apiKey).trim() !== '' && cfg.appId && String(cfg.appId).trim() !== '');
 }
 
-export async function getFirebaseApp(): Promise<unknown> {
+export async function getFirebaseApp(): Promise<FirebaseApp | null> {
   if (appInstance) return appInstance;
 
   const config = getFirebaseConfig();
@@ -35,7 +38,7 @@ export async function getFirebaseApp(): Promise<unknown> {
   }
 }
 
-export async function getAuth(): Promise<unknown> {
+export async function getAuth(): Promise<Auth | null> {
   if (authInstance) return authInstance;
 
   const app = await getFirebaseApp();
@@ -43,7 +46,7 @@ export async function getAuth(): Promise<unknown> {
 
   try {
     const firebaseAuth = await import('firebase/auth');
-    authInstance = firebaseAuth.getAuth(app as never);
+    authInstance = firebaseAuth.getAuth(app);
     return authInstance;
   } catch {
     return null;

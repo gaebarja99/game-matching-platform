@@ -50,7 +50,7 @@ export default function GroupChatRoom() {
   const [messages, setMessages] = useState<MessageItem[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
-  const [sendError, setSendError] = useState('');
+  const [sendError, setSendError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
   const [inviteOpen, setInviteOpen] = useState(false);
@@ -74,7 +74,7 @@ export default function GroupChatRoom() {
     if (res.ok) {
       navigate(backTo);
     } else {
-      setLeaveError(res.message || '나가기에 실패했습니다.');
+      setLeaveError(res.message || '나가기 처리에 실패했습니다.');
     }
   };
 
@@ -88,7 +88,7 @@ export default function GroupChatRoom() {
       }),
     ]).then(([roomsRes, membersRes]) => {
       const list = Array.isArray(roomsRes?.list) ? roomsRes.list : [];
-      const room = list.find((r: { id: number; createdByUserId?: number }) => r.id === roomId);
+      const room = list.find((r: { id: number; name?: string; createdByUserId?: number }) => r.id === roomId);
       setRoomName(room?.name || '채팅방');
       setHostUserId(typeof room?.createdByUserId === 'number' ? room.createdByUserId : null);
       if ((membersRes as { forbidden?: boolean }).forbidden) {
@@ -96,7 +96,9 @@ export default function GroupChatRoom() {
         setLoading(false);
         return;
       }
-      const memList = Array.isArray((membersRes as { list?: MemberItem[] })?.list) ? (membersRes as { list: MemberItem[] }).list : [];
+      const memList = Array.isArray((membersRes as { list?: MemberItem[] })?.list)
+        ? (membersRes as { list: MemberItem[] }).list
+        : [];
       setMembers(memList);
       setLoading(false);
     });
@@ -173,28 +175,26 @@ export default function GroupChatRoom() {
         client.subscribe('/topic/group-room/' + roomId, (message) => {
           if (!message?.body) return;
           try {
-            const d = JSON.parse(message.body) as { type?: string };
+            const d = JSON.parse(message.body) as { type?: string; userId?: number };
             if (d.type === 'MESSAGE') {
               const msg = d as unknown as MessageItem;
               setMessages((prev) => (prev.some((m) => m.id === msg.id) ? prev : [...prev, msg]));
               setTimeout(scrollToBottom, 50);
             }
-            if (d.type === 'MEMBER_JOINED') {
-              fetchRoomAndMembers();
-            }
-            if (d.type === 'MEMBER_LEFT') {
+            if (d.type === 'MEMBER_JOINED' || d.type === 'MEMBER_LEFT') {
               fetchRoomAndMembers();
             }
             if (d.type === 'MEMBER_KICKED') {
-              const payload = d as { userId: number };
-              if (payload.userId === user.id) {
+              if (d.userId === user.id) {
                 alert('방장에서 강퇴되었습니다.');
                 navigate(backTo);
                 return;
               }
               fetchRoomAndMembers();
             }
-          } catch {}
+          } catch {
+            // ignore malformed realtime payloads
+          }
         });
       },
     });
@@ -214,7 +214,7 @@ export default function GroupChatRoom() {
     e.preventDefault();
     const text = input.trim();
     if (!text || !user || !roomId || sending) return;
-    setSendError('');
+    setSendError(null);
     setSending(true);
     fetch(apiUrl(`api/group-chat/rooms/${roomId}/messages`), {
       method: 'POST',
@@ -222,12 +222,15 @@ export default function GroupChatRoom() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ text }),
     })
-      .then((r) => {
-        if (r.ok) return r.json();
-        return r.json().then((d) => Promise.reject(new Error((d as { message?: string }).message || '메시지를 전송할 수 없습니다.')));
+      .then((r) => r.json().catch(() => ({})).then((data) => ({ ok: r.ok, data: data as { message?: string } })))
+      .then(({ ok, data }) => {
+        if (!ok) {
+          setSendError(data?.message || '채팅 전송에 실패했습니다.');
+          return;
+        }
+        setInput('');
       })
-      .then(() => setInput(''))
-      .catch((error: Error) => setSendError(error.message || '메시지를 전송할 수 없습니다.'))
+      .catch(() => setSendError('채팅 전송에 실패했습니다.'))
       .finally(() => setSending(false));
   };
 
@@ -241,8 +244,9 @@ export default function GroupChatRoom() {
 
   const memberIds = new Set(members.map((m) => m.userId));
   const isHost = hostUserId != null && user?.id === hostUserId;
+
   const inviteFriend = (friendId: number) => {
-    if (memberIds.has(friendId)) return;
+    if (!roomId || memberIds.has(friendId)) return;
     setInvitingId(friendId);
     fetch(apiUrl(`api/group-chat/rooms/${roomId}/invite`), {
       method: 'POST',
@@ -258,7 +262,7 @@ export default function GroupChatRoom() {
   };
 
   const kickMember = (targetUserId: number, nickname: string) => {
-    if (!roomId || !isHost || targetUserId === user.id || kickingId != null) return;
+    if (!roomId || !isHost || !user || targetUserId === user.id || kickingId != null) return;
     const ok = window.confirm(`${nickname || '해당 유저'}님을 강퇴할까요?`);
     if (!ok) return;
     setKickingId(targetUserId);
@@ -294,7 +298,7 @@ export default function GroupChatRoom() {
     return (
       <Layout>
         <div className="group-chat-page">
-          <p className="group-chat-msg">잘못된 방입니다.</p>
+          <p className="group-chat-msg">올바르지 않은 방입니다.</p>
           <button type="button" className="btn-primary" onClick={() => navigate(backTo)}>
             목록으로
           </button>
@@ -344,7 +348,7 @@ export default function GroupChatRoom() {
                   disabled={leaving}
                   title="게임방 나가기"
                 >
-                  {leaving ? '나가는 중…' : '나가기'}
+                  {leaving ? '나가는 중...' : '나가기'}
                 </button>
                 {leaveError && <span className="group-chat-leave-error">{leaveError}</span>}
               </>
@@ -374,7 +378,7 @@ export default function GroupChatRoom() {
                       disabled={kickingId === m.userId}
                       onClick={() => kickMember(m.userId, m.nickname || m.loginId || '')}
                     >
-                      {kickingId === m.userId ? '강퇴 중…' : '강퇴'}
+                      {kickingId === m.userId ? '강퇴 중...' : '강퇴'}
                     </button>
                   )}
                 </li>
@@ -420,11 +424,8 @@ export default function GroupChatRoom() {
               <input
                 type="text"
                 value={input}
-                onChange={(e) => {
-                  setInput(e.target.value);
-                  if (sendError) setSendError('');
-                }}
-                placeholder="메시지 입력..."
+                onChange={(e) => setInput(e.target.value)}
+                placeholder="메시지를 입력하세요."
                 maxLength={2000}
                 className="group-chat-send-input"
               />
@@ -432,7 +433,7 @@ export default function GroupChatRoom() {
                 전송
               </button>
             </form>
-            {sendError && <div className="group-chat-send-error">{sendError}</div>}
+            {sendError && <p className="group-chat-empty" style={{ color: '#dc2626', marginTop: 8 }}>{sendError}</p>}
           </div>
         </div>
 
@@ -458,7 +459,7 @@ export default function GroupChatRoom() {
                       disabled={invitingId === f.id}
                       onClick={() => inviteFriend(f.id)}
                     >
-                      {invitingId === f.id ? '초대 중…' : '초대'}
+                      {invitingId === f.id ? '초대 중...' : '초대'}
                     </button>
                   </li>
                 ))}

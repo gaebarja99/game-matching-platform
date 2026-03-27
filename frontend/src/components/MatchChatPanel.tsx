@@ -19,7 +19,6 @@ const GAME_LABELS: Record<string, string> = {
   OVERWATCH: '오버워치2',
   PUBG: 'PUBG',
   COUNTER_STRIKE_2: 'CS2',
-  APEX_LEGENDS: '에이펙스',
 };
 
 export type MatchChatPanelProps = {
@@ -36,9 +35,9 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
   const [messages, setMessages] = useState<MatchChatMessageType[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
-  const [sendError, setSendError] = useState('');
   const [failedAvatarMsgIds, setFailedAvatarMsgIds] = useState<Set<number>>(new Set());
   const [hasLeftSession, setHasLeftSession] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -68,11 +67,28 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
 
   const fetchSession = useCallback(() => {
     if (!user || !sessionId) return;
-    getMatchSession(sessionId).then((s) => {
-      if (s) setSession(s);
-      else setForbidden(true);
-      setLoading(false);
-    });
+    const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+    const maxAttempts = 6;
+    (async () => {
+      try {
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+          const s = await getMatchSession(sessionId);
+          if (s) {
+            setSession(s);
+            setForbidden(false);
+            return;
+          }
+          if (attempt < maxAttempts - 1) {
+            await delay(100 * (attempt + 1));
+          }
+        }
+        setForbidden(true);
+      } catch {
+        setForbidden(true);
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, [user, sessionId]);
 
   const fetchMessages = useCallback(() => {
@@ -114,6 +130,7 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
               createdAt?: string;
             };
             if (d.type === 'MESSAGE' && d.text != null) {
+              const text = d.text;
               setMessages((prev) => {
                 if (prev.some((m) => m.id === d.id)) return prev;
                 const msg: MatchChatMessageType = {
@@ -122,7 +139,7 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
                   fromUserId: d.fromUserId!,
                   fromNickname: d.fromNickname ?? '',
                   fromProfileImageUrl: d.fromProfileImageUrl,
-                  text: d.text,
+                  text,
                   createdAt: d.createdAt ?? '',
                 };
                 return [...prev, msg];
@@ -145,17 +162,16 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
     e.preventDefault();
     const text = input.trim();
     if (!text || !sessionId || sending || hasLeftSession) return;
-    setSendError('');
+    setSendError(null);
     setSending(true);
-    sendMatchChatMessage(sessionId, text).then(({ ok, message }) => {
+    sendMatchChatMessage(sessionId, text).then((res) => {
       setSending(false);
-      if (ok) {
+      if (res.ok) {
         setInput('');
-        setSendError('');
         fetchMessages();
-      } else {
-        setSendError(message || '메시지를 전송할 수 없습니다.');
+        return;
       }
+      setSendError(res.message || '채팅 전송에 실패했습니다.');
     });
   };
 
@@ -277,14 +293,12 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
           {hasLeftSession ? (
             <div className="group-chat-readonly-notice">나간 방입니다. 내용만 볼 수 있습니다.</div>
           ) : (
+            <>
             <form className="group-chat-send-form" onSubmit={sendMessage}>
               <input
                 type="text"
                 value={input}
-                onChange={(e) => {
-                  setInput(e.target.value);
-                  if (sendError) setSendError('');
-                }}
+                onChange={(e) => setInput(e.target.value)}
                 placeholder="메시지 입력..."
                 maxLength={2000}
                 className="group-chat-send-input"
@@ -293,8 +307,9 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
                 전송
               </button>
             </form>
+            {sendError && <p className="group-chat-empty" style={{ color: '#dc2626', marginTop: 8 }}>{sendError}</p>}
+            </>
           )}
-          {sendError && <div className="group-chat-send-error">{sendError}</div>}
         </div>
       </div>
     </div>

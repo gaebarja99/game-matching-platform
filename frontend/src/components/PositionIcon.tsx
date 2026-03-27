@@ -82,10 +82,9 @@ interface PositionIconProps {
 
 export default function PositionIcon({ position, game, showLabel = true, className = '' }: PositionIconProps) {
   const key = normalizeKey(position);
-  const [imgFallbackTried, setImgFallbackTried] = useState(false);
   const [imgFailed, setImgFailed] = useState(false);
   const imagePath = game && key && !imgFailed ? getPositionImagePath(game, position) : null;
-  const imageUrl = imagePath ? (imgFallbackTried ? `/${imagePath}` : apiUrl(imagePath)) : null;
+  const imageUrl = imagePath ? apiUrl(imagePath) : null;
 
   if (!key) return <span className={`position-icon ${className}`}>{position || '—'}</span>;
   const icon = POSITION_ICONS[key] ?? '•';
@@ -99,13 +98,7 @@ export default function PositionIcon({ position, game, showLabel = true, classNa
           alt=""
           className="position-icon-img"
           aria-hidden
-          onError={() => {
-            if (!imgFallbackTried) {
-              setImgFallbackTried(true);
-              return;
-            }
-            setImgFailed(true);
-          }}
+          onError={() => setImgFailed(true)}
         />
       ) : (
         <span className="position-icon-emoji" aria-hidden>{icon}</span>

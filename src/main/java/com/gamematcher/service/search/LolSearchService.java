@@ -169,7 +169,7 @@ public class LolSearchService {
             //    -1    일반게임 (400 드래프트 + 430 블라인드 합산)
             //     null → 420 기본
             // ─────────────────────────────────────────────────────
-            int count   = Math.min(req.getCount() != null ? req.getCount() : 5, 20);
+            int count   = Math.min(req.getCount() != null ? req.getCount() : 20, 20);
             Integer qId = req.getQueueType() != null ? req.getQueueType() : 420;
 
             List<String> matchIds = fetchMatchIds(rout, puuid, qId, count);

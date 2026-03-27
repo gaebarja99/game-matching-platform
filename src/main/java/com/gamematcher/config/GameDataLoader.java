@@ -10,11 +10,6 @@ import org.springframework.stereotype.Component;
 
 import java.util.Map;
 
-/**
- * 앱 기동 시 GameList enum 기반으로 games 테이블 시드.
- * DB에 게임이 없을 때만 초기 데이터 삽입.
- * 테스트 프로파일에서는 실행하지 않음.
- */
 @Component
 @Profile("!test")
 public class GameDataLoader implements ApplicationRunner {
@@ -25,8 +20,7 @@ public class GameDataLoader implements ApplicationRunner {
         GameList.VALORANT, "발로란트",
         GameList.OVERWATCH, "오버워치",
         GameList.PUBG, "배틀그라운드",
-        GameList.COUNTER_STRIKE_2, "카운터 스트라이크 2",
-        GameList.APEX_LEGENDS, "에이펙스 레전드"
+        GameList.COUNTER_STRIKE_2, "카운터 스트라이크 2"
     );
 
     private final GameRepository gameRepository;
@@ -40,6 +34,7 @@ public class GameDataLoader implements ApplicationRunner {
         if (gameRepository.count() > 0) {
             return;
         }
+
         for (GameList gameList : GameList.values()) {
             String code = gameList.name();
             String name = DISPLAY_NAMES.getOrDefault(gameList, toDisplayName(code));

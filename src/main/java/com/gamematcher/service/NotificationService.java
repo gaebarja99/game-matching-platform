@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -139,14 +140,12 @@ public class NotificationService {
         notification.setUserId(userId);
         notification.setType(TYPE_ADMIN_PANG_GIFT);
         notification.setActorUserId(adminUserId);
-        notification.setMessage("운영자가 " + pangAmount + "팡을 선물했습니다.");
+        notification.setMessage(trimmedMessage.isBlank()
+                ? "운영자가 이벤트로 " + pangAmount + "팡을 지급했습니다."
+                : trimmedMessage);
         notificationRepository.save(notification);
-        if (!trimmedMessage.isBlank()) {
-            notification.setMessage(trimmedMessage);
-            notificationRepository.save(notification);
-        }
 
-        pushToUser(userId, "운영자 선물", notification.getMessage(), "/profile/pang");
+        pushToUser(userId, "이벤트 팡 지급", notification.getMessage(), "/profile/pang");
     }
 
     @Transactional
@@ -199,7 +198,7 @@ public class NotificationService {
 
                     String message = buildMessage(notification, actorNickname);
 
-                    Map<String, Object> map = new HashMap<>();
+                    Map<String, Object> map = new LinkedHashMap<>();
                     map.put("id", notification.getId());
                     map.put("type", notification.getType() != null ? notification.getType() : "");
                     map.put("streamId", notification.getStreamId() != null ? notification.getStreamId() : 0L);
@@ -249,11 +248,7 @@ public class NotificationService {
             return 0;
         }
 
-        List<Notification> list = notificationRepository.findByUserIdAndTypeAndActorUserIdAndReadAtIsNull(
-                userId,
-                TYPE_NEW_DM,
-                fromUserId
-        );
+        List<Notification> list = notificationRepository.findByUserIdAndTypeAndActorUserIdAndReadAtIsNull(userId, TYPE_NEW_DM, fromUserId);
         LocalDateTime now = LocalDateTime.now();
         for (Notification notification : list) {
             notification.setReadAt(now);
@@ -266,11 +261,7 @@ public class NotificationService {
         if (userId == null || actorUserId == null) {
             return 0;
         }
-        return notificationRepository.countByUserIdAndTypeAndActorUserIdAndReadAtIsNull(
-                userId,
-                TYPE_NEW_DM,
-                actorUserId
-        );
+        return notificationRepository.countByUserIdAndTypeAndActorUserIdAndReadAtIsNull(userId, TYPE_NEW_DM, actorUserId);
     }
 
     @Transactional
@@ -299,6 +290,12 @@ public class NotificationService {
         }
         if (TYPE_PAYMENT_REFUNDED.equals(notification.getType())) {
             return "팡 환불이 완료되었습니다.";
+        }
+        if (TYPE_ADMIN_PANG_GIFT.equals(notification.getType())) {
+            return "운영자가 이벤트 팡을 지급했습니다.";
+        }
+        if (TYPE_ADMIN_STREAM_NOTICE.equals(notification.getType())) {
+            return "운영자 방송 관리 알림이 도착했습니다.";
         }
         return "알림";
     }

@@ -9,7 +9,7 @@ import com.gamematcher.dto.ai.evaluation.BaseStatsDTO;
 import com.gamematcher.dto.ai.evaluation.GenericStatsDTO;
 import com.gamematcher.dto.ai.evaluation.LolStatsDTO;
 import com.gamematcher.dto.ai.evaluation.StatsConverter;
-import com.gamematcher.dto.ai.evaluation.ValorantStatsDTO;
+import com.gamematcher.dto.ai.evaluation.ValorantMatchStatsDTO;
 import com.gamematcher.entity.User;
 import com.gamematcher.entity.ai.evaluation.Game;
 import com.gamematcher.entity.ai.evaluation.MatchRecord;
@@ -85,10 +85,17 @@ class Phase2DomainCrudTest {
             new MatchRecord(game, "match-v1", MatchResult.VICTORY, LocalDateTime.now(), null)
         );
 
-        ValorantStatsDTO stats = new ValorantStatsDTO(
-            "VALORANT", 20, 5, 10, true,
-            13, 24, 8, 40
-        );
+        ValorantMatchStatsDTO stats = ValorantMatchStatsDTO.builder()
+            .game("VALORANT")
+            .kills(20)
+            .deaths(5)
+            .assists(10)
+            .result(MatchResult.VICTORY)
+            .roundsWon(13)
+            .roundsPlayed(24)
+            .headShots(8)
+            .totalShots(40)
+            .build();
         String rawStatsJson = statsConverter.toJson(stats);
 
         MatchRecordParticipant participant = new MatchRecordParticipant(record, user, "Duelist", rawStatsJson);
@@ -96,9 +103,9 @@ class Phase2DomainCrudTest {
 
         assertThat(saved.getRawStats()).isNotNull();
         BaseStatsDTO dto = statsConverter.toDto(saved.getRawStats(), game.getCode());
-        assertThat(dto).isInstanceOf(ValorantStatsDTO.class);
+        assertThat(dto).isInstanceOf(ValorantMatchStatsDTO.class);
         assertThat(dto.getKills()).isEqualTo(20);
-        assertThat(((ValorantStatsDTO) dto).getRoundsWon()).isEqualTo(13);
+        assertThat(((ValorantMatchStatsDTO) dto).getRoundsWon()).isEqualTo(13);
     }
 
     @Test

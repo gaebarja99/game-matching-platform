@@ -26,7 +26,7 @@ import java.util.stream.Collectors;
 public class CommunityService {
 
     private static final List<PostStatus> VISIBLE_STATUSES = List.of(PostStatus.ACTIVE, PostStatus.BLIND);
-    private static final int POPULAR_RECOMMEND_THRESHOLD = 10;
+    private static final int POPULAR_LIKE_THRESHOLD = 10;
 
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;
@@ -121,7 +121,7 @@ public class CommunityService {
         }
 
         // popular 여부 확인 (likeCount >= 10)
-        return postPage.map(p -> PostListResponseDto.from(p, p.getRecommendCount() >= POPULAR_RECOMMEND_THRESHOLD));
+        return postPage.map(p -> PostListResponseDto.from(p, p.getLikeCount() >= POPULAR_LIKE_THRESHOLD));
     }
 
     @Transactional(readOnly = true)
@@ -135,36 +135,23 @@ public class CommunityService {
                 .collect(Collectors.toList());
     }
 
-    @Transactional(readOnly = true)
-    public Page<PostListResponseDto> getMyPosts(Long userId, int page, int size) {
-        getUser(userId);
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
-        return postRepository.findByAuthorIdOrderByCreatedAtDesc(userId, pageable)
-                .map(p -> PostListResponseDto.from(p, p.getRecommendCount() >= POPULAR_RECOMMEND_THRESHOLD));
-    }
-
     @Transactional
-    public PostDetailResponseDto getPostDetail(Long postId, Long userId, boolean incrementViewCount) {
+    public PostDetailResponseDto getPostDetail(Long postId, Long userId) {
         Post post = getPost(postId);
 
-        if (post.getStatus() == PostStatus.DELETED_BY_ADMIN || post.getStatus() == PostStatus.DELETED_BY_USER) {
-            post.setTitle("삭제된 글입니다.");
-            post.setContent("삭제된 글입니다.");
-            post.getAttachments().clear();
-            post.getPostHashtags().clear();
-        } else if (post.getStatus() == PostStatus.BLIND) {
-            post.setTitle("블라인드 처리된 글입니다.");
-            post.setContent("블라인드 처리된 글입니다.");
-            post.getAttachments().clear();
-            post.getPostHashtags().clear();
-        } else if (!VISIBLE_STATUSES.contains(post.getStatus())) {
+        if (!VISIBLE_STATUSES.contains(post.getStatus())) {
             throw new GameApiException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다.");
         }
 
-        if (incrementViewCount && post.getStatus() == PostStatus.ACTIVE) {
-            postRepository.incrementViewCount(postId);
-            post.setViewCount(post.getViewCount() + 1);
+        // 블라인드 처리 시 작성자와 관리자만 조회 가능
+        if (post.getStatus() == PostStatus.BLIND) {
+            if (userId == null || (!post.getAuthor().getId().equals(userId) && !isAdmin(userId))) {
+                throw new GameApiException(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다.");
+            }
         }
+
+        postRepository.incrementViewCount(postId);
+        post.setViewCount(post.getViewCount() + 1);
 
         boolean liked = userId != null && postLikeRepository.existsByPostIdAndUserId(postId, userId);
         boolean bookmarked = userId != null && postBookmarkRepository.existsByPostIdAndUserId(postId, userId);
@@ -338,7 +325,7 @@ public class CommunityService {
         User user = getUser(userId);
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "createdAt"));
         Page<PostBookmark> bookmarks = postBookmarkRepository.findByUserIdOrderByCreatedAtDesc(userId, pageable);
-        return bookmarks.map(b -> PostListResponseDto.from(b.getPost(), b.getPost().getRecommendCount() >= POPULAR_RECOMMEND_THRESHOLD));
+        return bookmarks.map(b -> PostListResponseDto.from(b.getPost(), b.getPost().getLikeCount() >= POPULAR_LIKE_THRESHOLD));
     }
 
     // ========== 추천/비추천 ==========

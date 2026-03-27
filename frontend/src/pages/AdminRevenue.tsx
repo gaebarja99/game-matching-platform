@@ -63,9 +63,11 @@ function orderStatusTone(status: string) {
 function buildTrendPath(values: number[], width: number, height: number) {
   if (values.length === 0) return '';
   const max = Math.max(...values, 1);
+  const paddingX = 16;
+  const drawableWidth = Math.max(width - paddingX * 2, 1);
   return values
     .map((value, index) => {
-      const x = values.length === 1 ? width / 2 : (index / (values.length - 1)) * width;
+      const x = values.length === 1 ? width / 2 : paddingX + (index / (values.length - 1)) * drawableWidth;
       const y = height - (value / max) * (height - 16) - 8;
       return `${index === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`;
     })
@@ -75,8 +77,10 @@ function buildTrendPath(values: number[], width: number, height: number) {
 function buildTrendPoints(values: number[], width: number, height: number) {
   if (values.length === 0) return [];
   const max = Math.max(...values, 1);
+  const paddingX = 16;
+  const drawableWidth = Math.max(width - paddingX * 2, 1);
   return values.map((value, index) => {
-    const x = values.length === 1 ? width / 2 : (index / (values.length - 1)) * width;
+    const x = values.length === 1 ? width / 2 : paddingX + (index / (values.length - 1)) * drawableWidth;
     const y = height - (value / max) * (height - 16) - 8;
     return { x, y, value, index };
   });

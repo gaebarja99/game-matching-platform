@@ -38,18 +38,21 @@ public class User {
     private String password;
 
     /**
-     * API 헤더 {@code X-Auth-Token} 조회용(병합된 GM2 흐름).
-     * 로그인·가입·OAuth 성공 시 발급; nullable은 마이그레이션 직후 기존 행용.
+     * API 인증용 토큰이다. 세션 로그인과 별개로 사용할 수 있다.
      */
     @Column(name = "auth_token", length = 128, unique = true)
     private String authToken;
 
-    /** OAuth 제공자 (GOOGLE 등). null이면 일반 아이디/비밀번호 가입 */
+    /**
+     * OAuth 제공자 정보. 일반 회원가입 사용자는 null 일 수 있다.
+     */
     @Enumerated(EnumType.STRING)
     @Column(length = 20)
     private Provider provider;
 
-    /** OAuth 제공자 쪽 사용자 고유 ID (예: Google sub) */
+    /**
+     * OAuth 제공자의 고유 사용자 ID. 예: Google sub
+     */
     @Column(name = "provider_subject", length = 128)
     private String providerSubject;
 
@@ -59,7 +62,9 @@ public class User {
     @Column(name = "profile_image_url", length = 512)
     private String profileImageUrl;
 
-    /** 자기소개 (프로필 편집) */
+    /**
+     * 자기소개 문구
+     */
     @Column(length = 500)
     private String bio;
 
@@ -80,11 +85,29 @@ public class User {
     @Column(name = "last_login_at")
     private LocalDateTime lastLoginAt;
 
-    @Column(name = "suspended_until")
-    private LocalDateTime suspendedUntil;
+    /**
+     * 보유 중인 팡 잔액
+     */
+    @Column(name = "pang_balance", nullable = false)
+    private Long pangBalance = 0L;
 
-    @Column(name = "suspension_reason", length = 255)
-    private String suspensionReason;
+    /**
+     * 총 경험치. 0.1 XP 단위로 저장한다.
+     */
+    @Column(name = "total_experience_tenths", nullable = false)
+    private Long totalExperienceTenths = 0L;
+
+    /**
+     * 마일리지. 결제 금액의 일부를 적립한다.
+     */
+    @Column(name = "mileage", nullable = false)
+    private Long mileage = 0L;
+
+    /**
+     * 광고 제거 만료 시각. null 이면 광고 제거 혜택이 없다.
+     */
+    @Column(name = "ad_free_until")
+    private LocalDateTime adFreeUntil;
 
     @Column(name = "profanity_strike_count", nullable = false)
     private Integer profanityStrikeCount = 0;
@@ -92,23 +115,9 @@ public class User {
     @Column(name = "chat_muted_until")
     private LocalDateTime chatMutedUntil;
 
-    /** 팡 잔액 (1팡 = 1.2원) */
-    @Column(name = "pang_balance", nullable = false)
-    private Long pangBalance = 0L;
-
-    /** 경험치 (0.1 단위 저장: 1 XP = 10, 0.1 XP = 1). 팡 1 구매=1 XP, 팔로우/후원 방 채팅 1개=0.1 XP */
-    @Column(name = "total_experience_tenths", nullable = false)
-    private Long totalExperienceTenths = 0L;
-
-    /** 마일리지(원). 팡 구매 시 결제 금액의 10% 적립 (1팡=1.2원 → 0.12원) */
-    @Column(name = "mileage", nullable = false)
-    private Long mileage = 0L;
-
-    /** 광고 제거 만료일시 (null 또는 현재 이전이면 광고 노출) */
-    @Column(name = "ad_free_until")
-    private LocalDateTime adFreeUntil;
-
-    /** 스트리머 구분: 일반(30% 수수료) / 파트너(20% 수수료). null이면 일반과 동일 처리 */
+    /**
+     * 스트리머 등급 정보. 일반 사용자는 null 일 수 있다.
+     */
     @Enumerated(EnumType.STRING)
     @Column(name = "streamer_tier", length = 20)
     private StreamerTier streamerTier;

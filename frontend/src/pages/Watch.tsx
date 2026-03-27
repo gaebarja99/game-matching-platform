@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams } from 'react-router-dom';
 import Hls from 'hls.js';
 import { Client } from '@stomp/stompjs';
@@ -33,7 +33,7 @@ interface StreamInfo {
   playbackUrl?: string | null;
   externalUrl?: string | null;
   startedAt?: string | null;
-  /** ?댁쁺?먭? 吏?뺥븳 ?뚰듃???ㅽ듃由щ㉧???뚮쭔 true */
+  /** 운영자가 지정한 파트너 스트리머일 때만 true */
   partner?: boolean;
 }
 
@@ -45,7 +45,13 @@ interface WeeklyDonor {
   consecutiveDonationDays?: number;
 }
 
-/** ??湲덉븸蹂?梨꾪똿 移대뱶 tier ?대옒?? 1000=珥덈줉, 10000=蹂대씪, 100000=?묓겕 */
+interface WhisperTarget {
+  userId: number;
+  displayName: string;
+  profileImageUrl?: string | null;
+}
+
+/** 팡 금액별 채팅 카드 tier 클래스: 1000=초록, 10000=보라, 100000=핑크 */
 function donationTierClass(amount: number | undefined): string {
   if (amount == null) return 'tier-pang';
   if (amount >= 100_000) return 'tier-mega';
@@ -53,7 +59,7 @@ function donationTierClass(amount: number | undefined): string {
   return 'tier-pang';
 }
 
-/** ?덈꺼 援ш컙蹂?諭껋? ?됱긽 ?대옒??(1~999, 1000~1999, ... 9000~9999) */
+/** 레벨 구간별 뱃지 색상 클래스 (1~999, 1000~1999, ... 9000~9999) */
 function levelBadgeClass(level: number | undefined): string {
   if (level == null || level < 1) return 'level-1-999';
   const tier = Math.min(9, Math.floor(level / 1000));
@@ -61,25 +67,9 @@ function levelBadgeClass(level: number | undefined): string {
 }
 
 type ChatMessageItem =
-  | {
-      type: 'chat';
-      displayName?: string;
-      text?: string;
-      streamer?: boolean;
-      profileImageUrl?: string;
-      userId?: number;
-      level?: number;
-      whisper?: boolean;
-      whisperToUserId?: number;
-      whisperToDisplayName?: string;
-    }
+  | { type: 'chat'; displayName?: string; text?: string; streamer?: boolean; profileImageUrl?: string; userId?: number; level?: number }
   | { type: 'donation'; donorName?: string; amount?: number; tier?: string; donorMessage?: string; donorProfileImageUrl?: string; consecutiveDonationDays?: number; donorUserId?: number }
   | { type: 'system'; text?: string };
-
-interface ChatParticipant {
-  userId: number;
-  displayName: string;
-}
 
 function formatDuration(startedAt: string | null | undefined): string {
   if (!startedAt) return '';
@@ -89,7 +79,9 @@ function formatDuration(startedAt: string | null | undefined): string {
   const h = Math.floor(sec / 3600);
   const m = Math.floor((sec % 3600) / 60);
   const s = sec % 60;
-  return (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s + ' 스트리밍 중';
+  return (
+    (h < 10 ? '0' : '') + h + ':' + (m < 10 ? '0' : '') + m + ':' + (s < 10 ? '0' : '') + s + ' 스트리밍 중'
+  );
 }
 
 function toEmbedVideoUrl(url: string): string | null {
@@ -128,10 +120,8 @@ export default function Watch() {
   const [isPaused, setIsPaused] = useState(false);
   const [streamerAvatarError, setStreamerAvatarError] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessageItem[]>([]);
-  const [chatParticipants, setChatParticipants] = useState<ChatParticipant[]>([]);
   const [chatConnected, setChatConnected] = useState(false);
   const [chatNotice, setChatNotice] = useState('');
-  const [whisperTargetUserId, setWhisperTargetUserId] = useState<number | null>(null);
   const [donationModalOpen, setDonationModalOpen] = useState(false);
   const [donationAmount, setDonationAmount] = useState('');
   const [donationMessage, setDonationMessage] = useState('');
@@ -143,7 +133,12 @@ export default function Watch() {
   const [subscriptionError, setSubscriptionError] = useState('');
   const [controlsVisible, setControlsVisible] = useState(false);
   const [chatPanelOpen, setChatPanelOpen] = useState(true);
-  /** 二쇨컙 ?꾩썝 ??궧 ?쒖떆: collapsed(?묓옒) | expanded(?쇱묠) | full(?꾩껜+?묎린) */
+  const [whisperModalOpen, setWhisperModalOpen] = useState(false);
+  const [whisperTargetId, setWhisperTargetId] = useState<number | ''>('');
+  const [whisperMessage, setWhisperMessage] = useState('');
+  const [whisperSending, setWhisperSending] = useState(false);
+  const [whisperError, setWhisperError] = useState('');
+  /** 주간 후원 랭킹 표시: collapsed(접힘) | expanded(펼침) | full(전체+접기) */
   const [weeklyRankView, setWeeklyRankView] = useState<'collapsed' | 'expanded' | 'full'>('collapsed');
   const donorUserIdsRef = useRef<Set<number>>(new Set());
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -154,33 +149,86 @@ export default function Watch() {
   const chatEndRef = useRef<HTMLDivElement>(null);
   const joinedStreamIdRef = useRef<number | null>(null);
   const { user } = useAuth();
+  const whisperTargets: WhisperTarget[] = (() => { // whisper-targets
+    const seen = new Set<number>();
+    const targets: WhisperTarget[] = [];
 
-  const registerChatParticipant = useCallback((userId?: number, displayName?: string) => {
-    if (userId == null || !displayName) return;
-    setChatParticipants((prev) => {
-      if (prev.some((participant) => participant.userId === userId)) {
-        return prev;
-      }
-      return [...prev, { userId, displayName }];
+    if (stream?.userId && stream.userId !== user?.id) {
+      seen.add(stream.userId);
+      targets.push({
+        userId: stream.userId,
+        displayName: stream.broadcasterNickname || '스트리머',
+        profileImageUrl: stream.broadcasterProfileImageUrl,
+      });
+    }
+
+    chatMessages.forEach((msg) => {
+      if (msg.type !== 'chat') return;
+      if (!msg.userId || msg.userId === user?.id || seen.has(msg.userId)) return;
+      seen.add(msg.userId);
+      targets.push({
+        userId: msg.userId,
+        displayName: msg.displayName || `유저 ${msg.userId}`,
+        profileImageUrl: msg.profileImageUrl ?? null,
+      });
     });
+
+    return targets;
+  })();
+
+  const resetWhisperModal = useCallback(() => {
+    setWhisperModalOpen(false);
+    setWhisperTargetId('');
+    setWhisperMessage('');
+    setWhisperError('');
+    setWhisperSending(false);
   }, []);
 
-  const activeWhisperTarget = whisperTargetUserId != null
-    ? chatParticipants.find((participant) => participant.userId === whisperTargetUserId) ?? null
-    : null;
+  const submitWhisper = useCallback(() => {
+    if (!user) {
+      setWhisperError('로그인 후 귓속말을 보낼 수 있습니다.');
+      return;
+    }
+    if (!whisperTargetId) {
+      setWhisperError('귓속말 대상을 선택해 주세요.');
+      return;
+    }
+    const text = whisperMessage.trim();
+    if (!text) {
+      setWhisperError('귓속말 내용을 입력해 주세요.');
+      return;
+    }
+    setWhisperSending(true);
+    setWhisperError('');
+    fetch(apiUrl('api/dm'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ toUserId: whisperTargetId, text }),
+    })
+      .then((r) => r.json().then((d) => ({ ok: r.ok, data: d as { message?: string } })))
+      .then((res) => {
+        if (!res.ok) {
+          setWhisperError(res.data?.message || '귓속말 전송에 실패했습니다.');
+          return;
+        }
+        setChatNotice('귓속말을 보냈습니다.');
+        resetWhisperModal();
+      })
+      .catch(() => setWhisperError('귓속말 전송 중 오류가 발생했습니다.'))
+      .finally(() => setWhisperSending(false));
+  }, [resetWhisperModal, user, whisperMessage, whisperTargetId]);
 
-  const whisperCandidates =
-    (stream?.viewerCount ?? 0) > 0
-      ? chatParticipants.filter((participant) => participant.userId !== user?.id)
-      : [];
+  const clearChatWindow = useCallback(() => {
+    setChatMessages([]);
+    setChatNotice('채팅창을 지웠습니다.');
+  }, []);
 
   useEffect(() => {
     if (!streamId) {
       setLoading(false);
       return;
     }
-    setChatParticipants([]);
-    setWhisperTargetUserId(null);
     const id = Number(streamId);
     if (Number.isNaN(id)) {
       setLoading(false);
@@ -203,7 +251,7 @@ export default function Watch() {
       .finally(() => setLoading(false));
   }, [streamId]);
 
-  // ?쒖껌????吏묎퀎: ?쇱씠釉?諛⑹넚 ??viewer/join, ?댄깉 ??viewer/leave
+  // 시청자 수 집계: 라이브 방송 시 viewer/join, 이탈 시 viewer/leave
   useEffect(() => {
     const id = streamId ? Number(streamId) : NaN;
     if (!streamId || Number.isNaN(id) || !stream || stream.status !== 'LIVE') return;
@@ -211,7 +259,7 @@ export default function Watch() {
       .then((r) => {
         if (r.ok) {
           joinedStreamIdRef.current = id;
-          // 吏꾩엯 吏곹썑 ?쒖껌??????踰???議고쉶??利됱떆 諛섏쁺
+          // 진입 직후 시청자 수 한 번 더 조회해 즉시 반영
           fetch(apiUrl(`api/streams/${id}`), { credentials: 'include' })
             .then((res) => (res.ok ? res.json() : null))
             .then((s: StreamInfo | null) => {
@@ -229,7 +277,7 @@ export default function Watch() {
     };
   }, [streamId, stream?.id, stream?.status]);
 
-  // ?쒖껌?????ㅼ떆媛?媛깆떊 (10珥덈쭏??
+  // 시청자 수 실시간 갱신 (10초마다)
   useEffect(() => {
     const id = streamId ? Number(streamId) : NaN;
     if (!streamId || Number.isNaN(id) || !stream) return;
@@ -252,14 +300,89 @@ export default function Watch() {
         ? '배틀그라운드'
         : stream?.game === 'VALORANT'
           ? '발로란트'
-          : stream?.game ?? '기타';
+          : stream?.game ?? '—';
 
-  // 梨꾪똿 ?덉뒪?좊━ 濡쒕뱶 + WebSocket ?곌껐
+  // 채팅 히스토리 로드 + WebSocket 연결
   useEffect(() => {
     const id = streamId ? Number(streamId) : NaN;
     if (!streamId || Number.isNaN(id)) return;
 
-    setChatNotice(user ? '梨꾪똿 ?곌껐 以?..' : '濡쒓렇????梨꾪똿???댁슜?????덉뒿?덈떎.');
+    setChatNotice(user ? '채팅 연결 중...' : '로그인 후 채팅을 이용할 수 있습니다.');
+    /* const whisperTargets: WhisperTarget[] = (() => {
+    const seen = new Set<number>();
+    const targets: WhisperTarget[] = [];
+
+    if (stream?.userId && stream.userId !== user?.id) {
+      seen.add(stream.userId);
+      targets.push({
+        userId: stream.userId,
+        displayName: stream.broadcasterNickname || '스트리머',
+        profileImageUrl: stream.broadcasterProfileImageUrl,
+      });
+    }
+
+    chatMessages.forEach((msg) => {
+      if (msg.type !== 'chat') return;
+      if (!msg.userId || msg.userId === user?.id || seen.has(msg.userId)) return;
+      seen.add(msg.userId);
+      targets.push({
+        userId: msg.userId,
+        displayName: msg.displayName || `유저 ${msg.userId}`,
+        profileImageUrl: msg.profileImageUrl ?? null,
+      });
+    });
+
+    return targets;
+  })();
+
+  const resetWhisperModal = useCallback(() => {
+    setWhisperModalOpen(false);
+    setWhisperTargetId('');
+    setWhisperMessage('');
+    setWhisperError('');
+    setWhisperSending(false);
+  }, []);
+
+  const submitWhisper = useCallback(() => {
+    if (!user) {
+      setWhisperError('로그인 후 귓속말을 보낼 수 있습니다.');
+      return;
+    }
+    if (!whisperTargetId) {
+      setWhisperError('귓속말 대상을 선택해 주세요.');
+      return;
+    }
+    const text = whisperMessage.trim();
+    if (!text) {
+      setWhisperError('귓속말 내용을 입력해 주세요.');
+      return;
+    }
+    setWhisperSending(true);
+    setWhisperError('');
+    fetch(apiUrl('api/dm'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      credentials: 'include',
+      body: JSON.stringify({ toUserId: whisperTargetId, text }),
+    })
+      .then((r) => r.json().then((d) => ({ ok: r.ok, data: d as { message?: string } })))
+      .then((res) => {
+        if (!res.ok) {
+          setWhisperError(res.data?.message || '귓속말 전송에 실패했습니다.');
+          return;
+        }
+        setChatNotice('귓속말을 보냈습니다.');
+        resetWhisperModal();
+      })
+      .catch(() => setWhisperError('귓속말 전송 중 오류가 발생했습니다.'))
+      .finally(() => setWhisperSending(false));
+  }, [resetWhisperModal, user, whisperMessage, whisperTargetId]);
+
+  const clearChatWindow = useCallback(() => {
+    setChatMessages([]);
+    setChatNotice('채팅창을 지웠습니다.');
+  }, []); */
+
     fetch(apiUrl(`api/streams/${id}/chat-timeline?limit=100`), { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : []))
       .then((list: unknown) => {
@@ -277,18 +400,14 @@ export default function Watch() {
               donorProfileImageUrl: item.donorProfileImageUrl as string,
             });
           } else if (item.displayName != null && item.text != null) {
-            const chatUserId = item.userId != null ? Number(item.userId) : undefined;
             items.push({
               type: 'chat',
               displayName: item.displayName as string,
               text: item.text as string,
               streamer: !!item.streamer,
               profileImageUrl: item.profileImageUrl as string,
-              userId: chatUserId,
+              userId: item.userId as number,
               level: item.level as number,
-              whisper: !!item.whisper,
-              whisperToUserId: item.whisperToUserId != null ? Number(item.whisperToUserId) : undefined,
-              whisperToDisplayName: item.whisperToDisplayName as string,
             });
           }
         }
@@ -316,14 +435,14 @@ export default function Watch() {
                   type: 'donation',
                   donorName: d.donorName as string,
                   amount: d.amount as number,
-                  tier: (d.tier as string) || '후원',
+                  tier: (d.tier as string) || '팡',
                   donorMessage: d.donorMessage as string,
                   donorProfileImageUrl: d.donorProfileImageUrl as string,
                   consecutiveDonationDays: d.consecutiveDonationDays as number,
                   donorUserId,
                 },
               ]);
-              // 二쇨컙 ?꾩썝 ??궧 ?ㅼ떆媛?諛섏쁺 (?꾩썝 ?좊땲硫붿씠?섏? OBS ?꾩슜 URL?먯꽌留??쒖떆)
+              // 주간 후원 랭킹 실시간 반영 (후원 애니메이션은 OBS 전용 URL에서만 표시)
               fetch(apiUrl(`api/streams/${id}/weekly-donor-rank`), { credentials: 'include' })
                 .then((r) => (r.ok ? r.json() : []))
                 .then((list: unknown) => {
@@ -339,18 +458,6 @@ export default function Watch() {
               return;
             }
             if (d?.displayName != null && d?.text != null) {
-              const chatUserId = d.userId != null ? Number(d.userId) : undefined;
-              const whisperToUserId = d.whisperToUserId != null ? Number(d.whisperToUserId) : undefined;
-              const isWhisper = !!d.whisper;
-              if (isWhisper) {
-                const currentUserId = user?.id;
-                const isSender = currentUserId != null && chatUserId === currentUserId;
-                const isTarget = currentUserId != null && whisperToUserId === currentUserId;
-                if (!isSender && !isTarget) {
-                  return;
-                }
-              }
-              registerChatParticipant(chatUserId, d.displayName as string);
               setChatMessages((prev) => [
                 ...prev,
                 {
@@ -359,11 +466,8 @@ export default function Watch() {
                   text: d.text as string,
                   streamer: !!d.streamer,
                   profileImageUrl: d.profileImageUrl as string,
-                  userId: chatUserId,
+                  userId: d.userId as number,
                   level: d.level as number,
-                  whisper: isWhisper,
-                  whisperToUserId,
-                  whisperToDisplayName: d.whisperToDisplayName as string,
                 },
               ]);
             }
@@ -372,7 +476,7 @@ export default function Watch() {
           }
         });
       },
-      onStompError: () => setChatNotice('梨꾪똿 ?곌껐???ㅽ뙣?덉뒿?덈떎. ?덈줈怨좎묠??二쇱꽭??'),
+      onStompError: () => setChatNotice('채팅 연결에 실패했습니다. 새로고침해 주세요.'),
     });
     stompClientRef.current = client;
     client.activate();
@@ -386,7 +490,7 @@ export default function Watch() {
       stompClientRef.current = null;
       setChatConnected(false);
     };
-  }, [streamId, user, registerChatParticipant]);
+  }, [streamId, user]);
 
   useEffect(() => {
     const streamerId = stream?.userId;
@@ -403,28 +507,13 @@ export default function Watch() {
   const sendChat = useCallback(() => {
     const text = chatInput.trim();
     if (!text || !streamId || !chatConnected) return;
-    fetch(apiUrl(`api/streams/${streamId}/chat`), {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        text,
-        whisperToUserId: whisperTargetUserId ?? undefined,
-      }),
-    })
-      .then(async (response) => {
-        if (response.ok) {
-          setChatInput('');
-          if (whisperTargetUserId != null) {
-            setWhisperTargetUserId(null);
-          }
-          return;
-        }
-        const data = (await response.json().catch(() => null)) as { message?: string } | null;
-        setChatNotice(data?.message || '梨꾪똿???꾩넚?섏? 紐삵뻽?듬땲??');
-      })
-      .catch(() => setChatNotice('梨꾪똿???꾩넚?섏? 紐삵뻽?듬땲??'));
-  }, [chatConnected, chatInput, streamId, whisperTargetUserId]);
+    try {
+      stompClientRef.current?.publish({ destination: '/app/chat/' + streamId, body: text });
+      setChatInput('');
+    } catch {
+      /* ignore */
+    }
+  }, [chatInput, streamId, chatConnected]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -433,12 +522,12 @@ export default function Watch() {
   const submitDonation = useCallback(() => {
     const id = streamId ? Number(streamId) : NaN;
     if (Number.isNaN(id) || !user) {
-      setDonationError('濡쒓렇?????꾩썝?????덉뒿?덈떎.');
+      setDonationError('로그인 후 후원할 수 있습니다.');
       return;
     }
     const amount = Math.floor(Number(donationAmount) || 0);
     if (amount < 1000) {
-      setDonationError('理쒖냼 1,000???댁긽 ?꾩썝??二쇱꽭??');
+      setDonationError('최소 1,000팡 이상 후원해 주세요.');
       return;
     }
     setDonationError('');
@@ -461,10 +550,10 @@ export default function Watch() {
           setDonationMessage('');
           setWeeklyTotal((prev) => (prev ?? 0) + amount);
         } else {
-          setDonationError((data?.message as string) || '?꾩썝???ㅽ뙣?덉뒿?덈떎.');
+          setDonationError((data?.message as string) || '후원에 실패했습니다.');
         }
       })
-      .catch(() => setDonationError('?붿껌???ㅽ뙣?덉뒿?덈떎.'))
+      .catch(() => setDonationError('요청에 실패했습니다.'))
       .finally(() => setDonationSubmitting(false));
   }, [streamId, user, donationAmount, donationMessage]);
 
@@ -493,52 +582,12 @@ export default function Watch() {
       .then((r) => r.json().then((d: { orderId?: string; amount?: number; orderName?: string; storeId?: string; pg?: string; payMethod?: string; message?: string }) => ({ status: r.status, data: d })))
       .then((res) => {
         if (res.status !== 200 || !res.data?.orderId || res.data.amount == null) {
-          const message = String(res.data?.message ?? '');
-          if (res.status === 503 || message.includes('포트원')) {
-            fetch(apiUrl('api/subscription'), {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              credentials: 'include',
-              body: JSON.stringify({ userId: streamerId }),
-            })
-              .then((r) => r.json().then((d: { subscribed?: boolean; message?: string }) => ({ ok: r.ok, data: d })))
-              .then((fallbackRes) => {
-                if (fallbackRes.ok && fallbackRes.data?.subscribed) {
-                  setIsSubscribed(true);
-                  setSubscriptionModalOpen(false);
-                  setSubscriptionAgree(false);
-                } else {
-                  setSubscriptionError(fallbackRes.data?.message ?? '구독 처리에 실패했습니다.');
-                }
-              })
-              .catch(() => setSubscriptionError('구독 처리 중 오류가 발생했습니다.'))
-              .finally(() => setSubscriptionSubmitting(false));
-            return;
-          }
-          setSubscriptionError(message || '구독 주문 생성에 실패했습니다.');
-          setSubscriptionSubmitting(false);
+          setSubscriptionError(res.data?.message ?? '구독 주문 생성에 실패했습니다.');
           return;
         }
         const { orderId, amount, orderName, storeId, pg, payMethod } = res.data;
         if (!storeId || typeof window.IMP === 'undefined') {
-          fetch(apiUrl('api/subscription'), {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            credentials: 'include',
-            body: JSON.stringify({ userId: streamerId }),
-          })
-            .then((r) => r.json().then((d: { subscribed?: boolean; message?: string }) => ({ ok: r.ok, data: d })))
-            .then((fallbackRes) => {
-              if (fallbackRes.ok && fallbackRes.data?.subscribed) {
-                setIsSubscribed(true);
-                setSubscriptionModalOpen(false);
-                setSubscriptionAgree(false);
-              } else {
-                setSubscriptionError(fallbackRes.data?.message ?? '구독 처리에 실패했습니다.');
-              }
-            })
-            .catch(() => setSubscriptionError('구독 처리 중 오류가 발생했습니다.'))
-            .finally(() => setSubscriptionSubmitting(false));
+          setSubscriptionError('결제를 사용할 수 없습니다. 관리자에게 문의하세요.');
           return;
         }
         window.IMP.init(storeId);
@@ -584,7 +633,7 @@ export default function Watch() {
       });
   }, [stream?.userId, user, subscriptionAgree]);
 
-  // ?ㅽ듃由щ컢 寃쎄낵 ?쒓컙 1珥덈쭏??媛깆떊
+  // 스트리밍 경과 시간 1초마다 갱신
   useEffect(() => {
     if (!isLive || !stream?.startedAt) {
       setStreamDuration('');
@@ -602,7 +651,7 @@ export default function Watch() {
     };
   }, [isLive, stream?.startedAt]);
 
-  // HLS ?ъ깮 (?몃? URL???덉쑝硫?iframe留??곌퀬 HLS???ㅽ궢)
+  // HLS 재생 (외부 URL이 있으면 iframe만 쓰고 HLS는 스킵)
   useEffect(() => {
     if (!stream || loading) return;
     if (stream.externalUrl) {
@@ -636,7 +685,7 @@ export default function Watch() {
         setTimeout(tryPlay, 300);
         hls.on(Hls.Events.ERROR, (_e, d) => {
           if (d.fatal) {
-            setPlayerError('?ъ깮?????놁뒿?덈떎. 諛⑹넚???꾩쭅 ?쒖옉?섏? ?딆븯嫄곕굹 醫낅즺?섏뿀?????덉뒿?덈떎.');
+            setPlayerError('재생할 수 없습니다. 방송이 아직 시작되지 않았거나 종료되었을 수 있습니다.');
             setPlayerLoading(false);
           }
         });
@@ -653,7 +702,7 @@ export default function Watch() {
         video.addEventListener('canplaythrough', tryPlay);
         setTimeout(tryPlay, 300);
       } else {
-        setPlayerError('??釉뚮씪?곗???HLS ?ъ깮??吏?먰븯吏 ?딆뒿?덈떎.');
+        setPlayerError('이 브라우저는 HLS 재생을 지원하지 않습니다.');
         setPlayerLoading(false);
       }
       return () => {
@@ -669,6 +718,7 @@ export default function Watch() {
     setPlayerLoading(false);
   }, [stream?.id, isLive, stream?.playbackUrl, stream?.externalUrl, loading]);
 
+  // 스트리머 프로필 이미지 URL이 바뀌면 로드 에러 플래그 초기화
   useEffect(() => {
     setStreamerAvatarError(false);
   }, [stream?.broadcasterProfileImageUrl]);
@@ -717,7 +767,7 @@ export default function Watch() {
           >
             {showVideo && embedUrl ? (
               <iframe
-                title="諛⑹넚"
+                title="방송"
                 src={embedUrl}
                 className="player-embed"
                 allowFullScreen
@@ -735,8 +785,8 @@ export default function Watch() {
                   style={{ display: playerError ? 'none' : 'block' }}
                 />
                 {isLive && <div className="player-live-badge show">LIVE</div>}
-                <div className="player-controls-bar">
-                  <button type="button" className="btn-control" onClick={onPlayPause} title="?ъ깮/?쇱떆?뺤?" aria-label="?ъ깮 ?쇱떆?뺤?">
+                <div className={`player-controls-bar ${controlsVisible || isPaused ? 'is-visible' : ''}`}>
+                  <button type="button" className="btn-control" onClick={onPlayPause} title="재생/일시정지" aria-label="재생 일시정지">
                     {isPaused ? (
                       <svg className="icon-play" viewBox="0 0 24 24">
                         <polygon points="5 3 19 12 5 21 5 3" fill="currentColor" />
@@ -748,7 +798,7 @@ export default function Watch() {
                       </svg>
                     )}
                   </button>
-                  <button type="button" className="btn-control" onClick={onMute} title="음소거" aria-label="음소거">
+                  <button type="button" className="btn-control" onClick={onMute} title="음소거" aria-label="음량">
                     {isMuted ? (
                       <svg className="icon-volume-off" viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2">
                         <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
@@ -795,7 +845,7 @@ export default function Watch() {
               <div className="title">{stream.title || '제목 없음'}</div>
               <div className="stream-meta">
                 <span className="game">{gameLabel}</span>
-                <span className="viewers">시청자 {stream.viewerCount ?? 0}명</span>
+                <span className="viewers">{stream.viewerCount ?? 0}명 시청 중</span>
                 {isLive && streamDuration && <span className="stream-info-duration">{streamDuration}</span>}
                 {isLive && <span className="live-badge">LIVE</span>}
               </div>
@@ -815,11 +865,7 @@ export default function Watch() {
                 <div className="streamer-info-col">
                   <div className="streamer-name">
                     {stream.broadcasterNickname || '스트리머'}
-                    {stream.partner && (
-                      <span className="streamer-partner-badge" title="파트너 스트리머" aria-label="파트너 스트리머">
-                        ✓
-                      </span>
-                    )}
+                    {stream.partner && <span className="streamer-partner-badge" title="파트너 스트리머">✓</span>}
                   </div>
                   <div className="streamer-followers">팔로워 {stream.followerCount ?? 0}명</div>
                 </div>
@@ -887,43 +933,43 @@ export default function Watch() {
                 )}
               </span>
             </button>
-            <div className="chat-weekly-rank-hint">현재 방송 기준이며, 방송 종료 후에도 집계가 유지됩니다. 매주 월요일 0시에 초기화됩니다.</div>
+            <div className="chat-weekly-rank-hint">이 방송(계정) 기준이며, 방송을 켜고 꺼도 유지됩니다. 매주 월요일 0시에 리셋됩니다.</div>
             {weeklyRank.length > 0 ? (
               <>
-                {/* ?묓엺 ?곹깭: ?곸쐞 3紐낅쭔 ??以꾨줈 */}
+                {/* 접힌 상태: 상위 3명만 한 줄로 */}
                 {weeklyRankView === 'collapsed' && (
                   <div className="chat-weekly-rank-collapsed">
                     {weeklyRank.slice(0, 3).map((r, i) => {
                       const rank = r.rank ?? i + 1;
-                      const badgeEmoji = rank === 1 ? '1' : rank === 2 ? '2' : '3';
+                      const badgeEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : '🥉';
                       return (
                         <div key={i} className="chat-weekly-rank-collapsed-item">
                           <span className="chat-weekly-rank-collapsed-badge">{badgeEmoji}</span>
-                          <span className="chat-weekly-rank-collapsed-name">{r.displayName || '익명'}</span>
+                          <span className="chat-weekly-rank-collapsed-name">{r.displayName || '—'}</span>
                           <span className="chat-weekly-rank-collapsed-pang">{(Number(r.totalPang) || 0).toLocaleString()}</span>
                         </div>
                       );
                     })}
                   </div>
                 )}
-                {/* ?쇱묠/?꾩껜: 移대뱶??紐⑸줉 */}
+                {/* 펼침/전체: 카드형 목록 */}
                 {(weeklyRankView === 'expanded' || weeklyRankView === 'full') && (
                   <ul className="chat-weekly-rank-list">
                     {weeklyRank.slice(0, 10).map((r, i) => {
                       const rank = r.rank ?? i + 1;
-                      const badgeEmoji = rank <= 10 ? String(rank) : '-';
+                      const badgeEmoji = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : rank >= 4 && rank <= 10 ? '⭐' : '★';
                       const badgeClass = rank === 1 ? 'rank-1' : rank === 2 ? 'rank-2' : rank === 3 ? 'rank-3' : rank >= 4 && rank <= 10 ? 'rank-star' : 'rank-other';
                       const consecutiveDays = r.consecutiveDonationDays != null ? Number(r.consecutiveDonationDays) : 0;
                       return (
                         <li key={i} className="chat-weekly-rank-item">
                           <div className={`chat-weekly-rank-badge ${badgeClass}`}>{badgeEmoji}</div>
-                          <div className="chat-weekly-rank-name">{r.displayName || '익명'}</div>
+                          <div className="chat-weekly-rank-name">{r.displayName || '—'}</div>
                           <div className="chat-weekly-rank-pang">
                             <img src={apiUrl('images/pang-sparkle.svg')} alt="" />
                             {(Number(r.totalPang) || 0).toLocaleString()}
                           </div>
                           {consecutiveDays >= 1 && (
-                            <div className="chat-weekly-rank-consecutive">연속 후원 {consecutiveDays}일</div>
+                            <div className="chat-weekly-rank-consecutive">연속후원 {consecutiveDays}일</div>
                           )}
                         </li>
                       );
@@ -941,7 +987,7 @@ export default function Watch() {
                 )}
               </>
             ) : (
-              <div className="chat-weekly-rank-empty">?대쾲 二??꾩썝???놁뒿?덈떎.</div>
+              <div className="chat-weekly-rank-empty">이번 주 후원이 없습니다.</div>
             )}
           </div>
           <div className="chat-messages">
@@ -953,33 +999,29 @@ export default function Watch() {
                 <div key={idx} className={`chat-msg ${msg.streamer ? 'chat-msg-streamer' : ''} ${isDonor ? 'chat-msg-donor' : ''}`}>
                   <div className="chat-msg-body">
                     {msg.streamer && <span className="streamer-badge">방송자</span>}
+                    {msg.streamer && stream?.partner && <span className="chat-badge partner-badge" title="파트너">✓</span>}
                     {(msg.level != null && msg.level >= 1) && (
                       <span className={`chat-badge level-badge ${levelBadgeClass(msg.level)}`} title={`레벨 ${msg.level}`}>LV.{msg.level}</span>
                     )}
-                    {isDonor && donorRank === 0 && <span className="chat-badge donor-badge donor-heart" title="후원자">♥</span>}
-                    {donorRank === 1 && <span className="chat-badge donor-badge donor-rank-1" title="후원 1위">1</span>}
-                    {donorRank === 2 && <span className="chat-badge donor-badge donor-rank-2" title="후원 2위">2</span>}
-                    {donorRank === 3 && <span className="chat-badge donor-badge donor-rank-3" title="후원 3위">3</span>}
-                    <span className="user">{msg.displayName ?? '익명'}</span>
-                    {msg.whisper && (
-                      <span className="chat-badge" title="귓속말">
-                        {msg.userId === user?.id ? `귓속말 -> ${msg.whisperToDisplayName ?? '상대'}` : '귓속말'}
-                      </span>
-                    )}
+                    {isDonor && donorRank === 0 && <span className="chat-badge donor-badge donor-heart" title="후원자">❤</span>}
+                    {donorRank === 1 && <span className="chat-badge donor-badge donor-rank-1" title="후원 1등">🥇</span>}
+                    {donorRank === 2 && <span className="chat-badge donor-badge donor-rank-2" title="후원 2등">🥈</span>}
+                    {donorRank === 3 && <span className="chat-badge donor-badge donor-rank-3" title="후원 3등">🥉</span>}
+                    <span className="user">{msg.displayName ?? '—'}</span>
                     {msg.text}
                   </div>
                 </div>
               ) : msg.type === 'donation' ? (
                 <div key={idx} className="chat-msg chat-msg-donation-card">
                   <div className={`twitch-alert ${donationTierClass(msg.amount)}`}>
-                    <div className="twitch-alert-header">{msg.tier ?? '후원'}</div>
+                    <div className="twitch-alert-header">{msg.tier ?? '팡'}</div>
                     <div className="twitch-alert-body">
                       <div className="twitch-alert-donor">
-                        <span className="twitch-name">{(msg.donorName ?? '익명').trim()}</span> {(msg.amount ?? 0).toLocaleString()} 팡 후원
+                        🎉 <span className="twitch-name">{(msg.donorName ?? '익명').trim()}님이</span> {(msg.amount ?? 0).toLocaleString()}팡 후원! 팡! <img src={apiUrl('images/pang-sparkle.svg')} alt="팡" className="pang-emoji-img" />
                       </div>
                       {msg.donorMessage && <div className="twitch-alert-msg">{msg.donorMessage}</div>}
                       {msg.consecutiveDonationDays != null && msg.consecutiveDonationDays >= 1 && (
-                        <div className="twitch-alert-consecutive">연속 후원 {msg.consecutiveDonationDays}일</div>
+                        <div className="twitch-alert-consecutive">연속후원 {msg.consecutiveDonationDays}일</div>
                       )}
                     </div>
                   </div>
@@ -995,54 +1037,49 @@ export default function Watch() {
             <div ref={chatEndRef} />
           </div>
           <div className="chat-input-wrap">
-            {activeWhisperTarget && (
-              <div className="chat-whisper-target">
-                <span className="chat-whisper-label">귓속말 대상: {activeWhisperTarget.displayName}</span>
-                <button type="button" className="chat-whisper-cancel" onClick={() => setWhisperTargetUserId(null)}>
-                  취소
-                </button>
-              </div>
-            )}
             <input
               type="text"
               className="chat-input"
-              placeholder={user ? '메시지를 입력해주세요' : '로그인 후 채팅이 가능합니다'}
+              placeholder={user ? '메시지를 입력해주세요' : '로그인 후 채팅 가능'}
               value={chatInput}
               onChange={(e) => setChatInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), sendChat())}
               disabled={!user || !chatConnected}
             />
             <div className="chat-toolbar">
+              <button
+                type="button"
+                className="chat-toolbar-icon chat-toolbar-whisper-trigger"
+                title="귓속말"
+                aria-label="귓속말"
+                onClick={() => {
+                  setWhisperError('');
+                  setWhisperModalOpen(true);
+                }}
+              >
+                ?뮠
+              </button>
+              <button type="button" className="chat-toolbar-icon chat-toolbar-eraser-trigger" title="채팅창 지우기" aria-label="채팅창 지우기" onClick={clearChatWindow}>
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" fill="none" strokeWidth="2" aria-hidden="true">
+                  <path d="M3 21h6" />
+                  <path d="M16 3l5 5" />
+                  <path d="M21 8L8 21l-5-5L16 3z" />
+                </svg>
+              </button>
               <button type="button" className="btn-donate" onClick={() => setDonationModalOpen(true)}>
                 후원하기
               </button>
-              <select
-                className="chat-input whisper-select"
-                value={whisperTargetUserId ?? ''}
-                onChange={(e) => setWhisperTargetUserId(e.target.value ? Number(e.target.value) : null)}
-                disabled={!user || whisperCandidates.length === 0}
-                aria-label="귓속말 대상 선택"
-              >
-                <option value="">귓속말</option>
-                {whisperCandidates.map((participant) => (
-                  <option key={participant.userId} value={participant.userId}>
-                    {participant.displayName}
-                  </option>
-                ))}
-              </select>
-              <button
-                type="button"
-                className="chat-toolbar-icon"
-                title="채팅 기록 지우기"
-                aria-label="채팅 기록 지우기"
-                onClick={() => {
-                  setChatMessages([]);
-                  setChatInput('');
-                  setWhisperTargetUserId(null);
-                }}
-                disabled={chatMessages.length === 0 && !chatInput && whisperTargetUserId == null}
-              >
-                🧽
+              <button type="button" className="chat-toolbar-icon" title="채팅" aria-label="채팅">
+                💬
+              </button>
+              <button type="button" className="chat-toolbar-icon" title="이미지" aria-label="이미지">
+                🖼
+              </button>
+              <button type="button" className="chat-toolbar-icon" title="공유" aria-label="공유">
+                ↗
+              </button>
+              <button type="button" className="chat-toolbar-icon" title="설정" aria-label="설정">
+                ⚙
               </button>
             </div>
           </div>
@@ -1063,20 +1100,16 @@ export default function Watch() {
               )}
               <div className="subscription-streamer-info">
                 <span className="subscription-streamer-name">{stream?.broadcasterNickname || '스트리머'}</span>
-                {stream?.partner && (
-                  <span className="subscription-verified" title="파트너 스트리머" aria-label="파트너 스트리머">
-                    ✓
-                  </span>
-                )}
+                {stream?.partner && <span className="subscription-verified" title="파트너 스트리머">✓</span>}
               </div>
             </div>
             <div className="subscription-benefits">
               <h3>구독 혜택</h3>
               <ul>
-                <li><span className="benefit-icon">★</span> {stream?.broadcasterNickname || '스트리머'} 정기 후원</li>
-                <li><span className="benefit-icon">AD</span> 광고 제거 혜택</li>
-                <li><span className="benefit-icon">C</span> 구독자 전용 채팅</li>
-                <li><span className="benefit-icon">G</span> GameMatcher 마일리지 추가 적립</li>
+                <li><span className="benefit-icon">❤</span> {stream?.broadcasterNickname || '스트리머'} 스트리머 자동 후원</li>
+                <li><span className="benefit-icon">📺</span> {stream?.broadcasterNickname || '스트리머'} 방송 시청 시 재생 전, 중간 광고 제거</li>
+                <li><span className="benefit-icon">💬</span> 구독자 전용 채팅</li>
+                <li><span className="benefit-icon">G</span> GameMatcher 마일리지 10% 기본 적립!</li>
               </ul>
             </div>
             <div className="subscription-footer">
@@ -1089,7 +1122,7 @@ export default function Watch() {
               </p>
               {subscriptionError && <p className="modal-error" style={{ marginBottom: 10 }}>{subscriptionError}</p>}
               <button type="button" className="btn-subscribe-submit" onClick={submitSubscription} disabled={!subscriptionAgree || subscriptionSubmitting}>
-                {subscriptionSubmitting ? '처리 중...' : '월 4,900원에 정기구독하기'}
+                {subscriptionSubmitting ? '처리 중…' : '매월 4,900원에 정기구독하기'}
               </button>
             </div>
           </div>
@@ -1122,7 +1155,7 @@ export default function Watch() {
                     onClick={() => setDonationAmount((prev) => String((Number(prev) || 0) + amt))}
                     disabled={!user}
                   >
-                    {amt >= 10000 ? `${amt / 10000}만` : amt.toLocaleString()}
+                    {amt >= 10000 ? amt / 10000 + '만' : amt.toLocaleString()}
                   </button>
                 ))}
               </div>
@@ -1141,9 +1174,77 @@ export default function Watch() {
             {donationError && <p className="modal-error">{donationError}</p>}
             <div className="modal-actions">
               <button type="button" className="btn-primary" onClick={submitDonation} disabled={!user || donationSubmitting}>
-                {donationSubmitting ? '처리 중...' : '후원하기'}
+                {donationSubmitting ? '처리 중…' : '후원하기'}
               </button>
               <button type="button" className="btn-secondary" onClick={() => { if (!donationSubmitting) setDonationModalOpen(false); }} disabled={donationSubmitting}>
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {whisperModalOpen && (
+        <div className="main-modal-backdrop show" role="dialog" aria-modal="true" onClick={() => !whisperSending && resetWhisperModal()}>
+          <div className="main-modal-box watch-whisper-modal" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title">귓속말 보내기</h2>
+            <p className="modal-footer" style={{ marginBottom: 16 }}>현재 라이브에 참여한 사람에게만 귓속말을 보낼 수 있습니다.</p>
+            <div className="modal-field">
+              <label htmlFor="watch-whisper-target">대상</label>
+              <select
+                id="watch-whisper-target"
+                value={whisperTargetId}
+                onChange={(e) => setWhisperTargetId(e.target.value ? Number(e.target.value) : '')}
+                disabled={!user || whisperTargets.length === 0}
+              >
+                <option value="">대상을 선택해 주세요</option>
+                {whisperTargets.map((target) => (
+                  <option key={target.userId} value={target.userId}>
+                    {target.displayName}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="watch-whisper-target-list">
+              {whisperTargets.length > 0 ? (
+                whisperTargets.map((target) => (
+                  <button
+                    key={target.userId}
+                    type="button"
+                    className={`watch-whisper-target-chip ${whisperTargetId === target.userId ? 'active' : ''}`}
+                    onClick={() => setWhisperTargetId(target.userId)}
+                  >
+                    {resolveProfileImageUrl(target.profileImageUrl) ? (
+                      <img src={resolveProfileImageUrl(target.profileImageUrl)!} alt="" />
+                    ) : (
+                      <span className="watch-whisper-target-fallback">{target.displayName[0]}</span>
+                    )}
+                    <span>{target.displayName}</span>
+                  </button>
+                ))
+              ) : (
+                <div className="watch-whisper-empty">아직 채팅에 참여한 다른 사용자가 없습니다.</div>
+              )}
+            </div>
+            <div className="modal-field">
+              <label htmlFor="watch-whisper-message">메시지</label>
+              <textarea
+                id="watch-whisper-message"
+                className="watch-whisper-textarea"
+                placeholder="귓속말 내용을 입력해 주세요"
+                value={whisperMessage}
+                onChange={(e) => setWhisperMessage(e.target.value)}
+                disabled={!user}
+                rows={5}
+                maxLength={500}
+              />
+            </div>
+            {whisperError && <p className="modal-error">{whisperError}</p>}
+            <div className="modal-actions">
+              <button type="button" className="btn-primary" onClick={submitWhisper} disabled={!user || whisperSending || whisperTargets.length === 0}>
+                {whisperSending ? '보내는 중...' : '보내기'}
+              </button>
+              <button type="button" className="btn-secondary" onClick={resetWhisperModal} disabled={whisperSending}>
                 취소
               </button>
             </div>

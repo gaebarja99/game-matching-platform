@@ -3,6 +3,7 @@ package com.gamematcher.controller;
 import com.gamematcher.config.UploadProperties;
 import com.gamematcher.dto.auth.AuthResponse;
 import com.gamematcher.entity.User;
+import com.gamematcher.repository.FollowRepository;
 import com.gamematcher.repository.UserRepository;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +26,25 @@ public class ProfileController {
     private static final String PROFILE_SUBDIR = "profile";
 
     private final UserRepository userRepository;
+    private final FollowRepository followRepository;
     private final UploadProperties uploadProperties;
+
+    @GetMapping("/public/{userId}")
+    public ResponseEntity<?> getPublicProfile(@PathVariable Long userId) {
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(java.util.Map.of(
+                "id", user.getId(),
+                "loginId", user.getLoginId() != null ? user.getLoginId() : "",
+                "username", user.getUsername() != null ? user.getUsername() : "",
+                "nickname", user.getNickname() != null ? user.getNickname() : "",
+                "bio", user.getBio() != null ? user.getBio() : "",
+                "profileImageUrl", user.getProfileImageUrl() != null ? user.getProfileImageUrl() : "",
+                "followerCount", followRepository.countByFollowingId(user.getId())
+        ));
+    }
 
     /**
      * 프로필 수정 (이름, 닉네임, 이메일, 전화번호, 자기소개, 프로필 사진).

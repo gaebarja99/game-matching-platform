@@ -66,21 +66,17 @@ public class PangController {
         long total = pangService.getChargeHistoryCount(userId);
         List<Map<String, Object>> items = list.stream().map(c -> {
             Map<String, Object> m = new HashMap<>();
-            boolean positiveCharge = c.getPangAmount() != null && c.getPangAmount() > 0;
-            boolean hasPaymentReference =
-                    (c.getOrderId() != null && !c.getOrderId().isBlank())
-                            || (c.getImpUid() != null && !c.getImpUid().isBlank());
-            boolean adminGift = positiveCharge && !hasPaymentReference;
             m.put("id", c.getId());
             m.put("pangAmount", c.getPangAmount());
-            m.put("priceWon", adminGift ? 0 : c.getPriceWon());
+            m.put("priceWon", c.getPriceWon());
             m.put("orderId", c.getOrderId());
             m.put("impUid", c.getImpUid());
-            boolean refunded = positiveCharge
+            boolean refunded = c.getPangAmount() != null && c.getPangAmount() > 0
                     && pangService.isRefundedCharge(userId, c.getOrderId(), c.getImpUid());
             m.put("refunded", refunded);
-            m.put("refundable", !refunded && positiveCharge && hasPaymentReference);
-            m.put("sourceLabel", adminGift ? "운영자 선물" : null);
+            m.put("refundable", !refunded && c.getPangAmount() != null && c.getPangAmount() > 0
+                    && ((c.getOrderId() != null && !c.getOrderId().isBlank())
+                    || (c.getImpUid() != null && !c.getImpUid().isBlank())));
             m.put("createdAt", c.getCreatedAt() != null ? c.getCreatedAt().format(ISO_FORMAT) : null);
             return m;
         }).collect(Collectors.toList());

@@ -3,6 +3,7 @@ package com.gamematcher.repository.common;
 import com.gamematcher.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -12,6 +13,10 @@ public interface CommonUserRepository extends JpaRepository<User, Long> {
     Optional<User> findByLoginId(String loginId);
 
     Optional<User> findByAuthToken(String authToken);
+
+    Optional<User> findFirstByUsernameContainingIgnoreCaseOrderByIdAsc(String username);
+
+    List<User> findTop50ByUsernameContainingIgnoreCaseOrderByIdAsc(String username);
 
     boolean existsByLoginId(String loginId);
 

@@ -3,7 +3,6 @@ package com.gamematcher.controller.community;
 import com.gamematcher.constant.community.BoardCategory;
 import com.gamematcher.dto.community.*;
 import com.gamematcher.service.community.CommunityService;
-import jakarta.servlet.http.HttpSession;
 import org.springframework.data.domain.Page;
 import org.springframework.web.bind.annotation.*;
 
@@ -57,30 +56,12 @@ public class CommunityPublicController {
     }
 
     @GetMapping("/posts/{postId}")
-    public PostDetailResponseDto getPostDetail(@PathVariable Long postId, HttpSession session) {
-        return communityService.getPostDetail(postId, null, markViewed(postId, session));
+    public PostDetailResponseDto getPostDetail(@PathVariable Long postId) {
+        return communityService.getPostDetail(postId, null);
     }
 
     @GetMapping("/posts/{postId}/comments")
     public List<CommentResponseDto> getComments(@PathVariable Long postId) {
         return communityService.getComments(postId);
-    }
-
-    @SuppressWarnings("unchecked")
-    private boolean markViewed(Long postId, HttpSession session) {
-        if (session == null || postId == null) return true;
-        Object viewedPosts = session.getAttribute("communityViewedPosts");
-        java.util.Set<Long> viewed;
-        if (viewedPosts instanceof java.util.Set<?>) {
-            viewed = (java.util.Set<Long>) viewedPosts;
-        } else {
-            viewed = new java.util.HashSet<>();
-            session.setAttribute("communityViewedPosts", viewed);
-        }
-        if (viewed.contains(postId)) {
-            return false;
-        }
-        viewed.add(postId);
-        return true;
     }
 }

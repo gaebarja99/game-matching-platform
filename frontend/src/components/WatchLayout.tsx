@@ -14,7 +14,6 @@ type NotificationItem = {
   message: string;
   read: boolean;
   createdAt: string;
-  streamId?: number;
   actorUserId?: number;
   actorNickname?: string;
 };
@@ -23,6 +22,7 @@ export default function WatchLayout({ children }: WatchLayoutProps) {
   const { user, logout } = useAuth();
   const { toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const isAdmin = ['ADMIN', 'ROLE_ADMIN'].includes((user?.role ?? '').toUpperCase());
 
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -72,39 +72,6 @@ export default function WatchLayout({ children }: WatchLayoutProps) {
       .catch(() => {});
   }, []);
 
-  const handleNotificationClick = useCallback(
-    (notification: NotificationItem) => {
-      setNotificationOpen(false);
-      if (!notification.read) {
-        fetch(apiUrl(`api/notifications/${notification.id}/read`), { method: 'PATCH', credentials: 'include' })
-          .then(() => {
-            setNotificationList((prev) =>
-              prev.map((item) => (item.id === notification.id ? { ...item, read: true } : item)),
-            );
-            fetchNotificationCount();
-          })
-          .catch(() => {});
-      }
-
-      if (notification.type === 'FOLLOWING_STARTED_STREAM' && notification.streamId && notification.streamId > 0) {
-        navigate(`/watch/${notification.streamId}`);
-        return;
-      }
-      if (
-        notification.type === 'PAYMENT_COMPLETED'
-        || notification.type === 'PAYMENT_REFUNDED'
-        || notification.type === 'ADMIN_PANG_GIFT'
-      ) {
-        navigate('/profile/pang');
-        return;
-      }
-      if (notification.type === 'FRIEND_REQUEST') {
-        navigate('/profile');
-      }
-    },
-    [fetchNotificationCount, navigate],
-  );
-
   useEffect(() => {
     setProfileImgError(false);
   }, [user?.profileImageUrl]);
@@ -139,7 +106,6 @@ export default function WatchLayout({ children }: WatchLayoutProps) {
         <nav className="header-nav">
           <Link to="/streams">전체 방송</Link>
           <Link to="/streams">게임</Link>
-          <Link to="/streams">e스포츠</Link>
           <Link to="/studio" className="auth-only">스튜디오</Link>
         </nav>
 
@@ -184,7 +150,17 @@ export default function WatchLayout({ children }: WatchLayoutProps) {
                       key={n.id}
                       type="button"
                       className={`notification-item ${!n.read ? 'unread' : ''}`}
-                      onClick={() => handleNotificationClick(n)}
+                      onClick={() => {
+                        setNotificationOpen(false);
+                        if (!n.read) {
+                          fetch(apiUrl(`api/notifications/${n.id}/read`), { method: 'PATCH', credentials: 'include' })
+                            .then(() => {
+                              setNotificationList((prev) => prev.map((item) => (item.id === n.id ? { ...item, read: true } : item)));
+                              fetchNotificationCount();
+                            })
+                            .catch(() => {});
+                        }
+                      }}
                     >
                       <span>{n.message}</span>
                       <div className="notification-time">{n.createdAt ? new Date(n.createdAt).toLocaleString('ko-KR') : ''}</div>
@@ -223,9 +199,7 @@ export default function WatchLayout({ children }: WatchLayoutProps) {
                 <div className="dropdown-menu">
                   <Link to="/profile" onClick={() => setProfileOpen(false)}>내 프로필</Link>
                   <Link to="/studio" onClick={() => setProfileOpen(false)}>스튜디오</Link>
-                  {user?.role === 'ADMIN' && (
-                    <Link to="/admin" onClick={() => setProfileOpen(false)}>{'\uAD00\uB9AC'}</Link>
-                  )}
+                  {isAdmin ? <Link to="/admin" onClick={() => setProfileOpen(false)}>관리자</Link> : null}
                   <button type="button" onClick={handleLogout}>로그아웃</button>
                 </div>
               </div>

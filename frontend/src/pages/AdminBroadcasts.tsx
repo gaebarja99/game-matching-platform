@@ -1,8 +1,16 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import type { AdminBroadcastRow } from '../api/admin';
 import { fetchAdminBroadcasts, updateAdminBroadcast } from '../api/admin';
 import AdminLayout from '../components/AdminLayout';
 import { useAuth } from '../contexts/AuthContext';
+
+type BroadcastAction = 'warn' | 'force_end' | 'hide_recent' | 'restore_recent';
+
+type ActionModalState = {
+  streamId: number;
+  action: 'warn' | 'force_end';
+  message: string;
+} | null;
 
 function formatDate(value?: string | null) {
   if (!value) return '-';
@@ -45,6 +53,8 @@ export default function AdminBroadcasts() {
   const [status, setStatus] = useState('all');
   const [page, setPage] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [actionSubmitting, setActionSubmitting] = useState(false);
+  const [actionModal, setActionModal] = useState<ActionModalState>(null);
   const [result, setResult] = useState<{
     content: AdminBroadcastRow[];
     totalPages: number;
@@ -68,32 +78,30 @@ export default function AdminBroadcasts() {
     void load();
   }, [user, query, status, page]);
 
-  const handleAction = async (
-    streamId: number,
-    action: 'warn' | 'force_end' | 'hide_recent' | 'restore_recent'
-  ) => {
-    const message =
-      action === 'warn' || action === 'force_end'
-        ? window.prompt(
-            action === 'warn'
-              ? '경고 문구를 입력해 주세요.'
-              : '강제 종료 안내 문구를 입력해 주세요.',
-            ''
-          ) ?? ''
-        : '';
+  const executeAction = async (streamId: number, action: BroadcastAction, message?: string) => {
+    setActionSubmitting(true);
+    const response = await updateAdminBroadcast(streamId, action, message?.trim() || undefined);
+    setActionSubmitting(false);
 
-    if ((action === 'warn' || action === 'force_end') && !message.trim()) {
-      const proceed = window.confirm('문구 없이 기본 안내로 처리할까요?');
-      if (!proceed) return;
-    }
-
-    const response = await updateAdminBroadcast(streamId, action, message.trim() || undefined);
     if (!response.ok) {
       window.alert(response.error ?? '처리에 실패했습니다.');
-      return;
+      return false;
     }
 
     await load();
+    return true;
+  };
+
+  const openActionModal = (streamId: number, action: 'warn' | 'force_end') => {
+    setActionModal({ streamId, action, message: '' });
+  };
+
+  const submitActionModal = async () => {
+    if (!actionModal) return;
+    const ok = await executeAction(actionModal.streamId, actionModal.action, actionModal.message);
+    if (ok) {
+      setActionModal(null);
+    }
   };
 
   if (authLoading) {
@@ -113,7 +121,7 @@ export default function AdminBroadcasts() {
   return (
     <AdminLayout
       title="방송 관리"
-      description="방송 경고, 강제 종료, 최근 방송 내역 숨김과 복구를 한 화면에서 처리합니다."
+      description="방송 경고, 강제 종료, 최근 방송 노출 숨김과 복구를 한 화면에서 처리합니다."
     >
       <section className="admin-panel admin-filter-panel">
         <div className="admin-toolbar">
@@ -162,13 +170,13 @@ export default function AdminBroadcasts() {
       <section className="admin-panel admin-table-card">
         <table className="data-table admin-broadcasts-table">
           <colgroup>
-            <col style={{ width: '22%' }} />
+            <col style={{ width: '18%' }} />
             <col style={{ width: '14%' }} />
             <col style={{ width: '10%' }} />
             <col style={{ width: '11%' }} />
             <col style={{ width: '16%' }} />
             <col style={{ width: '12%' }} />
-            <col style={{ width: '15%' }} />
+            <col style={{ width: '19%' }} />
           </colgroup>
           <thead>
             <tr>
@@ -232,24 +240,15 @@ export default function AdminBroadcasts() {
                       <button
                         type="button"
                         className="admin-action-btn"
-                        onClick={() => void handleAction(stream.id, 'warn')}
+                        onClick={() => openActionModal(stream.id, 'warn')}
                       >
                         경고
                       </button>
-                      {stream.status !== 'ENDED' ? (
-                        <button
-                          type="button"
-                          className="admin-action-btn danger"
-                          onClick={() => void handleAction(stream.id, 'force_end')}
-                        >
-                          강제 종료
-                        </button>
-                      ) : null}
                       <button
                         type="button"
                         className={`admin-action-btn ${stream.visibleInRecent ? '' : 'primary'}`}
                         onClick={() =>
-                          void handleAction(
+                          void executeAction(
                             stream.id,
                             stream.visibleInRecent ? 'hide_recent' : 'restore_recent'
                           )
@@ -257,6 +256,15 @@ export default function AdminBroadcasts() {
                       >
                         {stream.visibleInRecent ? '최근 숨김' : '최근 복구'}
                       </button>
+                      {stream.status !== 'ENDED' ? (
+                        <button
+                          type="button"
+                          className="admin-action-btn danger"
+                          onClick={() => openActionModal(stream.id, 'force_end')}
+                        >
+                          강제 종료
+                        </button>
+                      ) : null}
                     </div>
                   </td>
                 </tr>
@@ -288,6 +296,45 @@ export default function AdminBroadcasts() {
           </button>
         </div>
       </section>
+
+      {actionModal ? (
+        <div className="admin-modal-backdrop" onClick={() => !actionSubmitting && setActionModal(null)}>
+          <div className="admin-modal admin-modal-compact" onClick={(event) => event.stopPropagation()}>
+            <div className="admin-modal-head">
+              <div>
+                <h3>{actionModal.action === 'warn' ? '경고 문구 입력' : '강제 종료 안내 입력'}</h3>
+                <p className="admin-subtext">
+                  {actionModal.action === 'warn'
+                    ? '시청자와 스트리머에게 표시할 경고 문구를 입력해 주세요.'
+                    : '방송 종료와 함께 표시할 안내 문구를 입력해 주세요.'}
+                </p>
+              </div>
+            </div>
+
+            <div className="admin-modal-field-stack">
+              <label className="admin-modal-label" htmlFor="broadcast-action-message">안내 문구</label>
+              <textarea
+                id="broadcast-action-message"
+                className="admin-note-input admin-broadcast-modal-textarea"
+                value={actionModal.message}
+                onChange={(event) => setActionModal((current) => (current ? { ...current, message: event.target.value } : current))}
+                placeholder={actionModal.action === 'warn' ? '경고 안내 문구를 입력해 주세요.' : '강제 종료 안내 문구를 입력해 주세요.'}
+                rows={4}
+              />
+              <p className="admin-subtext">비워 두면 서버 기본 안내 문구로 처리됩니다.</p>
+            </div>
+
+            <div className="modal-actions">
+              <button type="button" className="btn-secondary" onClick={() => setActionModal(null)} disabled={actionSubmitting}>
+                취소
+              </button>
+              <button type="button" className="btn-primary" onClick={() => void submitActionModal()} disabled={actionSubmitting}>
+                {actionSubmitting ? '처리 중...' : '확인'}
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </AdminLayout>
   );
 }

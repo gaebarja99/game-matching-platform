@@ -8,7 +8,7 @@ declare global {
       init: (storeId: string) => void;
       request_pay: (
         params: { pg: string; pay_method: string; merchant_uid: string; amount: number; name: string; buyer_name?: string; m_redirect_url?: string },
-        callback: (r: { success?: boolean; imp_uid?: string; payment_id?: string; paymentId?: string; merchant_uid?: string; error_msg?: string }) => void
+        callback: (r: { success?: boolean; imp_uid?: string; merchant_uid?: string; error_msg?: string }) => void
       ) => void;
     };
   }
@@ -57,13 +57,12 @@ export default function ProfileAdFree() {
           return;
         }
         const { orderId, amount, orderName, storeId, pg, payMethod } = res.data;
-        const portoneKey = storeId;
-        if (!portoneKey || typeof window.IMP === 'undefined') {
+        if (!storeId || typeof window.IMP === 'undefined') {
           setError('결제를 사용할 수 없습니다. 관리자에게 문의하세요.');
           setSubmitting(false);
           return;
         }
-        window.IMP.init(portoneKey);
+        window.IMP.init(storeId);
         window.IMP.request_pay(
           {
             pg: pg || 'html5_inicis.INIpayTest',
@@ -74,13 +73,12 @@ export default function ProfileAdFree() {
             buyer_name: user?.nickname || user?.username || undefined,
           },
           (response) => {
-            const impUid = response.imp_uid || response.payment_id || response.paymentId;
-            if (response.success && impUid) {
+            if (response.success && response.imp_uid) {
               fetch(apiUrl('api/adfree/confirm'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
-                body: JSON.stringify({ orderId, impUid }),
+                body: JSON.stringify({ orderId, impUid: response.imp_uid }),
               })
                 .then((r) => r.json().then((d: { success?: boolean; message?: string }) => ({ ok: r.ok, data: d })))
                 .then((confirmRes) => {
@@ -133,3 +131,4 @@ export default function ProfileAdFree() {
     </>
   );
 }
+

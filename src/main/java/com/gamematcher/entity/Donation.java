@@ -34,9 +34,6 @@ public class Donation {
     @Column(name = "message", length = 500)
     private String message;
 
-    @Column(name = "video_url", length = 512)
-    private String videoUrl;
-
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 

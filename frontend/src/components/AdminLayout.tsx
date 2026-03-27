@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { resolveProfileImageUrl } from '../api/client';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
+import '../styles/admin-source.css';
 
 interface AdminLayoutProps {
   title: string;

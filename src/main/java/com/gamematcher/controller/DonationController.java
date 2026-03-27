@@ -89,7 +89,7 @@ public class DonationController {
         }
 
         try {
-            DonationResponse result = donationService.donate(userId, streamId, amount, message, hasVideoUrl ? videoUrl : null);
+            DonationResponse result = donationService.donate(userId, streamId, amount, message);
             // 해당 방송 시청 중인 모든 클라이언트(스트리머·다른 시청자)에게 후원 알림 브로드캐스트
             Map<String, Object> payload = new java.util.HashMap<>(Map.of(
                     "type", "donation",
@@ -102,8 +102,8 @@ public class DonationController {
             if (result.getConsecutiveDonationDays() != null && result.getConsecutiveDonationDays() >= 1)
                 payload.put("consecutiveDonationDays", result.getConsecutiveDonationDays());
             payload.put("donorUserId", userId);
-            if (result.getVideoUrl() != null && !result.getVideoUrl().isBlank()) {
-                payload.put("videoUrl", result.getVideoUrl());
+            if (hasVideoUrl) {
+                payload.put("videoUrl", videoUrl.length() > 512 ? videoUrl.substring(0, 512) : videoUrl);
             }
             messagingTemplate.convertAndSend("/topic/stream/" + streamId, payload);
             return ResponseEntity.ok(result);

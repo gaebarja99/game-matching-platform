@@ -46,10 +46,15 @@ public class LiveChatController {
         if (trimmed.isEmpty() || trimmed.length() > MAX_TEXT_LENGTH) {
             return null;
         }
+        ProfanityFilterService.ModerationResult moderation;
         try {
-            trimmed = profanityFilterService.moderateChat(userId, trimmed).getSanitizedText();
+            moderation = profanityFilterService.moderateChat(userId, trimmed);
         } catch (IllegalArgumentException e) {
-            return null;
+            return ChatMessageDto.builder()
+                    .userId(0L)
+                    .displayName("SYSTEM")
+                    .text(e.getMessage())
+                    .build();
         }
         boolean isStreamer = liveStreamRepository.findById(streamId)
                 .map(stream -> userId.equals(stream.getUserId()))
@@ -67,7 +72,7 @@ public class LiveChatController {
         String displayName = user != null ? (user.getNickname() != null && !user.getNickname().isBlank() ? user.getNickname() : user.getUsername()) : "알 수 없음";
         String profileImageUrl = user != null ? user.getProfileImageUrl() : null;
         String loginId = user != null ? user.getLoginId() : null;
-        chatService.saveMessage(streamId, userId, trimmed);
+        chatService.saveMessage(streamId, userId, moderation.getSanitizedText());
         int level = user != null && user.getTotalExperienceTenths() != null
                 ? LevelService.getLevel(user.getTotalExperienceTenths())
                 : 1;
@@ -76,7 +81,7 @@ public class LiveChatController {
                 .loginId(loginId)
                 .displayName(displayName)
                 .profileImageUrl(profileImageUrl)
-                .text(trimmed)
+                .text(moderation.getSanitizedText())
                 .streamer(isStreamer)
                 .level(level)
                 .build();

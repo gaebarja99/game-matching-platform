@@ -1,7 +1,6 @@
 package com.gamematcher.dto.community;
 
 import com.gamematcher.constant.community.BoardCategory;
-import com.gamematcher.constant.community.PostStatus;
 import com.gamematcher.entity.community.Post;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -20,8 +19,6 @@ public class PostDetailResponseDto {
     private BoardCategory boardCategory;
     private String title;
     private String content;
-    private PostStatus status;
-    private String statusLabel;
     private Long authorId;
     private String authorUsername;
     private int viewCount;
@@ -44,8 +41,6 @@ public class PostDetailResponseDto {
         dto.boardCategory = post.getBoardCategory();
         dto.title = post.getTitle();
         dto.content = post.getContent();
-        dto.status = post.getStatus();
-        dto.statusLabel = post.getStatus() != null ? post.getStatus().getDisplayName() : "";
         dto.authorId = post.getAuthor().getId();
         dto.authorUsername = post.getAuthor().getUsername();
         dto.viewCount = post.getViewCount();

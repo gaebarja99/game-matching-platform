@@ -36,14 +36,6 @@ const CS2_POSITIONS: PositionOption[] = [
   { key: 'LURKER', icon: 'L', label: 'Lurker' },
 ];
 
-const APEX_POSITIONS: PositionOption[] = [
-  { key: 'ASSAULT', icon: 'A', label: 'Assault' },
-  { key: 'SKIRMISHER', icon: 'S', label: 'Skirmisher' },
-  { key: 'RECON', icon: 'R', label: 'Recon' },
-  { key: 'CONTROLLER', icon: 'C', label: 'Controller' },
-  { key: 'SUPPORT', icon: 'P', label: 'Support' },
-];
-
 const PUBG_POSITIONS: PositionOption[] = [
   { key: 'ALL', icon: 'A', label: 'All' },
   { key: 'DUO', icon: 'D', label: 'Duo' },
@@ -55,7 +47,6 @@ function getPositionsForGame(game?: string | null): PositionOption[] {
   if (game === 'VALORANT') return VALORANT_POSITIONS;
   if (game === 'OVERWATCH') return OVERWATCH_POSITIONS;
   if (game === 'COUNTER_STRIKE_2') return CS2_POSITIONS;
-  if (game === 'APEX_LEGENDS') return APEX_POSITIONS;
   if (game === 'PUBG') return PUBG_POSITIONS;
   return [];
 }
@@ -65,7 +56,6 @@ function getAllImageForGame(game?: string | null): string | null {
   if (game === 'VALORANT') return apiUrl('images/valorant-roles/all.png');
   if (game === 'OVERWATCH') return apiUrl('images/overwatch-roles/role-all.png');
   if (game === 'COUNTER_STRIKE_2') return apiUrl('images/cs2-roles/role-all.png');
-  if (game === 'APEX_LEGENDS') return '/images/apex-class/role-all.png';
   if (game === 'PUBG') return apiUrl('images/pubg-team/team-all.png');
   return null;
 }

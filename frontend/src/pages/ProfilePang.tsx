@@ -12,7 +12,6 @@ interface ChargeRow {
   impUid?: string;
   refundable?: boolean;
   refunded?: boolean;
-  sourceLabel?: string | null;
 }
 
 interface UsageRow {
@@ -162,7 +161,17 @@ export default function ProfilePang() {
       .catch(() => setChargeError('네트워크 오류가 발생했습니다.'));
   };
 
-  const isRefundableRow = (row: ChargeRow) => row.refundable === true;
+  const isRefundableRow = (row: ChargeRow) => {
+    const hasOrderRef = Boolean((row.orderId && row.orderId.trim()) || (row.impUid && row.impUid.trim()));
+    const positiveCharge = (row.pangAmount ?? 0) > 0;
+    return hasOrderRef && positiveCharge;
+  };
+
+  const isEventGrantRow = (row: ChargeRow) => {
+    const hasOrderRef = Boolean((row.orderId && row.orderId.trim()) || (row.impUid && row.impUid.trim()));
+    const positiveCharge = (row.pangAmount ?? 0) > 0;
+    return positiveCharge && !hasOrderRef;
+  };
 
   const handleRefund = (row: ChargeRow) => {
     const orderId = row.orderId?.trim() || undefined;
@@ -292,15 +301,16 @@ export default function ProfilePang() {
                     const won = r.priceWon != null ? r.priceWon : Math.round(pang * PRICE_PER_PANG * 10) / 10;
                     const refunded = r.refunded === true;
                     const refundable = !refunded && isRefundableRow(r);
+                    const isEventGrant = isEventGrantRow(r);
                     const isRefunding = refundingRowId != null && r.id != null && refundingRowId === r.id;
                     return (
                       <tr key={r.id ?? `${r.createdAt}-${pang}`}>
                         <td className="col-date">{formatDate(r.createdAt)}</td>
                         <td className="col-amount">{pang > 0 ? '+' : ''}{pang.toLocaleString()} 팡</td>
-                        <td>{won !== 0 ? `${won.toLocaleString()}원` : '--'}</td>
+                        <td>{!isEventGrant && won !== 0 ? `${won.toLocaleString()}원` : '--'}</td>
                         <td>
-                          {r.sourceLabel ? (
-                            <span className="pang-history-detail-label">{r.sourceLabel}</span>
+                          {isEventGrant ? (
+                            '이벤트'
                           ) : refunded ? (
                             <button type="button" className="pang-refund-btn done" disabled>
                               환불완료

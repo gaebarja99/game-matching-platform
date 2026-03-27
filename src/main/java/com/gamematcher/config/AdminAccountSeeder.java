@@ -6,12 +6,14 @@ import com.gamematcher.entity.User;
 import com.gamematcher.repository.common.CommonUserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 @Component
 public class AdminAccountSeeder implements CommandLineRunner {
 
     private final CommonUserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
     @Value("${app.admin.seed.login-id:admin}")
     private String adminLoginId;
@@ -25,19 +27,16 @@ public class AdminAccountSeeder implements CommandLineRunner {
     @Value("${app.admin.seed.email:admin@gamematcher.local}")
     private String adminEmail;
 
-    public AdminAccountSeeder(CommonUserRepository userRepository) {
+    public AdminAccountSeeder(CommonUserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
     public void run(String... args) {
-        if (userRepository.existsByLoginId(adminLoginId)) {
-            return;
-        }
-
-        User admin = new User();
+        User admin = userRepository.findByLoginId(adminLoginId).orElseGet(User::new);
         admin.setLoginId(adminLoginId);
-        admin.setPassword(adminPassword);
+        admin.setPassword(passwordEncoder.encode(adminPassword));
         admin.setUsername(adminUsername);
         admin.setEmail(adminEmail);
         admin.setRole(Role.ADMIN);

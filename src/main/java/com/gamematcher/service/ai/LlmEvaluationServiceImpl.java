@@ -29,8 +29,8 @@ public class LlmEvaluationServiceImpl implements LlmEvaluationService {
     public LlmEvaluationServiceImpl(
             ObjectMapper objectMapper,
             @Value("${ai.llm.api-key:}") String apiKey,
-            @Value("${ai.llm.model:gpt-4o-mini}") String model,
-            @Value("${ai.llm.timeout-seconds:15}") int timeoutSeconds,
+            @Value("${ai.llm.model:gpt-5-mini}") String model,
+            @Value("${ai.llm.timeout-seconds:30}") int timeoutSeconds,
             @Value("${ai.llm.max-retries:2}") int maxRetries) {
         this.objectMapper = objectMapper;
         this.apiKey = apiKey;
@@ -40,20 +40,34 @@ public class LlmEvaluationServiceImpl implements LlmEvaluationService {
     }
 
     @Override
-    public Optional<LlmEvaluationResponseDTO> evaluate(String promptText) {
+    public Optional<LlmEvaluationResponseDTO> evaluate(String promptText, String modelOverride) {
         if (apiKey == null || apiKey.isBlank()) {
             log.debug("AI_API_KEY가 설정되지 않아 LLM 평가를 건너뜁니다.");
             return Optional.empty();
         }
 
+        String useModel = (modelOverride != null && !modelOverride.isBlank()) ? modelOverride.trim() : model;
+
         for (int attempt = 1; attempt <= maxRetries; attempt++) {
+            String responseText;
             try {
-                String responseText = callOpenAi(promptText);
+                responseText = callOpenAi(promptText, useModel);
+            } catch (Exception e) {
+                log.warn("OpenAI Chat Completions 호출 실패 (시도 {}/{}, model={}): {}",
+                        attempt, maxRetries, useModel, e.getMessage(), e);
+                if (attempt == maxRetries) {
+                    return Optional.empty();
+                }
+                continue;
+            }
+            try {
                 String cleanJson = extractJsonFromResponse(responseText);
                 LlmEvaluationResponseDTO dto = objectMapper.readValue(cleanJson, LlmEvaluationResponseDTO.class);
                 return Optional.ofNullable(dto);
             } catch (Exception e) {
-                log.warn("LLM 평가 API 호출 실패 (시도 {}/{}): {}", attempt, maxRetries, e.getMessage());
+                String head = responseText.length() > 400 ? responseText.substring(0, 400) + "…" : responseText;
+                log.warn("LLM 응답 JSON 파싱 실패 (시도 {}/{}): {} | 응답 앞부분: {}",
+                        attempt, maxRetries, e.getMessage(), head.replaceAll("\\s+", " "), e);
                 if (attempt == maxRetries) {
                     return Optional.empty();
                 }
@@ -62,16 +76,17 @@ public class LlmEvaluationServiceImpl implements LlmEvaluationService {
         return Optional.empty();
     }
 
-    private String callOpenAi(String promptText) throws Exception {
+    private String callOpenAi(String promptText, String useModel) throws Exception {
         var service = new com.theokanning.openai.service.OpenAiService(
                 apiKey,
                 Duration.ofSeconds(timeoutSeconds));
 
+        String m = (useModel != null && !useModel.isBlank()) ? useModel.trim() : model;
+        // temperature 등 샘플링 파라미터는 모델·엔드포인트마다 제한이 달라 보내지 않고 API 기본값 사용
         var request = com.theokanning.openai.completion.chat.ChatCompletionRequest.builder()
-                .model(model)
+                .model(m)
                 .messages(java.util.List.of(
                         new com.theokanning.openai.completion.chat.ChatMessage("user", promptText)))
-                .temperature(0.5)
                 .build();
 
         var completion = service.createChatCompletion(request);
@@ -81,7 +96,8 @@ public class LlmEvaluationServiceImpl implements LlmEvaluationService {
                 .orElse(null);
 
         if (message == null || message.isBlank()) {
-            throw new IllegalStateException("LLM 응답 내용이 비어 있습니다.");
+            throw new IllegalStateException(
+                    "assistant.message.content가 비어 있습니다. 최신 모델은 JSON 응답 구조가 달라 theokanning 라이브러리(0.18.x)가 content를 채우지 못하는 경우가 있습니다.");
         }
         return message;
     }

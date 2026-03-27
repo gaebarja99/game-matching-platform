@@ -231,14 +231,7 @@ public class LiveStreamService {
                 .map(s -> {
                     long fc = s.getUserId() != null ? followRepository.countByFollowingId(s.getUserId()) : 0L;
                     int vc = streamViewerCountService.getViewerCount(s.getId());
-                    return StreamResponse.from(
-                            s,
-                            getBroadcasterDisplayName(s.getUserId()),
-                            fc,
-                            vc,
-                            getBroadcasterProfileImageUrl(s.getUserId()),
-                            getBroadcasterStreamerTier(s.getUserId())
-                    );
+                    return StreamResponse.from(s, getBroadcasterDisplayName(s.getUserId()), fc, vc, getBroadcasterProfileImageUrl(s.getUserId()));
                 })
                 .collect(Collectors.toList());
     }
@@ -250,14 +243,7 @@ public class LiveStreamService {
                 .stream()
                 .map(s -> {
                     int vc = streamViewerCountService.getViewerCount(s.getId());
-                    return StreamResponse.from(
-                            s,
-                            name,
-                            null,
-                            vc,
-                            profileImageUrl,
-                            getBroadcasterStreamerTier(s.getUserId())
-                    );
+                    return StreamResponse.from(s, name, null, vc, profileImageUrl);
                 })
                 .collect(Collectors.toList());
     }
@@ -273,18 +259,10 @@ public class LiveStreamService {
     /** 최근 방송 목록 - 종료된 방송만 (지금 라이브와 중복되지 않음) */
     public List<StreamResponse> listRecent(int limit) {
         return liveStreamRepository.findTop20ByStatusInOrderByStartedAtDesc(List.of(StreamStatus.ENDED)).stream()
-                .filter(stream -> stream.getVisibleInRecent() == null || stream.getVisibleInRecent())
                 .limit(limit)
                 .map(s -> {
                     int vc = streamViewerCountService.getViewerCount(s.getId());
-                    return StreamResponse.from(
-                            s,
-                            getBroadcasterDisplayName(s.getUserId()),
-                            null,
-                            vc,
-                            getBroadcasterProfileImageUrl(s.getUserId()),
-                            getBroadcasterStreamerTier(s.getUserId())
-                    );
+                    return StreamResponse.from(s, getBroadcasterDisplayName(s.getUserId()), null, vc, getBroadcasterProfileImageUrl(s.getUserId()));
                 })
                 .collect(Collectors.toList());
     }
@@ -295,14 +273,7 @@ public class LiveStreamService {
         return liveStreamRepository.findByUserIdInAndStatusAndEndedAtIsNullOrderByStartedAtDesc(userIds, StreamStatus.LIVE).stream()
                 .map(s -> {
                     int vc = streamViewerCountService.getViewerCount(s.getId());
-                    return StreamResponse.from(
-                            s,
-                            getBroadcasterDisplayName(s.getUserId()),
-                            null,
-                            vc,
-                            getBroadcasterProfileImageUrl(s.getUserId()),
-                            getBroadcasterStreamerTier(s.getUserId())
-                    );
+                    return StreamResponse.from(s, getBroadcasterDisplayName(s.getUserId()), null, vc, getBroadcasterProfileImageUrl(s.getUserId()));
                 })
                 .collect(Collectors.toList());
     }
@@ -311,18 +282,10 @@ public class LiveStreamService {
     public List<StreamResponse> listRecentByUserIds(List<Long> userIds, int limit) {
         if (userIds == null || userIds.isEmpty()) return List.of();
         return liveStreamRepository.findTop20ByUserIdInAndStatusInOrderByStartedAtDesc(userIds, List.of(StreamStatus.ENDED)).stream()
-                .filter(stream -> stream.getVisibleInRecent() == null || stream.getVisibleInRecent())
                 .limit(limit)
                 .map(s -> {
                     int vc = streamViewerCountService.getViewerCount(s.getId());
-                    return StreamResponse.from(
-                            s,
-                            getBroadcasterDisplayName(s.getUserId()),
-                            null,
-                            vc,
-                            getBroadcasterProfileImageUrl(s.getUserId()),
-                            getBroadcasterStreamerTier(s.getUserId())
-                    );
+                    return StreamResponse.from(s, getBroadcasterDisplayName(s.getUserId()), null, vc, getBroadcasterProfileImageUrl(s.getUserId()));
                 })
                 .collect(Collectors.toList());
     }

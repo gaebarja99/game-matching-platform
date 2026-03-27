@@ -179,11 +179,11 @@ public class GroupChatService {
         String trimmed = text != null ? text.trim() : "";
         if (trimmed.isEmpty()) throw new IllegalArgumentException("메시지를 입력해 주세요.");
         if (trimmed.length() > MAX_TEXT_LENGTH) trimmed = trimmed.substring(0, MAX_TEXT_LENGTH);
-        trimmed = profanityFilterService.moderateChat(userId, trimmed).getSanitizedText();
+        ProfanityFilterService.ModerationResult moderation = profanityFilterService.moderateChat(userId, trimmed);
         GroupChatMessage msg = new GroupChatMessage();
         msg.setRoomId(roomId);
         msg.setFromUserId(userId);
-        msg.setText(trimmed);
+        msg.setText(moderation.getSanitizedText());
         msg = messageRepository.save(msg);
         String fromNickname = null;
         String fromProfileImageUrl = null;

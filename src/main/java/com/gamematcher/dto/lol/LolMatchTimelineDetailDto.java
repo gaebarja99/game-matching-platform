@@ -98,6 +98,45 @@ public class LolMatchTimelineDetailDto {
 
             @JsonProperty("wardType")
             private String wardType;
+
+            @JsonProperty("position")
+            private ParticipantFrame.Position position;
+
+            @JsonProperty("teamId")
+            private Integer teamId;
+
+            @JsonProperty("laneType")
+            private String laneType;
+
+            @JsonProperty("killerId")
+            private Integer killerId;
+
+            @JsonProperty("monsterType")
+            private String monsterType;
+
+            @JsonProperty("monsterSubType")
+            private String monsterSubType;
+
+            @JsonProperty("winningTeam")
+            private Integer winningTeam;
+
+            @JsonProperty("level")
+            private Integer level;
+
+            @JsonProperty("victimId")
+            private Integer victimId;
+
+            @JsonProperty("assistingParticipantIds")
+            private List<Integer> assistingParticipantIds;
+
+            @JsonProperty("towerType")
+            private String towerType;
+
+            @JsonProperty("buildingType")
+            private String buildingType;
+
+            @JsonProperty("name")
+            private String name;
         }
 
         @Getter

@@ -38,7 +38,7 @@ public class DonationService {
     private final DonationRepository donationRepository;
 
     @Transactional
-    public DonationResponse donate(Long fromUserId, Long streamId, int amount, String message, String videoUrl) {
+    public DonationResponse donate(Long fromUserId, Long streamId, int amount, String message) {
         if (amount < MIN_AMOUNT || amount > MAX_AMOUNT) {
             throw new IllegalArgumentException("후원할 팡은 1,000 이상 입력해 주세요.");
         }
@@ -55,15 +55,8 @@ public class DonationService {
             throw new IllegalArgumentException("본인 방송에는 후원할 수 없습니다.");
         }
 
-        User toUser = userRepository.findById(toUserId)
-                .orElseThrow(() -> new IllegalArgumentException("諛⑹넚 ?쒖옉?먮? 李얠쓣 ???놁뒿?덈떎."));
-
         fromUser.setPangBalance(balance - amount);
         userRepository.save(fromUser);
-
-        long recipientBalance = toUser.getPangBalance() != null ? toUser.getPangBalance() : 0L;
-        toUser.setPangBalance(recipientBalance + amount);
-        userRepository.save(toUser);
 
         Donation donation = new Donation();
         donation.setFromUserId(fromUserId);
@@ -71,7 +64,6 @@ public class DonationService {
         donation.setToUserId(toUserId);
         donation.setAmount(amount);
         donation.setMessage(message != null && message.length() > 500 ? message.substring(0, 500) : message);
-        donation.setVideoUrl(videoUrl != null && videoUrl.length() > 512 ? videoUrl.substring(0, 512) : videoUrl);
         donationRepository.save(donation);
 
         int consecutiveDays = computeConsecutiveDonationDays(fromUserId, toUserId, donation.getCreatedAt() != null ? donation.getCreatedAt().toLocalDate() : LocalDate.now());
@@ -86,7 +78,6 @@ public class DonationService {
                 amount,
                 getPangTier(amount),
                 savedMessage != null && !savedMessage.isBlank() ? savedMessage : null,
-                donation.getVideoUrl(),
                 donorProfileImageUrl,
                 consecutiveDays >= 1 ? consecutiveDays : null
         );

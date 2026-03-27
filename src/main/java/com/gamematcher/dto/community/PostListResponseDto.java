@@ -21,8 +21,7 @@ public class PostListResponseDto {
     private Long authorId;
     private String authorUsername;
     private int viewCount;
-    private int recommendCount;
-    private int notRecommendCount;
+    private int likeCount;
     private int commentCount;
     private boolean isNotice;
     private boolean isPopular;
@@ -37,8 +36,7 @@ public class PostListResponseDto {
         dto.authorId = post.getAuthor().getId();
         dto.authorUsername = post.getAuthor().getUsername();
         dto.viewCount = post.getViewCount();
-        dto.recommendCount = post.getRecommendCount();
-        dto.notRecommendCount = post.getNotRecommendCount();
+        dto.likeCount = post.getLikeCount();
         dto.commentCount = post.getCommentCount();
         dto.isNotice = post.isNotice();
         dto.isPopular = isPopular;

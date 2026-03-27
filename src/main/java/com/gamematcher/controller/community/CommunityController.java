@@ -6,7 +6,6 @@ import com.gamematcher.dto.community.*;
 import com.gamematcher.entity.community.Comment;
 import com.gamematcher.entity.community.Post;
 import com.gamematcher.service.community.CommunityService;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.http.HttpStatus;
@@ -66,9 +65,8 @@ public class CommunityController {
     @GetMapping("/posts/{postId}")
     public PostDetailResponseDto getPostDetail(
             @PathVariable Long userId,
-            @PathVariable Long postId,
-            HttpSession session) {
-        return communityService.getPostDetail(postId, userId, markViewed(postId, session));
+            @PathVariable Long postId) {
+        return communityService.getPostDetail(postId, userId);
     }
 
     // ========== 게시글 작성 ==========
@@ -79,7 +77,7 @@ public class CommunityController {
             @Valid @RequestPart("post") PostCreateRequestDto request,
             @RequestPart(value = "files", required = false) List<MultipartFile> files) {
         Post post = communityService.createPost(userId, request, files != null ? files : List.of());
-        return communityService.getPostDetail(post.getId(), userId, false);
+        return communityService.getPostDetail(post.getId(), userId);
     }
 
     /** 파일 없이 게시글 작성 (JSON only) */
@@ -89,7 +87,7 @@ public class CommunityController {
             @PathVariable Long userId,
             @Valid @RequestBody PostCreateRequestDto request) {
         Post post = communityService.createPost(userId, request, List.of());
-        return communityService.getPostDetail(post.getId(), userId, false);
+        return communityService.getPostDetail(post.getId(), userId);
     }
 
     // ========== 게시글 수정 ==========
@@ -99,7 +97,7 @@ public class CommunityController {
             @PathVariable Long postId,
             @Valid @RequestBody PostUpdateRequestDto request) {
         communityService.updatePost(postId, userId, request);
-        return communityService.getPostDetail(postId, userId, false);
+        return communityService.getPostDetail(postId, userId);
     }
 
     // ========== 게시글 삭제 ==========
@@ -171,14 +169,6 @@ public class CommunityController {
         return PageResponseDto.of(communityService.getBookmarks(userId, page, size));
     }
 
-    @GetMapping("/my-posts")
-    public PageResponseDto<PostListResponseDto> getMyPosts(
-            @PathVariable Long userId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
-        return PageResponseDto.of(communityService.getMyPosts(userId, page, size));
-    }
-
     // ========== 추천/비추천 ==========
     @PostMapping("/posts/{postId}/recommend")
     @ResponseStatus(HttpStatus.NO_CONTENT)
@@ -218,23 +208,5 @@ public class CommunityController {
             @PathVariable Long userId,
             @PathVariable Long notificationId) {
         communityService.markNotificationRead(notificationId, userId);
-    }
-
-    @SuppressWarnings("unchecked")
-    private boolean markViewed(Long postId, HttpSession session) {
-        if (session == null || postId == null) return true;
-        Object viewedPosts = session.getAttribute("communityViewedPosts");
-        java.util.Set<Long> viewed;
-        if (viewedPosts instanceof java.util.Set<?>) {
-            viewed = (java.util.Set<Long>) viewedPosts;
-        } else {
-            viewed = new java.util.HashSet<>();
-            session.setAttribute("communityViewedPosts", viewed);
-        }
-        if (viewed.contains(postId)) {
-            return false;
-        }
-        viewed.add(postId);
-        return true;
     }
 }

@@ -5,11 +5,11 @@ export type BoardCategory =
   | 'NOTICE'
   | 'QUESTION'
   | 'LOL'
+  | 'TFT'
   | 'VALORANT'
   | 'PUBG'
   | 'OVERWATCH'
   | 'CS2'
-  | 'APEX'
   | 'BLIZZARD'
   | 'STEAM';
 
@@ -18,11 +18,11 @@ export const BOARD_CATEGORIES: BoardCategory[] = [
   'NOTICE',
   'QUESTION',
   'LOL',
+  'TFT',
   'VALORANT',
   'PUBG',
   'OVERWATCH',
   'CS2',
-  'APEX',
   'BLIZZARD',
   'STEAM',
 ];
@@ -32,11 +32,11 @@ export const BOARD_LABELS: Record<BoardCategory, string> = {
   NOTICE: '공지',
   QUESTION: '질문',
   LOL: '롤',
+  TFT: 'TFT',
   VALORANT: '발로란트',
   PUBG: '배그',
   OVERWATCH: '오버워치',
   CS2: 'CS2',
-  APEX: '에이펙스',
   BLIZZARD: '블리자드',
   STEAM: '스팀',
 };
@@ -48,8 +48,7 @@ export interface PostListItem {
   authorId: number;
   authorUsername: string;
   viewCount: number;
-  recommendCount: number;
-  notRecommendCount: number;
+  likeCount: number;
   commentCount: number;
   isNotice: boolean;
   isPopular: boolean;
@@ -70,11 +69,10 @@ export interface PostDetail {
   boardCategory: BoardCategory;
   title: string;
   content: string;
-  status: 'ACTIVE' | 'BLIND' | 'DELETED_BY_USER' | 'DELETED_BY_ADMIN';
-  statusLabel: string;
   authorId: number;
   authorUsername: string;
   viewCount: number;
+  likeCount: number;
   recommendCount: number;
   notRecommendCount: number;
   commentCount: number;
@@ -83,6 +81,7 @@ export interface PostDetail {
   attachments: AttachmentDto[];
   createdAt: string;
   updatedAt: string;
+  liked: boolean;
   bookmarked: boolean;
   myRecommend: number | null;
 }
@@ -99,6 +98,25 @@ export interface CommentNode {
   createdAt: string;
   updatedAt: string;
 }
+
+export type ReportReason =
+  | 'SPAM'
+  | 'HARASSMENT'
+  | 'INAPPROPRIATE_CONTENT'
+  | 'CHEATING'
+  | 'IMPERSONATION'
+  | 'HATE_SPEECH'
+  | 'OTHER';
+
+export const COMMUNITY_REPORT_REASONS: Array<{ value: ReportReason; label: string }> = [
+  { value: 'SPAM', label: '스팸' },
+  { value: 'HARASSMENT', label: '괴롭힘' },
+  { value: 'INAPPROPRIATE_CONTENT', label: '부적절한 콘텐츠' },
+  { value: 'CHEATING', label: '부정행위' },
+  { value: 'IMPERSONATION', label: '사칭' },
+  { value: 'HATE_SPEECH', label: '혐오 발언' },
+  { value: 'OTHER', label: '기타' },
+];
 
 export interface PageResult<T> {
   content: T[];
@@ -128,19 +146,13 @@ export async function fetchCommunityPostList(args: {
 }) {
   const { category, keyword, page = 0, size = 20, sortBy = 'latest' } = args;
   const q = qs({ keyword, page, size, sortBy });
-  const path =
-    category != null
-      ? `/api/community/boards/${category}/posts${q}`
-      : `/api/community/posts${q}`;
+  const path = category != null ? `/api/community/boards/${category}/posts${q}` : `/api/community/posts${q}`;
   return apiFetch<PageResult<PostListItem>>(path);
 }
 
 export async function fetchPopularPosts(category: BoardCategory | null, limit = 5) {
   const q = qs({ limit });
-  const path =
-    category != null
-      ? `/api/community/boards/${category}/posts/popular${q}`
-      : `/api/community/posts/popular${q}`;
+  const path = category != null ? `/api/community/boards/${category}/posts/popular${q}` : `/api/community/posts/popular${q}`;
   return apiFetch<PostListItem[]>(path);
 }
 
@@ -164,7 +176,7 @@ export async function createPostJson(
     content: string;
     isNotice?: boolean;
     hashtags?: string[];
-  }
+  },
 ) {
   return apiFetch<PostDetail>(`/api/users/${userId}/community/posts/json`, {
     method: 'POST',
@@ -172,7 +184,7 @@ export async function createPostJson(
   });
 }
 
-export async function createPostWithFiles(
+export async function createPostMultipart(
   userId: number,
   body: {
     boardCategory: BoardCategory;
@@ -181,50 +193,27 @@ export async function createPostWithFiles(
     isNotice?: boolean;
     hashtags?: string[];
   },
-  files: File[]
+  files: File[],
 ) {
   const formData = new FormData();
   formData.append(
     'post',
-    new Blob([JSON.stringify(body)], { type: 'application/json' })
+    new Blob([JSON.stringify(body)], {
+      type: 'application/json',
+    }),
   );
-  files.forEach((file) => {
-    formData.append('files', file);
-  });
+  files.forEach((file) => formData.append('files', file));
 
-  const res = await fetch(apiUrl(`/api/users/${userId}/community/posts`), {
+  return apiFetch<PostDetail>(`/api/users/${userId}/community/posts`, {
     method: 'POST',
-    credentials: 'include',
     body: formData,
   });
-
-  let data: PostDetail | undefined;
-  let message: string | undefined;
-  const ct = res.headers.get('content-type');
-  if (ct?.includes('application/json')) {
-    try {
-      const json = await res.json();
-      data = json as PostDetail;
-      if (json && typeof json === 'object' && 'message' in json) {
-        message = (json as { message?: string }).message;
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  return {
-    ok: res.ok,
-    status: res.status,
-    data,
-    message,
-  };
 }
 
 export async function updatePost(
   userId: number,
   postId: number,
-  body: { title: string; content: string; hashtags?: string[] }
+  body: { title: string; content: string; hashtags?: string[] },
 ) {
   return apiFetch<PostDetail>(`/api/users/${userId}/community/posts/${postId}`, {
     method: 'PUT',
@@ -235,39 +224,22 @@ export async function updatePost(
 export async function addPostAttachment(userId: number, postId: number, file: File) {
   const formData = new FormData();
   formData.append('file', file);
-
-  const res = await fetch(
-    apiUrl(`/api/users/${userId}/community/posts/${postId}/attachments`),
-    {
-      method: 'POST',
-      credentials: 'include',
-      body: formData,
-    }
-  );
-
-  let message: string | undefined;
-  const ct = res.headers.get('content-type');
-  if (ct?.includes('application/json')) {
-    try {
-      const json = await res.json();
-      if (json && typeof json === 'object' && 'message' in json) {
-        message = (json as { message?: string }).message;
-      }
-    } catch {
-      // ignore
-    }
-  }
-
-  return {
-    ok: res.ok,
-    status: res.status,
-    message,
-  };
+  return apiFetch<void>(`/api/users/${userId}/community/posts/${postId}/attachments`, {
+    method: 'POST',
+    body: formData,
+  });
 }
 
 export async function deletePost(userId: number, postId: number) {
   return apiFetch<void>(`/api/users/${userId}/community/posts/${postId}`, {
     method: 'DELETE',
+  });
+}
+
+export async function toggleLike(userId: number, postId: number) {
+  return apiFetch<void>(`/api/users/${userId}/community/posts/${postId}/like`, {
+    method: 'POST',
+    body: '{}',
   });
 }
 
@@ -278,19 +250,11 @@ export async function toggleBookmark(userId: number, postId: number) {
   });
 }
 
-export async function fetchMyCommunityPosts(userId: number, page = 0, size = 20) {
-  return apiFetch<PageResult<PostListItem>>(`/api/users/${userId}/community/my-posts${qs({ page, size })}`);
-}
-
-export async function fetchSavedCommunityPosts(userId: number, page = 0, size = 20) {
-  return apiFetch<PageResult<PostListItem>>(`/api/users/${userId}/community/bookmarks${qs({ page, size })}`);
-}
-
 export async function recommendPost(userId: number, postId: number, type: 'RECOMMEND' | 'NOT_RECOMMEND') {
-  return apiFetch<void>(
-    `/api/users/${userId}/community/posts/${postId}/recommend${qs({ type })}`,
-    { method: 'POST', body: '{}' }
-  );
+  return apiFetch<void>(`/api/users/${userId}/community/posts/${postId}/recommend${qs({ type })}`, {
+    method: 'POST',
+    body: '{}',
+  });
 }
 
 export async function createComment(userId: number, postId: number, content: string, parentId?: number) {
@@ -303,6 +267,22 @@ export async function createComment(userId: number, postId: number, content: str
 export async function deleteComment(userId: number, commentId: number) {
   return apiFetch<void>(`/api/users/${userId}/community/comments/${commentId}`, {
     method: 'DELETE',
+  });
+}
+
+export async function submitCommunityReport(
+  userId: number,
+  body: {
+    targetType: 'POST' | 'COMMENT';
+    postId: number;
+    commentId?: number;
+    reason: ReportReason;
+    description?: string;
+  },
+) {
+  return apiFetch<void>(`/api/users/${userId}/community/reports`, {
+    method: 'POST',
+    body: JSON.stringify(body),
   });
 }
 

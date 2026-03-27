@@ -278,7 +278,7 @@ public class ApexSearchService {
         result.sort((a, b) -> Integer.compare(
                 b.getKills() != null ? b.getKills() : 0,
                 a.getKills() != null ? a.getKills() : 0));
-        return result.stream().limit(10).collect(Collectors.toList());
+        return result.stream().limit(20).collect(Collectors.toList());
     }
 
     @SuppressWarnings("unchecked")

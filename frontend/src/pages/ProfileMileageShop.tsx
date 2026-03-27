@@ -215,7 +215,7 @@ export default function ProfileMileageShop() {
       <section className="pang-history-section">
         <div className="pang-history-table-wrap mileage-shop-layout">
           <div className="profile-edit-field mileage-shop-item">
-            <label>팡 구매 (1팡 = 2마일리지)</label>
+            <label>팡 구매 (1팡 = 2M)</label>
             <p className="pang-charge-desc">최소 1,000팡부터 구매할 수 있습니다.</p>
             <div className="mileage-shop-row">
               <input
@@ -233,7 +233,7 @@ export default function ProfileMileageShop() {
           </div>
 
           <div className="profile-edit-field mileage-shop-item">
-            <label>구독권 구매 ({(shopPrices.subscriptionTicketCost ?? 8000).toLocaleString()} 마일리지)</label>
+            <label>구독권 구매 (8,200M / 30일)</label>
             <p className="pang-charge-desc">스트리머 닉네임/아이디를 검색해서 선택한 뒤 구매할 수 있습니다.</p>
             <div className="mileage-shop-row">
               <input
@@ -280,7 +280,7 @@ export default function ProfileMileageShop() {
           </div>
 
           <div className="profile-edit-field mileage-shop-item">
-            <label>광고 제거권 ({(shopPrices.adFree30DaysCost ?? 14500).toLocaleString()} 마일리지 / 30일)</label>
+            <label>광고 제거권 (14,900M / 30일)</label>
             <p className="pang-charge-desc">
               현재 만료: {user?.adFreeUntil ? formatDate(user.adFreeUntil) : '미적용'}
             </p>
@@ -321,7 +321,7 @@ export default function ProfileMileageShop() {
                             ? '광고 제거 30일'
                             : h.type}
                     </td>
-                    <td>{(h.mileageCost ?? 0).toLocaleString()} ML</td>
+                    <td>{(h.mileageCost ?? 0).toLocaleString()} M</td>
                     <td>
                       {h.type === 'PANG'
                         ? `${(h.pangAmount ?? 0).toLocaleString()}팡`
