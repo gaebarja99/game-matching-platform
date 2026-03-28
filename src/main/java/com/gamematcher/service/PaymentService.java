@@ -1,10 +1,13 @@
 package com.gamematcher.service;
 
 import com.gamematcher.config.PaymentProperties;
+import com.gamematcher.constant.MileagePurchaseType;
 import com.gamematcher.constant.PangConstants;
 import com.gamematcher.constant.PaymentOrderKind;
+import com.gamematcher.entity.MileagePurchase;
 import com.gamematcher.entity.PaymentOrder;
 import com.gamematcher.entity.User;
+import com.gamematcher.repository.MileagePurchaseRepository;
 import com.gamematcher.repository.PaymentOrderRepository;
 import com.gamematcher.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +50,7 @@ public class PaymentService {
     private final NotificationService notificationService;
     private final PaymentProperties paymentProperties;
     private final UserRepository userRepository;
+    private final MileagePurchaseRepository mileagePurchaseRepository;
     private final RestTemplate restTemplate = new RestTemplate();
 
     @Transactional
@@ -163,6 +167,7 @@ public class PaymentService {
 
         verifyAndMarkPayment(order, orderId, impUid);
         long newBalance = pangService.charge(userId, order.getPangAmount(), order.getOrderId(), impUid);
+        saveMileageRewardHistory(userId, Math.round(order.getAmountWon() * 5.0 / 100.0), MileagePurchaseType.PANG_PAYMENT_REWARD);
         notificationService.createForPaymentCompleted(userId, order.getPangAmount(), order.getAmountWon());
         return new ConfirmResult(true, newBalance, "팡 충전이 완료되었습니다.");
     }
@@ -190,6 +195,8 @@ public class PaymentService {
 
         verifyAndMarkPayment(order, orderId, impUid);
         subscriptionService.grantSubscription(subscriberId, order.getTargetUserId(), true);
+        saveMileageRewardHistory(subscriberId, Math.round(order.getAmountWon() * 10.0 / 100.0), MileagePurchaseType.SUBSCRIPTION_PAYMENT_REWARD);
+        notificationService.createForNewSubscriber(order.getTargetUserId(), subscriberId);
         return new ConfirmResult(true, 0L, "구독 결제가 완료되었습니다.");
     }
 
@@ -219,7 +226,11 @@ public class PaymentService {
                 ? user.getAdFreeUntil()
                 : LocalDateTime.now();
         user.setAdFreeUntil(base.plusDays(30));
+        long currentMileage = user.getMileage() != null ? user.getMileage() : 0L;
+        long rewardMileage = Math.round(order.getAmountWon() * 5.0 / 100.0);
+        user.setMileage(currentMileage + rewardMileage);
         userRepository.save(user);
+        saveMileageRewardHistory(userId, rewardMileage, MileagePurchaseType.AD_FREE_PAYMENT_REWARD);
 
         return new ConfirmResult(true, 0L, "광고 제거 결제가 완료되었습니다.");
     }
@@ -524,6 +535,18 @@ public class PaymentService {
             }
         }
         return null;
+    }
+
+    private void saveMileageRewardHistory(Long userId, long mileageAmount, MileagePurchaseType type) {
+        if (userId == null || mileageAmount <= 0 || type == null) {
+            return;
+        }
+
+        MileagePurchase purchase = new MileagePurchase();
+        purchase.setUserId(userId);
+        purchase.setType(type);
+        purchase.setMileageCost(mileageAmount);
+        mileagePurchaseRepository.save(purchase);
     }
 
     public record CreateOrderResult(String orderId, long amountWon, String orderName, String storeId, String pg, String payMethod) {}

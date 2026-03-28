@@ -115,7 +115,8 @@ function App() {
               <Route path="/studio/viewers/followers" element={<StudioViewersFollowers />} />
               <Route path="/studio/viewers/fans" element={<StudioViewersFans />} />
               <Route path="/studio/viewers/subscribers" element={<StudioViewersSubscribers />} />
-              <Route path="/studio/viewers/blocklist" element={<StudioViewersBlocklist />} />
+              <Route path="/studio/viewers/blacklist" element={<StudioViewersBlocklist />} />
+              <Route path="/studio/viewers/blocklist" element={<Navigate to="/studio/viewers/blacklist" replace />} />
               <Route path="/studio/revenue" element={<StudioRevenue />} />
               <Route path="/studio/admin/streamers" element={<Navigate to="/admin/streamers" replace />} />
               <Route path="/admin" element={<Admin />} />

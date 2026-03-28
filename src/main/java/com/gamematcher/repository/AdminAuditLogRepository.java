@@ -8,4 +8,6 @@ import java.util.List;
 public interface AdminAuditLogRepository extends JpaRepository<AdminAuditLog, Long> {
 
     List<AdminAuditLog> findByTargetTypeAndTargetIdOrderByCreatedAtDesc(String targetType, Long targetId);
+
+    List<AdminAuditLog> findByActionTypeOrderByCreatedAtDesc(String actionType);
 }

@@ -1,9 +1,11 @@
 package com.gamematcher.controller;
 
 import com.gamematcher.dto.donation.DonationResponse;
+import com.gamematcher.entity.LiveStream;
 import com.gamematcher.dto.stream.StreamResponse;
 import com.gamematcher.entity.Donation;
 import com.gamematcher.repository.DonationRepository;
+import com.gamematcher.repository.LiveStreamRepository;
 import com.gamematcher.repository.UserRepository;
 import com.gamematcher.service.DonationService;
 import com.gamematcher.service.LiveStreamService;
@@ -31,6 +33,7 @@ public class DonationController {
     private final SimpMessagingTemplate messagingTemplate;
     private final DonationRepository donationRepository;
     private final UserRepository userRepository;
+    private final LiveStreamRepository liveStreamRepository;
 
     @PostMapping
     public ResponseEntity<?> donate(@RequestBody Map<String, Object> body, HttpSession session) {
@@ -132,8 +135,19 @@ public class DonationController {
         long total = donationService.getMyDonationsCount(userId);
         List<Map<String, Object>> items = list.stream().map(d -> {
             Map<String, Object> m = new HashMap<>();
+            String streamerNickname = userRepository.findById(d.getToUserId())
+                    .map(user -> (user.getNickname() != null && !user.getNickname().isBlank())
+                            ? user.getNickname()
+                            : (user.getUsername() != null && !user.getUsername().isBlank() ? user.getUsername() : user.getLoginId()))
+                    .orElse(null);
+            String streamTitle = liveStreamRepository.findById(d.getStreamId())
+                    .map(LiveStream::getTitle)
+                    .orElse(null);
             m.put("id", d.getId());
             m.put("streamId", d.getStreamId());
+            m.put("toUserId", d.getToUserId());
+            m.put("streamerNickname", streamerNickname);
+            m.put("streamTitle", streamTitle);
             m.put("amount", d.getAmount());
             m.put("message", d.getMessage());
             m.put("createdAt", d.getCreatedAt() != null ? d.getCreatedAt().format(ISO_FORMAT) : null);

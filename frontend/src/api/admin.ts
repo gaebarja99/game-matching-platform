@@ -54,6 +54,8 @@ export interface AdminSettlementRow {
 
 export interface AdminReportRow {
   id: number;
+  entryType?: 'USER_REPORT' | 'ADMIN_WARNING';
+  reportId?: number | null;
   reporterId: number;
   reporterUsername: string;
   reportedUserId: number;
@@ -118,6 +120,7 @@ export interface AdminRevenueSummary {
   usedMileage?: number;
   remainingMileage?: number;
   adminGrantedMileage?: number;
+  monthAdminGrantedMileage?: number;
   selectedYear?: number;
   selectedMonth?: number;
   currentYear?: number;

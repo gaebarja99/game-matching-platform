@@ -14,6 +14,14 @@ interface BlacklistEntry {
   loginId?: string;
 }
 
+function readSafeMessage(data: unknown, fallback: string) {
+  if (!data || typeof data !== 'object' || !('message' in data)) return fallback;
+  const message = String((data as { message?: unknown }).message ?? '').trim();
+  if (!message) return fallback;
+  const looksBroken = /[�?濡釉붾옓由ъ뒪]/.test(message) && !/[가-힣]/.test(message);
+  return looksBroken ? fallback : message;
+}
+
 export default function StudioViewersBlocklist() {
   const [streamId, setStreamId] = useState<number | null>(null);
   const [input, setInput] = useState('');
@@ -76,11 +84,11 @@ export default function StudioViewersBlocklist() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage(data?.message ?? '블랙리스트 사용자를 추가하지 못했습니다.');
+        setMessage(readSafeMessage(data, '블랙리스트 사용자를 추가하지 못했습니다.'));
         return;
       }
       setInput('');
-      setMessage(data?.message ?? '블랙리스트가 업데이트되었습니다.');
+      setMessage('블랙리스트에 추가했습니다.');
       await reload(streamId);
     } catch {
       setMessage('블랙리스트 사용자를 추가하지 못했습니다.');
@@ -100,10 +108,10 @@ export default function StudioViewersBlocklist() {
       });
       const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        setMessage(data?.message ?? '블랙리스트 해제에 실패했습니다.');
+        setMessage(readSafeMessage(data, '블랙리스트 해제에 실패했습니다.'));
         return;
       }
-      setMessage(data?.message ?? '블랙리스트가 해제되었습니다.');
+      setMessage('블랙리스트를 해제했습니다.');
       await reload(streamId);
     } catch {
       setMessage('블랙리스트 해제에 실패했습니다.');

@@ -28,6 +28,7 @@ public class MileageShopService {
     private final PangService pangService;
     private final SubscriptionService subscriptionService;
     private final MileagePurchaseRepository mileagePurchaseRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public Result buyPang(Long userId, int pangAmount) {
@@ -66,6 +67,7 @@ public class MileageShopService {
         user.setMileage(mileage - SUBSCRIPTION_TICKET_COST);
         userRepository.save(user);
         subscriptionService.grantSubscription(userId, streamerId, false);
+        notificationService.createForNewSubscriber(streamerId, userId);
 
         MileagePurchase p = new MileagePurchase();
         p.setUserId(userId);

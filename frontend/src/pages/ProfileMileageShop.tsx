@@ -4,7 +4,15 @@ import { apiUrl } from '../api/client';
 
 interface MileagePurchaseRow {
   id?: number;
-  type?: 'ADMIN_GIFT' | 'PANG' | 'SUBSCRIPTION_TICKET' | 'AD_FREE_30_DAYS' | string;
+  type?:
+    | 'ADMIN_GIFT'
+    | 'PANG_PAYMENT_REWARD'
+    | 'SUBSCRIPTION_PAYMENT_REWARD'
+    | 'AD_FREE_PAYMENT_REWARD'
+    | 'PANG'
+    | 'SUBSCRIPTION_TICKET'
+    | 'AD_FREE_30_DAYS'
+    | string;
   mileageCost?: number;
   pangAmount?: number;
   targetUserId?: number;
@@ -76,8 +84,12 @@ export default function ProfileMileageShop() {
       });
   };
 
-  const chargeHistory = shopHistory.filter((item) => item.type === 'ADMIN_GIFT');
-  const usageHistory = shopHistory.filter((item) => item.type !== 'ADMIN_GIFT');
+  const chargeHistory = shopHistory.filter((item) =>
+    ['ADMIN_GIFT', 'PANG_PAYMENT_REWARD', 'SUBSCRIPTION_PAYMENT_REWARD', 'AD_FREE_PAYMENT_REWARD'].includes(item.type ?? ''),
+  );
+  const usageHistory = shopHistory.filter(
+    (item) => !['ADMIN_GIFT', 'PANG_PAYMENT_REWARD', 'SUBSCRIPTION_PAYMENT_REWARD', 'AD_FREE_PAYMENT_REWARD'].includes(item.type ?? ''),
+  );
 
   useEffect(() => {
     loadPrices();
@@ -321,7 +333,6 @@ export default function ProfileMileageShop() {
                   <thead>
                     <tr>
                       <th>일시</th>
-                      <th>구분</th>
                       <th>적립 마일리지</th>
                       <th>상세</th>
                     </tr>
@@ -330,9 +341,18 @@ export default function ProfileMileageShop() {
                     {chargeHistory.map((h, idx) => (
                       <tr key={h.id ?? idx}>
                         <td className="col-date">{formatDate(h.createdAt)}</td>
-                        <td>이벤트 지급</td>
                         <td>{`+${(h.mileageCost ?? 0).toLocaleString()} M`}</td>
-                        <td>운영자 지급</td>
+                        <td>
+                          {h.type === 'ADMIN_GIFT'
+                            ? '운영자 지급'
+                            : h.type === 'PANG_PAYMENT_REWARD'
+                              ? '팡 결제'
+                              : h.type === 'SUBSCRIPTION_PAYMENT_REWARD'
+                                ? '구독권 결제'
+                                : h.type === 'AD_FREE_PAYMENT_REWARD'
+                                  ? '광고제거 결제'
+                                  : '-'}
+                        </td>
                       </tr>
                     ))}
                   </tbody>

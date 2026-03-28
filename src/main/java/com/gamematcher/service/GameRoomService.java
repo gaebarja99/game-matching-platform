@@ -209,7 +209,6 @@ public class GameRoomService {
         Optional<GameRoom> opt = roomRepository.findById(roomId);
         if (opt.isEmpty()) return "not_found";
         GameRoom room = opt.get();
-        if (room.getHostUserId().equals(userId)) return "host_cannot_leave";
         Optional<GameRoomMember> m = memberRepository.findByRoomIdAndUserId(roomId, userId);
         if (m.isEmpty()) return "not_member";
         String leaverNickname = userRepository.findById(userId)
@@ -226,6 +225,9 @@ public class GameRoomService {
             chatPayload.put("userId", userId);
             chatPayload.put("nickname", leaverNickname);
             messagingTemplate.convertAndSend("/topic/group-room/" + room.getGroupChatRoomId(), chatPayload);
+        }
+        if (memberRepository.countByRoomId(roomId) == 0) {
+            deleteRoomWithChat(room);
         }
         return "ok";
     }
@@ -252,9 +254,20 @@ public class GameRoomService {
         GameRoom room = opt.get();
         if (!room.getHostUserId().equals(userId)) return "not_host";
         if (password == null || !password.equals(room.getDeletePassword())) return "wrong_password";
-        memberRepository.findByRoomId(roomId).forEach(memberRepository::delete);
-        roomRepository.delete(room);
+        deleteRoomWithChat(room);
         return "ok";
+    }
+
+    private void deleteRoomWithChat(GameRoom room) {
+        Long roomId = room.getId();
+        memberRepository.findByRoomId(roomId).forEach(memberRepository::delete);
+        if (room.getGroupChatRoomId() != null) {
+            groupChatRoomMemberRepository.findByRoomId(room.getGroupChatRoomId())
+                    .forEach(groupChatRoomMemberRepository::delete);
+            groupChatRoomRepository.findById(room.getGroupChatRoomId())
+                    .ifPresent(groupChatRoomRepository::delete);
+        }
+        roomRepository.delete(room);
     }
 
     public boolean isMember(Long roomId, Long userId) {

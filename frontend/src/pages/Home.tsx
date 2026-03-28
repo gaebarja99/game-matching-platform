@@ -22,6 +22,8 @@ import {
   getMatchQueueStatusDetail,
   getLolMatchQueueStatus,
   leaveLolMatchQueue,
+  getMyMatchSessions,
+  getMatchSession,
 } from '../api/match';
 import {
   TIER_OPTIONS,
@@ -161,6 +163,14 @@ function formatRelativeCreatedAt(s: string) {
     return s;
   }
 }
+
+type HomeMatchRoomItem = {
+  id: number;
+  game: string;
+  createdAt: string;
+  memberCount: number | null;
+  hostNickname: string;
+};
 
 function UserGlyph({ className = '' }: { className?: string }) {
   return (
@@ -366,6 +376,7 @@ export default function Home() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
   const [roomList, setRoomList] = useState<GameRoomItem[]>([]);
+  const [matchRoomList, setMatchRoomList] = useState<HomeMatchRoomItem[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [joinRoomId, setJoinRoomId] = useState<number | null>(null);
   const [selectedGame, setSelectedGame] = useState<TeamSearchGameId>('ALL');
@@ -384,6 +395,30 @@ export default function Home() {
       .finally(() => setLoadingRooms(false));
   }, []);
 
+  const fetchMatchRooms = useCallback(async () => {
+    if (!user) {
+      setMatchRoomList([]);
+      return;
+    }
+
+    const sessions = await getMyMatchSessions();
+    const detailedSessions = await Promise.all(
+      sessions.map(async (session) => {
+        const detail = await getMatchSession(session.id);
+        return {
+          id: session.id,
+          game: session.game,
+          createdAt: session.createdAt,
+          memberCount: detail?.members?.length ?? null,
+          hostNickname: detail?.members?.[0]?.nickname?.trim() || '랜덤 매칭',
+        };
+      }),
+    );
+
+    detailedSessions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    setMatchRoomList(detailedSessions);
+  }, [user]);
+
   useEffect(() => {
     if (authLoading) return;
     fetchRooms();
@@ -391,12 +426,18 @@ export default function Home() {
 
   useEffect(() => {
     if (authLoading) return;
+    void fetchMatchRooms();
+  }, [authLoading, fetchMatchRooms]);
+
+  useEffect(() => {
+    if (authLoading) return;
     // 방 목록 인원 현황을 자연스럽게 갱신 (예: 1/5 → 2/5)
     const timer = window.setInterval(() => {
       fetchRooms();
+      void fetchMatchRooms();
     }, 4000);
     return () => window.clearInterval(timer);
-  }, [authLoading, fetchRooms]);
+  }, [authLoading, fetchRooms, fetchMatchRooms]);
 
   const visibleRoomList = useMemo(
     () => roomList.filter((r) => !isHiddenGameRoomHost(r.hostNickname)),
@@ -406,6 +447,11 @@ export default function Home() {
   const filteredRoomList = useMemo(
     () => (selectedGame === 'ALL' ? visibleRoomList : visibleRoomList.filter((r) => r.game === selectedGame)),
     [visibleRoomList, selectedGame],
+  );
+
+  const filteredMatchRoomList = useMemo(
+    () => (selectedGame === 'ALL' ? matchRoomList : matchRoomList.filter((room) => room.game === selectedGame)),
+    [matchRoomList, selectedGame],
   );
 
   useEffect(() => {
@@ -721,6 +767,10 @@ export default function Home() {
   const goGameRoomChat = (r: GameRoomItem) => {
     if (r.groupChatRoomId == null) return;
     navigate(`/group-chat/room/${r.groupChatRoomId}`, { state: { fromGameRoom: true, gameRoomId: r.id } });
+  };
+
+  const goMatchRoomChat = (sessionId: number) => {
+    navigate(`/match-chat/${sessionId}`);
   };
 
   const handleApiRoomButton = async (r: GameRoomItem) => {
@@ -1209,19 +1259,48 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {loadingRooms && roomList.length === 0 ? (
+                  {loadingRooms && roomList.length === 0 && matchRoomList.length === 0 ? (
                     <tr>
                       <td colSpan={tableColumnCount} className="home-demo-room-loading-cell">방 목록 불러오는 중…</td>
                     </tr>
-                  ) : visibleRoomList.length === 0 ? (
+                  ) : visibleRoomList.length === 0 && matchRoomList.length === 0 ? (
                     <tr>
                       <td colSpan={tableColumnCount} className="home-demo-room-loading-cell">등록된 방이 없습니다.</td>
                     </tr>
-                  ) : filteredRoomList.length === 0 ? (
+                  ) : filteredRoomList.length === 0 && filteredMatchRoomList.length === 0 ? (
                     <tr>
                       <td colSpan={tableColumnCount} className="home-demo-room-loading-cell">선택한 게임에 등록된 방이 없습니다.</td>
                     </tr>
                   ) : null}
+                  {filteredMatchRoomList.map((room) => {
+                    const gameLabel = GAME_OPTIONS.find((option) => option.id === room.game)?.label ?? room.game;
+                    return (
+                      <tr key={`match-${room.id}`} className="home-demo-room-row">
+                        <td>[랜덤] {gameLabel}</td>
+                        <td>랜덤 매칭</td>
+                        {showPositionColumn ? <td>-</td> : null}
+                        <td className="home-demo-room-memo-cell" title="내 랜덤 매칭방">내 랜덤 매칭방</td>
+                        <td>{room.memberCount != null ? `${room.memberCount}명` : '-'}</td>
+                        <td>{room.hostNickname}</td>
+                        <td>{formatRelativeCreatedAt(room.createdAt)}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="home-demo-room-join-btn home-demo-room-join-btn--live"
+                            title="랜덤 매칭 채팅방으로 이동"
+                            onClick={() => goMatchRoomChat(room.id)}
+                          >
+                            입장
+                          </button>
+                        </td>
+                        {showDeleteColumn ? (
+                          <td>
+                            <span className="home-demo-room-closed-label">-</span>
+                          </td>
+                        ) : null}
+                      </tr>
+                    );
+                  })}
                   {filteredRoomList.map((r) => {
                     const op = parseGameOptions(r.gameOptions);
                     const { maxPlayers: maxP, isFull } = getRoomCapacityMeta(r);

@@ -30,6 +30,8 @@ public class NotificationService {
     public static final String TYPE_ADMIN_PANG_GIFT = "ADMIN_PANG_GIFT";
     public static final String TYPE_ADMIN_MILEAGE_GIFT = "ADMIN_MILEAGE_GIFT";
     public static final String TYPE_ADMIN_STREAM_NOTICE = "ADMIN_STREAM_NOTICE";
+    public static final String TYPE_NEW_FOLLOWER = "NEW_FOLLOWER";
+    public static final String TYPE_NEW_SUBSCRIBER = "NEW_SUBSCRIBER";
     public static final String TYPE_CHANNEL_PERMISSION_GRANTED = "CHANNEL_PERMISSION_GRANTED";
     public static final String TYPE_CHANNEL_PERMISSION_REVOKED = "CHANNEL_PERMISSION_REVOKED";
     public static final String TYPE_GROUP_CHAT_INVITE = "GROUP_CHAT_INVITE";
@@ -159,7 +161,7 @@ public class NotificationService {
         notification.setType(TYPE_ADMIN_PANG_GIFT);
         notification.setActorUserId(adminUserId);
         notification.setMessage(trimmedMessage.isBlank()
-                ? "\uC6B4\uC601\uC790\uAC00 \uC774\uBCA4\uD2B8\uB85C " + pangAmount + "\uD31D\uC744 \uC9C0\uAE09\uD588\uC2B5\uB2C8\uB2E4."
+                ? "\uC774\uBCA4\uD2B8\uB85C " + pangAmount + "\uD31D\uC744 \uC9C0\uAE09\uD588\uC2B5\uB2C8\uB2E4."
                 : trimmedMessage);
         notificationRepository.save(notification);
 
@@ -179,11 +181,81 @@ public class NotificationService {
         notification.setType(TYPE_ADMIN_MILEAGE_GIFT);
         notification.setActorUserId(adminUserId);
         notification.setMessage(trimmedMessage.isBlank()
-                ? "\uC6B4\uC601\uC790\uAC00 \uC774\uBCA4\uD2B8\uB85C \uB9C8\uC77C\uB9AC\uC9C0 " + mileageAmount + "\uC810\uC744 \uC9C0\uAE09\uD588\uC2B5\uB2C8\uB2E4."
+                ? "\uC774\uBCA4\uD2B8\uB85C " + mileageAmount + "\uB9C8\uC77C\uB9AC\uC9C0\uB97C \uC9C0\uAE09\uD588\uC2B5\uB2C8\uB2E4."
                 : trimmedMessage);
         notificationRepository.save(notification);
 
         pushToUser(userId, "\uC774\uBCA4\uD2B8 \uB9C8\uC77C\uB9AC\uC9C0 \uC9C0\uAE09", notification.getMessage(), "/profile/mileage-shop");
+    }
+
+    @Transactional
+    public void backfillAdminMileageGiftNotification(
+            Long userId,
+            Long adminUserId,
+            long mileageAmount,
+            String customMessage,
+            LocalDateTime createdAt
+    ) {
+        if (userId == null || mileageAmount <= 0) {
+            return;
+        }
+
+        LocalDateTime safeCreatedAt = createdAt != null ? createdAt : LocalDateTime.now();
+        if (notificationRepository.existsByUserIdAndTypeAndCreatedAt(userId, TYPE_ADMIN_MILEAGE_GIFT, safeCreatedAt)) {
+            return;
+        }
+
+        String trimmedMessage = customMessage != null ? customMessage.trim() : "";
+
+        Notification notification = new Notification();
+        notification.setUserId(userId);
+        notification.setType(TYPE_ADMIN_MILEAGE_GIFT);
+        notification.setActorUserId(adminUserId);
+        notification.setMessage(trimmedMessage.isBlank()
+                ? "\uC774\uBCA4\uD2B8\uB85C " + mileageAmount + "\uB9C8\uC77C\uB9AC\uC9C0\uB97C \uC9C0\uAE09\uD588\uC2B5\uB2C8\uB2E4."
+                : trimmedMessage);
+        notification.setCreatedAt(safeCreatedAt);
+        notificationRepository.save(notification);
+    }
+
+    @Transactional
+    public void createForNewFollower(Long streamerUserId, Long followerUserId) {
+        if (streamerUserId == null || followerUserId == null || streamerUserId.equals(followerUserId)) {
+            return;
+        }
+
+        String followerName = userRepository.findById(followerUserId)
+                .map(this::displayName)
+                .orElse("\uC2DC\uCCAD\uC790");
+
+        Notification notification = new Notification();
+        notification.setUserId(streamerUserId);
+        notification.setType(TYPE_NEW_FOLLOWER);
+        notification.setActorUserId(followerUserId);
+        notification.setMessage(followerName + "\uB2D8\uC774 \uCC44\uB110\uC744 \uD314\uB85C\uC6B0\uD588\uC2B5\uB2C8\uB2E4.");
+        notificationRepository.save(notification);
+
+        pushToUser(streamerUserId, "\uC0C8 \uD314\uB85C\uC6B0", notification.getMessage(), "/studio/viewers/followers");
+    }
+
+    @Transactional
+    public void createForNewSubscriber(Long streamerUserId, Long subscriberUserId) {
+        if (streamerUserId == null || subscriberUserId == null || streamerUserId.equals(subscriberUserId)) {
+            return;
+        }
+
+        String subscriberName = userRepository.findById(subscriberUserId)
+                .map(this::displayName)
+                .orElse("\uC2DC\uCCAD\uC790");
+
+        Notification notification = new Notification();
+        notification.setUserId(streamerUserId);
+        notification.setType(TYPE_NEW_SUBSCRIBER);
+        notification.setActorUserId(subscriberUserId);
+        notification.setMessage(subscriberName + "\uB2D8\uC774 \uCC44\uB110\uC744 \uAD6C\uB3C5\uD588\uC2B5\uB2C8\uB2E4.");
+        notificationRepository.save(notification);
+
+        pushToUser(streamerUserId, "\uC0C8 \uAD6C\uB3C5\uC790", notification.getMessage(), "/studio/viewers/subscribers");
     }
 
     @Transactional
@@ -429,13 +501,21 @@ public class NotificationService {
             return "\uD31D \uD658\uBD88\uC774 \uC644\uB8CC\uB418\uC5C8\uC2B5\uB2C8\uB2E4.";
         }
         if (TYPE_ADMIN_PANG_GIFT.equals(notification.getType())) {
-            return "\uC6B4\uC601\uC790\uAC00 \uC774\uBCA4\uD2B8 \uD31D\uC744 \uC9C0\uAE09\uD588\uC2B5\uB2C8\uB2E4.";
+            return "\uC774\uBCA4\uD2B8\uB85C \uD31D\uC744 \uC9C0\uAE09\uD588\uC2B5\uB2C8\uB2E4.";
         }
         if (TYPE_ADMIN_MILEAGE_GIFT.equals(notification.getType())) {
-            return "\uC6B4\uC601\uC790\uAC00 \uC774\uBCA4\uD2B8 \uB9C8\uC77C\uB9AC\uC9C0\uB97C \uC9C0\uAE09\uD588\uC2B5\uB2C8\uB2E4.";
+            return "\uC774\uBCA4\uD2B8\uB85C \uB9C8\uC77C\uB9AC\uC9C0\uB97C \uC9C0\uAE09\uD588\uC2B5\uB2C8\uB2E4.";
         }
         if (TYPE_ADMIN_STREAM_NOTICE.equals(notification.getType())) {
             return "\uC6B4\uC601\uC790\uAC00 \uBC29\uC1A1 \uAD00\uB828 \uC548\uB0B4\uB97C \uBCF4\uB0C8\uC2B5\uB2C8\uB2E4.";
+        }
+        if (TYPE_NEW_FOLLOWER.equals(notification.getType())) {
+            return (actorNickname != null ? actorNickname : "\uC2DC\uCCAD\uC790")
+                    + "\uB2D8\uC774 \uCC44\uB110\uC744 \uD314\uB85C\uC6B0\uD588\uC2B5\uB2C8\uB2E4.";
+        }
+        if (TYPE_NEW_SUBSCRIBER.equals(notification.getType())) {
+            return (actorNickname != null ? actorNickname : "\uC2DC\uCCAD\uC790")
+                    + "\uB2D8\uC774 \uCC44\uB110\uC744 \uAD6C\uB3C5\uD588\uC2B5\uB2C8\uB2E4.";
         }
         if (TYPE_CHANNEL_PERMISSION_GRANTED.equals(notification.getType())
                 || TYPE_CHANNEL_PERMISSION_REVOKED.equals(notification.getType())
@@ -477,6 +557,12 @@ public class NotificationService {
         }
         if (TYPE_ADMIN_STREAM_NOTICE.equals(notification.getType())) {
             return "/studio";
+        }
+        if (TYPE_NEW_FOLLOWER.equals(notification.getType())) {
+            return "/studio/viewers/followers";
+        }
+        if (TYPE_NEW_SUBSCRIBER.equals(notification.getType())) {
+            return "/studio/viewers/subscribers";
         }
         if (TYPE_CHANNEL_PERMISSION_GRANTED.equals(notification.getType())) {
             return "/studio/channel/manage";

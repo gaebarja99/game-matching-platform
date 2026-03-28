@@ -369,8 +369,8 @@ public class LiveStreamController {
     @PostMapping("/{streamId}/chat/ban")
     public ResponseEntity<?> addChatBan(@PathVariable Long streamId, @RequestBody Map<String, Object> body, HttpSession session) {
         Long uid = getCurrentUserId(session);
-        if (uid == null) return ResponseEntity.status(401).body(Map.of("message", "?癲??嶺???轅붽틓?????됱깢???????諛몃마????꿔꺂??????"));
-        if (body == null) return ResponseEntity.badRequest().body(Map.of("message", "?????ID ??????癲??嶺????????諛몃마??維◈??? ??????ㅼ굣塋???????⑹름??????뭽??"));
+        if (uid == null) return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
+        if (body == null) return ResponseEntity.badRequest().body(Map.of("message", "사용자 ID 또는 로그인 ID를 입력해 주세요."));
         Integer durationMinutes = null;
         Object dm = body.get("durationMinutes");
         if (dm instanceof Number) durationMinutes = ((Number) dm).intValue();
@@ -443,19 +443,19 @@ public class LiveStreamController {
                     .or(() -> userRepository.findByNickname(loginId.trim()))
                     .map(User::getId)
                     .orElse(null);
-            if (targetUserId == null) return ResponseEntity.badRequest().body(Map.of("message", "??????癲??嶺????????諛몃마??維◈?????????????곕?癲?????諛몃마???뀀탿??????? ?饔낅떽???????????????깅즽????????놁졄."));
+            if (targetUserId == null) return ResponseEntity.badRequest().body(Map.of("message", "입력한 닉네임 또는 로그인 ID에 해당하는 사용자를 찾을 수 없습니다."));
         } else {
             Object targetObj = body.get("userId");
-            if (targetObj == null) return ResponseEntity.badRequest().body(Map.of("message", "?ъ슜??ID ?먮뒗 濡쒓렇???꾩씠?붾? ?낅젰??二쇱꽭??"));
+            if (targetObj == null) return ResponseEntity.badRequest().body(Map.of("message", "사용자 ID 또는 로그인 ID를 입력해 주세요."));
             targetUserId = parseLong(targetObj);
-            if (targetUserId == null || targetUserId < 1) return ResponseEntity.badRequest().body(Map.of("message", "?좏슚???ъ슜??ID瑜??낅젰??二쇱꽭??"));
+            if (targetUserId == null || targetUserId < 1) return ResponseEntity.badRequest().body(Map.of("message", "유효한 사용자 ID를 입력해 주세요."));
         }
         try {
             streamChatSettingsService.addBlacklist(streamId, uid, targetUserId);
             liveStreamService.viewerLeave(streamId, targetUserId);
-            broadcastSystemChat(streamId, getDisplayName(targetUserId) + "?섏씠 釉붾옓由ъ뒪?몄뿉 異붽??섏뿀?듬땲??");
-            broadcastKickEvent(streamId, targetUserId, "釉붾옓由ъ뒪?몄뿉 ?깅줉?섏뼱 諛⑹넚??李몄뿬?????놁뒿?덈떎.");
-            return ResponseEntity.ok(Map.of("message", "釉붾옓由ъ뒪??泥섎━?섏뿀?듬땲??"));
+            broadcastSystemChat(streamId, getDisplayName(targetUserId) + "님이 블랙리스트에 추가되었습니다.");
+            broadcastKickEvent(streamId, targetUserId, "블랙리스트에 등록되어 방송에 참여할 수 없습니다.");
+            return ResponseEntity.ok(Map.of("message", "블랙리스트에 추가했습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }
@@ -464,10 +464,10 @@ public class LiveStreamController {
     @DeleteMapping("/{streamId}/chat/blacklist/{targetUserId}")
     public ResponseEntity<?> removeBlacklist(@PathVariable Long streamId, @PathVariable Long targetUserId, HttpSession session) {
         Long uid = getCurrentUserId(session);
-        if (uid == null) return ResponseEntity.status(401).body(Map.of("message", "濡쒓렇?몄씠 ?꾩슂?⑸땲??"));
+        if (uid == null) return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
         try {
             streamChatSettingsService.removeBlacklist(streamId, uid, targetUserId);
-            return ResponseEntity.ok(Map.of("message", "釉붾옓由ъ뒪?멸? ?댁젣?섏뿀?듬땲??"));
+            return ResponseEntity.ok(Map.of("message", "블랙리스트를 해제했습니다."));
         } catch (IllegalArgumentException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }

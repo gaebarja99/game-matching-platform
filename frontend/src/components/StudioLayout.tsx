@@ -316,7 +316,10 @@ export default function StudioLayout({ children }: StudioLayoutProps) {
                   </Link>
                 </li>
                 <li>
-                  <Link to="/studio/viewers/blocklist" className={path === '/studio/viewers/blocklist' ? 'active' : ''}>
+                  <Link
+                    to="/studio/viewers/blacklist"
+                    className={path === '/studio/viewers/blacklist' || path === '/studio/viewers/blocklist' ? 'active' : ''}
+                  >
                     블랙리스트
                   </Link>
                 </li>

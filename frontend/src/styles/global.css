@@ -3811,3 +3811,42 @@ select.random-match-chat-input option {
 .channel-page .channel-info-stack,
 .channel-page .channel-panel,
 .channel-page .channel-panel * { caret-color: transparent; }
+.watch-page .chat-user-menu-wrap { position: relative; display: inline-flex; align-items: center; }
+.watch-page .chat-user-button { background: transparent; border: none; padding: 0; cursor: pointer; font: inherit; }
+.watch-page .chat-user-menu { position: absolute; top: calc(100% + 6px); left: 0; min-width: 110px; border-radius: 10px; padding: 6px; z-index: 20; box-shadow: 0 8px 24px rgba(0,0,0,0.2); }
+.theme-dark .watch-page .chat-user-menu { background: #2a2a31; border: 1px solid #3b3b44; }
+.theme-light .watch-page .chat-user-menu { background: #fff; border: 1px solid #d8d8dc; }
+.watch-page .chat-user-menu-item { width: 100%; border: none; border-radius: 8px; padding: 9px 10px; text-align: left; font: inherit; font-size: 0.85rem; font-weight: 600; cursor: pointer; background: transparent; }
+.theme-dark .watch-page .chat-user-menu-item { color: #f4f4f6; }
+.theme-light .watch-page .chat-user-menu-item { color: #19191d; }
+.theme-dark .watch-page .chat-user-menu-item:hover:not(:disabled) { background: #383842; }
+.theme-light .watch-page .chat-user-menu-item:hover:not(:disabled) { background: #f4f5f7; }
+.watch-page .chat-user-menu-item:disabled { opacity: 0.45; cursor: not-allowed; }
+.watch-report-textarea { width: 100%; padding: 12px; border-radius: 8px; font-size: 0.95rem; box-sizing: border-box; resize: vertical; font-family: inherit; transition: background 0.2s, border-color 0.2s, color 0.2s; }
+.theme-dark .watch-report-textarea { border: 1px solid #45454a; background: #38383c; color: #fff; }
+.theme-light .watch-report-textarea { border: 1px solid #d8d8dc; background: #f5f5f7; color: #141418; }
+.watch-report-textarea:focus { outline: none; border-color: #00e676; }
+.member-sidebar-enhanced ul { display: flex; flex-direction: column; gap: 10px; }
+.group-chat-member-entry { display: flex; flex-direction: column; gap: 8px; }
+.group-chat-member-button { width: 100%; border: 1px solid transparent; border-radius: 12px; padding: 10px 12px; background: transparent; text-align: left; cursor: pointer; transition: border-color 0.2s, background 0.2s; }
+.theme-dark .group-chat-member-button { background: #17171b; border-color: #2d2d33; }
+.theme-light .group-chat-member-button { background: #f8f9fb; border-color: #e1e4ea; }
+.group-chat-member-entry.is-active .group-chat-member-button { border-color: #00c76a; }
+.member-action-card { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.member-action-btn { border: 1px solid; border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 0.83rem; font-weight: 600; cursor: pointer; }
+.theme-dark .member-action-btn { background: #232329; border-color: #3a3a42; color: #f1f1f4; }
+.theme-light .member-action-btn { background: #fff; border-color: #d8dbe2; color: #17171b; }
+.theme-dark .member-action-btn:hover:not(:disabled) { background: #2f2f38; }
+.theme-light .member-action-btn:hover:not(:disabled) { background: #f4f6fa; }
+.member-action-btn.danger { border-color: #e29a9a; color: #c03232; }
+.theme-dark .member-action-btn.danger { border-color: #834444; color: #ffb4b4; background: #281919; }
+.theme-dark .member-action-btn.danger:hover:not(:disabled) { background: #352020; }
+.member-action-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+.member-profile-modal { display: flex; align-items: center; gap: 14px; margin-bottom: 14px; }
+.member-profile-avatar { width: 56px; height: 56px; border-radius: 50%; object-fit: cover; }
+.member-profile-avatar-fallback { display: flex; align-items: center; justify-content: center; font-size: 1.2rem; font-weight: 700; }
+.theme-dark .member-profile-avatar-fallback { background: #2c2c32; color: #f3f3f6; }
+.theme-light .member-profile-avatar-fallback { background: #eceef3; color: #1a1a1d; }
+.member-profile-copy { display: flex; flex-direction: column; gap: 4px; }
+.member-profile-copy strong { font-size: 1rem; }
+.member-profile-copy span { font-size: 0.9rem; opacity: 0.8; }

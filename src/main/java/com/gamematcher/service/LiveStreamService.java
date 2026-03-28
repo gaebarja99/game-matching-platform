@@ -17,7 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -288,8 +290,17 @@ public class LiveStreamService {
 
     /** 최근 방송 목록 - 종료된 방송만 (지금 라이브와 중복되지 않음) */
     public List<StreamResponse> listRecent(int limit) {
-        return liveStreamRepository.findTop20ByStatusInOrderByStartedAtDesc(List.of(StreamStatus.ENDED)).stream()
-                .limit(limit)
+        Map<Long, LiveStream> latestByUser = new LinkedHashMap<>();
+        for (LiveStream stream : liveStreamRepository.findTop20ByStatusInOrderByStartedAtDesc(List.of(StreamStatus.ENDED))) {
+            if (stream.getUserId() == null || latestByUser.containsKey(stream.getUserId())) {
+                continue;
+            }
+            latestByUser.put(stream.getUserId(), stream);
+            if (latestByUser.size() >= limit) {
+                break;
+            }
+        }
+        return latestByUser.values().stream()
                 .map(s -> {
                     int vc = streamViewerCountService.getViewerCount(s.getId());
                     return StreamResponse.from(s, getBroadcasterDisplayName(s.getUserId()), null, vc, getBroadcasterProfileImageUrl(s.getUserId()));
@@ -311,8 +322,17 @@ public class LiveStreamService {
     /** 팔로우한 사용자들의 최근 방송 (LIVE/ENDED) */
     public List<StreamResponse> listRecentByUserIds(List<Long> userIds, int limit) {
         if (userIds == null || userIds.isEmpty()) return List.of();
-        return liveStreamRepository.findTop20ByUserIdInAndStatusInOrderByStartedAtDesc(userIds, List.of(StreamStatus.ENDED)).stream()
-                .limit(limit)
+        Map<Long, LiveStream> latestByUser = new LinkedHashMap<>();
+        for (LiveStream stream : liveStreamRepository.findTop20ByUserIdInAndStatusInOrderByStartedAtDesc(userIds, List.of(StreamStatus.ENDED))) {
+            if (stream.getUserId() == null || latestByUser.containsKey(stream.getUserId())) {
+                continue;
+            }
+            latestByUser.put(stream.getUserId(), stream);
+            if (latestByUser.size() >= limit) {
+                break;
+            }
+        }
+        return latestByUser.values().stream()
                 .map(s -> {
                     int vc = streamViewerCountService.getViewerCount(s.getId());
                     return StreamResponse.from(s, getBroadcasterDisplayName(s.getUserId()), null, vc, getBroadcasterProfileImageUrl(s.getUserId()));

@@ -111,10 +111,18 @@ export default function AdminRevenue() {
   const [filterMonth, setFilterMonth] = useState(now.getMonth() + 1);
   const [selectedYear, setSelectedYear] = useState(now.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(now.getMonth() + 1);
+  const currentYear = Number(summary?.currentYear ?? now.getFullYear());
+  const currentMonth = Number(summary?.currentMonth ?? now.getMonth() + 1);
+  const isCurrentSelection = selectedYear === currentYear && selectedMonth === currentMonth;
+  const selectedMonthLabel = `${selectedYear}년 ${selectedMonth}월`;
+  const isCashFlowCard = selectedCard === 'total-payment';
+  const isPangFlowCard = selectedCard === 'total-donation-pang' || selectedCard === 'streamer-settlement';
+  const isMileageFlowCard = selectedCard === 'mileage-sales';
 
   const totalRequestedWon = Number(summary?.totalRequestedWon ?? 0);
   const completedSalesWon = Number(summary?.completedSalesWon ?? 0);
   const cancelledSalesWon = Number(summary?.cancelledSalesWon ?? 0);
+  const failedSalesWon = Number(summary?.failedSalesWon ?? 0);
   const todayCompletedWon = Number(summary?.todayCompletedWon ?? 0);
   const todayPlatformRevenueWon = Number(summary?.todayPlatformRevenueWon ?? summary?.todayCompletedWon ?? 0);
   const monthPlatformRevenueWon = Number(summary?.monthPlatformRevenueWon ?? summary?.monthCompletedWon ?? 0);
@@ -134,6 +142,7 @@ export default function AdminRevenue() {
   const grantedMileage = Number(summary?.grantedMileage ?? 0);
   const usedMileage = Number(summary?.usedMileage ?? mileageSalesWon);
   const remainingMileage = Number(summary?.remainingMileage ?? Math.max(grantedMileage - usedMileage, 0));
+  const monthSettlementCommissionWon = Math.round(monthSettlementCommissionPang * 1.2);
 
   useEffect(() => {
     if (!user || user.role !== 'ADMIN') return;
@@ -155,22 +164,24 @@ export default function AdminRevenue() {
 
   const statusBars = useMemo(() => {
     const rows = [
-      { key: 'cash-total', label: '총 충전', value: totalRequestedWon, tone: 'tone-success' },
-      { key: 'cash-month', label: '이번달 충전', value: completedSalesWon, tone: 'tone-accent' },
-      { key: 'cash-today', label: '오늘 충전', value: todayCompletedWon, tone: 'tone-neutral' },
-      { key: 'cash-refund', label: '환불', value: cancelledSalesWon, tone: 'tone-muted' },
+      { key: 'cash-month', label: `${selectedMonthLabel} 충전`, value: completedSalesWon, tone: 'tone-success' },
+      ...(isCurrentSelection
+        ? [{ key: 'cash-today', label: '오늘 충전', value: todayCompletedWon, tone: 'tone-neutral' as const }]
+        : []),
+      { key: 'cash-refund', label: `${selectedMonthLabel} 환불`, value: cancelledSalesWon, tone: 'tone-muted' },
+      { key: 'cash-failed', label: `${selectedMonthLabel} 실패`, value: failedSalesWon, tone: 'tone-danger' },
     ];
     const max = Math.max(...rows.map((row) => row.value), 1);
     return rows.map((row) => ({
       ...row,
       width: `${Math.max((row.value / max) * 100, row.value > 0 ? 8 : 0)}%`,
     }));
-  }, [cancelledSalesWon, completedSalesWon, todayCompletedWon, totalRequestedWon]);
+  }, [cancelledSalesWon, completedSalesWon, failedSalesWon, isCurrentSelection, selectedMonthLabel, todayCompletedWon]);
 
   const metricBars = useMemo(() => {
     const rows = [
       { label: '이번 달 플랫폼 매출', value: monthPlatformRevenueWon, format: formatWon },
-      { label: '금일 플랫폼 매출', value: todayPlatformRevenueWon, format: formatWon },
+      ...(isCurrentSelection ? [{ label: '금일 플랫폼 매출', value: todayPlatformRevenueWon, format: formatWon }] : []),
       { label: '마일리지 결제', value: mileageSalesWon, format: formatWon },
       { label: '구독권 매출', value: subscriptionSalesWon, format: formatWon },
       { label: '광고제거 매출', value: adFreeSalesWon, format: formatWon },
@@ -181,38 +192,36 @@ export default function AdminRevenue() {
       ...row,
       ratio: `${Math.max((row.value / max) * 100, row.value > 0 ? 10 : 0)}%`,
     }));
-  }, [adFreeSalesWon, mileageSalesWon, monthPlatformRevenueWon, subscriptionSalesWon, todayPlatformRevenueWon]);
+  }, [adFreeSalesWon, isCurrentSelection, mileageSalesWon, monthPlatformRevenueWon, subscriptionSalesWon, todayPlatformRevenueWon]);
 
   const detailMetricBars = useMemo(() => {
     const rows: DetailRow[] =
-      selectedCard === 'total-payment'
+      isPangFlowCard
         ? [
-            { label: '총 충전', value: totalRequestedWon, format: formatWon },
-            { label: '이번달 충전', value: completedSalesWon, format: formatWon },
-            { label: '오늘 충전', value: todayCompletedWon, format: formatWon },
-            { label: '환불', value: cancelledSalesWon, format: formatWon },
+            { label: `${selectedMonthLabel} 사용 팡`, value: monthUsedPang, format: formatPang },
+            { label: `${selectedMonthLabel} 정산 팡`, value: monthSettledPang, format: formatPang },
+            { label: `${selectedMonthLabel} 정산 수수료`, value: monthSettlementCommissionPang, format: formatPang },
+            { label: '현재 미사용 팡', value: remainingPang, format: formatPang },
           ]
-        : selectedCard === 'total-donation-pang'
+        : isMileageFlowCard
           ? [
-              { label: '사용된 팡', value: usedPang, format: formatPang },
-              { label: '정산된 팡', value: settledPang, format: formatPang },
-              { label: '잔여 팡', value: remainingPang, format: formatPang },
-            ]
-          : selectedCard === 'mileage-sales'
-            ? [
-                { label: '지급된 마일리지', value: grantedMileage, format: formatWon },
-                { label: '사용된 마일리지', value: usedMileage, format: formatWon },
-                { label: '잔액', value: remainingMileage, format: formatWon },
+                { label: '누적 지급 마일리지', value: grantedMileage, format: formatWon },
+                { label: `${selectedMonthLabel} 사용 마일리지`, value: mileageSalesWon, format: formatWon },
+                { label: '현재 미사용 마일리지', value: remainingMileage, format: formatWon },
               ]
-            : [
-                { label: '누적 결제', value: totalRequestedWon, format: formatWon },
-                { label: '사용된 팡', value: usedPang, format: formatPang },
-                { label: '정산된 팡', value: settledPang, format: formatPang },
-                { label: '정산 수수료', value: Math.round((summary?.completedSettlementCommissionPang ?? 0) * 1.2), format: formatWon },
+            : isCashFlowCard
+              ? [
+                  { label: `${selectedMonthLabel} 충전`, value: completedSalesWon, format: formatWon },
+                  ...(isCurrentSelection ? [{ label: '오늘 충전', value: todayCompletedWon, format: formatWon }] : []),
+                  { label: `${selectedMonthLabel} 환불`, value: cancelledSalesWon, format: formatWon },
+                  { label: `${selectedMonthLabel} 실패`, value: failedSalesWon, format: formatWon },
+                ]
+              : [
+                { label: `${selectedMonthLabel} 정산 수수료`, value: monthSettlementCommissionWon, format: formatWon },
                 { label: '구독권 매출', value: subscriptionSalesWon, format: formatWon },
                 { label: '광고제거 매출', value: adFreeSalesWon, format: formatWon },
                 { label: '마일리지 결제', value: mileageSalesWon, format: formatWon },
-                { label: '플랫폼 매출', value: platformRevenueWon, format: formatWon },
+                { label: `${selectedMonthLabel} 플랫폼 매출`, value: monthPlatformRevenueWon, format: formatWon },
               ];
 
     const max = Math.max(...rows.map((row) => row.value), 1);
@@ -224,34 +233,39 @@ export default function AdminRevenue() {
     adFreeSalesWon,
     cancelledSalesWon,
     completedSalesWon,
+    failedSalesWon,
+    isCashFlowCard,
+    isCurrentSelection,
+    isMileageFlowCard,
+    isPangFlowCard,
     grantedMileage,
     mileageSalesWon,
-    platformRevenueWon,
+    monthPlatformRevenueWon,
     remainingMileage,
     remainingPang,
+    monthSettledPang,
+    monthSettlementCommissionPang,
+    monthSettlementCommissionWon,
+    monthUsedPang,
     selectedCard,
-    settledPang,
+    selectedMonthLabel,
     subscriptionSalesWon,
-    summary?.completedSettlementCommissionPang,
     todayCompletedWon,
-    totalRequestedWon,
-    usedMileage,
-    usedPang,
   ]);
 
   const focusPanelTitle = useMemo(() => {
-    if (selectedCard === 'total-payment') return '현금 흐름';
-    if (selectedCard === 'total-donation-pang') return '팡 흐름';
-    if (selectedCard === 'mileage-sales') return '마일리지 흐름';
+    if (isCashFlowCard) return '현금 흐름';
+    if (isPangFlowCard) return '팡 흐름';
+    if (isMileageFlowCard) return '마일리지 흐름';
     return '플랫폼 수익 분석';
-  }, [selectedCard]);
+  }, [isCashFlowCard, isMileageFlowCard, isPangFlowCard]);
 
   const focusPanelDescription = useMemo(() => {
-    if (selectedCard === 'total-payment') return `${selectedYear}년 ${selectedMonth}월 현금 결제 흐름입니다.`;
-    if (selectedCard === 'total-donation-pang') return '후원과 정산 기준으로 보는 팡 흐름입니다.';
-    if (selectedCard === 'mileage-sales') return '마일리지 사용과 잔여 상태를 봅니다.';
-    return '플랫폼에 실제로 남는 수익 구조를 봅니다.';
-  }, [selectedCard, selectedMonth, selectedYear]);
+    if (isCashFlowCard) return `${selectedMonthLabel} 현금 결제 흐름입니다.`;
+    if (isPangFlowCard) return `${selectedMonthLabel} 사용 내역과 현재 미사용 팡을 함께 보는 흐름입니다.`;
+    if (isMileageFlowCard) return `${selectedMonthLabel} 사용 내역과 현재 미사용 마일리지를 함께 보는 흐름입니다.`;
+    return `${selectedMonthLabel} 플랫폼 수익 구조입니다.`;
+  }, [isCashFlowCard, isMileageFlowCard, isPangFlowCard, selectedMonthLabel]);
 
   const topCards = [
     { key: 'total-payment' as RevenueCardKey, label: '누적 결제', value: formatWon(completedSalesWon) },
@@ -456,11 +470,6 @@ export default function AdminRevenue() {
                   />
                 ))}
               </svg>
-              <div className="admin-line-axis">
-                {recentTrend.entries.map((entry, index) => (
-                  <span key={`${entry.label}-${index}`}>{entry.label}</span>
-                ))}
-              </div>
               {hoveredTrendIndex !== null && recentTrend.entries[hoveredTrendIndex] ? (
                 <div className="admin-line-tooltip">
                   <strong>{recentTrend.entries[hoveredTrendIndex].label}</strong>
@@ -475,12 +484,12 @@ export default function AdminRevenue() {
           <div className="admin-section-head">
             <div>
               <h3>운영 메모</h3>
-              <p>플랫폼 매출과 세부 지표를 운영 기준으로 확인합니다.</p>
+              <p>집계 기준과 핵심 수치를 한눈에 확인할 수 있도록 정리했습니다.</p>
             </div>
           </div>
           <div className="admin-note-copy">
-            <p>구독권과 광고제거 매출은 현금 결제만 집계하고, 마일리지 사용분은 마일리지 결제로 별도 집계합니다.</p>
-            <p>플랫폼 매출은 정산 완료 수수료와 광고제거 매출에서 마일리지 결제를 차감한 값입니다.</p>
+            <p>구독권과 광고제거 매출은 현금 결제 기준으로 집계하며, 마일리지 사용분은 별도 항목으로 분리해 확인합니다.</p>
+            <p>플랫폼 매출은 정산 수수료와 광고제거 매출을 기준으로 계산하고, 마일리지 결제분은 제외합니다.</p>
           </div>
           <div className="admin-summary-list">
             <div><strong>누적 결제</strong><span>{formatWon(totalRequestedWon)}</span></div>
@@ -507,8 +516,8 @@ export default function AdminRevenue() {
         ) : !summary || summary.recentOrders.length === 0 ? (
           <p className="admin-subtext">표시할 주문이 없습니다.</p>
         ) : (
-          <div className="admin-table-wrap">
-            <table className="admin-table">
+          <div className="admin-table-wrap admin-revenue-orders-wrap">
+            <table className="admin-table admin-revenue-orders-table">
               <thead>
                 <tr>
                   <th>주문번호</th>
@@ -524,19 +533,27 @@ export default function AdminRevenue() {
                   const status = orderStatusTone(order.status);
                   return (
                     <tr key={`${order.orderId}-${order.id}`}>
-                      <td>{order.orderId}</td>
+                      <td>
+                        <span className="admin-order-id">{order.orderId}</span>
+                      </td>
                       <td>
                         <div className="admin-table-user">
                           <strong>{order.displayName || '-'}</strong>
                           <span>{shortenLoginId(order.loginId)}</span>
                         </div>
                       </td>
-                      <td>{order.kind}</td>
-                      <td>{formatWon(order.amountWon)}</td>
+                      <td>
+                        <span className="admin-order-kind">{order.kind.replaceAll('_', ' ')}</span>
+                      </td>
+                      <td>
+                        <strong className="admin-order-amount">{formatWon(order.amountWon)}</strong>
+                      </td>
                       <td>
                         <span className={`admin-status-chip ${status.tone}`}>{status.label}</span>
                       </td>
-                      <td>{formatDate(order.createdAt)}</td>
+                      <td>
+                        <span className="admin-order-time">{formatDate(order.createdAt)}</span>
+                      </td>
                     </tr>
                   );
                 })}

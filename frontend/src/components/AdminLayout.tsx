@@ -17,7 +17,7 @@ const adminNavItems = [
   { to: '/admin/broadcasts', label: '\uBC29\uC1A1 \uAD00\uB9AC' },
   { to: '/admin/community', label: '\uCEE4\uBBA4\uB2C8\uD2F0 \uAD00\uB9AC' },
   { to: '/admin/match-rooms', label: '\uB9E4\uCE6D\uBC29 \uAD00\uB9AC' },
-  { to: '/admin/reports', label: '\uC2E0\uACE0 \uAD00\uB9AC' },
+  { to: '/admin/reports', label: '\uC2E0\uACE0 \uBC0F \uACBD\uACE0 \uAD00\uB9AC' },
   { to: '/admin/members', label: '\uD68C\uC6D0 \uAD00\uB9AC' },
   { to: '/admin/settlements', label: '\uC815\uC0B0 \uAD00\uB9AC' },
   { to: '/admin/revenue', label: '\uB9E4\uCD9C \uAD00\uB9AC' },

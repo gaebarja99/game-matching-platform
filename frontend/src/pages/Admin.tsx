@@ -12,8 +12,8 @@ const quickLinks = [
   {
     to: '/admin/reports',
     kicker: '제재',
-    title: '신고 관리',
-    description: '신고 접수, 메모, 계정 정지와 해제 흐름을 같은 화면에서 처리합니다.',
+    title: '신고 및 경고 관리',
+    description: '유저 신고 기록과 운영자 경고, 계정 정지 및 해제 이력을 같은 화면에서 이어서 확인합니다.',
   },
   {
     to: '/admin/members',

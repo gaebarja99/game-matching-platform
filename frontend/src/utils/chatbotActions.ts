@@ -72,7 +72,7 @@ const ACTION_MAP: Array<{
     keywords: ['차단', '신고', '블락', 'block'],
     actions: [
       { label: '1:1 채팅으로 이동', to: '/dm' },
-      { label: '스튜디오 차단 목록', to: '/studio/viewers/blocklist' },
+      { label: '스튜디오 차단 목록', to: '/studio/viewers/blacklist' },
       { label: '커뮤니티로 이동', to: '/community' },
     ],
   },

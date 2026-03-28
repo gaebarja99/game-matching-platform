@@ -1,6 +1,7 @@
 package com.gamematcher.controller;
 
 import com.gamematcher.service.FollowService;
+import com.gamematcher.service.NotificationService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -18,6 +19,7 @@ public class FollowController {
     private static final String SESSION_USER_ID = "userId";
 
     private final FollowService followService;
+    private final NotificationService notificationService;
 
     /** 내 채널을 팔로우한 사용자 목록 (스트리머용 팔로워 목록) */
     @GetMapping("/followers")
@@ -68,6 +70,7 @@ public class FollowController {
             return ResponseEntity.badRequest().body(Map.of("message", "사용자 ID가 필요합니다."));
         }
         followService.follow(myId, targetId);
+        notificationService.createForNewFollower(targetId, myId);
         return ResponseEntity.ok(Map.of("following", true));
     }
 

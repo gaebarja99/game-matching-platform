@@ -868,6 +868,13 @@ public class AdminController {
                 .filter(purchase -> purchase.getType() == MileagePurchaseType.ADMIN_GIFT)
                 .mapToLong(purchase -> purchase.getMileageCost() == null ? 0 : purchase.getMileageCost())
                 .sum();
+        long monthAdminGrantedMileage = mileagePurchases.stream()
+                .filter(purchase -> purchase.getType() == MileagePurchaseType.ADMIN_GIFT)
+                .filter(purchase -> purchase.getCreatedAt() != null
+                        && !purchase.getCreatedAt().toLocalDate().isBefore(targetMonthStart)
+                        && purchase.getCreatedAt().toLocalDate().isBefore(targetMonthEndExclusive))
+                .mapToLong(purchase -> purchase.getMileageCost() == null ? 0 : purchase.getMileageCost())
+                .sum();
         long adFreeSalesWon = orders.stream()
                 .filter(order -> "COMPLETED".equals(order.getStatus()))
                 .filter(order -> order.getKind() == PaymentOrderKind.AD_FREE)
@@ -992,6 +999,7 @@ public class AdminController {
         response.put("usedMileage", usedMileage);
         response.put("remainingMileage", remainingMileage);
         response.put("adminGrantedMileage", adminGrantedMileage);
+        response.put("monthAdminGrantedMileage", monthAdminGrantedMileage);
         response.put("selectedYear", targetYear);
         response.put("selectedMonth", targetMonth);
         response.put("currentYear", today.getYear());

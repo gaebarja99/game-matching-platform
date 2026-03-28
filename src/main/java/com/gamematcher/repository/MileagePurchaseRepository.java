@@ -17,6 +17,13 @@ public interface MileagePurchaseRepository extends JpaRepository<MileagePurchase
 
     long countByUserId(Long userId);
 
+    boolean existsByUserIdAndTypeAndMileageCostAndCreatedAt(
+            Long userId,
+            MileagePurchaseType type,
+            Long mileageCost,
+            java.time.LocalDateTime createdAt
+    );
+
     @Query("""
             SELECT COALESCE(SUM(m.mileageCost), 0)
             FROM MileagePurchase m

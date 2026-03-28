@@ -11,12 +11,16 @@ import com.gamematcher.service.NotificationService;
 import com.gamematcher.service.PangService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeParseException;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -26,6 +30,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/api/admin/pang")
 @RequiredArgsConstructor
+@Slf4j
 public class AdminMileageGiftController {
 
     private static final String SESSION_USER_ID = "userId";
@@ -54,11 +59,15 @@ public class AdminMileageGiftController {
         user.setMileage(nextMileage);
         userRepository.save(user);
 
-        MileagePurchase history = new MileagePurchase();
-        history.setUserId(user.getId());
-        history.setType(MileagePurchaseType.ADMIN_GIFT);
-        history.setMileageCost(mileageAmount);
-        mileagePurchaseRepository.save(history);
+        try {
+            MileagePurchase history = new MileagePurchase();
+            history.setUserId(user.getId());
+            history.setType(MileagePurchaseType.ADMIN_GIFT);
+            history.setMileageCost(mileageAmount);
+            mileagePurchaseRepository.save(history);
+        } catch (DataIntegrityViolationException e) {
+            log.warn("ADMIN_GIFT mileage history save skipped due to schema mismatch. userId={}, amount={}", user.getId(), mileageAmount, e);
+        }
 
         return nextMileage;
     }
@@ -134,5 +143,103 @@ public class AdminMileageGiftController {
         }
         response.put("loginId", targetUser.getLoginId());
         return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/gift-flex/backfill")
+    public ResponseEntity<?> backfillMileageGift(@RequestBody Map<String, Object> body, HttpSession session) {
+        if (!isAdmin(session)) {
+            return ResponseEntity.status(403).body(Map.of("message", "\uAD8C\uD55C\uC774 \uC5C6\uC2B5\uB2C8\uB2E4."));
+        }
+
+        String loginId = Objects.toString(body.get("loginId"), "").trim();
+        Long targetUserId = parseLong(body.get("userId"));
+        Long adminUserId = currentAdminId(session);
+
+        User targetUser = null;
+        if (targetUserId != null) {
+            targetUser = userRepository.findById(targetUserId).orElse(null);
+        }
+        if (targetUser == null && !loginId.isBlank()) {
+            targetUser = userRepository.findByLoginId(loginId).orElse(null);
+        }
+        if (targetUser == null) {
+            return ResponseEntity.status(404).body(Map.of("message", "\uB300\uC0C1 \uD68C\uC6D0\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."));
+        }
+
+        long mileageAmount;
+        try {
+            mileageAmount = Long.parseLong(Objects.toString(body.get("mileageAmount"), "0"));
+        } catch (NumberFormatException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", "\uBC31\uD544\uD560 \uB9C8\uC77C\uB9AC\uC9C0 \uAE08\uC561\uC744 \uC815\uD655\uD788 \uC785\uB825\uD574 \uC8FC\uC138\uC694."));
+        }
+        if (mileageAmount <= 0) {
+            return ResponseEntity.badRequest().body(Map.of("message", "\uBC31\uD544 \uB9C8\uC77C\uB9AC\uC9C0\uB294 1 \uC774\uC0C1\uC774\uC5B4\uC57C \uD569\uB2C8\uB2E4."));
+        }
+
+        LocalDateTime occurredAt;
+        try {
+            occurredAt = parseOccurredAt(body.get("occurredAt"));
+        } catch (DateTimeParseException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", "\uC2DC\uAC01\uC740 2026-03-28T12:34:56 \uD615\uC2DD\uC73C\uB85C \uC785\uB825\uD574 \uC8FC\uC138\uC694."));
+        }
+
+        String customMessage = Objects.toString(body.get("message"), "").trim();
+
+        boolean historyInserted = false;
+        if (!mileagePurchaseRepository.existsByUserIdAndTypeAndMileageCostAndCreatedAt(
+                targetUser.getId(),
+                MileagePurchaseType.ADMIN_GIFT,
+                mileageAmount,
+                occurredAt
+        )) {
+            MileagePurchase history = new MileagePurchase();
+            history.setUserId(targetUser.getId());
+            history.setType(MileagePurchaseType.ADMIN_GIFT);
+            history.setMileageCost(mileageAmount);
+            history.setCreatedAt(occurredAt);
+            mileagePurchaseRepository.save(history);
+            historyInserted = true;
+        }
+
+        notificationService.backfillAdminMileageGiftNotification(
+                targetUser.getId(),
+                adminUserId,
+                mileageAmount,
+                customMessage,
+                occurredAt
+        );
+
+        return ResponseEntity.ok(Map.of(
+                "message", historyInserted
+                        ? "\uB9C8\uC77C\uB9AC\uC9C0 \uB0B4\uC5ED\uACFC \uC54C\uB9BC \uBC31\uD544\uC744 \uC801\uC6A9\uD588\uC2B5\uB2C8\uB2E4."
+                        : "\uC774\uBBF8 \uAC19\uC740 \uC2DC\uAC01\uC758 \uB0B4\uC5ED\uC774 \uC788\uC5B4 \uC54C\uB9BC\uB9CC \uBCF4\uC815\uD588\uC2B5\uB2C8\uB2E4.",
+                "loginId", targetUser.getLoginId(),
+                "userId", targetUser.getId(),
+                "mileageAmount", mileageAmount,
+                "occurredAt", occurredAt.toString()
+        ));
+    }
+
+    private Long parseLong(Object value) {
+        if (value == null) {
+            return null;
+        }
+        String text = Objects.toString(value, "").trim();
+        if (text.isBlank()) {
+            return null;
+        }
+        try {
+            return Long.parseLong(text);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    private LocalDateTime parseOccurredAt(Object value) {
+        String text = Objects.toString(value, "").trim();
+        if (text.isBlank()) {
+            return LocalDateTime.now();
+        }
+        return LocalDateTime.parse(text);
     }
 }

@@ -4,7 +4,14 @@ import com.gamematcher.service.GameRoomService;
 import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -19,11 +26,12 @@ public class GameRoomController {
 
     private final GameRoomService gameRoomService;
 
-    /** 방 만들기 */
     @PostMapping
     public ResponseEntity<?> create(@RequestBody Map<String, Object> body, HttpSession session) {
         Long userId = (Long) session.getAttribute(SESSION_USER_ID);
-        if (userId == null) return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
+        if (userId == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "\uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4."));
+        }
         String title = body != null && body.get("title") != null ? body.get("title").toString().trim() : null;
         String memo = body != null && body.get("memo") != null ? body.get("memo").toString().trim() : null;
         String deletePassword = body != null && body.get("deletePassword") != null ? body.get("deletePassword").toString() : null;
@@ -42,7 +50,6 @@ public class GameRoomController {
         }
     }
 
-    /** 방 목록 (게임·마감 필터. closed=true 시 마감된 방만) */
     @GetMapping
     public ResponseEntity<?> list(
             @RequestParam(required = false) String game,
@@ -53,74 +60,78 @@ public class GameRoomController {
         return ResponseEntity.ok(Map.of("list", list));
     }
 
-    /** 참가 */
     @PostMapping("/{roomId}/join")
     public ResponseEntity<?> join(@PathVariable Long roomId, HttpSession session) {
         Long userId = (Long) session.getAttribute(SESSION_USER_ID);
-        if (userId == null) return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
-        String result = gameRoomService.join(roomId, userId);
-        switch (result) {
-            case "ok": return ResponseEntity.ok(Map.of("ok", true));
-            case "not_found": return ResponseEntity.status(404).body(Map.of("message", "방을 찾을 수 없습니다."));
-            case "closed": return ResponseEntity.badRequest().body(Map.of("message", "마감된 방입니다."));
-            case "already_member": return ResponseEntity.badRequest().body(Map.of("message", "이미 참가 중입니다."));
-            case "full": return ResponseEntity.badRequest().body(Map.of("message", "이미 정원이 가득 찬 방입니다."));
-            default: return ResponseEntity.badRequest().body(Map.of("message", "참가에 실패했습니다."));
+        if (userId == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "\uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4."));
         }
+        String result = gameRoomService.join(roomId, userId);
+        return switch (result) {
+            case "ok" -> ResponseEntity.ok(Map.of("ok", true));
+            case "not_found" -> ResponseEntity.status(404).body(Map.of("message", "\uBC29\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."));
+            case "closed" -> ResponseEntity.badRequest().body(Map.of("message", "\uB9C8\uAC10\uB41C \uBC29\uC785\uB2C8\uB2E4."));
+            case "already_member" -> ResponseEntity.badRequest().body(Map.of("message", "\uC774\uBBF8 \uCC38\uAC00 \uC911\uC785\uB2C8\uB2E4."));
+            case "full" -> ResponseEntity.badRequest().body(Map.of("message", "\uC774\uBBF8 \uC815\uC6D0\uC774 \uAC00\uB4DD \uCC2C \uBC29\uC785\uB2C8\uB2E4."));
+            default -> ResponseEntity.badRequest().body(Map.of("message", "\uCC38\uAC00\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4."));
+        };
     }
 
-    /** 나가기 */
     @PostMapping("/{roomId}/leave")
     public ResponseEntity<?> leave(@PathVariable Long roomId, HttpSession session) {
         Long userId = (Long) session.getAttribute(SESSION_USER_ID);
-        if (userId == null) return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
-        String result = gameRoomService.leave(roomId, userId);
-        switch (result) {
-            case "ok": return ResponseEntity.ok(Map.of("ok", true));
-            case "not_found": return ResponseEntity.status(404).body(Map.of("message", "방을 찾을 수 없습니다."));
-            case "host_cannot_leave": return ResponseEntity.badRequest().body(Map.of("message", "방장은 나갈 수 없습니다. 방을 삭제하거나 마감해 주세요."));
-            case "not_member": return ResponseEntity.badRequest().body(Map.of("message", "참가 중인 방이 아닙니다."));
-            default: return ResponseEntity.badRequest().body(Map.of("message", "나가기에 실패했습니다."));
+        if (userId == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "\uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4."));
         }
+        String result = gameRoomService.leave(roomId, userId);
+        return switch (result) {
+            case "ok" -> ResponseEntity.ok(Map.of("ok", true));
+            case "not_found" -> ResponseEntity.status(404).body(Map.of("message", "\uBC29\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."));
+            case "not_member" -> ResponseEntity.badRequest().body(Map.of("message", "\uCC38\uAC00 \uC911\uC778 \uBC29\uC774 \uC544\uB2D9\uB2C8\uB2E4."));
+            default -> ResponseEntity.badRequest().body(Map.of("message", "\uB098\uAC00\uAE30\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4."));
+        };
     }
 
-    /** 방장: 마감 */
     @PostMapping("/{roomId}/close")
     public ResponseEntity<?> close(@PathVariable Long roomId, HttpSession session) {
         Long userId = (Long) session.getAttribute(SESSION_USER_ID);
-        if (userId == null) return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
-        String result = gameRoomService.close(roomId, userId);
-        switch (result) {
-            case "ok": return ResponseEntity.ok(Map.of("ok", true));
-            case "not_found": return ResponseEntity.status(404).body(Map.of("message", "방을 찾을 수 없습니다."));
-            case "not_host": return ResponseEntity.status(403).body(Map.of("message", "방장만 마감할 수 있습니다."));
-            default: return ResponseEntity.badRequest().body(Map.of("message", "마감에 실패했습니다."));
+        if (userId == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "\uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4."));
         }
+        String result = gameRoomService.close(roomId, userId);
+        return switch (result) {
+            case "ok" -> ResponseEntity.ok(Map.of("ok", true));
+            case "not_found" -> ResponseEntity.status(404).body(Map.of("message", "\uBC29\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."));
+            case "not_host" -> ResponseEntity.status(403).body(Map.of("message", "\uBC29\uC7A5\uB9CC \uB9C8\uAC10\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4."));
+            default -> ResponseEntity.badRequest().body(Map.of("message", "\uB9C8\uAC10\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4."));
+        };
     }
 
-    /** 방장: 삭제 (비밀번호 필수) */
     @DeleteMapping("/{roomId}")
     public ResponseEntity<?> delete(@PathVariable Long roomId, @RequestBody Map<String, String> body, HttpSession session) {
         Long userId = (Long) session.getAttribute(SESSION_USER_ID);
-        if (userId == null) return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
+        if (userId == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "\uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4."));
+        }
         String password = body != null ? body.get("deletePassword") : null;
         String result = gameRoomService.delete(roomId, userId, password);
-        switch (result) {
-            case "ok": return ResponseEntity.ok(Map.of("ok", true));
-            case "not_found": return ResponseEntity.status(404).body(Map.of("message", "방을 찾을 수 없습니다."));
-            case "not_host": return ResponseEntity.status(403).body(Map.of("message", "방장만 삭제할 수 있습니다."));
-            case "wrong_password": return ResponseEntity.badRequest().body(Map.of("message", "삭제 비밀번호가 일치하지 않습니다."));
-            default: return ResponseEntity.badRequest().body(Map.of("message", "삭제에 실패했습니다."));
-        }
+        return switch (result) {
+            case "ok" -> ResponseEntity.ok(Map.of("ok", true));
+            case "not_found" -> ResponseEntity.status(404).body(Map.of("message", "\uBC29\uC744 \uCC3E\uC744 \uC218 \uC5C6\uC2B5\uB2C8\uB2E4."));
+            case "not_host" -> ResponseEntity.status(403).body(Map.of("message", "\uBC29\uC7A5\uB9CC \uC0AD\uC81C\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4."));
+            case "wrong_password" -> ResponseEntity.badRequest().body(Map.of("message", "\uC0AD\uC81C \uBE44\uBC00\uBC88\uD638\uAC00 \uC77C\uCE58\uD558\uC9C0 \uC54A\uC2B5\uB2C8\uB2E4."));
+            default -> ResponseEntity.badRequest().body(Map.of("message", "\uC0AD\uC81C\uC5D0 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4."));
+        };
     }
 
-    /** 방 채팅용 그룹 채팅방 ID 조회 (참가자만) */
     @GetMapping("/{roomId}/chat-room-id")
     public ResponseEntity<?> getChatRoomId(@PathVariable Long roomId, HttpSession session) {
         Long userId = (Long) session.getAttribute(SESSION_USER_ID);
-        if (userId == null) return ResponseEntity.status(401).body(Map.of("message", "로그인이 필요합니다."));
+        if (userId == null) {
+            return ResponseEntity.status(401).body(Map.of("message", "\uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4."));
+        }
         return gameRoomService.getGroupChatRoomId(roomId, userId)
                 .map(id -> ResponseEntity.<Object>ok(Map.<String, Object>of("groupChatRoomId", id)))
-                .orElse(ResponseEntity.status(403).body(Map.of("message", "참가한 방이 아닙니다.")));
+                .orElse(ResponseEntity.status(403).body(Map.of("message", "\uCC38\uAC00\uD55C \uBC29\uC774 \uC544\uB2D9\uB2C8\uB2E4.")));
     }
 }

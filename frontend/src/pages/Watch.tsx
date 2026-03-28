@@ -65,6 +65,18 @@ type ChatMessageItem =
   | { type: 'donation'; donorName?: string; amount?: number; tier?: string; donorMessage?: string; donorProfileImageUrl?: string; consecutiveDonationDays?: number; donorUserId?: number }
   | { type: 'system'; text?: string };
 
+type ReportReason = 'SPAM' | 'HARASSMENT' | 'INAPPROPRIATE_CONTENT' | 'CHEATING' | 'IMPERSONATION' | 'HATE_SPEECH' | 'OTHER';
+
+const REPORT_REASON_OPTIONS: Array<{ value: ReportReason; label: string }> = [
+  { value: 'SPAM', label: '스팸' },
+  { value: 'HARASSMENT', label: '괴롭힘' },
+  { value: 'INAPPROPRIATE_CONTENT', label: '부적절한 콘텐츠' },
+  { value: 'CHEATING', label: '부정행위' },
+  { value: 'IMPERSONATION', label: '사칭' },
+  { value: 'HATE_SPEECH', label: '혐오 발언' },
+  { value: 'OTHER', label: '기타' },
+];
+
 function formatDuration(startedAt: string | null | undefined): string {
   if (!startedAt) return '';
   const start = new Date(startedAt).getTime();
@@ -133,6 +145,13 @@ export default function Watch() {
   const [chargeError, setChargeError] = useState('');
   const [controlsVisible, setControlsVisible] = useState(false);
   const [chatPanelOpen, setChatPanelOpen] = useState(true);
+  const [chatUserMenu, setChatUserMenu] = useState<{ userId: number; displayName: string } | null>(null);
+  const [reportModalOpen, setReportModalOpen] = useState(false);
+  const [reportTarget, setReportTarget] = useState<{ userId: number; displayName: string } | null>(null);
+  const [reportReason, setReportReason] = useState<ReportReason>('HARASSMENT');
+  const [reportDescription, setReportDescription] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportError, setReportError] = useState('');
   /** 주간 후원 랭킹 표시: collapsed(접힘) | expanded(펼침) | full(전체+접기) */
   const [weeklyRankView, setWeeklyRankView] = useState<'collapsed' | 'expanded' | 'full'>('collapsed');
   const donorUserIdsRef = useRef<Set<number>>(new Set());
@@ -174,6 +193,24 @@ export default function Watch() {
     setChargeModalOpen(false);
     setChargeError('');
   }, [chargeSubmitting]);
+  const openChatUserMenu = useCallback((targetUserId: number, displayName: string) => {
+    setChatUserMenu((current) => (current?.userId === targetUserId ? null : { userId: targetUserId, displayName }));
+  }, []);
+  const openReportModal = useCallback((targetUserId: number, displayName: string) => {
+    setChatUserMenu(null);
+    setReportTarget({ userId: targetUserId, displayName });
+    setReportReason('HARASSMENT');
+    setReportDescription('');
+    setReportError('');
+    setReportModalOpen(true);
+  }, []);
+  const closeReportModal = useCallback(() => {
+    if (reportSubmitting) return;
+    setReportModalOpen(false);
+    setReportTarget(null);
+    setReportDescription('');
+    setReportError('');
+  }, [reportSubmitting]);
 
   useEffect(() => {
     if (!streamId) {
@@ -200,6 +237,13 @@ export default function Watch() {
       .catch(() => setStream(null))
       .finally(() => setLoading(false));
   }, [streamId]);
+
+  useEffect(() => {
+    if (!chatUserMenu && !reportModalOpen) return;
+    const handleWindowClick = () => setChatUserMenu(null);
+    window.addEventListener('click', handleWindowClick);
+    return () => window.removeEventListener('click', handleWindowClick);
+  }, [chatUserMenu, reportModalOpen]);
 
   // 시청자 수 집계: 라이브 방송 시 viewer/join, 이탈 시 viewer/leave
   useEffect(() => {
@@ -485,6 +529,54 @@ export default function Watch() {
       /* ignore */
     }
   }, [chatInput, streamId, chatConnected]);
+
+  const submitUserReport = useCallback(async () => {
+    if (!user?.id) {
+      setReportError('로그인 후 신고할 수 있습니다.');
+      return;
+    }
+    if (!reportTarget?.userId) {
+      setReportError('신고 대상을 찾을 수 없습니다.');
+      return;
+    }
+    if (user.id === reportTarget.userId) {
+      setReportError('자기 자신은 신고할 수 없습니다.');
+      return;
+    }
+    const detail = reportDescription.trim();
+    if (!detail) {
+      setReportError('상세 내용을 입력해 주세요.');
+      return;
+    }
+
+    setReportSubmitting(true);
+    setReportError('');
+    try {
+      const response = await fetch(apiUrl(`api/users/${user.id}/reports`), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportedUserId: reportTarget.userId,
+          reason: reportReason,
+          description: detail,
+        }),
+      });
+      const payload = await response.json().catch(() => ({} as { message?: string }));
+      if (!response.ok) {
+        setReportError(payload.message ?? '신고 접수에 실패했습니다.');
+        return;
+      }
+      window.alert(`${reportTarget.displayName}님 신고가 접수되었습니다.`);
+      setReportModalOpen(false);
+      setReportTarget(null);
+      setReportDescription('');
+    } catch {
+      setReportError('신고 접수 중 오류가 발생했습니다.');
+    } finally {
+      setReportSubmitting(false);
+    }
+  }, [reportDescription, reportReason, reportTarget, user]);
 
   useEffect(() => {
     chatEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -1112,7 +1204,31 @@ export default function Watch() {
                       <span className={`chat-badge level-badge ${levelBadgeClass(msg.level)}`} title={`레벨 ${msg.level}`}>LV.{msg.level}</span>
                     )}
                     {msg.manager && !msg.streamer && <span className="manager-badge">매니저</span>}
-                    <span className="user">{msg.displayName ?? '익명'}</span>
+                    {msg.userId != null ? (
+                      <span className="chat-user-menu-wrap" onClick={(event) => event.stopPropagation()}>
+                        <button
+                          type="button"
+                          className="user chat-user-button"
+                          onClick={() => openChatUserMenu(msg.userId!, msg.displayName ?? '익명')}
+                        >
+                          {msg.displayName ?? '익명'}
+                        </button>
+                        {chatUserMenu?.userId === msg.userId ? (
+                          <div className="chat-user-menu">
+                            <button
+                              type="button"
+                              className="chat-user-menu-item"
+                              onClick={() => openReportModal(msg.userId!, msg.displayName ?? '익명')}
+                              disabled={!user || user.id === msg.userId}
+                            >
+                              신고하기
+                            </button>
+                          </div>
+                        ) : null}
+                      </span>
+                    ) : (
+                      <span className="user">{msg.displayName ?? '익명'}</span>
+                    )}
                     {msg.streamer && stream?.partner && <span className="chat-badge partner-badge" title="파트너 스트리머">✓</span>}
                     {msg.text}
                   </div>
@@ -1333,6 +1449,46 @@ export default function Watch() {
                 {chargeSubmitting ? '처리 중…' : chargeUseMileage ? '마일리지로 충전하기' : '결제하기'}
               </button>
               <button type="button" className="btn-secondary" onClick={closeChargeModal} disabled={chargeSubmitting}>
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reportModalOpen && reportTarget && (
+        <div className="main-modal-backdrop show" role="dialog" aria-modal="true" onClick={closeReportModal}>
+          <div className="main-modal-box" onClick={(e) => e.stopPropagation()}>
+            <h2 className="modal-title">{reportTarget.displayName} 신고하기</h2>
+            <div className="modal-field">
+              <label htmlFor="watch-report-reason">신고 사유</label>
+              <select id="watch-report-reason" value={reportReason} onChange={(e) => setReportReason(e.target.value as ReportReason)}>
+                {REPORT_REASON_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="modal-field">
+              <label htmlFor="watch-report-description">상세 내용</label>
+              <textarea
+                id="watch-report-description"
+                className="watch-report-textarea"
+                value={reportDescription}
+                onChange={(e) => setReportDescription(e.target.value)}
+                placeholder="채팅 내용이나 신고 사유를 구체적으로 적어 주세요."
+                maxLength={500}
+                rows={5}
+              />
+              <div className="modal-hint">{reportDescription.length}/500</div>
+            </div>
+            {reportError && <p className="modal-error">{reportError}</p>}
+            <div className="modal-actions">
+              <button type="button" className="btn-primary" onClick={submitUserReport} disabled={reportSubmitting}>
+                {reportSubmitting ? '접수 중…' : '신고 접수'}
+              </button>
+              <button type="button" className="btn-secondary" onClick={closeReportModal} disabled={reportSubmitting}>
                 취소
               </button>
             </div>
