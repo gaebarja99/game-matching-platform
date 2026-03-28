@@ -156,7 +156,10 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
               text?: string;
               createdAt?: string;
             };
-            if (payload.type !== 'MESSAGE' || payload.text == null || payload.fromUserId == null) return;
+            if (payload.type !== 'MESSAGE' || payload.text == null) return;
+            const fromUserId = payload.fromUserId;
+            if (fromUserId === undefined || fromUserId === null) return;
+            const text = payload.text;
             setMessages((prev) => {
               if (prev.some((item) => item.id === payload.id)) return prev;
               return [
@@ -164,10 +167,10 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
                 {
                   id: payload.id ?? Date.now(),
                   sessionId,
-                  fromUserId: payload.fromUserId,
+                  fromUserId,
                   fromNickname: payload.fromNickname ?? '',
                   fromProfileImageUrl: payload.fromProfileImageUrl,
-                  text: payload.text,
+                  text,
                   createdAt: payload.createdAt ?? '',
                 },
               ];

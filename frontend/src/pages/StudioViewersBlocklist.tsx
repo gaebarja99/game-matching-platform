@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import StudioLayout from '../components/StudioLayout';
 import { apiUrl } from '../api/client';
 
@@ -129,10 +129,10 @@ export default function StudioViewersBlocklist() {
           <div className="input-row">
             <input
               type="text"
+              className="studio-input"
               value={input}
               onChange={(e) => setInput(e.target.value)}
               placeholder="닉네임, 로그인 ID 또는 UID"
-              style={{ flex: 1, minWidth: 200 }}
               disabled={!streamId || adding}
             />
             <button type="button" className="btn-copy" onClick={() => void addBlacklist()} disabled={!streamId || adding}>
@@ -157,10 +157,10 @@ export default function StudioViewersBlocklist() {
           <div className="input-row">
             <input
               type="text"
+              className="studio-input"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="닉네임, 로그인 ID, UID 검색"
-              style={{ flex: 1, minWidth: 200 }}
             />
           </div>
         </div>

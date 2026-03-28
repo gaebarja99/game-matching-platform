@@ -1,11 +1,19 @@
 import { useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { findLoginIdByPhone } from '../api/auth';
+import { getAuth } from '../firebase';
 import { getFirebaseAuthErrorMessage } from '../lib/firebaseAuthErrorMessages';
 import { getRecaptchaEnterpriseToken } from '../lib/recaptchaEnterprise';
-import { clearRecaptchaVerifier, confirmVerificationCode, getRecaptchaVerifier, sendVerificationCode } from '../lib/phoneAuth';
+import {
+  clearRecaptchaVerifier,
+  confirmVerificationCode,
+  getRecaptchaVerifier,
+  isPhoneAuthDevBypassEnabled,
+  sendVerificationCode,
+} from '../lib/phoneAuth';
 
 const RECAPTCHA_CONTAINER_ID = 'find-login-id-recaptcha';
+const DEV_PHONE_AUTH_CODE = (import.meta.env.VITE_PHONE_AUTH_DEV_CODE || '123456').trim();
 
 export default function FindLoginId() {
   const [phone, setPhone] = useState('');
@@ -29,10 +37,13 @@ export default function FindLoginId() {
     setError('');
     setSendingCode(true);
     try {
-      // reCAPTCHA 검증기는 한 번만 사용 가능. 매 요청마다 제거 후 새로 생성.
+      // reCAPTCHA 검증기는 한 번만 사용 가능. 매 요청마다 제거 후 새로 생성 (Firebase 있을 때만).
       clearRecaptchaVerifier(RECAPTCHA_CONTAINER_ID, recaptchaVerifierRef.current);
       recaptchaVerifierRef.current = null;
-      recaptchaVerifierRef.current = await getRecaptchaVerifier(RECAPTCHA_CONTAINER_ID) as import('firebase/auth').RecaptchaVerifier;
+      const auth = await getAuth();
+      if (auth) {
+        recaptchaVerifierRef.current = await getRecaptchaVerifier(RECAPTCHA_CONTAINER_ID) as import('firebase/auth').RecaptchaVerifier;
+      }
       const result = await sendVerificationCode(phone.trim(), recaptchaVerifierRef.current);
       confirmationResultRef.current = result;
       setPhoneVerified(false);
@@ -78,14 +89,17 @@ export default function FindLoginId() {
       setError('인증번호를 입력해 주세요.');
       return;
     }
-    if (!confirmationResultRef.current && !phoneVerified) {
-      setError('인증번호 요청 후 확인을 진행해 주세요.');
+    // 같은 핸들러 안에서는 setPhoneVerified 직후에도 phoneVerified 값이 바로 바뀌지 않으므로 로컬 플래그 사용
+    let verified = phoneVerified;
+    if (!confirmationResultRef.current && !verified) {
+      setError('인증번호 요청 후 인증을 완료해 주세요. (확인 버튼 또는 아래 아이디 찾기)');
       return;
     }
-    if (!phoneVerified && confirmationResultRef.current) {
+    if (!verified && confirmationResultRef.current) {
       setVerifyingCode(true);
       try {
         await confirmVerificationCode(confirmationResultRef.current, code);
+        verified = true;
         setPhoneVerified(true);
         confirmationResultRef.current = null;
       } catch (err: unknown) {
@@ -95,7 +109,7 @@ export default function FindLoginId() {
       }
       setVerifyingCode(false);
     }
-    if (!phoneVerified) return;
+    if (!verified) return;
     setSubmitting(true);
     try {
       const recaptchaToken = await getRecaptchaEnterpriseToken('FIND_LOGIN_ID');
@@ -129,6 +143,11 @@ export default function FindLoginId() {
       <div className="main-modal-box">
         <h2 className="modal-title">아이디 찾기</h2>
         <p className="modal-desc" style={{ marginBottom: 16 }}>가입 시 등록한 휴대폰 번호로 인증 후 아이디를 조회합니다.</p>
+        {import.meta.env.DEV && isPhoneAuthDevBypassEnabled() ? (
+          <p className="modal-desc" style={{ marginBottom: 12, fontSize: '0.85rem', opacity: 0.9 }}>
+            로컬 개발: Firebase 미설정 시 SMS 대신 고정 인증번호(<strong>{DEV_PHONE_AUTH_CODE}</strong>)로 테스트할 수 있습니다.
+          </p>
+        ) : null}
         {loginIds === null ? (
           <form onSubmit={verifyAndFindId}>
             <div className="modal-field">

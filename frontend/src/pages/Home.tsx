@@ -46,6 +46,8 @@ import {
 import { saveRandomMatchPending, clearRandomMatchPending } from '../utils/randomMatchPendingStorage';
 import { isHiddenGameRoomHost } from '../utils/gameRoomVisibility';
 import { getRoomCapacityMeta } from '../utils/gameRoomCapacity';
+import { parseGameOptions } from '../utils/parseGameRoomOptions';
+import GameRoomDetailModal, { type RoomModalOpen } from '../components/GameRoomDetailModal';
 import './Home.css';
 
 function defaultRandomMatchPosition(game: string): string {
@@ -85,46 +87,6 @@ function isRandomMatchPositionValid(game: string, pos: string | null): boolean {
       return ['ENTRY', 'SUPPORT', 'IGL', 'AWPER', 'LURKER', 'ALL'].includes(p);
     default:
       return true;
-  }
-}
-
-function parseGameOptions(s?: string | null): {
-  tier?: string;
-  mode?: string;
-  position?: string;
-  maxPlayers?: number;
-  myPosition?: string;
-  partnerPosition?: string;
-  primaryRole?: string;
-  secondaryRole?: string;
-  findPosition?: string;
-  preferredMap?: string;
-  preferredMethod?: string;
-  preferredLegend?: string;
-  platform?: string;
-  partySize?: string;
-} {
-  if (!s || !s.trim()) return {};
-  try {
-    const o = JSON.parse(s) as Record<string, unknown>;
-    return {
-      tier: typeof o.tier === 'string' ? o.tier : undefined,
-      mode: typeof o.mode === 'string' ? o.mode : undefined,
-      position: typeof o.position === 'string' ? o.position : undefined,
-      maxPlayers: typeof o.maxPlayers === 'number' ? o.maxPlayers : undefined,
-      myPosition: typeof o.myPosition === 'string' ? o.myPosition : undefined,
-      partnerPosition: typeof o.partnerPosition === 'string' ? o.partnerPosition : undefined,
-      primaryRole: typeof o.primaryRole === 'string' ? o.primaryRole : undefined,
-      secondaryRole: typeof o.secondaryRole === 'string' ? o.secondaryRole : undefined,
-      findPosition: typeof o.findPosition === 'string' ? o.findPosition : undefined,
-      preferredMap: typeof o.preferredMap === 'string' ? o.preferredMap : undefined,
-      preferredMethod: typeof o.preferredMethod === 'string' ? o.preferredMethod : undefined,
-      preferredLegend: typeof o.preferredLegend === 'string' ? o.preferredLegend : undefined,
-      platform: typeof o.platform === 'string' ? o.platform : undefined,
-      partySize: typeof o.partySize === 'string' ? o.partySize : undefined,
-    };
-  } catch {
-    return {};
   }
 }
 
@@ -379,14 +341,18 @@ export default function Home() {
   const [matchRoomList, setMatchRoomList] = useState<HomeMatchRoomItem[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [joinRoomId, setJoinRoomId] = useState<number | null>(null);
+  const [roomModal, setRoomModal] = useState<RoomModalOpen>(null);
   const [selectedGame, setSelectedGame] = useState<TeamSearchGameId>('ALL');
 
   // 팀 찾기 테이블 컬럼 표시 규칙
   // - PUBG 탭: 포지션 컬럼 숨김
   // - 전체(ALL) 탭: 삭제 컬럼 숨김
+  // - 오버워치2 탭에서만 랭크 컬럼 표시
+  const showRankColumn = selectedGame === 'OVERWATCH';
   const showPositionColumn = selectedGame !== 'PUBG';
   const showDeleteColumn = selectedGame !== 'ALL';
-  const tableColumnCount = 7 + (showPositionColumn ? 1 : 0) + (showDeleteColumn ? 1 : 0);
+  const tableColumnCount =
+    6 + (showRankColumn ? 1 : 0) + (showPositionColumn ? 1 : 0) + (showDeleteColumn ? 1 : 0);
 
   const fetchRooms = useCallback(() => {
     setLoadingRooms(true);
@@ -983,9 +949,9 @@ export default function Home() {
               )}
               {createRank === 'QUICK' ? (
                 <>
-                  <label className="sidebar-form-label">주 역할군</label>
+                  <label className="sidebar-form-label">주 포지션</label>
                   <PositionPicker value={createPrimaryRole} onChange={setCreatePrimaryRole} game={createGame} filterMode includeAllOption={false} />
-                  <label className="sidebar-form-label">부 역할군</label>
+                  <label className="sidebar-form-label">부 포지션</label>
                   <PositionPicker value={createSecondaryRole} onChange={setCreateSecondaryRole} game={createGame} filterMode includeAllOption={false} />
                   <label className="sidebar-form-label">찾는 포지션</label>
                   <PositionPicker value={createFindPosition} onChange={setCreateFindPosition} game={createGame} filterMode includeAllOption={false} />
@@ -1019,7 +985,7 @@ export default function Home() {
                   </select>
                 </>
               )}
-              <label className="sidebar-form-label">역할</label>
+              <label className="sidebar-form-label">포지션</label>
               <PositionPicker value={createPosition} onChange={setCreatePosition} game={createGame} />
             </>
           )}
@@ -1042,7 +1008,7 @@ export default function Home() {
                   </select>
                 </>
               )}
-              <label className="sidebar-form-label">역할</label>
+              <label className="sidebar-form-label">포지션</label>
               <PositionPicker value={createPosition} onChange={setCreatePosition} game={createGame} />
             </>
           )}
@@ -1248,7 +1214,7 @@ export default function Home() {
                 <thead>
                   <tr>
                     <th>제목</th>
-                    <th>랭크</th>
+                    {showRankColumn ? <th>랭크</th> : null}
                     {showPositionColumn ? <th>포지션</th> : null}
                     <th>메모</th>
                     <th>인원</th>
@@ -1273,11 +1239,15 @@ export default function Home() {
                     </tr>
                   ) : null}
                   {filteredMatchRoomList.map((room) => {
-                    const gameLabel = GAME_OPTIONS.find((option) => option.id === room.game)?.label ?? room.game;
+                    const gameLabel = GAME_OPTIONS.find((option) => option.key === room.game)?.label ?? room.game;
                     return (
-                      <tr key={`match-${room.id}`} className="home-demo-room-row">
+                      <tr
+                        key={`match-${room.id}`}
+                        className="home-demo-room-row home-demo-room-row--clickable"
+                        onClick={() => setRoomModal({ kind: 'match', room })}
+                      >
                         <td>[랜덤] {gameLabel}</td>
-                        <td>랜덤 매칭</td>
+                        {showRankColumn ? <td>랜덤 매칭</td> : null}
                         {showPositionColumn ? <td>-</td> : null}
                         <td className="home-demo-room-memo-cell" title="내 랜덤 매칭방">내 랜덤 매칭방</td>
                         <td>{room.memberCount != null ? `${room.memberCount}명` : '-'}</td>
@@ -1288,7 +1258,10 @@ export default function Home() {
                             type="button"
                             className="home-demo-room-join-btn home-demo-room-join-btn--live"
                             title="랜덤 매칭 채팅방으로 이동"
-                            onClick={() => goMatchRoomChat(room.id)}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              goMatchRoomChat(room.id);
+                            }}
                           >
                             입장
                           </button>
@@ -1311,9 +1284,17 @@ export default function Home() {
                     const partyCell = partySizeLabel(op.partySize, r.game);
                     const showPos = r.game !== 'PUBG' && showPositionForRoom(r.game, op.mode) && op.position;
                     return (
-                      <tr key={`api-${r.id}`} className={isFull ? 'home-demo-room-row home-demo-room-row--full' : 'home-demo-room-row'}>
+                      <tr
+                        key={`api-${r.id}`}
+                        className={
+                          isFull
+                            ? 'home-demo-room-row home-demo-room-row--full home-demo-room-row--clickable'
+                            : 'home-demo-room-row home-demo-room-row--clickable'
+                        }
+                        onClick={() => setRoomModal({ kind: 'game', room: r })}
+                      >
                         <td>{r.title}</td>
-                        <td>{rankCell}</td>
+                        {showRankColumn ? <td>{rankCell}</td> : null}
                         {showPositionColumn ? (
                           <td>
                             {showPos ? (
@@ -1355,7 +1336,10 @@ export default function Home() {
                               type="button"
                               className="home-demo-room-join-btn home-demo-room-join-btn--live"
                               title="방 채팅으로 이동"
-                              onClick={() => goGameRoomChat(r)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                goGameRoomChat(r);
+                              }}
                             >
                               입장
                             </button>
@@ -1369,7 +1353,10 @@ export default function Home() {
                               }
                               title={isFull ? '모집 완료' : user ? '참가' : '로그인 후 참가'}
                               disabled={joinRoomId === r.id || isFull}
-                              onClick={() => handleApiRoomButton(r)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void handleApiRoomButton(r);
+                              }}
                             >
                               {joinRoomId === r.id ? '참가 중…' : isFull ? '모집 완료' : '참가'}
                             </button>
@@ -1382,7 +1369,10 @@ export default function Home() {
                                 type="button"
                                 className="home-demo-room-delete-btn"
                                 disabled={deletingRoomId === r.id}
-                                onClick={() => void handleDeleteRoom(r)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleDeleteRoom(r);
+                                }}
                                 title="방 삭제"
                               >
                                 {deletingRoomId === r.id ? '삭제 중…' : '삭제'}
@@ -1410,6 +1400,25 @@ export default function Home() {
           </aside>
         )}
       </div>
+
+      <GameRoomDetailModal
+        open={roomModal}
+        onClose={() => setRoomModal(null)}
+        onGameRoomAction={(r) => {
+          setRoomModal(null);
+          if (r.closed) return;
+          if (r.isMember && r.groupChatRoomId) {
+            goGameRoomChat(r);
+            return;
+          }
+          void handleApiRoomButton(r);
+        }}
+        onMatchRoomEnter={(id) => {
+          setRoomModal(null);
+          goMatchRoomChat(id);
+        }}
+        joinRoomId={joinRoomId}
+      />
     </Layout>
   );
 }

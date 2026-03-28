@@ -51,7 +51,7 @@ export default function ProfileLayout() {
             GameMatcher
           </Link>
           <nav className="header-nav">
-            <Link to="/streams">전체 방송</Link>
+            <Link to="/streams">방송</Link>
             <Link to="/records">전적 검색</Link>
             <Link to="/community">커뮤니티</Link>
           </nav>
@@ -87,7 +87,7 @@ export default function ProfileLayout() {
           GameMatcher
         </Link>
         <nav className="header-nav">
-          <Link to="/streams">전체 방송</Link>
+          <Link to="/streams">방송</Link>
           <Link to="/records">전적 검색</Link>
           <Link to="/community">커뮤니티</Link>
         </nav>

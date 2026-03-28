@@ -1,4 +1,4 @@
-.register-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); padding: 20px; }
+.register-page { min-height: 100vh; display: flex; align-items: center; justify-content: center; background: var(--bg); padding: 24px 28px; }
 .register-box { width: 100%; max-width: 420px; padding: 28px; border-radius: 12px; background: var(--card-bg); border: 1px solid var(--border); }
 .register-box h1 { margin: 0 0 8px 0; font-size: 1.5rem; font-weight: 700; color: #00e676; }
 .register-subtitle { margin: 0 0 24px 0; font-size: 0.95rem; color: var(--text-muted); }

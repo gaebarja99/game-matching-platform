@@ -129,7 +129,7 @@ export default function WatchLayout({ children }: WatchLayoutProps) {
       <header className="header">
         <Link to="/" className="header-logo">GameMatcher</Link>
         <nav className="header-nav">
-          <Link to="/streams">전체 방송</Link>
+          <Link to="/streams">방송</Link>
           <Link to="/streams">게임</Link>
           <Link to="/studio" className="auth-only">스튜디오</Link>
         </nav>
@@ -231,7 +231,7 @@ export default function WatchLayout({ children }: WatchLayoutProps) {
 
       <div className="watch-layout">
         <aside className="left-sidebar">
-          <Link to="/streams" className="nav-link">전체 방송</Link>
+          <Link to="/streams" className="nav-link">방송</Link>
           <Link to="/following" className="nav-link">팔로잉</Link>
           <Link to="/profile" className="nav-link">내 프로필</Link>
         </aside>

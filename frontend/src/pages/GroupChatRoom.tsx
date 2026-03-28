@@ -301,28 +301,6 @@ export default function GroupChatRoom() {
       .finally(() => setInvitingId(null));
   };
 
-  const kickMember = (targetUserId: number, nickname: string) => {
-    if (!roomId || !isHost || !user || targetUserId === user.id || kickingId != null) return;
-    if (!window.confirm(`${nickname || '해당 유저'}님을 강퇴할까요?`)) return;
-    setKickingId(targetUserId);
-    fetch(apiUrl(`api/group-chat/rooms/${roomId}/kick`), {
-      method: 'POST',
-      credentials: 'include',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ userId: targetUserId }),
-    })
-      .then((response) => response.json().then((data: { message?: string }) => ({ ok: response.ok, message: data.message })))
-      .then(({ ok, message }) => {
-        if (!ok) {
-          window.alert(message || '강퇴에 실패했습니다.');
-          return;
-        }
-        fetchRoomAndMembers();
-      })
-      .catch(() => window.alert('강퇴 요청에 실패했습니다.'))
-      .finally(() => setKickingId(null));
-  };
-
   const openMemberProfile = async (member: MemberItem) => {
     setProfileLoading(true);
     setProfileModal({

@@ -94,7 +94,7 @@ export default function ChannelWrite() {
               <h2>채널 커뮤니티 글쓰기</h2>
               <p>팬들과 나눌 공지, 소식, 일상을 작성해 보세요.</p>
             </div>
-            <Link to="/channel?tab=community" className="channel-panel-action">
+            <Link to="/channel?tab=community" className="channel-panel-action channel-panel-action--ghost">
               목록으로
             </Link>
           </div>

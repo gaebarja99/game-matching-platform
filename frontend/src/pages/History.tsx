@@ -104,7 +104,7 @@ export default function History() {
   }, [user]);
 
   return (
-    <StreamsLayout sidebarVariant="simple">
+    <StreamsLayout>
       <h1 className="page-title">히스토리</h1>
 
       <div className="history-section">

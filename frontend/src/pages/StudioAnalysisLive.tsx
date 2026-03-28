@@ -1,4 +1,4 @@
-﻿import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import StudioLayout from '../components/StudioLayout';
 import { apiUrl } from '../api/client';
 
@@ -83,7 +83,7 @@ function formatDonation(amount: number, count: number): string {
 
 function getDateRangeLabel(rows: AnalysisRow[]): string {
   if (rows.length === 0) return '집계 데이터 없음';
-  return '전체 방송 기준 집계';
+  return '방송 기준 집계';
 }
 
 export default function StudioAnalysisLive() {

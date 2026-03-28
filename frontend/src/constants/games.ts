@@ -8,7 +8,6 @@ export const PREFERRED_GAME_OPTIONS = [
   { value: '오버워치' },
   { value: 'PUBG' },
   { value: '카운터 스트라이크 2' },
-  { value: '에이펙스 레전드' },
 ] as const;
 
 const VALID_VALUES = new Set<string>(

@@ -143,6 +143,14 @@ export default function Channel() {
     }, 0);
   }, [streams]);
 
+  const communityPostsSorted = useMemo(() => {
+    return [...communityPosts].sort((a, b) => {
+      const ta = new Date(a.createdAt).getTime();
+      const tb = new Date(b.createdAt).getTime();
+      return (Number.isNaN(tb) ? 0 : tb) - (Number.isNaN(ta) ? 0 : ta);
+    });
+  }, [communityPosts]);
+
   if (!channelUserId) {
     return (
       <ChannelLayout>
@@ -266,24 +274,30 @@ export default function Channel() {
                   <p>스트리머가 팬들과 방송 소식, 공지, 일상을 나누는 채널 전용 소통 공간입니다.</p>
                 </div>
                 {isOwnChannel ? (
-                  <Link to="/channel/write" className="channel-panel-action">
+                  <Link to="/channel/write" className="channel-panel-action channel-panel-action--primary">
                     글쓰기
                   </Link>
                 ) : null}
               </div>
 
-              {communityPosts.length === 0 ? (
+              {communityPostsSorted.length === 0 ? (
                 <p className="channel-panel-empty">아직 작성된 커뮤니티 글이 없습니다.</p>
               ) : (
-                <div className="channel-community-list">
-                  {communityPosts.map((post) => (
-                    <article key={post.id} className="channel-community-card">
-                      <div className="channel-community-meta">{formatChannelDate(post.createdAt)}</div>
-                      <h3>{post.title}</h3>
-                      <p>{post.content}</p>
-                    </article>
+                <ul className="channel-community-list" aria-label="채널 커뮤니티 글 목록">
+                  {communityPostsSorted.map((post) => (
+                    <li key={post.id}>
+                      <article className="channel-community-card">
+                        <div className="channel-community-card-head">
+                          <h3 className="channel-community-card-title">{post.title}</h3>
+                          <time className="channel-community-meta" dateTime={post.createdAt}>
+                            {formatChannelDate(post.createdAt)}
+                          </time>
+                        </div>
+                        <p className="channel-community-excerpt">{post.content}</p>
+                      </article>
+                    </li>
                   ))}
-                </div>
+                </ul>
               )}
             </section>
           </div>

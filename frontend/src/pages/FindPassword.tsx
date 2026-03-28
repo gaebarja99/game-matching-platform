@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { checkLoginIdExists, resetPasswordByPhone } from '../api/auth';
+import { getAuth } from '../firebase';
 import { getFirebaseAuthErrorMessage } from '../lib/firebaseAuthErrorMessages';
 import { getRecaptchaEnterpriseToken } from '../lib/recaptchaEnterprise';
 import { clearRecaptchaVerifier, confirmVerificationCode, getRecaptchaVerifier, sendVerificationCode } from '../lib/phoneAuth';
@@ -56,7 +57,10 @@ export default function FindPassword() {
     try {
       clearRecaptchaVerifier(RECAPTCHA_CONTAINER_ID, recaptchaVerifierRef.current);
       recaptchaVerifierRef.current = null;
-      recaptchaVerifierRef.current = await getRecaptchaVerifier(RECAPTCHA_CONTAINER_ID) as import('firebase/auth').RecaptchaVerifier;
+      const auth = await getAuth();
+      if (auth) {
+        recaptchaVerifierRef.current = await getRecaptchaVerifier(RECAPTCHA_CONTAINER_ID) as import('firebase/auth').RecaptchaVerifier;
+      }
       const result = await sendVerificationCode(phone.trim(), recaptchaVerifierRef.current);
       confirmationResultRef.current = result;
     } catch (err: unknown) {

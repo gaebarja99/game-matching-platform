@@ -27,6 +27,28 @@ export type SearchFieldOverrides = {
   count?: number;
 };
 
+function parseHexRgb(hex: string): { r: number; g: number; b: number } | null {
+  const m = /^#?([0-9a-f]{6})$/i.exec(hex.trim());
+  if (!m) return null;
+  const n = parseInt(m[1], 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+/** 전적 랜딩(검색 폼·버튼) — 선택 게임 브랜드 색과 맞춤 */
+export function getRecordsLandingCssVars(accent: string): Record<string, string> {
+  const a = accent.trim();
+  const mid = `color-mix(in srgb, ${a} 78%, #0c0c0e)`;
+  const rgb = parseHexRgb(a);
+  const soft = rgb ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.14)` : 'rgba(0, 230, 118, 0.14)';
+  const glow = rgb ? `rgba(${rgb.r}, ${rgb.g}, ${rgb.b}, 0.22)` : 'rgba(0, 230, 118, 0.22)';
+  return {
+    '--records-landing-accent': a,
+    '--records-landing-accent-mid': mid,
+    '--records-landing-accent-soft': soft,
+    '--records-landing-accent-glow': glow,
+  };
+}
+
 export const GAMES: GameOption[] = [
   {
     id: 'lol',

@@ -1,5 +1,4 @@
-﻿import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useEffect, useState } from 'react';
 import StudioLayout from '../components/StudioLayout';
 import { apiUrl } from '../api/client';
 
@@ -9,14 +8,6 @@ interface MyStream {
 }
 
 type OverlayPosition = 'br' | 'bl' | 'tr' | 'tl';
-type ChatPermissionScope = 'ALL' | 'FOLLOWER' | 'MANAGER';
-
-interface ChatSettingsResponse {
-  chatPermissionScope?: ChatPermissionScope;
-  slowModeEnabled?: boolean;
-  slowModeSeconds?: number;
-  chatRules?: string;
-}
 
 export default function StudioSettings() {
   const [streamUrl, setStreamUrl] = useState('');
@@ -25,13 +16,7 @@ export default function StudioSettings() {
   const [streamId, setStreamId] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [reissueLoading, setReissueLoading] = useState(false);
-  const [chatScope, setChatScope] = useState<ChatPermissionScope>('ALL');
-  const [slowOn, setSlowOn] = useState(false);
-  const [chatRules, setChatRules] = useState('');
   const [donationOverlayPosition, setDonationOverlayPosition] = useState<OverlayPosition>('br');
-  const [savingChatPreferences, setSavingChatPreferences] = useState(false);
-  const [savingChatRules, setSavingChatRules] = useState(false);
-  const [updatingAll, setUpdatingAll] = useState(false);
 
   const backendOrigin = apiUrl('').replace(/\/$/, '');
   const overlayChatUrl = streamId ? `${backendOrigin}/chat-widget.html?streamId=${streamId}&overlay=1` : '';
@@ -52,20 +37,12 @@ export default function StudioSettings() {
           return;
         }
 
-        Promise.all([
-          fetch(apiUrl(`api/streams/${sid}/obs-setup`), { credentials: 'include' })
-            .then((response) => (response.ok ? response.json() : null))
-            .catch(() => null),
-          fetch(apiUrl(`api/streams/${sid}/chat-settings`), { credentials: 'include' })
-            .then((response) => (response.ok ? response.json() : null))
-            .catch(() => null),
-        ])
-          .then(([obs, chatSettings]: [{ serverUrl?: string; streamKey?: string } | null, ChatSettingsResponse | null]) => {
+        fetch(apiUrl(`api/streams/${sid}/obs-setup`), { credentials: 'include' })
+          .then((response) => (response.ok ? response.json() : null))
+          .catch(() => null)
+          .then((obs: { serverUrl?: string; streamKey?: string } | null) => {
             if (obs?.serverUrl) setStreamUrl(obs.serverUrl);
             if (obs?.streamKey) setStreamKey(obs.streamKey);
-            setChatScope(chatSettings?.chatPermissionScope ?? 'ALL');
-            setSlowOn(!!chatSettings?.slowModeEnabled);
-            setChatRules(chatSettings?.chatRules ?? '');
           })
           .finally(() => setLoading(false));
       })
@@ -98,107 +75,9 @@ export default function StudioSettings() {
       .finally(() => setReissueLoading(false));
   };
 
-  const saveChatPreferences = () => {
-    if (!streamId) return;
-    setSavingChatPreferences(true);
-    fetch(apiUrl(`api/streams/${streamId}/chat-settings/preferences`), {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        chatPermissionScope: chatScope,
-        slowModeEnabled: slowOn,
-        slowModeSeconds: 5,
-      }),
-    })
-      .then((response) => response.json().then((data: { message?: string }) => ({ ok: response.ok, data })))
-      .then((result) => {
-        if (result.ok) {
-          window.alert('채팅 참여 설정이 저장되었습니다.');
-        } else {
-          window.alert(result.data?.message ?? '저장에 실패했습니다.');
-        }
-      })
-      .catch(() => window.alert('저장에 실패했습니다.'))
-      .finally(() => setSavingChatPreferences(false));
-  };
-
-  const saveChatRules = () => {
-    if (!streamId) return;
-    setSavingChatRules(true);
-    fetch(apiUrl(`api/streams/${streamId}/chat-settings/rules`), {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include',
-      body: JSON.stringify({
-        chatRules,
-      }),
-    })
-      .then((response) => response.json().then((data: { message?: string; chatRules?: string }) => ({ ok: response.ok, data })))
-      .then((result) => {
-        if (result.ok) {
-          setChatRules(result.data.chatRules ?? chatRules);
-          window.alert('채팅 규칙이 저장되었습니다.');
-        } else {
-          window.alert(result.data?.message ?? '저장에 실패했습니다.');
-        }
-      })
-      .catch(() => window.alert('저장에 실패했습니다.'))
-      .finally(() => setSavingChatRules(false));
-  };
-
-  const updateAllSettings = async () => {
-    if (!streamId || updatingAll) return;
-    setUpdatingAll(true);
-    try {
-      const preferencesResponse = await fetch(apiUrl(`api/streams/${streamId}/chat-settings/preferences`), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          chatPermissionScope: chatScope,
-          slowModeEnabled: slowOn,
-          slowModeSeconds: 5,
-        }),
-      });
-      const preferencesData = await preferencesResponse.json().catch(() => ({} as { message?: string }));
-      if (!preferencesResponse.ok) {
-        window.alert(preferencesData.message ?? '채팅 설정 업데이트에 실패했습니다.');
-        return;
-      }
-
-      const rulesResponse = await fetch(apiUrl(`api/streams/${streamId}/chat-settings/rules`), {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({
-          chatRules,
-        }),
-      });
-      const rulesData = await rulesResponse.json().catch(() => ({} as { message?: string; chatRules?: string }));
-      if (!rulesResponse.ok) {
-        window.alert(rulesData.message ?? '채팅 규칙 업데이트에 실패했습니다.');
-        return;
-      }
-
-      setChatRules(rulesData.chatRules ?? chatRules);
-      window.alert('설정이 업데이트되었습니다.');
-    } catch {
-      window.alert('업데이트에 실패했습니다.');
-    } finally {
-      setUpdatingAll(false);
-    }
-  };
-
   return (
     <StudioLayout>
       <div className="settings-main">
-        <div className="settings-update-bar">
-          <button type="button" className="btn-update" onClick={() => void updateAllSettings()} disabled={!streamId || updatingAll}>
-            {updatingAll ? '업데이트 중...' : '업데이트'}
-          </button>
-        </div>
-
         <div className="settings-card">
           <h2>스트림 설정</h2>
 
@@ -281,9 +160,10 @@ export default function StudioSettings() {
             <label className="label">후원 애니메이션 URL</label>
             <div className="input-row" style={{ flexWrap: 'wrap', gap: 8 }}>
               <select
+                className="studio-select"
+                aria-label="후원 애니메이션 표시 위치"
                 value={donationOverlayPosition}
                 onChange={(event) => setDonationOverlayPosition(event.target.value as OverlayPosition)}
-                style={{ minWidth: 120 }}
               >
                 <option value="br">하단 우 (br)</option>
                 <option value="bl">하단 좌 (bl)</option>
@@ -327,76 +207,6 @@ export default function StudioSettings() {
           <div className="stream-rtmp-notice">
             <strong>OBS에서 연결이 실패하는 경우</strong>
             <p>로컬 RTMP 서버가 실행 중인지 확인한 뒤 `rtmp://localhost/live`와 스트림 키를 OBS에 입력해 주세요.</p>
-          </div>
-        </div>
-
-        <div className="settings-card">
-          <h2>채팅 참여자 설정</h2>
-          <div className="settings-row">
-            <label className="label">채팅 참여 범위</label>
-            <div className="radio-group">
-              <label><input type="radio" name="chat-scope" value="ALL" checked={chatScope === 'ALL'} onChange={() => setChatScope('ALL')} /> 모든 시청자</label>
-              <label><input type="radio" name="chat-scope" value="FOLLOWER" checked={chatScope === 'FOLLOWER'} onChange={() => setChatScope('FOLLOWER')} /> 팔로워 전용</label>
-              <label><input type="radio" name="chat-scope" value="MANAGER" checked={chatScope === 'MANAGER'} onChange={() => setChatScope('MANAGER')} /> 운영자 전용</label>
-            </div>
-          </div>
-          <div className="settings-row">
-            <button type="button" className="btn-save" onClick={saveChatPreferences} disabled={!streamId || savingChatPreferences}>
-              {savingChatPreferences ? '저장 중...' : '참여 설정 저장'}
-            </button>
-          </div>
-        </div>
-
-        <div className="settings-card">
-          <h2>채팅 모드 설정</h2>
-          <div className="settings-row">
-            <label className="label">클린봇</label>
-            <div className="banned-row">
-              <span className="status">켜짐</span>
-              <span className="hint">욕설 필터와 금칙어 관리를 함께 사용합니다.</span>
-            </div>
-          </div>
-          <div className="toggle-row">
-            <div className="label-wrap">
-              <span className="label">저속 모드</span>
-              <span className="help" title="시청자는 5초에 한 번만 채팅할 수 있습니다.">?</span>
-            </div>
-            <button
-              type="button"
-              className={`toggle-switch ${slowOn ? 'on' : ''}`}
-              role="switch"
-              aria-pressed={slowOn}
-              onClick={() => setSlowOn((value) => !value)}
-            >
-              <span className="knob" />
-            </button>
-          </div>
-          <p className="hint">저속 모드를 켜면 한 사용자는 5초에 한 번만 채팅할 수 있습니다.</p>
-          <div className="settings-row">
-            <button type="button" className="btn-save" onClick={saveChatPreferences} disabled={!streamId || savingChatPreferences}>
-              {savingChatPreferences ? '저장 중...' : '모드 저장'}
-            </button>
-          </div>
-        </div>
-
-        <div className="settings-card">
-          <h2>채팅 규칙 설정</h2>
-          <div className="settings-row">
-            <label className="label">채팅 규칙</label>
-            <div className="textarea-wrap">
-              <textarea value={chatRules} onChange={(event) => setChatRules(event.target.value)} placeholder="채팅 규칙은 한 줄씩 입력해 주세요." />
-              <button type="button" className="btn-save" onClick={saveChatRules} disabled={!streamId || savingChatRules}>
-                {savingChatRules ? '저장 중...' : '저장'}
-              </button>
-            </div>
-            <p className="hint">규칙은 시청자에게 안내 문구로 활용할 수 있고, 변경 시 다시 확인받는 기준으로 쓸 수 있습니다.</p>
-          </div>
-          <div className="settings-row">
-            <label className="label">채팅 금칙어 설정</label>
-            <div className="banned-row">
-              <span className="status">금칙어 관리는 별도 화면에서 설정합니다.</span>
-              <Link to="/studio/chat" className="btn-manage">금칙어 관리</Link>
-            </div>
           </div>
         </div>
       </div>

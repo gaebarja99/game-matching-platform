@@ -1,7 +1,7 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
-import { GAMES, buildRecordsProfileUrl, fetchRecordsPlayerSearch } from './recordsShared';
+import { GAMES, buildRecordsProfileUrl, fetchRecordsPlayerSearch, getRecordsLandingCssVars } from './recordsShared';
 import '../Records.css';
 
 const FEATURED_GAMES = ['lol', 'tft', 'valorant', 'pubg', 'overwatch', 'cs2'] as const;
@@ -72,6 +72,21 @@ export default function RecordsSearch() {
     [],
   );
   const isValorant = gameId === 'valorant';
+  const isTwoFieldSearch = gameId === 'cs2';
+
+  const recordsLandingFormClass = useMemo(
+    () => ['records-landing-form', isTwoFieldSearch ? 'records-landing-form--two-field' : ''].filter(Boolean).join(' '),
+    [isTwoFieldSearch],
+  );
+
+  const recordsLandingFormStyle = useMemo((): CSSProperties | undefined => {
+    if (isValorant) {
+      return {
+        gridTemplateColumns: 'minmax(160px, 1fr) minmax(0, 2.2fr) minmax(88px, 0.52fr) minmax(96px, 0.62fr) 142px',
+      };
+    }
+    return undefined;
+  }, [isValorant]);
 
   useEffect(() => {
     const g = searchParams.get('game');
@@ -170,9 +185,11 @@ export default function RecordsSearch() {
     void runSearch();
   };
 
+  const landingCssVars = useMemo(() => getRecordsLandingCssVars(game.accent), [game.accent]);
+
   return (
     <Layout>
-      <div className="records-search-page records-search-page--landing">
+      <div className="records-search-page records-search-page--landing" style={landingCssVars as CSSProperties}>
         <section className="records-landing-hero">
           <span className="records-landing-badge">전적 검색</span>
           <span className="records-landing-game-chip">{game.label}</span>
@@ -195,11 +212,7 @@ export default function RecordsSearch() {
             <span>최근 20경기 기준으로 결과를 보여줍니다.</span>
           </div>
 
-          <form
-            className="records-landing-form"
-            style={isValorant ? { gridTemplateColumns: 'minmax(160px, 1fr) minmax(0, 2.2fr) minmax(88px, 0.52fr) minmax(96px, 0.62fr) 142px' } : undefined}
-            onSubmit={handleSearch}
-          >
+          <form className={recordsLandingFormClass} style={recordsLandingFormStyle} onSubmit={handleSearch}>
             <label className="records-landing-field records-landing-field--game">
               <span>게임</span>
               <select value={gameId} onChange={(event) => selectGame(event.target.value)}>

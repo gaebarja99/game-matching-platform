@@ -1,0 +1,134 @@
+.game-room-detail-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.game-room-detail-modal {
+  width: min(440px, 100%);
+  max-height: min(85vh, 720px);
+  overflow: auto;
+  border-radius: 12px;
+  border: 1px solid rgba(46, 204, 113, 0.35);
+  background: linear-gradient(165deg, #141a18 0%, #0d1210 100%);
+  box-shadow: 0 18px 48px rgba(0, 0, 0, 0.55);
+  color: #e8f0ec;
+}
+
+.game-room-detail-modal__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 0;
+}
+
+.game-room-detail-modal__title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.game-room-detail-modal__close {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #c8d4ce;
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.game-room-detail-modal__close:hover {
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.game-room-detail-modal__subtitle {
+  margin: 8px 18px 0;
+  font-size: 0.95rem;
+  color: #9fb3a8;
+  word-break: break-word;
+}
+
+.game-room-detail-modal__dl {
+  margin: 16px 18px 0;
+  padding: 0;
+}
+
+.game-room-detail-modal__row {
+  display: grid;
+  grid-template-columns: 110px 1fr;
+  gap: 10px 14px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  font-size: 0.9rem;
+}
+
+.game-room-detail-modal__row:last-of-type {
+  border-bottom: none;
+}
+
+.game-room-detail-modal__row dt {
+  margin: 0;
+  color: #8fa399;
+  font-weight: 600;
+}
+
+.game-room-detail-modal__row dd {
+  margin: 0;
+  color: #e8f0ec;
+}
+
+.game-room-detail-modal__pos {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.game-room-detail-modal__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 18px;
+  margin-top: 4px;
+}
+
+.game-room-detail-modal__btn {
+  min-width: 88px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: 1px solid transparent;
+}
+
+.game-room-detail-modal__btn.ghost {
+  background: transparent;
+  border-color: rgba(255, 255, 255, 0.15);
+  color: #c8d4ce;
+}
+
+.game-room-detail-modal__btn.primary {
+  background: linear-gradient(135deg, #2ecc71, #27ae60);
+  color: #0a120e;
+  border: none;
+}
+
+.game-room-detail-modal__btn.primary:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.game-room-detail-modal__btn:not(:disabled):hover {
+  filter: brightness(1.06);
+}

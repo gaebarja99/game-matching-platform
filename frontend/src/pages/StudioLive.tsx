@@ -1,4 +1,4 @@
-﻿import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import StudioLayout from '../components/StudioLayout';
 import { apiUrl } from '../api/client';
@@ -13,10 +13,6 @@ const GAME_OPTIONS = [
   { value: 'OTHERS', label: '기타' },
 ];
 
-const MAX_TAGS = 5;
-const TAG_MAX_LEN = 15;
-const TAG_REG = /^[a-zA-Z0-9가-힣]+$/;
-
 interface MyStream {
   id: number;
   title?: string;
@@ -30,13 +26,6 @@ export default function StudioLive() {
   const [streamNoData, setStreamNoData] = useState(false);
   const [title, setTitle] = useState('');
   const [game, setGame] = useState('PUBG');
-  const [tags, setTags] = useState<string[]>([]);
-  const [tagInput, setTagInput] = useState('');
-  const [ageRestrict, setAgeRestrict] = useState(false);
-  const [paidPromo, setPaidPromo] = useState(false);
-  const [promoAllow, setPromoAllow] = useState<'yes' | 'no'>('no');
-  const [registerTab, setRegisterTab] = useState<'easy' | 'obs'>('easy');
-  const [regExternalUrl, setRegExternalUrl] = useState('');
   const [registerResult, setRegisterResult] = useState<{ html?: string } | null>(null);
   const [registerLoading, setRegisterLoading] = useState(false);
   const [updateLoading, setUpdateLoading] = useState(false);
@@ -90,31 +79,6 @@ export default function StudioLive() {
     }
     navigator.clipboard.writeText(text);
     window.alert(`${label}이(가) 복사되었습니다.`);
-  };
-
-  const addTag = () => {
-    const raw = tagInput.trim();
-    if (!raw) {
-      return;
-    }
-    if (tags.length >= MAX_TAGS) {
-      window.alert(`태그는 최대 ${MAX_TAGS}개까지 추가할 수 있습니다.`);
-      return;
-    }
-    if (raw.length > TAG_MAX_LEN || !TAG_REG.test(raw)) {
-      window.alert('공백과 특수문자 없이 15자 이내로 입력해 주세요.');
-      return;
-    }
-    if (tags.includes(raw)) {
-      window.alert('이미 추가한 태그입니다.');
-      return;
-    }
-    setTags((current) => [...current, raw]);
-    setTagInput('');
-  };
-
-  const removeTag = (index: number) => {
-    setTags((current) => current.filter((_, currentIndex) => currentIndex !== index));
   };
 
   const handleEndStream = () => {
@@ -180,14 +144,10 @@ export default function StudioLive() {
       return;
     }
 
-    const body: { title: string; game: string; externalUrl?: string } = {
+    const body: { title: string; game: string } = {
       title: trimmedTitle,
       game,
     };
-
-    if (registerTab === 'easy' && regExternalUrl.trim()) {
-      body.externalUrl = regExternalUrl.trim();
-    }
 
     setRegisterResult(null);
     setRegisterLoading(true);
@@ -204,17 +164,10 @@ export default function StudioLive() {
         }
         return response.json();
       })
-      .then((data: { id?: number }) => {
-        const streamId = data?.id;
-        if (body.externalUrl) {
-          setRegisterResult({
-            html: `방송이 등록되었습니다.<br><br><a href="${window.location.origin}/watch/${streamId ?? ''}">시청 페이지로 이동</a> · <a href="${window.location.origin}/streams">스트림 목록 보기</a>`,
-          });
-        } else {
-          setRegisterResult({
-            html: `방송이 등록되었습니다. 스트림 URL과 스트림 키는 <a href="${window.location.origin}/studio/settings">설정</a>에서 확인할 수 있습니다.`,
-          });
-        }
+      .then(() => {
+        setRegisterResult({
+          html: `방송이 등록되었습니다. 스트림 URL과 스트림 키는 <a href="${window.location.origin}/studio/settings">설정</a>에서 확인할 수 있습니다.`,
+        });
         loadMyStream();
       })
       .catch((error) => {
@@ -298,111 +251,11 @@ export default function StudioLive() {
             </Link>
           </div>
 
-          <div className="section-title">스트림 상태</div>
-          <div className="form-block">
-            <p className="hint">실시간 품질 수치는 추후 연동 예정입니다. 현재는 방송 정보와 채팅 URL만 바로 확인할 수 있습니다.</p>
-            <Link
-              to={currentStream?.id ? `/watch/${currentStream.id}` : '#'}
-              className="link-next"
-              onClick={(event) => !currentStream?.id && event.preventDefault()}
-            >
-              방송 페이지 열기 &gt;
-            </Link>
-          </div>
-
-          <div className="section-title">태그 (최대 5개)</div>
-          <div className="form-block">
-            <div className="tag-input-row">
-              <input
-                type="text"
-                placeholder="태그 입력 후 Enter 또는 추가 버튼"
-                value={tagInput}
-                onChange={(event) => setTagInput(event.target.value)}
-                onKeyDown={(event) => {
-                  if (event.key === 'Enter') {
-                    event.preventDefault();
-                    addTag();
-                  }
-                }}
-                maxLength={15}
-                autoComplete="off"
-              />
-              <button type="button" className="btn-add" onClick={addTag}>
-                추가
-              </button>
-            </div>
-            <div className="tag-chips-wrap">
-              {tags.map((tag, index) => (
-                <span key={tag} className="tag-chip">
-                  {tag}
-                  <button type="button" className="tag-remove" aria-label="태그 제거" onClick={() => removeTag(index)}>
-                    ×
-                  </button>
-                </span>
-              ))}
-            </div>
-            <p className="hint">공백과 특수문자 없이 최대 15자까지 입력할 수 있습니다.</p>
-          </div>
-
-          <div className="section-title">연령 제한</div>
-          <div className="form-block checkbox-row">
-            <input
-              type="checkbox"
-              id="age-restrict"
-              checked={ageRestrict}
-              onChange={(event) => setAgeRestrict(event.target.checked)}
-            />
-            <label htmlFor="age-restrict" className="text">
-              시청자를 19세 이상으로 제한합니다.
-            </label>
-          </div>
-
-          <div className="section-title">유료 프로모션</div>
-          <div className="form-block checkbox-row">
-            <input
-              type="checkbox"
-              id="paid-promo"
-              checked={paidPromo}
-              onChange={(event) => setPaidPromo(event.target.checked)}
-            />
-            <label htmlFor="paid-promo" className="text">
-              광고, 협찬 등 유료 프로모션이 포함된 방송입니다.
-            </label>
-          </div>
-          <div className="form-block radio-group horizontal">
-            <label>
-              <input type="radio" name="promo" value="yes" checked={promoAllow === 'yes'} onChange={() => setPromoAllow('yes')} /> 허용
-            </label>
-            <label>
-              <input type="radio" name="promo" value="no" checked={promoAllow === 'no'} onChange={() => setPromoAllow('no')} /> 허용 안 함
-            </label>
-          </div>
-
           <div className="section-title">방송 등록</div>
           <p className="hint" style={{ marginBottom: 12 }}>
-            외부 플랫폼 링크를 등록하거나, GameMatcher 자체 방송을 생성할 수 있습니다.
+            GameMatcher 방송을 등록한 뒤 OBS 등으로 송출할 수 있습니다.
           </p>
-          <div className="register-tabs">
-            <button type="button" className={registerTab === 'easy' ? 'active' : ''} onClick={() => setRegisterTab('easy')}>
-              간편 등록
-            </button>
-            <button type="button" className={registerTab === 'obs' ? 'active' : ''} onClick={() => setRegisterTab('obs')}>
-              OBS 송출
-            </button>
-          </div>
-          <div className={`register-panel ${registerTab === 'easy' ? 'show' : ''}`}>
-            <p className="hint">트위치, 유튜브 등 외부 방송 주소가 있으면 함께 등록할 수 있습니다.</p>
-            <div className="form-block">
-              <label className="label">외부 방송 주소</label>
-              <input
-                type="url"
-                placeholder="https://www.twitch.tv/... 또는 https://youtube.com/live/..."
-                value={regExternalUrl}
-                onChange={(event) => setRegExternalUrl(event.target.value)}
-              />
-            </div>
-          </div>
-          <div className={`register-panel ${registerTab === 'obs' ? 'show' : ''}`}>
+          <div className="register-panel show">
             <p className="hint">
               방송 등록 후 스트림 URL, 스트림 키, 채팅 오버레이, 후원 오버레이는 <Link to="/studio/settings">설정</Link>에서 확인하세요.
             </p>

@@ -78,12 +78,6 @@ export default function Categories() {
       <div className="categories-page">
         <div className="categories-head">
           <h1 className="categories-title">카테고리</h1>
-          <div className="categories-tabs" aria-label="카테고리 필터">
-            <button type="button" className="categories-tab active">전체</button>
-            <button type="button" className="categories-tab">게임</button>
-            <button type="button" className="categories-tab">스포츠</button>
-            <button type="button" className="categories-tab">엔터</button>
-          </div>
         </div>
 
         <div className="categories-grid">

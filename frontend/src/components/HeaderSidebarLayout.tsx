@@ -31,7 +31,7 @@ export default function HeaderSidebarLayout({ children, pageTitle, sidebarItems 
       <header className="header">
         <Link to="/" className="header-logo">GameMatcher</Link>
         <nav className="header-nav">
-          <Link to="/streams" className={sidebarItems.some((i) => i.to === '/streams') ? 'active' : ''}>전체 방송</Link>
+          <Link to="/streams" className={sidebarItems.some((i) => i.to === '/streams') ? 'active' : ''}>방송</Link>
           <Link to="/streams">게임</Link>
         </nav>
         <input type="text" className="header-search" placeholder="채널, 라이브 영상 검색" />

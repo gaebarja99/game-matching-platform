@@ -8,6 +8,7 @@ import {
   getRecaptchaVerifier,
   sendVerificationCode,
 } from '../lib/phoneAuth';
+import { getAuth } from '../firebase';
 import { getFirebaseAuthErrorMessage } from '../lib/firebaseAuthErrorMessages';
 
 const PROFILE_VERIFY_RECAPTCHA_ID = 'profile-verify-recaptcha';
@@ -152,10 +153,16 @@ export default function ProfileMyInfo() {
 
     try {
       const sendOnce = async () => {
-        const containerId = await resetRecaptcha();
-        recaptchaVerifierRef.current = await getRecaptchaVerifier(containerId) as import('firebase/auth').RecaptchaVerifier;
-        const result = await sendVerificationCode(phone.trim(), recaptchaVerifierRef.current);
-        confirmationResultRef.current = result;
+        const auth = await getAuth();
+        if (auth) {
+          const containerId = await resetRecaptcha();
+          recaptchaVerifierRef.current = await getRecaptchaVerifier(containerId) as import('firebase/auth').RecaptchaVerifier;
+          const result = await sendVerificationCode(phone.trim(), recaptchaVerifierRef.current);
+          confirmationResultRef.current = result;
+        } else {
+          const result = await sendVerificationCode(phone.trim(), null);
+          confirmationResultRef.current = result;
+        }
       };
 
       try {

@@ -147,7 +147,7 @@ export default function StudioChannelManage() {
       </div>
 
       {context?.actingAsManager ? (
-        <div className="settings-card" style={{ marginBottom: 20, maxWidth: 1080, background: '#f7f3ff' }}>
+        <div className="settings-card" style={{ marginBottom: 20, maxWidth: 1080, background: '#ecfdf5', borderColor: 'rgba(0, 230, 118, 0.25)' }}>
           <strong>{context.ownerNickname}</strong>님의 채널을 대신 관리 중입니다. 저장하면 해당 채널 정보에 바로 반영됩니다.
         </div>
       ) : null}
@@ -189,10 +189,10 @@ export default function StudioChannelManage() {
           <div style={{ flex: 1 }}>
             <input
               type="text"
+              className="studio-input studio-input-full"
               value={form.nickname}
               maxLength={30}
               onChange={(e) => setField('nickname', e.target.value)}
-              style={{ width: '100%' }}
               disabled={loading || saving}
             />
             <div className="hint" style={{ textAlign: 'right' }}>
@@ -205,20 +205,10 @@ export default function StudioChannelManage() {
           <label style={{ width: 170, fontWeight: 700 }}>채널 소개</label>
           <div style={{ flex: 1 }}>
             <textarea
+              className="studio-textarea"
               value={form.bio}
               maxLength={500}
               onChange={(e) => setField('bio', e.target.value)}
-              style={{
-                width: '100%',
-                minHeight: 140,
-                padding: 14,
-                borderRadius: 16,
-                border: '1px solid var(--studio-border-strong)',
-                background: 'var(--studio-bg-card)',
-                color: 'var(--studio-text)',
-                fontFamily: 'inherit',
-                resize: 'vertical',
-              }}
               disabled={loading || saving}
             />
             <div className="hint" style={{ textAlign: 'right' }}>
@@ -237,10 +227,10 @@ export default function StudioChannelManage() {
             <div className="input-row">
               <input
                 type="url"
+                className="studio-input"
                 value={socialInput}
                 onChange={(e) => setSocialInput(e.target.value)}
                 placeholder="https://"
-                style={{ flex: 1 }}
                 disabled={loading || saving}
               />
               <button type="button" className="btn-copy" onClick={handleAddLink} disabled={loading || saving}>
@@ -260,22 +250,6 @@ export default function StudioChannelManage() {
                 ))}
               </ul>
             ) : null}
-          </div>
-        </div>
-
-        <div className="settings-row studio-toggle-row">
-          <label>후원 랭킹 노출</label>
-          <div className="studio-toggle-options">
-            <label><input type="radio" checked={!form.sponsorRankingVisible} onChange={() => setField('sponsorRankingVisible', false)} disabled={loading || saving} /> 비노출</label>
-            <label><input type="radio" checked={form.sponsorRankingVisible} onChange={() => setField('sponsorRankingVisible', true)} disabled={loading || saving} /> 노출</label>
-          </div>
-        </div>
-
-        <div className="settings-row studio-toggle-row" style={{ marginBottom: 0 }}>
-          <label>미션 후원 목록 노출</label>
-          <div className="studio-toggle-options">
-            <label><input type="radio" checked={!form.missionVisible} onChange={() => setField('missionVisible', false)} disabled={loading || saving} /> 비노출</label>
-            <label><input type="radio" checked={form.missionVisible} onChange={() => setField('missionVisible', true)} disabled={loading || saving} /> 노출</label>
           </div>
         </div>
 

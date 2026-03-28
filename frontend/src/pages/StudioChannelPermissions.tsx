@@ -128,39 +128,41 @@ export default function StudioChannelPermissions() {
       </p>
 
       {context?.actingAsManager ? (
-        <div className="settings-card" style={{ marginBottom: 20, maxWidth: 920, background: '#f7f3ff' }}>
+        <div className="settings-card" style={{ marginBottom: 20, maxWidth: 920, background: '#ecfdf5', borderColor: 'rgba(0, 230, 118, 0.25)' }}>
           <strong>{context.ownerNickname}</strong>님의 채널을 관리 중입니다. 권한 관리 자체는 채널 소유자만 변경할 수 있습니다.
         </div>
       ) : null}
 
       <div className="settings-card" style={{ marginBottom: 24, maxWidth: 920 }}>
-        <div className="input-row" style={{ alignItems: 'stretch' }}>
-          <input
-            type="text"
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-            placeholder="닉네임 또는 아이디를 정확히 입력해주세요."
-            style={{ flex: 1 }}
-            disabled={!context?.canManagePermissions || saving}
-          />
-          <select
-            value={role}
-            onChange={(e) => setRole(e.target.value)}
-            style={{ minWidth: 150 }}
-            disabled={!context?.canManagePermissions || saving}
-          >
-            <option>채널 관리자</option>
-            <option>매니저</option>
-            <option>편집자</option>
-          </select>
-          <button
-            type="button"
-            className="btn-copy"
-            onClick={handleAdd}
-            disabled={!context?.canManagePermissions || saving}
-          >
-            추가
-          </button>
+        <div className="settings-row" style={{ marginBottom: 0 }}>
+          <div className="input-row studio-permissions-add-row">
+            <input
+              type="text"
+              className="studio-input"
+              value={keyword}
+              onChange={(e) => setKeyword(e.target.value)}
+              placeholder="닉네임 또는 아이디를 정확히 입력해주세요."
+              disabled={!context?.canManagePermissions || saving}
+            />
+            <select
+              className="studio-select"
+              value={role}
+              onChange={(e) => setRole(e.target.value)}
+              disabled={!context?.canManagePermissions || saving}
+            >
+              <option>채널 관리자</option>
+              <option>매니저</option>
+              <option>편집자</option>
+            </select>
+            <button
+              type="button"
+              className="btn-copy"
+              onClick={handleAdd}
+              disabled={!context?.canManagePermissions || saving}
+            >
+              추가
+            </button>
+          </div>
         </div>
         <ul style={{ margin: '18px 0 0 18px', padding: 0, lineHeight: 1.8, color: 'var(--studio-text)' }}>
           <li>사이트에 실제로 존재하는 회원만 닉네임 또는 아이디로 추가됩니다.</li>
