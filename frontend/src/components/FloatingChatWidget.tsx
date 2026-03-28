@@ -784,9 +784,7 @@ export default function FloatingChatWidget() {
           onClick={toggleMenu}
         >
           {user && dmUnreadCount > 0 ? (
-            <span className="floating-chat-widget-n-badge" aria-hidden>
-              N
-            </span>
+            <span className="floating-chat-widget-unread-dot" aria-hidden title="읽지 않은 메시지" />
           ) : null}
           {isChatOpen ? (
             <svg viewBox="0 0 24 24" width="28" height="28" aria-hidden className="floating-chat-widget-toggle-icon">

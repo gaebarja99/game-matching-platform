@@ -753,18 +753,18 @@
   transition: background 0.2s ease, transform 0.15s ease;
 }
 
-/* 읽지 않은 DM 있음 — 숫자 대신 노란색 N만 표시 */
-.floating-chat-widget-n-badge {
+/* 읽지 않은 DM 있음 — 빨간 점 표시 */
+.floating-chat-widget-unread-dot {
   position: absolute;
-  top: 4px;
-  right: 4px;
+  top: 6px;
+  right: 6px;
   z-index: 2;
   pointer-events: none;
-  font-size: 0.62rem;
-  font-weight: 800;
-  color: #ffeb3b;
-  line-height: 1;
-  text-shadow: 0 0 1px rgba(0, 0, 0, 0.9);
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e53935;
+  box-shadow: 0 0 0 2px #1a1a1a;
 }
 
 .floating-chat-widget-toggle:hover {
@@ -1014,9 +1014,8 @@
   background: #f8f9fa;
 }
 
-.theme-light .floating-chat-widget-n-badge {
-  text-shadow: 0 0 1px rgba(255, 255, 255, 0.9);
-  color: #e67700;
+.theme-light .floating-chat-widget-unread-dot {
+  box-shadow: 0 0 0 2px #fff;
 }
 
 .theme-light .floating-chat-widget-group {
