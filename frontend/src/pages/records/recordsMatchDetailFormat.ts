@@ -42,6 +42,11 @@ function firstStr(obj: Record<string, unknown>, keys: string[]): string | undefi
   return undefined;
 }
 
+function normalizeMultilineText(value: string | undefined): string | undefined {
+  if (!value) return value;
+  return value.replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n').replace(/\\r/g, '\n');
+}
+
 function extractAiBlocks(payload: Record<string, unknown>): MatchDetailBlock[] {
   const aiKeys = ['records_ai_evaluation', 'recordsAiEvaluation', 'ai_evaluation', 'aiEvaluation'] as const;
   let raw: Record<string, unknown> | undefined;
@@ -64,8 +69,8 @@ function extractAiBlocks(payload: Record<string, unknown>): MatchDetailBlock[] {
   if (status) items.push(['상태', status]);
   if (grade) items.push(['등급', grade]);
   if (scoreRaw != null && String(scoreRaw).trim() !== '') items.push(['점수', String(scoreRaw)]);
-  const summary = firstStr(raw, ['summary']);
-  const detailed = firstStr(raw, ['detailed_comment', 'detailedComment']);
+  const summary = normalizeMultilineText(firstStr(raw, ['summary']));
+  const detailed = normalizeMultilineText(firstStr(raw, ['detailed_comment', 'detailedComment']));
   if (summary) items.push(['요약', summary]);
   if (detailed) items.push(['상세', detailed]);
   if (!items.length) return [];
