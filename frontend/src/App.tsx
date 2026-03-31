@@ -59,6 +59,7 @@ import DirectMessages from './pages/DirectMessages';
 import Community from './pages/Community';
 import CommunityPost from './pages/CommunityPost';
 import CommunityWrite from './pages/CommunityWrite';
+import NotFound from './pages/NotFound';
 import ProfileLayout from './components/ProfileLayout';
 import './App.css';
 
@@ -143,7 +144,7 @@ function App() {
               <Route path="/community/write" element={<CommunityWrite />} />
               <Route path="/chatbot" element={<Chatbot />} />
               <Route path="/dm" element={<DirectMessages />} />
-              <Route path="*" element={<Navigate to="/" replace />} />
+              <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
           </ThemeWrapper>
