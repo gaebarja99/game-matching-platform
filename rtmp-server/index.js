@@ -12,11 +12,11 @@ const NodeMediaServer = require('node-media-server');
 const fs = require('fs');
 const http = require('http');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execSync, execFileSync } = require('child_process');
 
 const RTMP_PORT = 1935;
 const HTTP_PORT = 8000;
-const SPRING_BOOT_URL = 'http://127.0.0.1:8080';
+const SPRING_BOOT_URL = process.env.SPRING_BOOT_URL || 'http://127.0.0.1:8080';
 const DEFAULT_FFMPEG_PATH = process.platform === 'win32' ? 'ffmpeg.exe' : 'ffmpeg';
 const BACKEND_PROPERTIES_PATH = path.resolve(__dirname, '../src/main/resources/application.properties');
 const MEDIA_ROOT = path.resolve(__dirname, 'media').replace(/\\/g, '/');
@@ -53,6 +53,26 @@ function normalizeFsPath(value) {
   return normalized;
 }
 
+function isOnPath(candidate) {
+  if (process.platform === 'win32') {
+    try {
+      execSync(`where.exe "${candidate}"`, { stdio: 'pipe', timeout: 3000 });
+      return true;
+    } catch (_e) {
+      return false;
+    }
+  }
+  try {
+    execFileSync('/bin/sh', ['-c', `command -v -- ${JSON.stringify(candidate)}`], {
+      stdio: 'pipe',
+      timeout: 3000,
+    });
+    return true;
+  } catch (_e) {
+    return false;
+  }
+}
+
 function resolveFfmpegPath() {
   const props = loadBackendStreamingProperties();
   const candidates = [
@@ -67,11 +87,8 @@ function resolveFfmpegPath() {
     if (path.isAbsolute(candidate) && fs.existsSync(candidate)) {
       return candidate;
     }
-    try {
-      execSync(`where.exe "${candidate}"`, { stdio: 'pipe', timeout: 3000 });
+    if (isOnPath(candidate)) {
       return candidate;
-    } catch (_error) {
-      // Try next candidate.
     }
   }
 
@@ -158,14 +175,14 @@ const config = {
 };
 
 try {
-  execSync('"' + ffmpegPath + '" -version', { stdio: 'pipe', timeout: 3000 });
+  execFileSync(ffmpegPath, ['-version'], { stdio: 'pipe', timeout: 5000 });
   console.log('[OK] FFmpeg 사용 가능:', ffmpegPath);
 } catch (e) {
   console.error('');
   console.error('*** FFmpeg를 찾을 수 없습니다. HLS 변환이 되지 않아 브라우저에서 재생이 안 됩니다. ***');
-  console.error('   - FFmpeg 설치: https://ffmpeg.org/download.html');
-  console.error('   - 설치 후 bin 폴더를 PATH에 추가하거나, FFMPEG_PATH 환경 변수로 경로 지정');
-  console.error('   예: set FFMPEG_PATH=C:\\ffmpeg\\bin\\ffmpeg.exe  (Windows)');
+  console.error('   - Linux(EC2): sudo dnf install -y ffmpeg  (AL2023) / sudo apt install -y ffmpeg  (Ubuntu)');
+  console.error('   - Windows: PATH에 bin 추가 또는 set FFMPEG_PATH=C:\\ffmpeg\\bin\\ffmpeg.exe');
+  console.error('   - 기타: FFMPEG_PATH 환경 변수로 실행 파일 전체 경로 지정');
   console.error('');
 }
 
