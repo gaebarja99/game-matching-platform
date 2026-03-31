@@ -9,9 +9,10 @@
 ## 카카오 로그인
 
 1. **developers.kakao.com** → 내 애플리케이션 → REST API 키 확인
-2. **카카오 로그인 리다이렉트 URI**에 아래가 **완전히 동일하게** 등록되어 있어야 합니다. (끝 슬래시 X, 포트 8080, 경로 `oauth2`)
-   - `http://localhost:8080/login/oauth2/code/kakao`
-   - `http://127.0.0.1:8080/login/oauth2/code/kakao`
+2. **카카오 로그인 리다이렉트 URI**에 아래가 **완전히 동일하게** 등록되어 있어야 합니다. (끝 슬래시 X, 경로 `oauth2`)
+   - 배포(HTTPS): `https://3.37.67.151.nip.io/login/oauth2/code/kakao`
+   - 로컬: `http://localhost:8080/login/oauth2/code/kakao`
+   - 로컬: `http://127.0.0.1:8080/login/oauth2/code/kakao`
 3. **호출 허용 IP 주소**: 플랫폼 키에서 "호출 허용 IP 주소"를 설정해 두었다면, 백엔드 서버가 카카오 API를 호출할 때 쓰는 IP가 그 목록에 있어야 합니다. **로컬 개발 시**에는 비워 두는 것이 401 방지에 유리합니다.
 4. **클라이언트 시크릿**을 사용한다면 '카카오 로그인' 코드를 발급·활성화한 뒤, 아래 값 설정합니다.
 

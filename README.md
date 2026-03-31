@@ -5,7 +5,7 @@
 게임 팀 매칭·방송·채팅을 위한 풀스택 웹 애플리케이션입니다.  
 Spring Boot 백엔드(API + WebSocket) + React(Vite) 프론트엔드 분리 구조이며, OBS 라이브 방송 연동을 위해 RTMP 서버를 별도로 실행할 수 있습니다.
 
-**프론트엔드 접속**: 실행 후 브라우저에서 **http://127.0.0.1:5173/** 로 접속하세요.
+**로컬 개발**: 프론트는 **http://127.0.0.1:5173/** (백엔드는 보통 8080). **배포 기본 도메인**: **https://3.37.67.151.nip.io/** (`application.properties`·`frontend/.env.example` 기준).
 
 ---
 
@@ -72,7 +72,7 @@ cp .env.example .env
 ```
 
 `.env` 파일을 열어 **API 주소**를 확인·수정하세요.  
-다른 PC에서도 로컬 백엔드를 쓰면 보통 아래만 있으면 됩니다.
+저장소 기본값은 배포 API **https://3.37.67.151.nip.io** 입니다. 같은 PC에서 Spring만 띄우고 개발할 때는 아래처럼 바꿉니다.
 
 ```env
 VITE_API_URL=http://localhost:8080
@@ -216,7 +216,7 @@ npm run dev
 
 - **접속 주소**: **http://127.0.0.1:5173/**  
   (localhost 대신 127.0.0.1 사용 권장 — 세션·쿠키 동작 일치)
-- API 호출은 `VITE_API_URL`(기본 `http://localhost:8080`)로 보내며, 세션 쿠키는 `credentials: 'include'`로 전송됩니다.
+- API 호출은 `VITE_API_URL`(저장소 기본 `https://3.37.67.151.nip.io`, 로컬 백엔드면 `http://localhost:8080`)로 보내며, 세션 쿠키는 `credentials: 'include'`로 전송됩니다.
 
 ### 3. RTMP 서버 (OBS 라이브 방송 → HLS 재생용, 선택)
 
@@ -265,15 +265,15 @@ npm run build
 **프로덕션 API 주소**를 지정해 빌드하려면:
 
 ```bash
-# .env.production 또는 빌드 시
-VITE_API_URL=https://your-api-domain.com npm run build
+# .env.production 또는 빌드 시 (배포 기본과 동일하게 쓸 때)
+VITE_API_URL=https://3.37.67.151.nip.io npm run build
 ```
 
 ### 프론트 빌드 결과를 백엔드에서 서빙 (통합 배포)
 
 1. `frontend`에서 `npm run build`로 `frontend/dist` 생성
 2. `dist` 내용을 `src/main/resources/static/`에 복사하거나, Maven 빌드 시 `frontend/dist`를 `target/classes/static`으로 복사하도록 pom.xml에 리소스 설정 추가
-3. Spring Boot JAR 실행 시 `http://localhost:8080/` 로 프론트 접속
+3. Spring Boot JAR 실행 시 통합 접속: 로컬은 `http://localhost:8080/`, 배포는 `https://3.37.67.151.nip.io/` (nginx 등 프록시 기준)
 
 ---
 
@@ -285,9 +285,9 @@ VITE_API_URL=https://your-api-domain.com npm run build
 |------|------|
 | `server.port` | API 서버 포트 (기본 8080) |
 | `spring.datasource.*` | H2 또는 MySQL 접속 정보 |
-| `app.frontend.url` | CORS·OAuth 리다이렉트용 프론트 URL (예: http://localhost:5173, http://127.0.0.1:5173) |
+| `app.frontend.url` | CORS·OAuth 리다이렉트용 프론트 URL (기본 `https://3.37.67.151.nip.io`, 로컬은 `local` 프로필에서 localhost 목록) |
 | `app.upload.path` | 프로필 이미지 등 업로드 경로 |
-| `app.streaming.hls-base-url` | HLS 재생 기준 URL (RTMP 서버 8000 포트) |
+| `app.streaming.hls-base-url` | HLS 재생 기준 URL (기본 `https://3.37.67.151.nip.io/hls`, nginx 프록시 없으면 환경에 맞게 변경) |
 
 OAuth2(Google/Kakao/Naver)는 `application-oauth.properties` 참고.  
 시크릿은 `application-oauth-local.properties` 또는 환경 변수(`GOOGLE_CLIENT_ID`, `KAKAO_CLIENT_SECRET` 등)로 설정하는 것을 권장합니다.
@@ -296,7 +296,7 @@ OAuth2(Google/Kakao/Naver)는 `application-oauth.properties` 참고.
 
 | 변수 | 설명 |
 |------|------|
-| `VITE_API_URL` | 백엔드 API 주소 (기본 `http://localhost:8080`) |
+| `VITE_API_URL` | 백엔드 API 주소 (기본 `https://3.37.67.151.nip.io`, 로컬 개발 시 `http://localhost:8080`) |
 | `VITE_FIREBASE_*` | Firebase(전화번호 인증) — 사용 시 필수 |
 | `VITE_RECAPTCHA_ENTERPRISE_SITE_KEY` | reCAPTCHA Enterprise (선택) |
 

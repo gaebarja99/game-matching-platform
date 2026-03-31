@@ -13,10 +13,25 @@ function envPointsToLoopback(apiBaseEnv: string): boolean {
 }
 
 /**
+ * HTTPS로 연 페이지에서 http API URL을 쓰면 브라우저가 혼합 콘텐츠로 막음(로그인 fetch가 빨간색·프리플라이트 실패처럼 보임).
+ * VITE_API_URL이 http://공인IP:8080 처럼 박혀 있어도, 실제 접속이 https://…nip.io 이면 같은 오리진으로 맞춘다.
+ */
+function envWouldBreakHttpsPage(apiBaseEnv: string): boolean {
+  if (typeof window === 'undefined') return false;
+  if (window.location.protocol !== 'https:') return false;
+  try {
+    const u = new URL(apiBaseEnv);
+    return u.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+/**
  * 브라우저 주소 기준 API 베이스.
  * - 로컬: Vite(5173 등)에서 열었을 때 백엔드는 보통 :8080 → 호스트:8080.
- * - 배포: https://nip.io 처럼 443(포트 생략)으로 열렸으면 API도 같은 호스트·같은 포트만 쓴다(nginx가 8080으로 프록시).
- *   여기서 :8080을 붙이면 https://nip.io:8080 이 되어, Tomcat은 TLS가 없어 ERR_SSL_PROTOCOL_ERROR 가 난다.
+ * - 배포: https://3.37.67.151.nip.io 처럼 443(포트 생략)으로 열렸으면 API도 같은 호스트·같은 포트만 쓴다(nginx가 8080으로 프록시).
+ *   여기서 :8080을 붙이면 TLS 없는 Tomcat으로 가서 ERR_SSL_PROTOCOL_ERROR 가 난다.
  */
 function apiBaseFromBrowserLocation(): string {
   const { protocol, hostname, port } = window.location;
@@ -45,9 +60,13 @@ function getApiBase(): string {
   const envRaw = import.meta.env.VITE_API_URL;
   const envTrim = envRaw != null ? String(envRaw).trim() : '';
   if (envTrim !== '') {
-    if (typeof window !== 'undefined' && envPointsToLoopback(envTrim)) {
-      const { hostname } = window.location;
-      if (!isLoopbackHost(hostname)) {
+    if (typeof window !== 'undefined') {
+      if (envPointsToLoopback(envTrim)) {
+        const { hostname } = window.location;
+        if (!isLoopbackHost(hostname)) {
+          return apiBaseFromBrowserLocation();
+        }
+      } else if (envWouldBreakHttpsPage(envTrim)) {
         return apiBaseFromBrowserLocation();
       }
     }
@@ -56,7 +75,7 @@ function getApiBase(): string {
   if (typeof window !== 'undefined') {
     return apiBaseFromBrowserLocation();
   }
-  return 'http://localhost:8080';
+  return 'https://3.37.67.151.nip.io';
 }
 
 /** 외부 전적 API 429 / Rate limit 시 사용자 안내 (백엔드와 동일 문구) */

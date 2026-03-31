@@ -82,7 +82,7 @@ mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=oauth
 | scope `profile`, `email` | scope `openid`, `profile`, `email` (구글 표준) |
 | 로그인 진입점 `/oauth2/authorization/google` | 동일. 프론트에서 `apiUrl('/oauth2/authorization/google')` 로 이동 |
 
-로그인 성공 후에는 `app.frontend.url`(예: http://localhost:5173) 로 리다이렉트되도록 되어 있습니다.
+로그인 성공 후에는 `app.frontend.url`에 맞는 오리진으로 리다이렉트됩니다(배포 기본 `https://3.37.67.151.nip.io`, 로컬 프로필에서는 localhost 목록).
 
 ---
 

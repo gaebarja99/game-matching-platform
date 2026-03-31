@@ -60,7 +60,7 @@ export default function HomePage() {
         </a>
       </div>
       <p style={{ marginTop: 32, fontSize: '0.8rem', color: '#52525b' }}>
-        API는 Vite 프록시(`/api` → localhost:8080) 또는 CORS로 연결됩니다.
+        API는 `VITE_API_URL`·CORS(배포 시 같은 도메인)로 연결됩니다.
       </p>
     </div>
   );

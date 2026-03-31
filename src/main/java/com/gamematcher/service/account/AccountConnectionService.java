@@ -45,10 +45,10 @@ public class AccountConnectionService {
     private final OAuthLinkStateService oAuthLinkStateService;
     private final RestTemplate restTemplate;
 
-    @Value("${app.frontend.base-url:http://localhost:5173}")
+    @Value("${app.frontend.base-url:https://3.37.67.151.nip.io}")
     private String frontendBaseUrl;
 
-    @Value("${app.backend.base-url:http://localhost:8080}")
+    @Value("${app.backend.base-url:https://3.37.67.151.nip.io}")
     private String backendBaseUrl;
 
     @Value("${discord.oauth.client-id:}")
