@@ -28,7 +28,8 @@
 - **API 및 서비스** → **사용자 인증 정보** → **사용자 인증 정보 만들기** → **OAuth 클라이언트 ID**
 - **애플리케이션 유형**: **웹 애플리케이션**
 - **이름**: 예) GameMatcher Web
-- **승인된 리디렉션 URI**에 아래 두 개 **추가**
+- **승인된 리디렉션 URI**에 아래 **모두 추가** (배포·로컬 각각 필요)
+  - `https://3.37.67.151.nip.io/login/oauth2/code/google` (EC2·nip.io HTTPS)
   - `http://localhost:8080/login/oauth2/code/google`
   - `http://127.0.0.1:8080/login/oauth2/code/google`
 - **만들기** 클릭

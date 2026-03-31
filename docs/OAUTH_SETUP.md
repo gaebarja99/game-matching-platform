@@ -45,4 +45,6 @@ spring.security.oauth2.client.registration.kakao.client-secret=여기에_클라�
 ## 구글 로그인
 
 - `application-oauth.properties`의 구글 기본값 또는 환경 변수 `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` 사용.
-- 리다이렉트 URI: `http://localhost:8080/login/oauth2/code/google` (구글 콘솔에 등록).
+- 리다이렉트 URI (구글 콘솔 **승인된 리디렉션 URI**에 앱과 동일하게 등록):
+  - 배포: `https://3.37.67.151.nip.io/login/oauth2/code/google`
+  - 로컬: `http://localhost:8080/login/oauth2/code/google` (및 필요 시 `http://127.0.0.1:8080/login/oauth2/code/google`)

@@ -13,33 +13,48 @@ function envPointsToLoopback(apiBaseEnv: string): boolean {
 }
 
 /**
+ * 브라우저 주소 기준 API 베이스.
+ * - 로컬: Vite(5173 등)에서 열었을 때 백엔드는 보통 :8080 → 호스트:8080.
+ * - 배포: https://nip.io 처럼 443(포트 생략)으로 열렸으면 API도 같은 호스트·같은 포트만 쓴다(nginx가 8080으로 프록시).
+ *   여기서 :8080을 붙이면 https://nip.io:8080 이 되어, Tomcat은 TLS가 없어 ERR_SSL_PROTOCOL_ERROR 가 난다.
+ */
+function apiBaseFromBrowserLocation(): string {
+  const { protocol, hostname, port } = window.location;
+  if (isLoopbackHost(hostname)) {
+    return `${protocol}//${hostname}:8080`;
+  }
+  if (!port) {
+    return `${protocol}//${hostname}`;
+  }
+  return `${protocol}//${hostname}:${port}`;
+}
+
+/**
  * API 베이스 URL.
  * - localhost/127.0.0.1 로 접속 시: 같은 호스트:8080 (세션 쿠키 same-site).
- * - 그 외 호스트(예: EC2 공인 IP)인데 VITE_API_URL이 localhost로 박혀 있으면: 빌드값을 쓰지 않고
- *   현재 창의 호스트:8080 사용 (배포 후에도 localhost로 API 호출되는 문제 방지).
- * - 그 밖에는 VITE_API_URL 또는 현재 호스트:8080.
+ * - 그 외 호스트(예: EC2)인데 VITE_API_URL이 localhost로 박혀 있으면: 빌드값 대신 현재 창과 같은 오리진 베이스 사용.
+ * - 그 밖에는 VITE_API_URL 또는 브라우저 위치 기반.
  */
 function getApiBase(): string {
   if (typeof window !== 'undefined') {
-    const { protocol, hostname } = window.location;
+    const { hostname } = window.location;
     if (isLoopbackHost(hostname)) {
-      return `${protocol}//${hostname}:8080`;
+      return apiBaseFromBrowserLocation();
     }
   }
   const envRaw = import.meta.env.VITE_API_URL;
   const envTrim = envRaw != null ? String(envRaw).trim() : '';
   if (envTrim !== '') {
     if (typeof window !== 'undefined' && envPointsToLoopback(envTrim)) {
-      const { protocol, hostname } = window.location;
+      const { hostname } = window.location;
       if (!isLoopbackHost(hostname)) {
-        return `${protocol}//${hostname}:8080`;
+        return apiBaseFromBrowserLocation();
       }
     }
     return envTrim.replace(/\/+$/, '');
   }
   if (typeof window !== 'undefined') {
-    const { protocol, hostname } = window.location;
-    return `${protocol}//${hostname}:8080`;
+    return apiBaseFromBrowserLocation();
   }
   return 'http://localhost:8080';
 }
