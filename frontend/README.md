@@ -1,6 +1,6 @@
 # GameMatcher React 프론트엔드
 
-분리형 아키텍처: Spring Boot API 서버(`http://localhost:8080`)와 분리된 React SPA입니다.
+분리형 아키텍처: Spring Boot API 서버와 분리된 React SPA입니다. 배포 기본 API는 `https://3.37.67.151.nip.io`, 로컬은 `http://localhost:8080`.
 
 ## 실행 방법
 
@@ -19,13 +19,13 @@
 
 ## 환경 변수
 
-- `VITE_API_URL`: API 서버 주소 (기본값 `http://localhost:8080`)
+- `VITE_API_URL`: API 서버 주소 (`.env.example` 기본 `https://3.37.67.151.nip.io`, 로컬 개발 시 `http://localhost:8080`)
 - `.env` 파일에 설정하거나, 빌드 시 지정 가능.
 
 ## 로그인
 
 - **일반 로그인**: `/login`에서 아이디/비밀번호 제출 → API `POST /api/auth/login` (세션 쿠키)
-- **구글 로그인**: "Google로 로그인" 클릭 → API 서버 `GET /oauth2/authorization/google`로 이동 → 로그인 완료 후 백엔드가 `app.frontend.url`(예: http://localhost:3000)로 리다이렉트
+- **구글 로그인**: "Google로 로그인" 클릭 → API 서버 `GET /oauth2/authorization/google`로 이동 → 로그인 완료 후 백엔드가 `app.frontend.url`(배포: `https://3.37.67.151.nip.io`, 로컬 프로필: localhost 목록)로 리다이렉트
 
 ## CORS / 세션
 

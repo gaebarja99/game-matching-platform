@@ -21,6 +21,57 @@ body {
 .records-page-image-wrap { text-align: center; background: var(--card-bg); border-radius: 8px; padding: 16px; border: 1px solid var(--border); }
 .records-page-image { max-width: 100%; height: auto; display: block; margin: 0 auto; }
 
+/* 404 — NotFound.tsx */
+.not-found-page {
+  max-width: 440px;
+  margin: 0 auto;
+  padding: 56px 24px 80px;
+  text-align: center;
+}
+.not-found-code {
+  margin: 0 0 12px;
+  font-size: clamp(3.5rem, 12vw, 4.5rem);
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: -0.06em;
+  color: var(--text-muted);
+  opacity: 0.85;
+}
+.not-found-title {
+  margin: 0 0 12px;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--text);
+}
+.not-found-desc {
+  margin: 0 0 28px;
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: var(--text-muted);
+}
+.not-found-home-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 28px;
+  border-radius: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  text-decoration: none;
+  background: #00e676;
+  color: #0d0d0f;
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+.not-found-home-btn:hover {
+  filter: brightness(1.06);
+  transform: translateY(-1px);
+}
+.not-found-home-btn:focus-visible {
+  outline: 2px solid #00e676;
+  outline-offset: 3px;
+}
+
 .esports-page { padding: 24px; max-width: 900px; margin: 0 auto; }
 .esports-page-title { margin: 0 0 20px; font-size: 1.25rem; font-weight: 700; color: var(--text); }
 .esports-page-image-wrap { text-align: center; background: var(--card-bg); border-radius: 8px; padding: 16px; border: 1px solid var(--border); }

@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/cs2")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class Cs2Controller {
 
     private final Cs2SearchService cs2SearchService;

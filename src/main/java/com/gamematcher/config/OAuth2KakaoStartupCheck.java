@@ -2,19 +2,19 @@ package com.gamematcher.config;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.annotation.Profile;
 import org.springframework.context.event.EventListener;
 import org.springframework.security.oauth2.client.registration.ClientRegistration;
 import org.springframework.security.oauth2.client.registration.ClientRegistrationRepository;
 import org.springframework.stereotype.Component;
 
 /**
- * oauth 프로필 기동 시 카카오 client-secret 로드 여부를 로그로 확인.
+ * OAuth 클라이언트 등록이 있을 때 카카오 client-secret·네이버 설정 여부를 로그로 확인.
  * 401 invalid_token_response 시 시크릿/리다이렉트 URI/호출 허용 IP 점검용.
  */
 @Component
-@Profile("oauth")
+@ConditionalOnBean(ClientRegistrationRepository.class)
 public class OAuth2KakaoStartupCheck {
 
     private static final Logger log = LoggerFactory.getLogger(OAuth2KakaoStartupCheck.class);

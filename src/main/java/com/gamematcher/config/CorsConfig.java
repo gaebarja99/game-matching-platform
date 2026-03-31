@@ -16,7 +16,7 @@ import java.util.Set;
  * 분리형 아키텍처: React(Vite) 등 별도 프론트엔드에서 API 호출 시 CORS 허용.
  * <ul>
  *   <li>{@code app.frontend.url} — 배포/팀 공용 프론트 주소(쉼표 구분)</li>
- *   <li>{@code app.frontend.base-url} — 로컬 개발 기본값 {@code http://localhost:5173} 등(OAuth·CORS 공통)</li>
+ *   <li>{@code app.frontend.base-url} — 배포 기본 {@code https://3.37.67.151.nip.io}, 로컬은 프로필에서 {@code http://localhost:5173} 등(OAuth·CORS 공통)</li>
  * </ul>
  * 예전에는 {@code app.frontend.url}만 쓰면 로컬 5173이 빠져 프리플라이트가 실패했음.
  */
@@ -26,7 +26,7 @@ public class CorsConfig {
     @Value("${app.frontend.url:}")
     private String frontendUrl;
 
-    @Value("${app.frontend.base-url:http://localhost:5173}")
+    @Value("${app.frontend.base-url:https://3.37.67.151.nip.io}")
     private String frontendBaseUrl;
 
     private static List<String> parseOriginList(String raw) {
@@ -42,21 +42,25 @@ public class CorsConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        Set<String> origins = new LinkedHashSet<>();
-        parseOriginList(frontendUrl).forEach(origins::add);
-        parseOriginList(frontendBaseUrl).forEach(origins::add);
-        /* Vite를 127.0.0.1 로 열면 Origin 이 localhost 와 달라 CORS 가 막힘 */
-        if (origins.contains("http://localhost:5173")) {
-            origins.add("http://127.0.0.1:5173");
-        }
+        /*
+         * credentials: include(쿠키) 사용 시 Access-Control-Allow-Origin 에 * 불가.
+         * 컨트롤러의 @CrossOrigin(origins = "*") 는 전역 설정과 합쳐질 때 프리플라이트가 깨질 수 있어 제거하고,
+         * 여기서만 패턴·명시 URL을 통일한다.
+         */
+        Set<String> patterns = new LinkedHashSet<>();
+        patterns.add("http://localhost:*");
+        patterns.add("http://127.0.0.1:*");
+        patterns.add("https://localhost:*");
+        patterns.add("https://127.0.0.1:*");
+        parseOriginList(frontendUrl).forEach(patterns::add);
+        parseOriginList(frontendBaseUrl).forEach(patterns::add);
 
-        if (!origins.isEmpty()) {
-            config.setAllowedOrigins(new ArrayList<>(origins));
-            config.setAllowCredentials(true);
-            config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-            config.setAllowedHeaders(List.of("*"));
-            config.setMaxAge(3600L);
-        }
+        config.setAllowedOriginPatterns(new ArrayList<>(patterns));
+        config.setAllowCredentials(true);
+        config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
+        config.setAllowedHeaders(List.of("*"));
+        config.setMaxAge(3600L);
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;

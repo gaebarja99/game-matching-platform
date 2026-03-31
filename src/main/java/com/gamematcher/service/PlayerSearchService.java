@@ -33,7 +33,8 @@ public class PlayerSearchService {
 
     public PlayerSearchResponse searchPlayer(PlayerSearchRequest request) {
         request.normalize();
-        request.setCount(20);
+        /* count는 normalize()에서 기본 10·최대 20으로 이미 정규화됨. 여기서 20으로 고정하면
+         * 프론트·문서상 "최근 10경기"와 무관하게 항상 20판 분량 API를 때려 응답이 느려짐. */
 
         String game = request.getGame();
         if (game == null || game.isBlank()) {

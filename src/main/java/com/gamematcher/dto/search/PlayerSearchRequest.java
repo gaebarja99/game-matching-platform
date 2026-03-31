@@ -98,6 +98,18 @@ public class PlayerSearchRequest {
     private Boolean deferValorantMmr;
 
     /**
+     * true 이면 계정(소환사/발로 Riot ID) 존재 여부만 확인하고 매치·랭크 등은 조회하지 않는다.
+     * 발로란트: 1차 프로브 후 전체 전적은 {@code valorantPrefetchPuuid} 등으로 이어서 호출.
+     */
+    private Boolean accountOnly;
+
+    /** 발로란트: 계정 프로브 직후 전체 검색 시 계정 API를 다시 호출하지 않도록 전달 */
+    private String valorantPrefetchPuuid;
+    /** Henrik 계정 API의 {@code region} 원문(예: ap). 없으면 요청 region 기준 폴백 */
+    private String valorantPrefetchAccountRegion;
+    private String valorantPrefetchCardUrl;
+
+    /**
      * nickname 필드에서 gameName / tagLine 자동 파싱
      */
     public void parseNickname() {

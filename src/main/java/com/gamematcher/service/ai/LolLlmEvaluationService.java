@@ -30,7 +30,7 @@ public class LolLlmEvaluationService {
      * @return summary, detailedComment. API 키 없음·호출 실패 시 {@link Optional#empty()}
      */
     public Optional<LlmEvaluationResponseDTO> evaluate(LolPlayerMatchStatsDTO playerStats) {
-        return evaluate(playerStats, -1);
+        return evaluate(playerStats, -1, null);
     }
 
     /**
@@ -43,10 +43,21 @@ public class LolLlmEvaluationService {
     public Optional<LlmEvaluationResponseDTO> evaluate(
             LolPlayerMatchStatsDTO playerStats,
             int maxTimelineEvents) {
+        return evaluate(playerStats, maxTimelineEvents, null);
+    }
+
+    /**
+     * @param modelOverride 비어 있지 않으면 해당 모델 ID로 호출. null/공백이면 {@link LlmEvaluationService} 기본 모델.
+     */
+    public Optional<LlmEvaluationResponseDTO> evaluate(
+            LolPlayerMatchStatsDTO playerStats,
+            int maxTimelineEvents,
+            String modelOverride) {
         if (playerStats == null) {
             return Optional.empty();
         }
         String prompt = promptBuilder.build(playerStats, maxTimelineEvents);
-        return llmService.evaluate(prompt);
+        String model = modelOverride != null && !modelOverride.isBlank() ? modelOverride.trim() : null;
+        return llmService.evaluate(prompt, model);
     }
 }

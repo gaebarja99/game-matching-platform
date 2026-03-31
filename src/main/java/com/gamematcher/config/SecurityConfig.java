@@ -46,7 +46,10 @@ public class SecurityConfig {
             .addFilterBefore(oauth2KakaoNotConfiguredFilter, OAuth2AuthorizationRequestRedirectFilter.class)
             .addFilterBefore(oauth2NaverNotConfiguredFilter, OAuth2AuthorizationRequestRedirectFilter.class);
         if (clientRegistrationRepository != null) {
+            // 기본 loginPage(/login) 이면 GET /login 이 Spring 기본 OAuth 선택 화면만 나와 React 라우트가 깨짐(새로고침 시).
+            // 실제 로그인 UI는 SPA 의 /login — 미인증 시 리다이렉트용으로만 쓰이는 경로를 분리.
             http.oauth2Login(oauth2 -> oauth2
+                .loginPage("/oauth2-login-page")
                 .successHandler(oAuth2LoginSuccessHandler)
                 .failureHandler(oAuth2LoginFailureHandler)
             );

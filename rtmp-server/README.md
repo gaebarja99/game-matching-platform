@@ -45,7 +45,7 @@ OBS가 보내는 RTMP를 받아 HLS로 변환합니다.
 |----------------|------|
 | OBS 서버       | rtmp://localhost:1935/live |
 | HLS 재생(m3u8) | http://localhost:8000/live/스트림키/index.m3u8 |
-| 사이트/API     | http://localhost:8080 |
+| 사이트/API     | 로컬 `http://localhost:8080` · 배포 `https://3.37.67.151.nip.io` |
 
 ## OBS는 되는데 브라우저에서 재생이 안 될 때
 
