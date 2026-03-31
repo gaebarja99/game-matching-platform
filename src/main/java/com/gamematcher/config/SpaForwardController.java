@@ -9,6 +9,8 @@ import org.springframework.web.server.ResponseStatusException;
 /**
  * React Router(BrowserRouter) 경로로 직접 접근하거나 새로고침할 때 서버가 index.html을 내려주도록 함.
  * 그렇지 않으면 /login 등은 정적 리소스가 없어 404가 난다.
+ * <p>Spring Boot 3 기본 PathPattern 은 이 Ant 스타일 다중 세그먼트 패턴을 지원하지 않으므로
+ * application.properties 에 spring.mvc.pathmatch.matching-strategy=ant_path_matcher 가 있어야 한다.
  */
 @Controller
 public class SpaForwardController {
