@@ -13,35 +13,91 @@ function envPointsToLoopback(apiBaseEnv: string): boolean {
 }
 
 /**
+ * HTTPS로 연 페이지에서 http API URL을 쓰면 브라우저가 혼합 콘텐츠로 막음(로그인 fetch가 빨간색·프리플라이트 실패처럼 보임).
+ * VITE_API_URL이 http://공인IP:8080 처럼 박혀 있어도, 실제 접속이 https://…nip.io 이면 같은 오리진으로 맞춘다.
+ */
+function envWouldBreakHttpsPage(apiBaseEnv: string): boolean {
+  if (typeof window === 'undefined') return false;
+  if (window.location.protocol !== 'https:') return false;
+  try {
+    const u = new URL(apiBaseEnv);
+    return u.protocol === 'http:';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * nginx(443 TLS) → 내부만 8080(평문) 인 배포에서 흔한 실수: VITE_API_URL에 https://도메인:8080 을 넣음.
+ * 브라우저는 8080에 TLS 핸드셰이크를 보내고 Tomcat은 평문이라 요청이 막히거나 "Provisional headers" 만 보임.
+ * 주소창이 https://도메인/ (포트 생략=443)일 때는 API도 같은 오리진(포트 없음)만 쓴다.
+ */
+function envHttpsSameHostWrongPublicPort8080(apiBaseEnv: string): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const u = new URL(apiBaseEnv);
+    const p = new URL(window.location.href);
+    if (u.hostname !== p.hostname) return false;
+    if (u.port !== '8080') return false;
+    if (p.protocol !== 'https:') return false;
+    const pagePort = p.port === '' ? '443' : p.port;
+    return pagePort === '443';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 브라우저 주소 기준 API 베이스.
+ * - 로컬: Vite(5173 등)에서 열었을 때 백엔드는 보통 :8080 → 호스트:8080.
+ * - 배포: https://3.37.67.151.nip.io 처럼 443(포트 생략)으로 열렸으면 API도 같은 호스트·같은 포트만 쓴다(nginx가 8080으로 프록시).
+ *   여기서 :8080을 붙이면 TLS 없는 Tomcat으로 가서 ERR_SSL_PROTOCOL_ERROR 가 난다.
+ */
+function apiBaseFromBrowserLocation(): string {
+  const { protocol, hostname, port } = window.location;
+  if (isLoopbackHost(hostname)) {
+    return `${protocol}//${hostname}:8080`;
+  }
+  if (!port) {
+    return `${protocol}//${hostname}`;
+  }
+  return `${protocol}//${hostname}:${port}`;
+}
+
+/**
  * API 베이스 URL.
  * - localhost/127.0.0.1 로 접속 시: 같은 호스트:8080 (세션 쿠키 same-site).
- * - 그 외 호스트(예: EC2 공인 IP)인데 VITE_API_URL이 localhost로 박혀 있으면: 빌드값을 쓰지 않고
- *   현재 창의 호스트:8080 사용 (배포 후에도 localhost로 API 호출되는 문제 방지).
- * - 그 밖에는 VITE_API_URL 또는 현재 호스트:8080.
+ * - 그 외 호스트(예: EC2)인데 VITE_API_URL이 localhost로 박혀 있으면: 빌드값 대신 현재 창과 같은 오리진 베이스 사용.
+ * - 그 밖에는 VITE_API_URL 또는 브라우저 위치 기반.
  */
 function getApiBase(): string {
   if (typeof window !== 'undefined') {
-    const { protocol, hostname } = window.location;
+    const { hostname } = window.location;
     if (isLoopbackHost(hostname)) {
-      return `${protocol}//${hostname}:8080`;
+      return apiBaseFromBrowserLocation();
     }
   }
   const envRaw = import.meta.env.VITE_API_URL;
   const envTrim = envRaw != null ? String(envRaw).trim() : '';
   if (envTrim !== '') {
-    if (typeof window !== 'undefined' && envPointsToLoopback(envTrim)) {
-      const { protocol, hostname } = window.location;
-      if (!isLoopbackHost(hostname)) {
-        return `${protocol}//${hostname}:8080`;
+    if (typeof window !== 'undefined') {
+      if (envPointsToLoopback(envTrim)) {
+        const { hostname } = window.location;
+        if (!isLoopbackHost(hostname)) {
+          return apiBaseFromBrowserLocation();
+        }
+      } else if (envWouldBreakHttpsPage(envTrim)) {
+        return apiBaseFromBrowserLocation();
+      } else if (envHttpsSameHostWrongPublicPort8080(envTrim)) {
+        return apiBaseFromBrowserLocation();
       }
     }
     return envTrim.replace(/\/+$/, '');
   }
   if (typeof window !== 'undefined') {
-    const { protocol, hostname } = window.location;
-    return `${protocol}//${hostname}:8080`;
+    return apiBaseFromBrowserLocation();
   }
-  return 'http://localhost:8080';
+  return 'https://3.37.67.151.nip.io';
 }
 
 /** 외부 전적 API 429 / Rate limit 시 사용자 안내 (백엔드와 동일 문구) */
