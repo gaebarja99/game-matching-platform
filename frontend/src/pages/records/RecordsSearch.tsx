@@ -79,50 +79,88 @@ export default function RecordsSearch() {
     });
   };
 
-  const runSearch = useCallback(async () => {
-    const nick = nickname.trim();
-    if (!nick) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await fetchRecordsPlayerSearch(
-        gameId,
-        nick,
-        tagLine,
-        platform,
-        count,
-        false,
-        undefined,
-      );
-
-      if (!response.success) {
-        setError(response.errorMessage || '검색에 실패했습니다.');
+  const runSearch = useCallback(
+    async (overrides?: { nickname?: string; tagLine?: string }) => {
+      const nick = (overrides?.nickname ?? nickname).trim();
+      const tag = (overrides?.tagLine ?? tagLine).trim();
+      if (!nick) {
+        setError('검색어를 입력해 주세요.');
         return;
       }
 
-      navigate(
-        buildRecordsProfileUrl(
+      setLoading(true);
+      setError(null);
+
+      try {
+        if (gameId === 'valorant') {
+          const probe = await fetchRecordsPlayerSearch(gameId, nick, tag, platform, count, false, undefined, {
+            accountOnly: true,
+          });
+          if (!probe.success) {
+            setError(probe.errorMessage || '검색에 실패했습니다.');
+            return;
+          }
+          const puuid = probe.playerInfo?.puuid?.trim();
+          if (!puuid) {
+            setError('계정 정보를 확인했지만 puuid가 없습니다.');
+            return;
+          }
+          const raw = probe.playerInfo?.rawData as Record<string, unknown> | undefined;
+          const shard = typeof raw?.valorantRegion === 'string' ? raw.valorantRegion.trim() : undefined;
+          navigate(buildRecordsProfileUrl(gameId, nick, tag, platform, count, undefined), {
+            state: {
+              valorantPrefetch: {
+                puuid,
+                gameName: nick,
+                tagLine: tag,
+                accountRegionRaw: shard,
+                cardUrl: probe.playerInfo?.avatarUrl ?? null,
+              },
+            },
+          });
+          return;
+        }
+
+        const response = await fetchRecordsPlayerSearch(
           gameId,
           nick,
-          tagLine,
+          tag,
           platform,
           count,
+          false,
           undefined,
-        ),
-      );
-    } catch (err) {
-      const raw = err instanceof Error ? err.message : '서버 오류가 발생했습니다.';
-      setError(decodeApiTextNewlines(raw));
-    } finally {
-      setLoading(false);
-    }
-  }, [count, gameId, navigate, nickname, platform, tagLine]);
+        );
+
+        if (!response.success) {
+          setError(response.errorMessage || '검색에 실패했습니다.');
+          return;
+        }
+
+        navigate(buildRecordsProfileUrl(gameId, nick, tag, platform, count, undefined), {
+          state: { recordsSearchResult: response },
+        });
+      } catch (err) {
+        const raw = err instanceof Error ? err.message : '서버 오류가 발생했습니다.';
+        setError(decodeApiTextNewlines(raw));
+      } finally {
+        setLoading(false);
+      }
+    },
+    [count, gameId, navigate, nickname, platform, tagLine],
+  );
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    void runSearch();
+    const fd = new FormData(event.currentTarget);
+    const domNick = String(fd.get('nickname') ?? '').trim();
+    const domTag = game.fields.includes('tag') ? String(fd.get('tagLine') ?? '').trim() : tagLine.trim();
+    setNickname(domNick);
+    if (game.fields.includes('tag')) {
+      setTagLine(domTag);
+    }
+    void runSearch(
+      game.fields.includes('tag') ? { nickname: domNick, tagLine: domTag } : { nickname: domNick },
+    );
   };
 
   const landingCssVars = useMemo(() => getRecordsLandingCssVars(game.accent), [game.accent]);
@@ -155,7 +193,7 @@ export default function RecordsSearch() {
           <form className={recordsLandingFormClass} onSubmit={handleSearch}>
             <label className="records-landing-field records-landing-field--game">
               <span>게임</span>
-              <select value={gameId} onChange={(event) => selectGame(event.target.value)}>
+              <select name="gameId" value={gameId} onChange={(event) => selectGame(event.target.value)}>
                 {featuredGames.map((item) => (
                   <option key={item.id} value={item.id}>
                     {item.label}
@@ -168,6 +206,7 @@ export default function RecordsSearch() {
               <span>검색</span>
               <input
                 type="text"
+                name="nickname"
                 value={nickname}
                 onChange={(event) => setNickname(event.target.value)}
                 placeholder={game.placeholders.nickname}
@@ -181,6 +220,7 @@ export default function RecordsSearch() {
                 <span>{game.tagLabel || '태그'}</span>
                 <input
                   type="text"
+                  name="tagLine"
                   value={tagLine}
                   onChange={(event) => setTagLine(event.target.value)}
                   placeholder={game.placeholders.tag || 'KR1'}
@@ -192,7 +232,7 @@ export default function RecordsSearch() {
             {game.fields.includes('pubg_platform') ? (
               <label className="records-landing-field records-landing-field--tag">
                 <span>플랫폼</span>
-                <select value={platform} onChange={(event) => setPlatform(event.target.value)}>
+                <select name="platform" value={platform} onChange={(event) => setPlatform(event.target.value)}>
                   {game.platformOptions?.map((option) => (
                     <option key={option.value} value={option.value}>
                       {option.label}
@@ -203,7 +243,7 @@ export default function RecordsSearch() {
             ) : null}
 
             <button type="submit" className="records-landing-submit" disabled={loading}>
-              {loading ? '검색 중' : '검색'}
+              {loading ? (gameId === 'valorant' ? '계정 확인 중' : '검색 중') : '검색'}
             </button>
           </form>
 

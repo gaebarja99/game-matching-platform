@@ -23,6 +23,11 @@ export interface PlayerSearchRequest {
   matchListOnly?: boolean;
   /** 발로란트: 티어는 /api/search/valorant/mmr 로 이어서 로드 */
   deferValorantMmr?: boolean;
+  /** 계정 존재만 확인(발로 1차 프로브 등). 매치·MMR 제외 */
+  accountOnly?: boolean;
+  valorantPrefetchPuuid?: string;
+  valorantPrefetchAccountRegion?: string;
+  valorantPrefetchCardUrl?: string;
 }
 
 export interface PlayerSearchResponse {

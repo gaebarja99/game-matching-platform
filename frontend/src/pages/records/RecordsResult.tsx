@@ -35,6 +35,59 @@ function isLoadMoreRecordsUrl(prevKey: string | null, newKey: string): boolean {
   );
 }
 
+/** 랜딩에서 navigate state로 넘긴 응답이 현재 URL 프로필과 같은지 (중복 API 방지) */
+function isPrefetchForCurrentProfile(
+  r: PlayerSearchResponse,
+  gameId: string,
+  playerSlug: string,
+  urlHash: string,
+): boolean {
+  if (!r.success) return false;
+  if (r.game && r.game !== gameId) return false;
+  try {
+    const parsed = parseProfileSlug(gameId, playerSlug, urlHash);
+    const nick = parsed.nickname.trim().toLowerCase();
+    const tag = (parsed.tagLine ?? '').trim().toLowerCase();
+    const meta = GAMES.find((g) => g.id === gameId);
+    if (meta?.fields.includes('tag')) {
+      const gn = (r.playerInfo?.gameName ?? '').trim().toLowerCase();
+      const tl = (r.playerInfo?.tagLine ?? '').trim().toLowerCase();
+      return gn === nick && tl === tag;
+    }
+    const fromResult = (r.playerInfo?.gameName ?? r.nickname ?? '').trim().toLowerCase();
+    return fromResult === nick;
+  } catch {
+    return false;
+  }
+}
+
+type ValorantAccountPrefetchState = {
+  puuid: string;
+  gameName: string;
+  tagLine: string;
+  accountRegionRaw?: string;
+  cardUrl?: string | null;
+};
+
+type RecordsResultLocationState = {
+  recordsSearchResult?: PlayerSearchResponse;
+  valorantPrefetch?: ValorantAccountPrefetchState;
+};
+
+function isValorantPrefetchForUrl(
+  vf: ValorantAccountPrefetchState,
+  gameId: string,
+  playerSlug: string,
+  urlHash: string,
+): boolean {
+  if (gameId !== 'valorant') return false;
+  const parsed = parseProfileSlug(gameId, playerSlug, urlHash);
+  return (
+    parsed.nickname.trim().toLowerCase() === vf.gameName.trim().toLowerCase() &&
+    (parsed.tagLine ?? '').trim().toLowerCase() === (vf.tagLine ?? '').trim().toLowerCase()
+  );
+}
+
 type PerformSearchOptions = { keepPreviousResult?: boolean };
 
 function RecordsResultContent({
@@ -168,6 +221,9 @@ function RecordsResultContent({
           cnt,
           forceRefresh,
           searchRegion,
+          overrides?.valorantPrefetch
+            ? { valorantPrefetch: overrides.valorantPrefetch }
+            : undefined,
         );
         setResult(response);
         if (!response.success) {
@@ -211,6 +267,39 @@ function RecordsResultContent({
     const parsed = parseProfileSlug(gameId, playerSlug, urlHash);
     if (!parsed.nickname.trim()) return;
 
+    const locState = location.state as RecordsResultLocationState | null;
+    const vf = locState?.valorantPrefetch;
+    if (vf && isValorantPrefetchForUrl(vf, gameId, playerSlug, urlHash)) {
+      autoSearchedUrlKey.current = key;
+      navigate(
+        { pathname: location.pathname, search: location.search, hash: location.hash },
+        { replace: true, state: {} },
+      );
+      void performSearch(false, {
+        nickname: vf.gameName,
+        tagLine: vf.tagLine,
+        valorantPrefetch: {
+          puuid: vf.puuid,
+          accountRegionRaw: vf.accountRegionRaw,
+          cardUrl: vf.cardUrl ?? undefined,
+        },
+      });
+      return;
+    }
+
+    const prefetch = locState?.recordsSearchResult;
+    if (prefetch && isPrefetchForCurrentProfile(prefetch, gameId, playerSlug, urlHash)) {
+      autoSearchedUrlKey.current = key;
+      setResult(prefetch);
+      setLoading(false);
+      setError(null);
+      navigate(
+        { pathname: location.pathname, search: location.search, hash: location.hash },
+        { replace: true, state: {} },
+      );
+      return;
+    }
+
     const prevKey = autoSearchedUrlKey.current;
     const keepPrev = isLoadMoreRecordsUrl(prevKey, key);
     autoSearchedUrlKey.current = key;
@@ -236,7 +325,7 @@ function RecordsResultContent({
       },
       { keepPreviousResult: keepPrev },
     );
-  }, [gameId, playerSlug, urlHash, searchParams, performSearch]);
+  }, [gameId, playerSlug, urlHash, searchParams, performSearch, location.pathname, location.search, location.hash, location.state, navigate]);
 
   const supportsPaginatedMatches = game.fields.includes('count');
   const matchCount = result?.matches?.length ?? 0;

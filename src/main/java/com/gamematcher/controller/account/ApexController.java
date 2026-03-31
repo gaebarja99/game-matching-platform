@@ -20,7 +20,6 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/apex")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class ApexController {
 
     private final ApexSearchService apexSearchService;

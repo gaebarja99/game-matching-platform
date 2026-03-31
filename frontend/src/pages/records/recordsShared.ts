@@ -24,6 +24,17 @@ export type SearchFieldOverrides = {
   platform?: string;
   region?: string;
   count?: number;
+  /** 발로: 계정 프로브 후 전체 검색 시 서버가 계정 API를 생략 */
+  valorantPrefetch?: {
+    puuid: string;
+    accountRegionRaw?: string;
+    cardUrl?: string | null;
+  };
+};
+
+export type FetchRecordsSearchOptions = {
+  accountOnly?: boolean;
+  valorantPrefetch?: SearchFieldOverrides['valorantPrefetch'];
 };
 
 function parseHexRgb(hex: string): { r: number; g: number; b: number } | null {
@@ -82,7 +93,7 @@ export const GAMES: GameOption[] = [
     brandLabel: 'VALORANT',
     fields: ['nickname', 'tag', 'count'],
     placeholders: { nickname: '플레이어명', tag: 'KR1' },
-    hint: '발로란트는 플레이어명과 태그로 계정 API 기준 최근 전적을 조회합니다. (리전은 KR 기준)',
+    hint: '발로란트는 플레이어명과 태그로 계정 API 기준 최근 전적을 조회합니다.',
     tagLabel: '태그',
   },
   {
@@ -230,10 +241,12 @@ export async function fetchRecordsPlayerSearch(
   count: number,
   forceRefresh: boolean,
   region?: string,
+  options?: FetchRecordsSearchOptions,
 ): Promise<PlayerSearchResponse> {
   const game = GAMES.find((item) => item.id === gameId) || GAMES[0];
   const regionParam =
     gameId === 'valorant' ? (region?.trim() || 'kr') : region?.trim() || undefined;
+  const vf = options?.valorantPrefetch;
   return searchPlayer({
     game: gameId,
     gameName: nickname.trim(),
@@ -243,7 +256,12 @@ export async function fetchRecordsPlayerSearch(
     count: game.fields.includes('count') ? count : undefined,
     forceRefresh: forceRefresh || undefined,
     matchListOnly: gameId === 'lol' || gameId === 'tft' ? true : undefined,
-    deferValorantMmr: gameId === 'valorant' ? true : undefined,
+    deferValorantMmr: gameId === 'valorant' && !options?.accountOnly ? true : undefined,
+    accountOnly: options?.accountOnly || undefined,
+    valorantPrefetchPuuid: gameId === 'valorant' && vf?.puuid ? vf.puuid : undefined,
+    valorantPrefetchAccountRegion: gameId === 'valorant' && vf?.accountRegionRaw ? vf.accountRegionRaw : undefined,
+    valorantPrefetchCardUrl:
+      gameId === 'valorant' && vf?.cardUrl != null && vf.cardUrl !== '' ? vf.cardUrl : undefined,
   });
 }
 

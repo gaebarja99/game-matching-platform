@@ -30,6 +30,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -67,23 +68,89 @@ public class ValorantSearchService {
         REGION_MAP.put("br1", "br");
     }
 
+    /** Henrik v1/v3/lifetime 엔드포인트에 쓰는 리전 코드 */
+    private static final Set<String> HENRIK_SHARDS = Set.of("kr", "ap", "na", "eu", "latam", "br");
+
+    /**
+     * 계정 API의 region 문자열 → Henrik 샤드. 알 수 없으면 null.
+     */
+    private static String toHenrikShard(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return null;
+        }
+        String t = raw.toLowerCase().trim();
+        if (REGION_MAP.containsKey(t)) {
+            return REGION_MAP.get(t);
+        }
+        if (HENRIK_SHARDS.contains(t)) {
+            return t;
+        }
+        return null;
+    }
+
     public PlayerSearchResponse search(PlayerSearchRequest req) {
         String nickname = req.getGameName() + "#" + req.getTagLine();
         String inputRegion = req.getRegion() != null ? req.getRegion().toLowerCase().trim() : "kr";
 
-        log.info("Valorant search - gameName={}, tagLine={}, region(input)={}",
-                req.getGameName(), req.getTagLine(), inputRegion);
+        log.info("Valorant search - gameName={}, tagLine={}, region(input)={}, accountOnly={}, prefetchPuuid={}",
+                req.getGameName(), req.getTagLine(), inputRegion,
+                Boolean.TRUE.equals(req.getAccountOnly()),
+                req.getValorantPrefetchPuuid() != null && !req.getValorantPrefetchPuuid().isBlank());
 
         try {
             HttpEntity<Void> entity = createEntity();
-            Map<String, Object> accountData = fetchAccountData(req, entity);
-            if (accountData == null) {
-                throw new RuntimeException("발로란트 계정을 찾을 수 없습니다.");
+
+            if (Boolean.TRUE.equals(req.getAccountOnly())) {
+                Map<String, Object> probeAccount = fetchAccountData(req, entity);
+                if (probeAccount == null) {
+                    throw new RuntimeException("발로란트 계정을 찾을 수 없습니다.");
+                }
+                String probePuuid = asString(probeAccount.get("puuid"));
+                String probeCard = extractCardUrl(probeAccount);
+                String probeAccountRegion = asString(probeAccount.get("region"));
+                List<String> probeShards = resolveCandidateRegions(inputRegion, probeAccountRegion);
+                String shardForMmr = probeShards.isEmpty() ? "kr" : probeShards.get(0);
+                Map<String, Object> rawData = new LinkedHashMap<>();
+                rawData.put("valorantRegion", shardForMmr);
+                PlayerInfo probeInfo = PlayerInfo.builder()
+                        .puuid(probePuuid)
+                        .gameName(req.getGameName())
+                        .tagLine(req.getTagLine())
+                        .tier("")
+                        .rank(shardForMmr)
+                        .avatarUrl(probeCard)
+                        .rawData(rawData)
+                        .build();
+                return PlayerSearchResponse.builder()
+                        .success(true)
+                        .game("valorant")
+                        .nickname(nickname)
+                        .valorantMmrPending(true)
+                        .playerInfo(probeInfo)
+                        .matches(List.of())
+                        .stats(buildStats(List.of()))
+                        .build();
             }
 
-            String puuid = asString(accountData.get("puuid"));
-            String cardUrl = extractCardUrl(accountData);
-            String accountRegion = asString(accountData.get("region"));
+            String puuid;
+            String cardUrl;
+            String accountRegion;
+            boolean usePrefetch = req.getValorantPrefetchPuuid() != null && !req.getValorantPrefetchPuuid().isBlank()
+                    && !Boolean.TRUE.equals(req.getForceRefresh());
+            if (usePrefetch) {
+                puuid = req.getValorantPrefetchPuuid().trim();
+                cardUrl = req.getValorantPrefetchCardUrl();
+                accountRegion = req.getValorantPrefetchAccountRegion();
+            } else {
+                Map<String, Object> accountData = fetchAccountData(req, entity);
+                if (accountData == null) {
+                    throw new RuntimeException("발로란트 계정을 찾을 수 없습니다.");
+                }
+                puuid = asString(accountData.get("puuid"));
+                cardUrl = extractCardUrl(accountData);
+                accountRegion = asString(accountData.get("region"));
+            }
+
             List<String> candidateRegions = resolveCandidateRegions(inputRegion, accountRegion);
 
             boolean deferMmr = Boolean.TRUE.equals(req.getDeferValorantMmr());
@@ -218,11 +285,13 @@ public class ValorantSearchService {
 
     @SuppressWarnings("unchecked")
     private Map<String, Object> fetchAccountData(PlayerSearchRequest req, HttpEntity<Void> entity) {
+        boolean bustCache = Boolean.TRUE.equals(req.getForceRefresh());
+        String forceQ = bustCache ? "?force=true" : "";
         List<String> candidateUrls = List.of(
-                String.format("https://api.henrikdev.xyz/valorant/v2/account/%s/%s?force=true",
-                        req.getGameName(), req.getTagLine()),
-                String.format("https://api.henrikdev.xyz/valorant/v1/account/%s/%s?force=true",
-                        req.getGameName(), req.getTagLine())
+                String.format("https://api.henrikdev.xyz/valorant/v2/account/%s/%s%s",
+                        req.getGameName(), req.getTagLine(), forceQ),
+                String.format("https://api.henrikdev.xyz/valorant/v1/account/%s/%s%s",
+                        req.getGameName(), req.getTagLine(), forceQ)
         );
 
         RuntimeException lastError = null;
@@ -251,13 +320,20 @@ public class ValorantSearchService {
         return null;
     }
 
+    /**
+     * 계정 조회 응답에 region이 오면 puuid 기준 API는 그 샤드 하나만 호출하면 됨.
+     * (다른 샤드에 같은 puuid로 조회하면 Account not found 404만 연쇄로 남.)
+     * region이 비었거나 매핑 불가할 때만 요청 region + 공통 샤드 순으로 폴백.
+     */
     private List<String> resolveCandidateRegions(String inputRegion, String accountRegion) {
-        LinkedHashSet<String> candidates = new LinkedHashSet<>();
-        if (accountRegion != null && !accountRegion.isBlank()) {
-            candidates.add(REGION_MAP.getOrDefault(accountRegion.toLowerCase().trim(), "ap"));
+        String fromAccount = toHenrikShard(accountRegion);
+        if (fromAccount != null) {
+            return List.of(fromAccount);
         }
-        if (inputRegion != null && !inputRegion.isBlank()) {
-            candidates.add(REGION_MAP.getOrDefault(inputRegion.toLowerCase().trim(), "ap"));
+        LinkedHashSet<String> candidates = new LinkedHashSet<>();
+        String fromInput = toHenrikShard(inputRegion);
+        if (fromInput != null) {
+            candidates.add(fromInput);
         }
         candidates.add("kr");
         candidates.add("ap");

@@ -22,7 +22,6 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/search")
 @RequiredArgsConstructor
-@CrossOrigin(origins = "*")
 public class PlayerSearchController {
 
     private final PlayerSearchService playerSearchService;
@@ -43,7 +42,9 @@ public class PlayerSearchController {
      *   "count": 10,            // 조회할 매치 수 (기본값: 10, 최대: 20)
      *   "forceRefresh": false, // true면 LoL/TFT/발로/PUBG 매치 DB 캐시 무시 후 API 갱신
      *   "matchListOnly": false, // true면 LoL/TFT는 매치 ID만(상세는 POST /api/search/match-detail)
-     *   "deferValorantMmr": false // true면 발로란트는 매치·통계만 먼저, 티어는 POST /api/search/valorant/mmr
+     *   "deferValorantMmr": false, // true면 발로란트는 매치·통계만 먼저, 티어는 POST /api/search/valorant/mmr
+     *   "accountOnly": false,      // true면 계정 존재만(발로: Henrik account만). 이후 valorantPrefetchPuuid 등으로 전체 검색
+     *   "valorantPrefetchPuuid": "", "valorantPrefetchAccountRegion": "", "valorantPrefetchCardUrl": ""
      * }
      */
     @PostMapping("/player")
