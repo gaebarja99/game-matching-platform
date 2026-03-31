@@ -10,8 +10,7 @@ import org.springframework.security.oauth2.client.registration.ClientRegistratio
 import org.springframework.stereotype.Component;
 
 /**
- * OAuth 클라이언트 등록이 있을 때 카카오 client-secret·네이버 설정 여부를 로그로 확인.
- * 401 invalid_token_response 시 시크릿/리다이렉트 URI/호출 허용 IP 점검용.
+ * OAuth 클라이언트 등록 요약 로그. 401 invalid_token_response 시 시크릿·리다이렉트 URI 점검용.
  */
 @Component
 @ConditionalOnBean(ClientRegistrationRepository.class)
@@ -28,6 +27,14 @@ public class OAuth2KakaoStartupCheck {
     @EventListener(ApplicationReadyEvent.class)
     public void onReady() {
         try {
+            ClientRegistration google = registrationRepository.findByRegistrationId("google");
+            if (google != null) {
+                boolean hasSecret = google.getClientSecret() != null && !google.getClientSecret().isBlank();
+                log.info("[OAuth2 Google] client-id={} redirect-uri={} client-secret: {} — invalid_client 이면 client-id 가 콘솔과 일치하는지·GOOGLE_CLIENT_ID 환경변수 오타·끝 공백 여부를 확인하세요.",
+                        google.getClientId(),
+                        google.getRedirectUri(),
+                        hasSecret ? "set" : "MISSING");
+            }
             ClientRegistration kakao = registrationRepository.findByRegistrationId("kakao");
             if (kakao != null) {
                 String secret = kakao.getClientSecret();

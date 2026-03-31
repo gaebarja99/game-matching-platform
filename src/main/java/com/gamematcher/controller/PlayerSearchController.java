@@ -11,7 +11,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 
 /**
  * 닉네임 기반 통합 전적 검색 컨트롤러
@@ -63,6 +67,30 @@ public class PlayerSearchController {
     public ResponseEntity<MatchDetailResponse> matchDetail(@RequestBody MatchDetailRequest request) {
         log.info("매치 상세 요청 - game: {}, matchId: {}", request.getGame(), request.getMatchId());
         return ResponseEntity.ok(recordsMatchDetailService.load(request));
+    }
+
+    /**
+     * 저장된 AI 평가만 DB 조회 (외부 매치 API 없음). 전적 상세에서 모델·게임만 바꿀 때 사용.
+     * {@code game}: valorant | lol | pubg
+     */
+    @GetMapping("/saved-ai-evaluation")
+    public ResponseEntity<Map<String, Object>> savedAiEvaluation(
+            @RequestParam String game,
+            @RequestParam String matchId,
+            @RequestParam(required = false) String puuid,
+            @RequestParam(required = false) String playerName,
+            @RequestParam(required = false) String llmModel) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("success", true);
+        String g = game != null ? game.trim().toLowerCase(Locale.ROOT) : "";
+        Optional<Map<String, Object>> ai = switch (g) {
+            case "valorant" -> recordsMatchDetailService.loadValorantSavedAiEvaluationOnly(matchId, puuid, llmModel);
+            case "lol" -> recordsMatchDetailService.loadLolSavedAiEvaluationOnly(matchId, puuid, llmModel);
+            case "pubg" -> recordsMatchDetailService.loadPubgSavedAiEvaluationOnly(matchId, playerName);
+            default -> Optional.empty();
+        };
+        ai.ifPresent(m -> body.put("records_ai_evaluation", m));
+        return ResponseEntity.ok(body);
     }
 
     /**

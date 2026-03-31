@@ -15,10 +15,26 @@ export default function Login() {
     const oauthError = searchParams.get('error');
     const message = searchParams.get('message');
     if (oauthError === 'oauth_failed') {
-      setError(message || '소셜 로그인에 실패했습니다. 다시 시도해 주세요.');
+      const text = message ?? '';
+      const isToken401 =
+        text.includes('invalid_token_response') ||
+        text.includes('401 Unauthorized') ||
+        /\b401\b/.test(text);
+      if (isToken401) {
+        setError(
+          '구글 로그인 토큰 요청이 거절되었습니다(401). Google Cloud 콘솔 → OAuth 클라이언트 → 보안 비밀을 재발급한 뒤 GOOGLE_CLIENT_SECRET(또는 application-oauth-local.properties)에 넣으세요. 공개 저장소에 있던 기본 시크릿은 무효일 수 있습니다. 승인된 리디렉션 URI에 http://localhost:8080/login/oauth2/code/google (필요 시 127.0.0.1 동일 경로)을 등록했는지 확인하세요.',
+        );
+      } else {
+        setError(text || '소셜 로그인에 실패했습니다. 다시 시도해 주세요.');
+      }
       setSearchParams({}, { replace: true });
     } else if (oauthError === 'oauth_not_configured') {
       setError('소셜 로그인이 설정되지 않았습니다. 아이디/비밀번호로 로그인하거나, 백엔드를 프로젝트 루트(D:\\GameMatcher)에서 실행했는지 확인하세요.');
+      setSearchParams({}, { replace: true });
+    } else if (oauthError === 'kakao_secret_required') {
+      setError(
+        '카카오 로그인에 Client Secret 이 필요합니다. Kakao Developers → 앱 → 제품 설정 → 카카오 로그인에서 시크릿 확인 후, 환경변수 KAKAO_CLIENT_SECRET 또는 src/main/resources/application-oauth-local.properties 에 spring.security.oauth2.client.registration.kakao.client-secret 을 설정하세요.',
+      );
       setSearchParams({}, { replace: true });
     }
   }, [searchParams, setSearchParams]);

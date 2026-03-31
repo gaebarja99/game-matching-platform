@@ -161,6 +161,31 @@ export async function fetchMatchDetail(request: {
   return data;
 }
 
+/** DB에 저장된 AI 평가만 조회 (매치 상세·외부 전적 API 재호출 없음). 모델/게임 전환 시 사용. */
+export async function fetchSavedAiEvaluation(request: {
+  game: string;
+  matchId: string;
+  puuid?: string;
+  playerName?: string;
+  llmModel?: string;
+}): Promise<Record<string, unknown> | null> {
+  const q = new URLSearchParams({
+    game: request.game,
+    matchId: request.matchId,
+  });
+  if (request.puuid) q.set('puuid', request.puuid);
+  if (request.playerName) q.set('playerName', request.playerName);
+  if (request.llmModel) q.set('llmModel', request.llmModel);
+  const response = await apiFetch<{ success?: boolean; records_ai_evaluation?: Record<string, unknown> }>(
+    `/api/search/saved-ai-evaluation?${q}`,
+  );
+  if (!response.ok || !response.data) {
+    return null;
+  }
+  const ev = response.data.records_ai_evaluation;
+  return ev && typeof ev === 'object' ? ev : null;
+}
+
 /** POST /api/valorant/evaluations/match/{matchId} 응답 행 */
 export interface ValorantAiEvaluationApiRow {
   matchId?: string;

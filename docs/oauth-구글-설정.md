@@ -28,10 +28,10 @@
 - **API 및 서비스** → **사용자 인증 정보** → **사용자 인증 정보 만들기** → **OAuth 클라이언트 ID**
 - **애플리케이션 유형**: **웹 애플리케이션**
 - **이름**: 예) GameMatcher Web
-- **승인된 리디렉션 URI**에 아래 **모두 추가** (배포·로컬 각각 필요)
-  - `https://3.37.67.151.nip.io/login/oauth2/code/google` (EC2·nip.io HTTPS)
+- **승인된 리디렉션 URI**에 아래 **로컬 + 배포 도메인(운영 시)** 등록
   - `http://localhost:8080/login/oauth2/code/google`
   - `http://127.0.0.1:8080/login/oauth2/code/google`
+  - (배포 시) `https://YOUR_PUBLIC_DOMAIN/login/oauth2/code/google`
 - **만들기** 클릭
 
 ### 5) 클라이언트 ID / 보안 비밀번호 확인
@@ -82,7 +82,7 @@ mvnw.cmd spring-boot:run -Dspring-boot.run.profiles=oauth
 | scope `profile`, `email` | scope `openid`, `profile`, `email` (구글 표준) |
 | 로그인 진입점 `/oauth2/authorization/google` | 동일. 프론트에서 `apiUrl('/oauth2/authorization/google')` 로 이동 |
 
-로그인 성공 후에는 `app.frontend.url`에 맞는 오리진으로 리다이렉트됩니다(배포 기본 `https://3.37.67.151.nip.io`, 로컬 프로필에서는 localhost 목록).
+로그인 성공 후에는 `app.frontend.url`에 맞는 오리진으로 리다이렉트됩니다(저장소 기본은 localhost:5173·8080 등).
 
 ---
 

@@ -14,7 +14,7 @@ function envPointsToLoopback(apiBaseEnv: string): boolean {
 
 /**
  * HTTPS로 연 페이지에서 http API URL을 쓰면 브라우저가 혼합 콘텐츠로 막음(로그인 fetch가 빨간색·프리플라이트 실패처럼 보임).
- * VITE_API_URL이 http://공인IP:8080 처럼 박혀 있어도, 실제 접속이 https://…nip.io 이면 같은 오리진으로 맞춘다.
+ * VITE_API_URL이 http://공인IP:8080 처럼 박혀 있어도, 실제 접속이 https라면 같은 오리진으로 맞춘다.
  */
 function envWouldBreakHttpsPage(apiBaseEnv: string): boolean {
   if (typeof window === 'undefined') return false;
@@ -67,7 +67,7 @@ function stripMisleadingHttpsPort8080FromApiBase(base: string): string {
 /**
  * 브라우저 주소 기준 API 베이스.
  * - 로컬: Vite(5173 등)에서 열었을 때 백엔드는 보통 :8080 → 호스트:8080.
- * - 배포: https://3.37.67.151.nip.io 처럼 443(포트 생략)으로 열렸으면 API도 같은 호스트·같은 포트만 쓴다(nginx가 8080으로 프록시).
+ * - 배포: https 로 443(포트 생략)만 쓰면 API도 같은 호스트·같은 포트만 쓴다(nginx가 8080으로 프록시).
  *   여기서 :8080을 붙이면 TLS 없는 Tomcat으로 가서 ERR_SSL_PROTOCOL_ERROR 가 난다.
  */
 function apiBaseFromBrowserLocation(): string {
@@ -114,7 +114,7 @@ function resolveApiBase(): string {
   if (typeof window !== 'undefined') {
     return apiBaseFromBrowserLocation();
   }
-  return 'https://3.37.67.151.nip.io';
+  return 'http://localhost:8080';
 }
 
 function getApiBase(): string {

@@ -18,8 +18,8 @@ public class StreamingProperties {
     /** OBS 서버 URL (예: rtmp://localhost/live) - 포트 제외 기본 1935 */
     private String rtmpServerUrl = "rtmp://localhost/live";
 
-    /** HLS 재생 베이스 URL (예: https://3.37.67.151.nip.io/hls) - .m3u8 경로 앞까지 */
-    private String hlsBaseUrl = "https://3.37.67.151.nip.io/hls";
+    /** HLS 재생 베이스 URL (예: http://127.0.0.1:8000/hls) - .m3u8 경로 앞까지 */
+    private String hlsBaseUrl = "http://127.0.0.1:8000/hls";
 
     /** HLS 파일이 기록되는 로컬 경로 (nginx-rtmp hls_path 상위). 비어 있으면 /hls 미서빙 */
     private String hlsFilePath = "";

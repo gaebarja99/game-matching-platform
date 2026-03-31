@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { decodeApiTextNewlines } from '../../api/client';
 import {
   fetchMatchDetail,
+  fetchSavedAiEvaluation,
   runLolMatchAiEvaluation,
   runPubgMatchAiEvaluation,
   runValorantMatchAiEvaluation,
@@ -505,7 +506,13 @@ export function MatchRow({
   const lastDetailFetchKey = useRef<string | null>(null);
 
   const buildDetailFetchKey = (model: string) =>
-    `${match.matchId ?? ''}|${gameId}|${gameId === 'valorant' ? model : '-'}|${detailContext.puuid ?? ''}`;
+    [
+      match.matchId ?? '',
+      gameId,
+      gameId === 'valorant' || gameId === 'lol' ? model : '-',
+      detailContext.puuid ?? '',
+      detailContext.playerName ?? '',
+    ].join('|');
 
   const duration = match.playtime ? `${Math.floor(match.playtime / 60)}m` : null;
   const canDetail = GAMES_WITH_MATCH_DETAIL.has(gameId) && Boolean(match.matchId);
@@ -546,7 +553,7 @@ export function MatchRow({
         matchId: match.matchId!,
         puuid: detailContext.puuid,
         platform: detailContext.platform,
-        llmModel: gameId === 'valorant' ? detailAiModel : undefined,
+        llmModel: gameId === 'valorant' || gameId === 'lol' ? detailAiModel : undefined,
       });
       if (!res.success) {
         setDetailError(decodeApiTextNewlines(res.errorMessage || '상세를 불러오지 못했습니다.'));
@@ -565,28 +572,50 @@ export function MatchRow({
   const handleAiModelChange = async (model: string) => {
     setDetailAiModel(model);
     if (!detailOpen || !match.matchId) return;
-    const fetchKey = buildDetailFetchKey(model);
-    setDetailLoading(true);
-    setDetailError(null);
-    try {
-      const res = await fetchMatchDetail({
-        game: gameId,
-        matchId: match.matchId,
-        puuid: detailContext.puuid,
-        platform: detailContext.platform,
-        llmModel: gameId === 'valorant' ? model : undefined,
-      });
-      if (!res.success) {
-        setDetailError(decodeApiTextNewlines(res.errorMessage || '상세를 불러오지 못했습니다.'));
-        return;
+
+    const mergeSavedAi = async () => {
+      const fetchKey = buildDetailFetchKey(model);
+      try {
+        const ai = await fetchSavedAiEvaluation({
+          game: gameId,
+          matchId: match.matchId!,
+          puuid: detailContext.puuid,
+          playerName: detailContext.playerName,
+          llmModel: gameId === 'pubg' ? undefined : model,
+        });
+        setDetailPayload((prev) => {
+          if (!prev) return prev;
+          const next: Record<string, unknown> = { ...prev };
+          if (ai && Object.keys(ai).length > 0) {
+            next.records_ai_evaluation = ai;
+          } else {
+            delete next.records_ai_evaluation;
+          }
+          return next;
+        });
+        lastDetailFetchKey.current = fetchKey;
+      } catch {
+        setDetailPayload((prev) => {
+          if (!prev) return prev;
+          const next: Record<string, unknown> = { ...prev };
+          delete next.records_ai_evaluation;
+          return next;
+        });
+        lastDetailFetchKey.current = fetchKey;
       }
-      lastDetailFetchKey.current = fetchKey;
-      setDetailPayload((res.payload ?? {}) as Record<string, unknown>);
-    } catch (e) {
-      const raw = e instanceof Error ? e.message : '상세 요청 오류';
-      setDetailError(decodeApiTextNewlines(raw));
-    } finally {
-      setDetailLoading(false);
+    };
+
+    if (gameId === 'valorant' && detailContext.puuid) {
+      void mergeSavedAi();
+      return;
+    }
+    if (gameId === 'lol' && detailContext.puuid) {
+      void mergeSavedAi();
+      return;
+    }
+    if (gameId === 'pubg' && detailContext.playerName) {
+      void mergeSavedAi();
+      return;
     }
   };
 

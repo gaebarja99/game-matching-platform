@@ -11,8 +11,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import java.io.IOException;
 
 /**
- * 카카오 OAuth client-id가 미설정일 때 /oauth2/authorization/kakao 요청을
- * 카카오로 보내지 않고 프론트엔드 로그인 페이지로 리다이렉트하여 KOE101 오류를 방지.
+ * 카카오 OAuth: client-id 없으면 KOE101 방지, client-secret 없으면 콜백 후 토큰 401(invalid_token_response) 방지.
  */
 @Component
 public class OAuth2KakaoNotConfiguredFilter extends OncePerRequestFilter {
@@ -23,6 +22,9 @@ public class OAuth2KakaoNotConfiguredFilter extends OncePerRequestFilter {
     @Value("${spring.security.oauth2.client.registration.kakao.client-id:not-configured}")
     private String kakaoClientId;
 
+    @Value("${spring.security.oauth2.client.registration.kakao.client-secret:}")
+    private String kakaoClientSecret;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
@@ -31,6 +33,11 @@ public class OAuth2KakaoNotConfiguredFilter extends OncePerRequestFilter {
             if (clientId.isEmpty() || "not-configured".equalsIgnoreCase(clientId)) {
                 String redirect = buildRedirectToLogin("oauth_not_configured");
                 response.sendRedirect(redirect);
+                return;
+            }
+            String secret = kakaoClientSecret != null ? kakaoClientSecret.trim() : "";
+            if (secret.isEmpty()) {
+                response.sendRedirect(buildRedirectToLogin("kakao_secret_required"));
                 return;
             }
         }

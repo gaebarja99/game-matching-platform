@@ -8,8 +8,12 @@ import com.gamematcher.dto.valorant.ValorantMatchDetailDto;
 import com.gamematcher.service.lol.LolApiService;
 import com.gamematcher.service.pubg.PubgApiService;
 import com.gamematcher.service.tft.TftApiService;
+import com.gamematcher.dto.lol.LolAiEvaluationResponseDto;
+import com.gamematcher.entity.match.pubg.PubgMatchAiEvaluation;
 import com.gamematcher.entity.match.valorant.ValorantMatchAiEvaluation;
 import com.gamematcher.entity.match.valorant.ValorantMatchPlayer;
+import com.gamematcher.repository.match.PubgMatchAiEvaluationRepository;
+import com.gamematcher.service.lol.LolAiEvaluationService;
 import com.gamematcher.service.valorant.ValorantApiService;
 import com.gamematcher.service.valorant.ValorantMatchService;
 import com.gamematcher.repository.match.ValorantMatchAiEvaluationRepository;
@@ -18,8 +22,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -42,6 +49,8 @@ public class RecordsMatchDetailService {
     private final ObjectMapper objectMapper;
     private final ValorantMatchPlayerRepository valorantMatchPlayerRepository;
     private final ValorantMatchAiEvaluationRepository valorantMatchAiEvaluationRepository;
+    private final LolAiEvaluationService lolAiEvaluationService;
+    private final PubgMatchAiEvaluationRepository pubgMatchAiEvaluationRepository;
 
     public MatchDetailResponse load(MatchDetailRequest req) {
         req.normalize();
@@ -56,7 +65,7 @@ public class RecordsMatchDetailService {
         try {
             return switch (game) {
                 case "valorant" -> loadValorant(matchId, req.getPuuid(), req.getLlmModel());
-                case "lol" -> loadLol(matchId, req.getRegion());
+                case "lol" -> loadLol(matchId, req.getRegion(), req.getPuuid(), req.getLlmModel());
                 case "tft" -> loadTft(matchId, req.getRegion(), req.getPuuid());
                 case "pubg" -> loadPubg(matchId, req.getPlatform());
                 default -> MatchDetailResponse.error(game, matchId,
@@ -145,12 +154,123 @@ public class RecordsMatchDetailService {
         payload.put("records_ai_evaluation", ai);
     }
 
-    private MatchDetailResponse loadLol(String matchId, String region) {
+    /**
+     * Henrik/외부 매치 API 없이 DB에 저장된 AI 평가만 조회 (모델 변경 시 전체 상세 재호출 방지).
+     *
+     * @return 저장된 평가 맵, 없으면 empty
+     */
+    public Optional<Map<String, Object>> loadValorantSavedAiEvaluationOnly(
+            String matchId, String puuid, String llmModel) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        attachValorantAiEvaluationIfPresent(payload, matchId, puuid, llmModel);
+        @SuppressWarnings("unchecked")
+        Map<String, Object> ai = (Map<String, Object>) payload.get("records_ai_evaluation");
+        return Optional.ofNullable(ai);
+    }
+
+    /**
+     * LoL: DB 저장 AI만 (Riot 매치 API 없음).
+     */
+    @Transactional(readOnly = true)
+    public Optional<Map<String, Object>> loadLolSavedAiEvaluationOnly(
+            String matchId, String puuid, String llmModel) {
+        return lolAiEvaluationService
+                .findSavedEvaluation(matchId, puuid, llmModel)
+                .map(RecordsMatchDetailService::lolEvaluationToAiMap);
+    }
+
+    /**
+     * PUBG: DB 저장 AI만 (participant당 1건, llmModel 구분 없음).
+     */
+    @Transactional(readOnly = true)
+    public Optional<Map<String, Object>> loadPubgSavedAiEvaluationOnly(String matchId, String playerName) {
+        if (matchId == null || matchId.isBlank()) {
+            return Optional.empty();
+        }
+        List<PubgMatchAiEvaluation> list = pubgMatchAiEvaluationRepository
+                .findByMatchIdWithParticipantFetched(matchId.trim());
+        if (list == null || list.isEmpty()) {
+            return Optional.empty();
+        }
+        PubgMatchAiEvaluation chosen;
+        if (playerName != null && !playerName.isBlank()) {
+            String n = playerName.trim().toLowerCase(Locale.ROOT);
+            chosen = list.stream()
+                    .filter(e -> e.getPubgMatchParticipant() != null
+                            && e.getPubgMatchParticipant().getName() != null
+                            && n.equals(e.getPubgMatchParticipant().getName().trim().toLowerCase(Locale.ROOT)))
+                    .findFirst()
+                    .orElse(null);
+        } else {
+            chosen = list.get(0);
+        }
+        if (chosen == null) {
+            return Optional.empty();
+        }
+        Map<String, Object> ai = pubgEvaluationToAiMap(chosen);
+        return Optional.ofNullable(ai);
+    }
+
+    private static Map<String, Object> lolEvaluationToAiMap(LolAiEvaluationResponseDto dto) {
+        Map<String, Object> ai = new LinkedHashMap<>();
+        if (dto.getLlmModel() != null && !dto.getLlmModel().isBlank()) {
+            ai.put("llmModel", dto.getLlmModel());
+        }
+        if (dto.getStatus() != null) {
+            ai.put("status", dto.getStatus().name());
+        }
+        if (dto.getGrade() != null) {
+            ai.put("grade", dto.getGrade().name());
+        }
+        if (dto.getScore() != null) {
+            ai.put("score", dto.getScore());
+        }
+        if (dto.getSummary() != null && !dto.getSummary().isBlank()) {
+            ai.put("summary", dto.getSummary());
+        }
+        if (dto.getDetailedComment() != null && !dto.getDetailedComment().isBlank()) {
+            ai.put("detailedComment", dto.getDetailedComment());
+        }
+        return ai.isEmpty() ? null : ai;
+    }
+
+    private static Map<String, Object> pubgEvaluationToAiMap(PubgMatchAiEvaluation e) {
+        String summary = e.getSummary();
+        String detailed = e.getDetailedComment();
+        boolean hasText = (summary != null && !summary.isBlank())
+                || (detailed != null && !detailed.isBlank());
+        if (!hasText && e.getGrade() == null && e.getScore() == null) {
+            return null;
+        }
+        Map<String, Object> ai = new LinkedHashMap<>();
+        if (e.getStatus() != null) {
+            ai.put("status", e.getStatus().name());
+        }
+        if (e.getGrade() != null) {
+            ai.put("grade", e.getGrade().name());
+        }
+        if (e.getScore() != null) {
+            ai.put("score", e.getScore());
+        }
+        if (summary != null && !summary.isBlank()) {
+            ai.put("summary", summary);
+        }
+        if (detailed != null && !detailed.isBlank()) {
+            ai.put("detailedComment", detailed);
+        }
+        return ai;
+    }
+
+    private MatchDetailResponse loadLol(String matchId, String region, String puuid, String llmModel) {
         Map<String, Object> raw = lolApiService.fetchMatchV5RawForRecords(matchId, region);
         if (raw == null || raw.isEmpty()) {
             return MatchDetailResponse.error("lol", matchId, "매치를 불러올 수 없습니다.");
         }
         lolApiService.persistMatchV5FromSearchMap(raw);
+        if (puuid != null && !puuid.isBlank()) {
+            loadLolSavedAiEvaluationOnly(matchId, puuid, llmModel)
+                    .ifPresent(ai -> raw.put("records_ai_evaluation", ai));
+        }
         return MatchDetailResponse.builder()
                 .success(true)
                 .game("lol")
