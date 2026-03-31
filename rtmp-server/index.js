@@ -73,26 +73,61 @@ function isOnPath(candidate) {
   }
 }
 
-function resolveFfmpegPath() {
-  const props = loadBackendStreamingProperties();
-  const candidates = [
-    process.env.FFMPEG_PATH,
-    props['app.streaming.ffmpeg-path'],
-    DEFAULT_FFMPEG_PATH,
-  ]
-    .map(normalizeFsPath)
-    .filter(Boolean);
-
-  for (const candidate of candidates) {
-    if (path.isAbsolute(candidate) && fs.existsSync(candidate)) {
-      return candidate;
-    }
-    if (isOnPath(candidate)) {
+function tryResolveFullExecutable(candidate) {
+  if (path.isAbsolute(candidate) && fs.existsSync(candidate)) {
+    try {
+      return fs.realpathSync(candidate);
+    } catch (_e) {
       return candidate;
     }
   }
+  if (process.platform === 'win32') {
+    try {
+      const out = execSync(`where.exe ${JSON.stringify(candidate)}`, {
+        encoding: 'utf8',
+        stdio: 'pipe',
+        timeout: 3000,
+      });
+      const first = out.trim().split(/\r?\n/)[0];
+      if (first && fs.existsSync(first)) return first.trim();
+    } catch (_e) {
+      /* ignore */
+    }
+  } else {
+    try {
+      const out = execFileSync('/bin/sh', ['-c', `command -v -- ${JSON.stringify(candidate)}`], {
+        encoding: 'utf8',
+        stdio: 'pipe',
+        timeout: 3000,
+      });
+      const p = out.trim();
+      if (p && fs.existsSync(p)) return p;
+    } catch (_e) {
+      /* ignore */
+    }
+  }
+  return candidate;
+}
 
-  return candidates[0] || DEFAULT_FFMPEG_PATH;
+function resolveFfmpegPath() {
+  const props = loadBackendStreamingProperties();
+  const raw = [process.env.FFMPEG_PATH, props['app.streaming.ffmpeg-path'], DEFAULT_FFMPEG_PATH]
+    .map(normalizeFsPath)
+    .filter(Boolean);
+  // 이 OS에 없는 절대 경로(예: Linux용 /usr/bin/ffmpeg 를 Windows에서 읽은 경우)는 제외
+  const candidates = raw.filter((c) => !path.isAbsolute(c) || fs.existsSync(c));
+
+  for (const candidate of candidates) {
+    if (path.isAbsolute(candidate) && fs.existsSync(candidate)) {
+      return tryResolveFullExecutable(candidate);
+    }
+    if (isOnPath(candidate)) {
+      return tryResolveFullExecutable(candidate);
+    }
+  }
+
+  // 잘못된 properties 값을 넘기지 않음 (기존: candidates[0] 때문에 없는 /usr/bin/ffmpeg 가 선택됨)
+  return DEFAULT_FFMPEG_PATH;
 }
 
 const ffmpegPath = resolveFfmpegPath();
