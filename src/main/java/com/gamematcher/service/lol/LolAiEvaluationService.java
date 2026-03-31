@@ -195,8 +195,10 @@ public class LolAiEvaluationService {
                 ? ruleBasedScoreService.calculateScore(GAME_CODE, playerStats.getMatchStats()).orElse(100)
                 : 100;
 
+        String defaultModel = defaultLlmModel != null ? defaultLlmModel.trim() : "";
+        String llmModelParam = modelKey.equals(defaultModel) ? null : modelKey;
         Optional<LlmEvaluationResponseDTO> llmResult =
-                lolLlmEvaluationService.evaluate(playerStats, -1, modelKey);
+                lolLlmEvaluationService.evaluate(playerStats, -1, llmModelParam);
         String summary = llmResult.map(LlmEvaluationResponseDTO::getSummary).orElse(null);
         String detailedComment = llmResult.map(LlmEvaluationResponseDTO::getDetailedComment).orElse(null);
 

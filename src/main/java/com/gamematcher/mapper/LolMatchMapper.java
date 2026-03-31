@@ -144,6 +144,33 @@ public class LolMatchMapper {
     }
 
     /**
+     * DB에 JSON(info)으로 저장된 타임라인 → {@link LolMatchTimelineDetailDto}
+     */
+    public LolMatchTimelineDetailDto toTimelineDetailDto(LolMatchTimeline timeline) {
+        if (timeline == null || timeline.getTimelineInfo() == null || timeline.getTimelineInfo().isBlank()) {
+            return null;
+        }
+        try {
+            LolMatchTimelineDetailDto dto = new LolMatchTimelineDetailDto();
+            LolMatchTimelineDetailDto.Info info = objectMapper.readValue(
+                    timeline.getTimelineInfo(),
+                    LolMatchTimelineDetailDto.Info.class);
+            dto.setInfo(info);
+            if (info != null) {
+                if (info.getEndOfGameResult() == null && timeline.getEndOfGameResult() != null) {
+                    info.setEndOfGameResult(timeline.getEndOfGameResult());
+                }
+                if (info.getFrameInterval() == null && timeline.getFrameInterval() != null) {
+                    info.setFrameInterval(timeline.getFrameInterval());
+                }
+            }
+            return dto;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    /**
      * LolMatch 엔티티 → DTO (DB → API 응답용)
      */
     public LolMatchDetailDto toMatchDto(LolMatch match) {
