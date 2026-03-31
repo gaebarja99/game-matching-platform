@@ -1,0 +1,10 @@
+# Copy to application-portone-local.properties and fill in real values.
+
+payment.portone.api-key=
+payment.portone.api-secret=
+payment.portone.store-id=
+payment.portone.customer-code=
+payment.portone.channel-key=
+payment.portone.sign-key=
+payment.portone.pg=html5_inicis
+payment.portone.pay-method=card

@@ -1,0 +1,14 @@
+# Copy to application-sms-local.properties and fill in real values.
+
+app.sms.enabled=true
+app.sms.provider=solapi
+app.sms.solapi-base-url=https://api.solapi.com
+app.sms.access-key=
+app.sms.secret-key=
+app.sms.from-number=
+app.sms.country-code=82
+
+# If you use Naver SENS instead, switch provider and fill these too.
+# app.sms.provider=naver-sens
+# app.sms.base-url=https://sens.apigw.ntruss.com
+# app.sms.service-id=
