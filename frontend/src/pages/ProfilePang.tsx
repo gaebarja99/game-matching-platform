@@ -12,6 +12,7 @@ interface ChargeRow {
   impUid?: string;
   refundable?: boolean;
   refunded?: boolean;
+  detail?: string;
 }
 
 interface UsageRow {
@@ -286,7 +287,7 @@ export default function ProfilePang() {
                     <th>일시</th>
                     <th>충전량</th>
                     <th>결제 금액</th>
-                    <th>환불</th>
+                    <th>상세</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -295,14 +296,18 @@ export default function ProfilePang() {
                     const won = r.priceWon != null ? r.priceWon : Math.round(pang * PRICE_PER_PANG * 10) / 10;
                     const refunded = r.refunded === true;
                     const refundable = !refunded && isRefundableRow(r);
+                    const detailText = r.detail?.trim() || '--';
+                    const isEventGrant = detailText === '이벤트';
                     const isRefunding = refundingRowId != null && r.id != null && refundingRowId === r.id;
                     return (
                       <tr key={r.id ?? `${r.createdAt}-${pang}`}>
                         <td className="col-date">{formatDate(r.createdAt)}</td>
                         <td className="col-amount">{pang > 0 ? '+' : ''}{pang.toLocaleString()} 팡</td>
-                        <td>{won !== 0 ? `${won.toLocaleString()}원` : '--'}</td>
+                        <td>{!isEventGrant && won !== 0 ? `${won.toLocaleString()}원` : '--'}</td>
                         <td>
-                          {refunded ? (
+                          {isEventGrant ? (
+                            '이벤트'
+                          ) : refunded ? (
                             <button type="button" className="pang-refund-btn done" disabled>
                               환불완료
                             </button>
@@ -316,7 +321,7 @@ export default function ProfilePang() {
                               {isRefunding ? '처리중' : '환불'}
                             </button>
                           ) : (
-                            '--'
+                            detailText
                           )}
                         </td>
                       </tr>

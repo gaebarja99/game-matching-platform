@@ -191,7 +191,7 @@ export default function Community() {
                   <li key={post.id}>
                     <Link to={`/community/posts/${post.id}`}>{post.title}</Link>
                     <span className="community-popular-sub">
-                      {BOARD_LABELS[post.boardCategory]} · ♥ {post.likeCount}
+                      {BOARD_LABELS[post.boardCategory]} · 추천 {post.recommendCount}
                     </span>
                   </li>
                 ))}

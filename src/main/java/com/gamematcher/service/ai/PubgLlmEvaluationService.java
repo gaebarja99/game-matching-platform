@@ -28,21 +28,9 @@ public class PubgLlmEvaluationService {
     }
 
     public Optional<LlmEvaluationResponseDTO> evaluate(PubgPlayerMatchStatsDTO stats, int maxTimelineLines) {
-        return evaluate(stats, maxTimelineLines, null);
-    }
-
-    /**
-     * @param modelOverride 비어 있지 않으면 해당 OpenAI 모델 ID로 호출
-     */
-    public Optional<LlmEvaluationResponseDTO> evaluate(
-            PubgPlayerMatchStatsDTO stats,
-            int maxTimelineLines,
-            String modelOverride) {
-        if (stats == null) {
-            return Optional.empty();
-        }
+        if (stats == null) return Optional.empty();
         String prompt = promptBuilder.build(stats, maxTimelineLines);
-        return llmService.evaluate(prompt, modelOverride);
+        return llmService.evaluate(prompt);
     }
 }
 

@@ -2,26 +2,19 @@ package com.gamematcher.service.account;
 
 import com.gamematcher.dto.account.AccountConnectionStatusDto;
 import com.gamematcher.dto.account.AccountConnectionsResponseDto;
-import com.gamematcher.dto.account.AccountLinkRefreshResponseDto;
 import com.gamematcher.dto.account.OAuthStartResponseDto;
-import com.gamematcher.dto.profile.ProfilePublicResponseDto;
-import com.gamematcher.dto.riot.RiotLeagueEntryResponseDto;
-import com.gamematcher.dto.valorant.ValorantMmrApiResponse;
+import com.gamematcher.entity.User;
 import com.gamematcher.entity.account.BlizzardAccount;
 import com.gamematcher.entity.account.DiscordAccount;
 import com.gamematcher.entity.account.RiotAccount;
 import com.gamematcher.entity.account.SteamAccount;
-import com.gamematcher.entity.profile.UserProfile;
 import com.gamematcher.exception.GameApiException;
 import com.gamematcher.repository.account.BlizzardAccountRepository;
 import com.gamematcher.repository.account.DiscordAccountRepository;
 import com.gamematcher.repository.account.RiotAccountRepository;
 import com.gamematcher.repository.account.SteamAccountRepository;
-import com.gamematcher.repository.profile.UserProfileRepository;
-import com.gamematcher.service.riot.LolApiService;
-import com.gamematcher.service.valorant.ValorantApiService;
+import com.gamematcher.service.auth.CurrentUserService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
@@ -36,15 +29,12 @@ import java.util.ArrayList;
 import java.util.Base64;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.function.Function;
-import java.util.stream.Collectors;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class AccountConnectionService {
 
+    private final CurrentUserService currentUserService;
     private final DiscordAccountRepository discordAccountRepository;
     private final SteamAccountRepository steamAccountRepository;
     private final BlizzardAccountRepository blizzardAccountRepository;
@@ -54,10 +44,6 @@ public class AccountConnectionService {
     private final BlizzardAccountService blizzardAccountService;
     private final OAuthLinkStateService oAuthLinkStateService;
     private final RestTemplate restTemplate;
-    private final LolApiService riotLolApiService;
-    private final ValorantApiService valorantApiService;
-    private final UserProfileRepository userProfileRepository;
-    private final RiotAccountService riotAccountService;
 
     @Value("${app.frontend.base-url:http://localhost:5173}")
     private String frontendBaseUrl;
@@ -80,168 +66,41 @@ public class AccountConnectionService {
     @Value("${steam.api.key:}")
     private String steamApiKey;
 
-    public AccountConnectionsResponseDto getConnections(Long userId) {
-        UserProfile profile = userProfileRepository.findById(userId).orElse(null);
-        return new AccountConnectionsResponseDto(userId, buildAllWithVisibility(userId, profile));
+    public AccountConnectionsResponseDto getConnections(String authToken) {
+        User user = currentUserService.requireUser(authToken);
+        return getConnectionsForUser(user.getId());
     }
 
-    /**
-     * 프로필 응답에 연동 목록을 붙인다. 타인 조회 시 비공개·보조 식별자·안내 문구는 제외한다.
-     */
-    @Transactional(readOnly = true)
-    public void fillConnections(ProfilePublicResponseDto dto, Long userId, boolean ownerView) {
-        UserProfile profile = userProfileRepository.findById(userId).orElse(null);
-        List<AccountConnectionStatusDto> all = buildAllWithVisibility(userId, profile);
-        if (ownerView) {
-            dto.setConnections(all.stream()
-                    .filter(AccountConnectionStatusDto::isConnected)
-                    .collect(Collectors.toList()));
-        } else {
-            dto.setConnections(all.stream()
-                    .filter(c -> c.isConnected() && c.isPublicProfileVisible())
-                    .map(this::sanitizeConnectionForPublic)
-                    .collect(Collectors.toList()));
-        }
-    }
-
-    private List<AccountConnectionStatusDto> buildAllWithVisibility(Long userId, UserProfile profile) {
+    public AccountConnectionsResponseDto getConnectionsForUser(Long userId) {
         List<AccountConnectionStatusDto> connections = new ArrayList<>();
-        connections.add(withLinkVisibility(buildDiscordStatus(userId), profile, UserProfile::getPublicDiscordLinkVisible));
-        connections.add(withLinkVisibility(buildSteamStatus(userId), profile, UserProfile::getPublicSteamLinkVisible));
-        connections.add(withLinkVisibility(buildBlizzardStatus(userId), profile, UserProfile::getPublicBlizzardLinkVisible));
-        connections.add(withRiotLinkVisibility(buildRiotStatus(userId), profile));
-        return connections;
-    }
-
-    private static AccountConnectionStatusDto withRiotLinkVisibility(AccountConnectionStatusDto base, UserProfile profile) {
-        boolean linkVis = profile == null || profile.getPublicRiotLinkVisible() == null || profile.getPublicRiotLinkVisible();
-        boolean lolVis = profile == null || profile.getPublicRiotLolRankVisible() == null || profile.getPublicRiotLolRankVisible();
-        boolean valVis =
-                profile == null || profile.getPublicRiotValorantRankVisible() == null || profile.getPublicRiotValorantRankVisible();
-        return base.toBuilder()
-                .publicProfileVisible(linkVis)
-                .publicLolRankVisible(lolVis)
-                .publicValorantRankVisible(valVis)
-                .build();
-    }
-
-    private static AccountConnectionStatusDto withLinkVisibility(
-            AccountConnectionStatusDto base,
-            UserProfile profile,
-            Function<UserProfile, Boolean> visibilityFlag) {
-        boolean vis = true;
-        if (profile != null) {
-            Boolean v = visibilityFlag.apply(profile);
-            vis = v == null || v;
-        }
-        return base.toBuilder().publicProfileVisible(vis).build();
-    }
-
-    private AccountConnectionStatusDto sanitizeConnectionForPublic(AccountConnectionStatusDto c) {
-        AccountConnectionStatusDto.AccountConnectionStatusDtoBuilder b = c.toBuilder()
-                .secondaryValue(null)
-                .note(null)
-                .connectUrl(null);
-        if ("riot".equalsIgnoreCase(c.getProvider())) {
-            if (!c.isPublicLolRankVisible()) {
-                b.lolRankSummary(null);
-            }
-            if (!c.isPublicValorantRankVisible()) {
-                b.valorantRankSummary(null);
-            }
-        }
-        return b.build();
-    }
-
-    /**
-     * 연동된 외부 계정 표시 정보·(가능한 경우) 게임 캐시를 최신으로 맞춘다.
-     */
-    @Transactional
-    public AccountLinkRefreshResponseDto refreshLinkedProfile(Long userId, String provider) {
-        return switch (provider.toLowerCase()) {
-            case "riot" -> refreshRiotLinked(userId);
-            case "steam" -> refreshSteamLinked(userId);
-            case "discord" -> new AccountLinkRefreshResponseDto(false,
-                    "Discord 닉네임·아바타는 OAuth 연동 시점 기준으로 저장됩니다. 변경 후에는 「연동 해제」 후 다시 연결해 주세요.");
-            case "blizzard" -> new AccountLinkRefreshResponseDto(false,
-                    "Battle.net 표시명은 OAuth 연동 시점 기준입니다. 최신 정보가 필요하면 연동 해제 후 다시 연결해 주세요.");
-            default -> throw new GameApiException(HttpStatus.BAD_REQUEST, "지원하지 않는 연동 제공자입니다: " + provider);
-        };
-    }
-
-    private AccountLinkRefreshResponseDto refreshRiotLinked(Long userId) {
-        riotAccountService.refreshLinkedData(userId);
-        return new AccountLinkRefreshResponseDto(true, "Riot 닉네임·LoL·발로란트 연동 데이터를 최신으로 불러왔습니다.");
-    }
-
-    private AccountLinkRefreshResponseDto refreshSteamLinked(Long userId) {
-        SteamAccount acc = steamAccountRepository.findFirstByUserId(userId)
-                .orElseThrow(() -> new GameApiException(HttpStatus.NOT_FOUND, "연동된 Steam 계정이 없습니다."));
-        if (steamApiKey == null || steamApiKey.isBlank()) {
-            throw new GameApiException(HttpStatus.BAD_REQUEST,
-                    "Steam Web API 키(steam.api.key)가 설정되어 있지 않아 프로필을 갱신할 수 없습니다.");
-        }
-        String steamId = acc.getSteamId();
-        String personaName = steamId;
-        String avatar = null;
-        Map<?, ?> summaries = restTemplate.getForObject(
-                "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v2/?key="
-                        + enc(steamApiKey) + "&steamids=" + enc(steamId),
-                Map.class
-        );
-        Object responseObj = summaries == null ? null : summaries.get("response");
-        if (responseObj instanceof Map<?, ?> responseMap) {
-            Object playersObj = responseMap.get("players");
-            if (playersObj instanceof List<?> players && !players.isEmpty() && players.get(0) instanceof Map<?, ?> player) {
-                String pn = stringValue(player.get("personaname"));
-                if (pn != null && !pn.isBlank()) {
-                    personaName = pn;
-                }
-                avatar = stringValue(player.get("avatarfull"));
-            }
-        }
-        boolean changed =
-                !Objects.equals(acc.getPersonaName(), personaName) || !Objects.equals(acc.getAvatar(), avatar);
-        acc.setPersonaName(personaName);
-        acc.setAvatar(avatar);
-        steamAccountRepository.save(acc);
-        return new AccountLinkRefreshResponseDto(changed,
-                changed ? "Steam 닉네임·아바타를 최신으로 반영했습니다." : "이미 최신 Steam 프로필입니다.");
-    }
-
-    public AccountConnectionsResponseDto getConnectionsForUser(String authToken, Long targetUserId) {
-        // 로그인 상태만 확인하고, 조회 대상은 targetUserId로 한다.
-        currentUserService.requireUser(authToken);
-        if (targetUserId == null) {
-            throw new GameApiException(HttpStatus.BAD_REQUEST, "userId가 필요합니다.");
-        }
-        List<AccountConnectionStatusDto> connections = new ArrayList<>();
-        connections.add(buildDiscordStatus(targetUserId));
-        connections.add(buildSteamStatus(targetUserId));
-        connections.add(buildBlizzardStatus(targetUserId));
-        connections.add(buildRiotStatus(targetUserId));
-        return new AccountConnectionsResponseDto(targetUserId, connections);
+        connections.add(buildDiscordStatus(userId));
+        connections.add(buildSteamStatus(userId));
+        connections.add(buildBlizzardStatus(userId));
+        connections.add(buildRiotStatus(userId));
+        return new AccountConnectionsResponseDto(userId, connections);
     }
 
     @Transactional
-    public void unlink(Long userId, String provider) {
+    public void unlink(String authToken, String provider) {
+        User user = currentUserService.requireUser(authToken);
         switch (provider.toLowerCase()) {
-            case "discord" -> discordAccountRepository.findFirstByUserId(userId)
+            case "discord" -> discordAccountRepository.findFirstByUserId(user.getId())
                     .ifPresent(discordAccountRepository::delete);
-            case "steam" -> steamAccountRepository.findFirstByUserId(userId)
+            case "steam" -> steamAccountRepository.findFirstByUserId(user.getId())
                     .ifPresent(steamAccountRepository::delete);
-            case "blizzard" -> blizzardAccountRepository.findFirstByUserId(userId)
+            case "blizzard" -> blizzardAccountRepository.findFirstByUserId(user.getId())
                     .ifPresent(blizzardAccountRepository::delete);
-            case "riot" -> riotAccountRepository.findFirstByUserId(userId)
+            case "riot" -> riotAccountRepository.findFirstByUserId(user.getId())
                     .ifPresent(riotAccountRepository::delete);
             default -> throw new GameApiException(HttpStatus.BAD_REQUEST, "지원하지 않는 연동 제공자입니다: " + provider);
         }
     }
 
-    public OAuthStartResponseDto startDiscord(Long userId) {
+    public OAuthStartResponseDto startDiscord(String authToken) {
+        User user = currentUserService.requireUser(authToken);
         requireConfigured(discordClientId, "Discord OAuth Client ID");
         requireConfigured(discordClientSecret, "Discord OAuth Client Secret");
-        String state = oAuthLinkStateService.createState(userId, "discord");
+        String state = oAuthLinkStateService.createState(user.getId(), "discord");
         String callback = backendBaseUrl + "/api/account-links/oauth/discord/callback";
         String url = "https://discord.com/oauth2/authorize"
                 + "?response_type=code"
@@ -252,10 +111,11 @@ public class AccountConnectionService {
         return new OAuthStartResponseDto("discord", url);
     }
 
-    public OAuthStartResponseDto startBlizzard(Long userId) {
+    public OAuthStartResponseDto startBlizzard(String authToken) {
+        User user = currentUserService.requireUser(authToken);
         requireConfigured(blizzardClientId, "Blizzard OAuth Client ID");
         requireConfigured(blizzardClientSecret, "Blizzard OAuth Client Secret");
-        String state = oAuthLinkStateService.createState(userId, "blizzard");
+        String state = oAuthLinkStateService.createState(user.getId(), "blizzard");
         String callback = backendBaseUrl + "/api/account-links/oauth/blizzard/callback";
         String url = "https://oauth.battle.net/authorize"
                 + "?response_type=code"
@@ -266,8 +126,9 @@ public class AccountConnectionService {
         return new OAuthStartResponseDto("blizzard", url);
     }
 
-    public OAuthStartResponseDto startSteam(Long userId) {
-        String state = oAuthLinkStateService.createState(userId, "steam");
+    public OAuthStartResponseDto startSteam(String authToken) {
+        User user = currentUserService.requireUser(authToken);
+        String state = oAuthLinkStateService.createState(user.getId(), "steam");
         String callback = backendBaseUrl + "/api/account-links/oauth/steam/callback";
         String realm = backendBaseUrl;
         String url = "https://steamcommunity.com/openid/login"
@@ -480,24 +341,6 @@ public class AccountConnectionService {
             note = "인증 확인됨";
         }
 
-        String lolRankSummary = null;
-        String valorantRankSummary = null;
-        if (account != null) {
-            try {
-                List<RiotLeagueEntryResponseDto> entries = riotLolApiService.findLeagueEntriesByPuuidOrEmpty(account.getPuuid());
-                lolRankSummary = formatLolRankSummary(entries);
-            } catch (Exception e) {
-                log.debug("LoL 랭크 요약 생략: {}", e.getMessage());
-            }
-            try {
-                ValorantMmrApiResponse mmr = valorantApiService.fetchMmrForRiotLinkedProfile(
-                        account.getGameName(), account.getTagLine());
-                valorantRankSummary = formatValorantRankSummary(mmr);
-            } catch (Exception e) {
-                log.debug("발로란트 티어 요약 생략: {}", e.getMessage());
-            }
-        }
-
         return AccountConnectionStatusDto.builder()
                 .provider("riot")
                 .connected(account != null)
@@ -505,66 +348,7 @@ public class AccountConnectionService {
                 .secondaryValue(account == null ? null : account.getPuuid())
                 .ownershipVerified(account != null && account.isOwnershipVerified())
                 .note(note)
-                .lolRankSummary(lolRankSummary)
-                .valorantRankSummary(valorantRankSummary)
                 .build();
-    }
-
-    private static String formatLolRankSummary(List<RiotLeagueEntryResponseDto> entries) {
-        if (entries == null || entries.isEmpty()) {
-            return "LoL: 솔로/자유 랭크 없음 (미배치)";
-        }
-        StringBuilder sb = new StringBuilder();
-        for (RiotLeagueEntryResponseDto e : entries) {
-            if ("RANKED_SOLO_5x5".equals(e.getQueueType())) {
-                if (sb.length() > 0) {
-                    sb.append(" · ");
-                }
-                sb.append("LoL 솔로: ").append(formatLolLeagueEntry(e));
-            } else if ("RANKED_FLEX_SR".equals(e.getQueueType())) {
-                if (sb.length() > 0) {
-                    sb.append(" · ");
-                }
-                sb.append("LoL 자유: ").append(formatLolLeagueEntry(e));
-            }
-        }
-        if (sb.length() == 0) {
-            return "LoL: 솔로/자유 랭크 없음 (미배치)";
-        }
-        return sb.toString();
-    }
-
-    private static String formatLolLeagueEntry(RiotLeagueEntryResponseDto e) {
-        String tier = e.getTier() != null ? e.getTier() : "UNRANKED";
-        String div = e.getRank() != null && !e.getRank().isBlank() ? " " + e.getRank() : "";
-        return tier + div + " (" + e.getLeaguePoints() + " LP)";
-    }
-
-    private static String formatValorantRankSummary(ValorantMmrApiResponse mmr) {
-        if (mmr == null || mmr.getData() == null) {
-            return null;
-        }
-        ValorantMmrApiResponse.MmrData data = mmr.getData();
-        ValorantMmrApiResponse.CurrentData cd = data.getCurrentData();
-        if (cd != null) {
-            String patched = cd.getCurrentTierPatched();
-            Integer need = cd.getGamesNeededForRating();
-            if (patched == null || patched.isBlank()) {
-                if (need != null && need > 0) {
-                    return "발로란트 경쟁: 배치전 (" + need + "경기 남음)";
-                }
-            } else {
-                if (need != null && need > 0) {
-                    return "발로란트 경쟁: " + patched + " (등록 " + need + "경기 남음)";
-                }
-                return "발로란트 경쟁: " + patched;
-            }
-        }
-        ValorantMmrApiResponse.HighestRank hr = data.getHighestRank();
-        if (hr != null && hr.getPatchedTier() != null && !hr.getPatchedTier().isBlank()) {
-            return "발로란트 경쟁: 시즌 최고 " + hr.getPatchedTier();
-        }
-        return "발로란트 경쟁: 경쟁 전적 없음·언랭";
     }
 
     private void requireConfigured(String value, String label) {

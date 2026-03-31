@@ -23,4 +23,7 @@ public class StreamingProperties {
 
     /** HLS 파일이 기록되는 로컬 경로 (nginx-rtmp hls_path 상위). 비어 있으면 /hls 미서빙 */
     private String hlsFilePath = "";
+
+    /** FFmpeg 실행 파일 경로 */
+    private String ffmpegPath = "";
 }

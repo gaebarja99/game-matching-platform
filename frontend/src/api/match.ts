@@ -137,11 +137,11 @@ export async function getMatchChatMessages(sessionId: number, limit = 50): Promi
   return data.list ?? [];
 }
 
-export async function sendMatchChatMessage(sessionId: number, text: string): Promise<boolean> {
-  const { ok } = await apiFetch(`/api/match/sessions/${sessionId}/messages`, {
+export async function sendMatchChatMessage(sessionId: number, text: string): Promise<{ ok: boolean; message?: string }> {
+  const { ok, message } = await apiFetch(`/api/match/sessions/${sessionId}/messages`, {
     method: 'POST',
     body: JSON.stringify({ text }),
     headers: { 'Content-Type': 'application/json' },
   });
-  return ok;
+  return { ok, message };
 }

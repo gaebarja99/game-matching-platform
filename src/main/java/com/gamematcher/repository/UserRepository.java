@@ -13,6 +13,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
 
     Optional<User> findByLoginId(String loginId);
 
+    Optional<User> findByNickname(String nickname);
+
     @Query("SELECT u FROM User u WHERE u.id != :excludeId AND (LOWER(u.loginId) LIKE LOWER(CONCAT('%', :q, '%')) OR LOWER(COALESCE(u.nickname, '')) LIKE LOWER(CONCAT('%', :q, '%')))")
     List<User> searchByLoginIdOrNickname(@Param("q") String q, @Param("excludeId") Long excludeId);
 

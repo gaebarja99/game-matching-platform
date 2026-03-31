@@ -4,11 +4,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamematcher.dto.search.PlayerSearchRequest;
 import com.gamematcher.dto.search.PlayerSearchResponse;
 import com.gamematcher.service.search.Cs2SearchService;
-import com.gamematcher.service.lol.LolApiService;
+import com.gamematcher.service.search.LolSearchService;
 import com.gamematcher.service.search.OverwatchSearchService;
 import com.gamematcher.service.search.PubgSearchService;
 import com.gamematcher.service.search.TftSearchService;
-import com.gamematcher.service.valorant.ValorantApiService;
+import com.gamematcher.service.search.ValorantSearchService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -29,9 +29,9 @@ import static org.mockito.Mockito.when;
 @MockitoSettings(strictness = Strictness.LENIENT)
 class PlayerSearchServiceTest {
 
-    @Mock LolApiService lolApiService;
+    @Mock LolSearchService lolSearchService;
     @Mock TftSearchService tftSearchService;
-    @Mock ValorantApiService valorantApiService;
+    @Mock ValorantSearchService valorantSearchService;
     @Mock ObjectMapper objectMapper;
     @Mock PubgSearchService pubgSearchService;
     @Mock OverwatchSearchService overwatchSearchService;
@@ -50,9 +50,9 @@ class PlayerSearchServiceTest {
 
     @BeforeEach
     void setUp() {
-        when(lolApiService.search(any())).thenReturn(mockSuccessResponse("lol"));
+        when(lolSearchService.search(any())).thenReturn(mockSuccessResponse("lol"));
         when(tftSearchService.search(any())).thenReturn(mockSuccessResponse("tft"));
-        when(valorantApiService.search(any())).thenReturn(mockSuccessResponse("valorant"));
+        when(valorantSearchService.search(any())).thenReturn(mockSuccessResponse("valorant"));
         when(pubgSearchService.search(any())).thenReturn(mockSuccessResponse("pubg"));
         when(overwatchSearchService.search(any())).thenReturn(mockSuccessResponse("overwatch"));
         when(cs2SearchService.search(any())).thenReturn(mockSuccessResponse("cs2"));
@@ -71,7 +71,7 @@ class PlayerSearchServiceTest {
 
             PlayerSearchResponse response = playerSearchService.searchPlayer(req);
 
-            verify(lolApiService).search(any());
+            verify(lolSearchService).search(any());
             assertThat(response.isSuccess()).isTrue();
             assertThat(response.getGame()).isEqualTo("lol");
         }
@@ -98,7 +98,7 @@ class PlayerSearchServiceTest {
 
             PlayerSearchResponse response = playerSearchService.searchPlayer(req);
 
-            verify(valorantApiService).search(any());
+            verify(valorantSearchService).search(any());
             assertThat(response.getGame()).isEqualTo("valorant");
         }
 

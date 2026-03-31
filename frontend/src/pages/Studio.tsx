@@ -73,53 +73,6 @@ export default function Studio() {
             </div>
           </div>
         </div>
-
-        <div className="dashboard-card">
-          <h3>동영상 업로드하기</h3>
-          <p className="step-desc" style={{ marginBottom: 16 }}>
-            내 동영상을 간편하게 업로드해보세요. 게시된 동영상이 얼마나 인기 있는지 분석해드립니다.
-          </p>
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={() => alert('동영상 업로드 기능은 준비 중입니다.')}
-          >
-            동영상 업로드
-          </button>
-        </div>
-
-        <div className="dashboard-card">
-          <h3>채팅 설정</h3>
-          <p className="step-desc" style={{ marginBottom: 12 }}>
-            내 방송 스타일에 맞게 채팅 기능을 설정할 수 있습니다.
-          </p>
-          <p className="step-desc" style={{ fontSize: '0.85rem', marginBottom: 16 }}>
-            설정 가능 항목: 채팅 규칙, 금칙어 설정
-          </p>
-          <div className="btn-group">
-            <Link to="/studio/chat" className="btn-secondary">
-              채팅 설정
-            </Link>
-            <Link to="/studio/chat" className="btn-secondary">
-              금칙어 설정
-            </Link>
-          </div>
-        </div>
-
-        <div className="dashboard-card" style={{ gridColumn: '1 / -1' }}>
-          <h3>공지사항</h3>
-          <ul className="notice-list">
-            <li>
-              GameMatcher 스튜디오 이용 안내 <span className="notice-date">2025.03</span>
-            </li>
-            <li>
-              방송 시작하기 가이드 <span className="notice-date">2025.03</span>
-            </li>
-            <li>
-              OBS 연동 방법 <span className="notice-date">2025.03</span>
-            </li>
-          </ul>
-        </div>
       </div>
     </StudioLayout>
   );

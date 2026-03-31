@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchAdminSettlements } from '../api/admin';
@@ -132,19 +132,17 @@ export default function AdminSettlements() {
           <colgroup>
             <col style={{ width: '9%' }} />
             <col style={{ width: '15%' }} />
-            <col style={{ width: '13%' }} />
-            <col style={{ width: '12%' }} />
-            <col style={{ width: '14%' }} />
-            <col style={{ width: '15%' }} />
-            <col style={{ width: '22%' }} />
+            <col style={{ width: '16%' }} />
+            <col style={{ width: '16%' }} />
+            <col style={{ width: '18%' }} />
+            <col style={{ width: '26%' }} />
           </colgroup>
           <thead>
             <tr>
               <th>정산번호</th>
               <th>회원</th>
-              <th>신청 팡</th>
+              <th>신청금액</th>
               <th>수수료</th>
-              <th>실정산 팡</th>
               <th>정산금액</th>
               <th>신청일</th>
             </tr>
@@ -152,11 +150,11 @@ export default function AdminSettlements() {
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={7} className="empty-msg">불러오는 중입니다.</td>
+                <td colSpan={6} className="empty-msg">불러오는 중입니다.</td>
               </tr>
             ) : visibleRows.length === 0 ? (
               <tr>
-                <td colSpan={7} className="empty-msg">조건에 맞는 정산 신청이 없습니다.</td>
+                <td colSpan={6} className="empty-msg">조건에 맞는 정산 신청이 없습니다.</td>
               </tr>
             ) : (
               visibleRows.map((settlement) => (
@@ -166,12 +164,11 @@ export default function AdminSettlements() {
                     <div>{settlement.displayName || '-'}</div>
                     <div className="admin-subtext">{settlement.loginId || '-'}</div>
                   </td>
-                  <td>{formatNumber(settlement.pangAmount, ' 팡')}</td>
+                  <td>{formatNumber(settlement.pangAmount, '원')}</td>
                   <td>
-                    <div>{formatNumber(settlement.commissionPang, ' 팡')}</div>
+                    <div>{formatNumber(settlement.commissionPang, '원')}</div>
                     <div className="admin-subtext">수수료율 {settlement.commissionPercent ?? 0}%</div>
                   </td>
-                  <td>{formatNumber(settlement.netPang ?? settlement.amountWon, ' 팡')}</td>
                   <td>{formatNumber(settlement.amountWon, '원')}</td>
                   <td>{formatDate(settlement.createdAt)}</td>
                 </tr>

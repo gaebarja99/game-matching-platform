@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
-import { useAuth } from '../contexts/AuthContext';
 import { fetchAdminCommunityPosts, updateAdminCommunityPost } from '../api/admin';
 import type { AdminCommunityPostRow } from '../api/admin';
+import { useAuth } from '../contexts/AuthContext';
 
 function formatDate(value?: string) {
   if (!value) return '-';
@@ -64,7 +64,11 @@ export default function AdminCommunity() {
   const load = async () => {
     setLoading(true);
     const response = await fetchAdminCommunityPosts({ query, category, status, page, size: 12 });
-    setResult(response.ok && response.data ? response.data : { content: [], totalPages: 0, first: true, last: true });
+    setResult(
+      response.ok && response.data
+        ? response.data
+        : { content: [], totalPages: 0, first: true, last: true },
+    );
     setLoading(false);
   };
 
@@ -109,7 +113,11 @@ export default function AdminCommunity() {
             onChange={(event) => setQueryInput(event.target.value)}
             placeholder="제목, 작성자 아이디, 닉네임 검색"
           />
-          <select className="admin-filter-select" value={category} onChange={(event) => setCategory(event.target.value)}>
+          <select
+            className="admin-filter-select"
+            value={category}
+            onChange={(event) => setCategory(event.target.value)}
+          >
             <option value="all">전체 카테고리</option>
             <option value="free">자유</option>
             <option value="notice">공지</option>
@@ -119,10 +127,15 @@ export default function AdminCommunity() {
             <option value="battleground">배그</option>
             <option value="overwatch">오버워치</option>
             <option value="cs2">CS2</option>
+            <option value="apex">에이펙스</option>
             <option value="blizzard">블리자드</option>
             <option value="steam">스팀</option>
           </select>
-          <select className="admin-filter-select" value={status} onChange={(event) => setStatus(event.target.value)}>
+          <select
+            className="admin-filter-select"
+            value={status}
+            onChange={(event) => setStatus(event.target.value)}
+          >
             <option value="all">전체 상태</option>
             <option value="active">활성</option>
             <option value="blind">블라인드</option>
@@ -172,23 +185,32 @@ export default function AdminCommunity() {
               <th>작성자</th>
               <th>카테고리</th>
               <th>상태</th>
-              <th>반응</th>
+              <th>추천수</th>
               <th>작성일</th>
               <th>액션</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="empty-msg">불러오는 중입니다.</td></tr>
+              <tr>
+                <td colSpan={7} className="empty-msg">
+                  불러오는 중입니다.
+                </td>
+              </tr>
             ) : !result || result.content.length === 0 ? (
-              <tr><td colSpan={7} className="empty-msg">조건에 맞는 게시글이 없습니다.</td></tr>
+              <tr>
+                <td colSpan={7} className="empty-msg">
+                  조건에 맞는 게시글이 없습니다.
+                </td>
+              </tr>
             ) : (
               result.content.map((post) => (
                 <tr key={post.id}>
                   <td>
                     <div>{post.title}</div>
                     <div className="admin-subtext">
-                      조회 {post.viewCount} · 좋아요 {post.likeCount} · 댓글 {post.commentCount} · 신고 {post.reportCount}
+                      조회 {post.viewCount} · 추천수 {post.likeCount} · 댓글 {post.commentCount} · 신고{' '}
+                      {post.reportCount}
                       {post.isNotice ? ' · 공지' : ''}
                     </div>
                   </td>
@@ -197,20 +219,48 @@ export default function AdminCommunity() {
                     <div className="admin-subtext">{shortenLoginId(post.authorLoginId || '-')}</div>
                   </td>
                   <td>{post.categoryLabel}</td>
-                  <td><span className={`admin-status-badge ${statusTone(post.status)}`}>{post.statusLabel}</span></td>
-                  <td>{post.likeCount + post.commentCount + post.reportCount}</td>
+                  <td>
+                    <span className={`admin-status-badge ${statusTone(post.status)}`}>
+                      {post.statusLabel}
+                    </span>
+                  </td>
+                  <td>{post.likeCount}</td>
                   <td>{formatDate(post.createdAt)}</td>
                   <td>
                     <div className="admin-inline-actions">
                       {post.status === 'ACTIVE' ? (
-                        <button type="button" className="admin-action-btn" onClick={() => void handleAction(post.id, 'blind')}>블라인드</button>
+                        <button
+                          type="button"
+                          className="admin-action-btn"
+                          onClick={() => void handleAction(post.id, 'blind')}
+                        >
+                          블라인드
+                        </button>
                       ) : canRestore(post.status) ? (
-                        <button type="button" className="admin-action-btn" onClick={() => void handleAction(post.id, 'restore')}>복구</button>
+                        <button
+                          type="button"
+                          className="admin-action-btn"
+                          onClick={() => void handleAction(post.id, 'restore')}
+                        >
+                          복구
+                        </button>
                       ) : null}
                       {post.status !== 'DELETED_BY_ADMIN' ? (
-                        <button type="button" className="admin-action-btn danger" onClick={() => void handleAction(post.id, 'delete')}>삭제</button>
+                        <button
+                          type="button"
+                          className="admin-action-btn danger"
+                          onClick={() => void handleAction(post.id, 'delete')}
+                        >
+                          삭제
+                        </button>
                       ) : (
-                        <button type="button" className="admin-action-btn danger" onClick={() => void handleAction(post.id, 'restore')}>복구</button>
+                        <button
+                          type="button"
+                          className="admin-action-btn danger"
+                          onClick={() => void handleAction(post.id, 'restore')}
+                        >
+                          복구
+                        </button>
                       )}
                     </div>
                   </td>
@@ -221,9 +271,26 @@ export default function AdminCommunity() {
         </table>
 
         <div className="admin-pagination">
-          <button type="button" className="admin-action-btn" disabled={result?.first ?? true} onClick={() => setPage((current) => Math.max(0, current - 1))}>이전</button>
-          <span>페이지 {page + 1}{result?.totalPages ? ` / ${Math.max(result.totalPages, 1)}` : ''}</span>
-          <button type="button" className="admin-action-btn" disabled={result?.last ?? true} onClick={() => setPage((current) => current + 1)}>다음</button>
+          <button
+            type="button"
+            className="admin-action-btn"
+            disabled={result?.first ?? true}
+            onClick={() => setPage((current) => Math.max(0, current - 1))}
+          >
+            이전
+          </button>
+          <span>
+            페이지 {page + 1}
+            {result?.totalPages ? ` / ${Math.max(result.totalPages, 1)}` : ''}
+          </span>
+          <button
+            type="button"
+            className="admin-action-btn"
+            disabled={result?.last ?? true}
+            onClick={() => setPage((current) => current + 1)}
+          >
+            다음
+          </button>
         </div>
       </section>
     </AdminLayout>

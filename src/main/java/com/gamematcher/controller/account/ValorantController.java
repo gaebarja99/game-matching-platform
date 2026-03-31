@@ -126,20 +126,6 @@ public class ValorantController {
     }
 
     /**
-     * 이미 DB에 저장된 AI 평가만 조회(LLM·매치 API 미호출).
-     * 전적 화면에서 모델만 바꿀 때 상세 전체를 다시 받지 않도록 사용한다.
-     */
-    @GetMapping("/evaluations/match/{matchId}/saved")
-    public ResponseEntity<ValorantAiEvaluationResponseDto> getSavedEvaluation(
-            @PathVariable String matchId,
-            @RequestParam String puuid,
-            @RequestParam(required = false) String model) {
-        return valorantAiEvaluationService.findSavedEvaluation(matchId, puuid, model)
-                .map(ResponseEntity::ok)
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    /**
      * 발로란트 매치 플레이어 단일 AI 평가 실행 및 저장
      * - valorantMatchPlayerId: valorant_match_player 테이블의 id
      */

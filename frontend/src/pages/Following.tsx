@@ -87,7 +87,7 @@ export default function Following() {
 
   if (!user) {
     return (
-      <StreamsLayout sidebarVariant="simple">
+      <StreamsLayout>
         <h1 className="page-title">팔로잉</h1>
         <div className="following-tabs">
           <button type="button" className="active">전체</button>
@@ -208,7 +208,7 @@ export default function Following() {
   };
 
   return (
-    <StreamsLayout sidebarVariant="simple">
+    <StreamsLayout>
       <h1 className="page-title">팔로잉</h1>
       <div className="following-tabs">
         <button type="button" className={tab === 'all' ? 'active' : ''} onClick={() => setTab('all')}>전체</button>

@@ -4,6 +4,8 @@ import com.gamematcher.dto.chat.ChatMessageDto;
 import com.gamematcher.entity.User;
 import com.gamematcher.service.ChatService;
 import com.gamematcher.service.LevelService;
+import com.gamematcher.service.ProfanityFilterService;
+import com.gamematcher.service.RankService;
 import com.gamematcher.service.StreamChatSettingsService;
 import com.gamematcher.repository.LiveStreamRepository;
 import com.gamematcher.repository.UserRepository;
@@ -29,6 +31,8 @@ public class LiveChatController {
     private final LiveStreamRepository liveStreamRepository;
     private final ChatService chatService;
     private final StreamChatSettingsService streamChatSettingsService;
+    private final ProfanityFilterService profanityFilterService;
+    private final RankService rankService;
 
     @MessageMapping("/chat/{streamId}")
     @SendTo("/topic/stream/{streamId}")
@@ -44,15 +48,26 @@ public class LiveChatController {
         if (trimmed.isEmpty() || trimmed.length() > MAX_TEXT_LENGTH) {
             return null;
         }
+        ProfanityFilterService.ModerationResult moderation;
+        try {
+            moderation = profanityFilterService.moderateChat(userId, trimmed);
+        } catch (IllegalArgumentException e) {
+            return ChatMessageDto.builder()
+                    .userId(0L)
+                    .displayName("SYSTEM")
+                    .text(e.getMessage())
+                    .build();
+        }
         boolean isStreamer = liveStreamRepository.findById(streamId)
                 .map(stream -> userId.equals(stream.getUserId()))
                 .orElse(false);
         boolean isManager = streamChatSettingsService.isManager(streamId, userId);
+        boolean isFan = rankService.getStreamDonorUserIds(streamId).contains(userId);
         if (streamChatSettingsService.isBanned(streamId, userId)) {
             return null;
         }
         if (liveStreamRepository.findById(streamId)
-                .map(s -> Boolean.TRUE.equals(s.getChatFrozen()) && !isStreamer && !isManager)
+                .map(s -> Boolean.TRUE.equals(s.getChatFrozen()) && !isStreamer && !isManager && !isFan)
                 .orElse(false)) {
             return null;
         }
@@ -60,7 +75,7 @@ public class LiveChatController {
         String displayName = user != null ? (user.getNickname() != null && !user.getNickname().isBlank() ? user.getNickname() : user.getUsername()) : "알 수 없음";
         String profileImageUrl = user != null ? user.getProfileImageUrl() : null;
         String loginId = user != null ? user.getLoginId() : null;
-        chatService.saveMessage(streamId, userId, trimmed);
+        chatService.saveMessage(streamId, userId, moderation.getSanitizedText());
         int level = user != null && user.getTotalExperienceTenths() != null
                 ? LevelService.getLevel(user.getTotalExperienceTenths())
                 : 1;
@@ -69,8 +84,9 @@ public class LiveChatController {
                 .loginId(loginId)
                 .displayName(displayName)
                 .profileImageUrl(profileImageUrl)
-                .text(trimmed)
+                .text(moderation.getSanitizedText())
                 .streamer(isStreamer)
+                .manager(isManager)
                 .level(level)
                 .build();
     }

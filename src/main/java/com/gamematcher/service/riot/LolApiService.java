@@ -9,15 +9,12 @@ import com.gamematcher.dto.riot.RiotMatchDetailResponseDto;
 import com.gamematcher.dto.riot.RiotStatsResponseDto;
 import com.gamematcher.dto.riot.RiotSummonerResponseDto;
 import com.gamematcher.entity.match.lol.LolMatchSummary;
-import com.gamematcher.exception.GameApiException;
 import com.gamematcher.repository.match.MatchSummaryRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.HttpStatusCodeException;
@@ -30,7 +27,6 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 
-@Slf4j
 @Service("riotLolApiService")
 @RequiredArgsConstructor
 public class LolApiService {
@@ -86,98 +82,9 @@ public class LolApiService {
             );
             return response.getBody();
         } catch (HttpStatusCodeException e) {
-            int code = e.getStatusCode().value();
-            if (code == 401 || code == 403) {
-                throw new GameApiException(HttpStatus.BAD_GATEWAY,
-                        "Riot API 키가 거부되었습니다. 환경 변수 RIOT_API_KEY 또는 riot.api.key에 개발자 포털에서 발급·갱신한 키를 넣어 주세요.");
-            }
-            if (code == 404) {
-                throw new GameApiException(HttpStatus.NOT_FOUND, "해당 Riot ID(게임명#태그)를 찾을 수 없습니다.");
-            }
-            throw new GameApiException(HttpStatus.BAD_GATEWAY,
-                    "Riot Account API 호출 실패: " + e.getStatusCode() + " / " + e.getResponseBodyAsString());
+            throw new RuntimeException("Riot Account API 호출 실패: " + e.getStatusCode() + " / " + e.getResponseBodyAsString());
         } catch (Exception e) {
-            throw new GameApiException(HttpStatus.BAD_GATEWAY, "Riot Account API 호출 중 오류 발생: " + e.getMessage());
-        }
-    }
-
-    /**
-     * PUUID 기준 현재 Riot ID(게임명·태그). 닉 변경 후에도 연동 갱신에 사용.
-     */
-    public RiotAccountResponseDto getAccountByPuuid(String puuid) {
-        if (puuid == null || puuid.isBlank()) {
-            throw new GameApiException(HttpStatus.BAD_REQUEST, "PUUID가 비어 있습니다.");
-        }
-        String url = UriComponentsBuilder
-                .fromHttpUrl(riotApiProperties.getRegionalBaseUrl())
-                .path("/riot/account/v1/accounts/by-puuid/{puuid}")
-                .buildAndExpand(puuid)
-                .toUriString();
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("X-Riot-Token", riotApiProperties.getApiKey());
-        HttpEntity<Void> entity = new HttpEntity<>(headers);
-
-        try {
-            ResponseEntity<RiotAccountResponseDto> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    entity,
-                    RiotAccountResponseDto.class
-            );
-            RiotAccountResponseDto body = response.getBody();
-            if (body == null || body.getPuuid() == null || body.getPuuid().isBlank()) {
-                throw new GameApiException(HttpStatus.BAD_GATEWAY, "Riot Account API 응답이 비어 있습니다.");
-            }
-            return body;
-        } catch (HttpStatusCodeException e) {
-            int code = e.getStatusCode().value();
-            if (code == 401 || code == 403) {
-                throw new GameApiException(HttpStatus.BAD_GATEWAY,
-                        "Riot API 키가 거부되었습니다. 환경 변수 RIOT_API_KEY 또는 riot.api.key에 개발자 포털에서 발급·갱신한 키를 넣어 주세요.");
-            }
-            if (code == 404) {
-                throw new GameApiException(HttpStatus.NOT_FOUND, "해당 Riot 계정(PUUID)을 찾을 수 없습니다.");
-            }
-            throw new GameApiException(HttpStatus.BAD_GATEWAY,
-                    "Riot Account API 호출 실패: " + e.getStatusCode() + " / " + e.getResponseBodyAsString());
-        } catch (GameApiException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new GameApiException(HttpStatus.BAD_GATEWAY, "Riot Account API 호출 중 오류 발생: " + e.getMessage());
-        }
-    }
-
-    /**
-     * 랭크 큐별 티어(솔로/자유 등). 비배치·API 오류 시 빈 리스트 (연동 프로필 표시용).
-     */
-    public List<RiotLeagueEntryResponseDto> findLeagueEntriesByPuuidOrEmpty(String puuid) {
-        if (puuid == null || puuid.isBlank()) {
-            return List.of();
-        }
-        String url = UriComponentsBuilder
-                .fromHttpUrl(riotApiProperties.getPlatformBaseUrl())
-                .path("/lol/league/v4/entries/by-puuid/{encryptedPUUID}")
-                .buildAndExpand(puuid)
-                .toUriString();
-        HttpHeaders headers = new HttpHeaders();
-        headers.set("X-Riot-Token", riotApiProperties.getApiKey());
-        HttpEntity<Void> entity = new HttpEntity<>(headers);
-        try {
-            ResponseEntity<List<RiotLeagueEntryResponseDto>> response = restTemplate.exchange(
-                    url,
-                    HttpMethod.GET,
-                    entity,
-                    new ParameterizedTypeReference<List<RiotLeagueEntryResponseDto>>() {}
-            );
-            List<RiotLeagueEntryResponseDto> body = response.getBody();
-            return body != null ? body : List.of();
-        } catch (HttpStatusCodeException e) {
-            log.debug("LoL league-v4 조회 생략: {} {}", e.getStatusCode(), e.getResponseBodyAsString());
-            return List.of();
-        } catch (Exception e) {
-            log.debug("LoL league-v4 조회 오류(무시): {}", e.getMessage());
-            return List.of();
+            throw new RuntimeException("Riot Account API 호출 중 오류 발생: " + e.getMessage(), e);
         }
     }
 

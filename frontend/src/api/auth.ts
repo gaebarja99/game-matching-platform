@@ -133,12 +133,10 @@ export async function checkNicknameAvailable(nickname: string): Promise<{ ok: bo
 
 export async function findLoginIdByPhone(
   phone: string,
-  verificationCode: string,
   recaptchaToken?: string | null,
 ): Promise<{ ok: boolean; loginIds?: string[]; message?: string }> {
   const body: Record<string, string> = {
     phone: phone.trim(),
-    verificationCode: (verificationCode || '').trim(),
   };
   if (recaptchaToken) body.recaptchaToken = recaptchaToken;
 
@@ -162,14 +160,12 @@ export async function checkLoginIdExists(loginId: string): Promise<boolean> {
 export async function resetPasswordByPhone(
   loginId: string,
   phone: string,
-  verificationCode: string,
   newPassword: string,
   recaptchaToken?: string | null,
 ): Promise<{ ok: boolean; message?: string }> {
   const body: Record<string, string> = {
     loginId: loginId.trim(),
     phone: phone.trim(),
-    verificationCode: (verificationCode || '').trim(),
     newPassword,
   };
   if (recaptchaToken) body.recaptchaToken = recaptchaToken;

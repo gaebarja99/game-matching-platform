@@ -1,6 +1,48 @@
 import type { ApplicationVerifier, Auth, ConfirmationResult } from 'firebase/auth';
 import { getAuth } from '../firebase';
 
+const LOCAL_DEV_PHONE_AUTH_CODE = (import.meta.env.VITE_PHONE_AUTH_DEV_CODE || '123456').trim();
+
+function isLocalDevHost(): boolean {
+  if (typeof window === 'undefined') return false;
+  const host = window.location.hostname;
+  return host === 'localhost' || host === '127.0.0.1' || host === '::1';
+}
+
+function isRetryableFirebasePhoneAuthError(error: unknown): boolean {
+  const message = String((error as { message?: string })?.message ?? error ?? '').toLowerCase();
+  return message.includes('auth/invalid-app-credential')
+    || message.includes('auth/captcha-check-failed')
+    || message.includes('failed to initialize recaptcha enterprise');
+}
+
+function shouldUseLocalDevFallback(error: unknown): boolean {
+  const enabled = String(import.meta.env.VITE_PHONE_AUTH_DEV_FALLBACK ?? 'true').toLowerCase() !== 'false';
+  return enabled && isLocalDevHost() && isRetryableFirebasePhoneAuthError(error);
+}
+
+/** localhost 등에서 Firebase 미설정 시 모의 인증(기본 인증번호) 사용 가능 여부 */
+export function isPhoneAuthDevBypassEnabled(): boolean {
+  return String(import.meta.env.VITE_PHONE_AUTH_DEV_FALLBACK ?? 'true').toLowerCase() !== 'false' && isLocalDevHost();
+}
+
+function createLocalDevConfirmationResult(phoneNumber: string): ConfirmationResult {
+  return {
+    verificationId: `local-dev:${phoneNumber}`,
+    confirm: async (code: string) => {
+      if ((code ?? '').trim() !== LOCAL_DEV_PHONE_AUTH_CODE) {
+        throw new Error('auth/invalid-verification-code');
+      }
+      return {
+        user: {
+          uid: `local-dev:${phoneNumber}`,
+          phoneNumber,
+        },
+      } as never;
+    },
+  } as ConfirmationResult;
+}
+
 /** 한국 휴대폰 번호를 E.164 형식으로 변환 (예: 01012345678 → +821012345678) */
 export function toE164(phone: string): string {
   const digits = phone.replace(/\D/g, '');
@@ -52,17 +94,44 @@ export async function getRecaptchaVerifier(containerId: string): Promise<Applica
 
 /**
  * 휴대폰으로 인증 코드 발송.
+ * `recaptchaVerifier`는 Firebase가 초기화된 경우에만 필수입니다. 로컬 개발에서 Firebase가 없으면 null을 넘기면 모의 SMS 흐름이 동작합니다.
  */
-export async function sendVerificationCode(phoneNumber: string, recaptchaVerifier: ApplicationVerifier) {
+export async function sendVerificationCode(phoneNumber: string, recaptchaVerifier: ApplicationVerifier | null) {
   const auth = await getAuth();
-  if (!auth) throw new Error('Firebase가 설정되지 않았습니다.');
+  const number = phoneNumber.startsWith('+') ? phoneNumber : toE164(phoneNumber);
+
+  if (!auth) {
+    if (isPhoneAuthDevBypassEnabled()) {
+      console.warn(
+        `[phoneAuth] Firebase 미설정 — 로컬 개발용 인증 우회. 인증번호: ${LOCAL_DEV_PHONE_AUTH_CODE}`,
+      );
+      return createLocalDevConfirmationResult(number);
+    }
+    throw new Error('Firebase가 설정되지 않았습니다. .env에 VITE_FIREBASE_* 값을 넣어 주세요.');
+  }
+
+  if (!recaptchaVerifier) {
+    throw new Error('reCAPTCHA 검증기가 필요합니다.');
+  }
+
   return sendVerificationCodeInner(auth, phoneNumber, recaptchaVerifier);
 }
 
 async function sendVerificationCodeInner(auth: Auth, phoneNumber: string, recaptchaVerifier: ApplicationVerifier) {
   const { signInWithPhoneNumber } = await import('firebase/auth');
   const number = phoneNumber.startsWith('+') ? phoneNumber : toE164(phoneNumber);
-  return signInWithPhoneNumber(auth, number, recaptchaVerifier);
+  try {
+    return await signInWithPhoneNumber(auth, number, recaptchaVerifier);
+  } catch (error) {
+    if (shouldUseLocalDevFallback(error)) {
+      console.warn(
+        `[phoneAuth] Firebase phone auth failed on local dev host. Falling back to local dev code ${LOCAL_DEV_PHONE_AUTH_CODE}.`,
+        error,
+      );
+      return createLocalDevConfirmationResult(number);
+    }
+    throw error;
+  }
 }
 
 /**

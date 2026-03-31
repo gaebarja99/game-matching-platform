@@ -1,7 +1,6 @@
 package com.gamematcher.controller.account;
 
 import com.gamematcher.dto.account.AccountConnectionsResponseDto;
-import com.gamematcher.dto.account.AccountLinkRefreshResponseDto;
 import com.gamematcher.dto.account.OAuthStartResponseDto;
 import com.gamematcher.dto.account.RiotAccountLinkResponseDto;
 import com.gamematcher.dto.account.RiotManualLinkRequestDto;
@@ -13,9 +12,7 @@ import com.gamematcher.service.account.AccountConnectionService;
 import com.gamematcher.service.account.RiotAccountService;
 import com.gamematcher.service.account.RiotOwnershipVerificationService;
 import com.gamematcher.service.auth.CurrentUserService;
-import com.gamematcher.entity.User;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.HttpSession;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -36,51 +33,33 @@ public class AccountConnectionController {
     private final RiotAccountService riotAccountService;
     private final RiotOwnershipVerificationService riotOwnershipVerificationService;
 
-    @PostMapping("/{provider}/refresh")
-    public AccountLinkRefreshResponseDto refreshLinkedProfile(
-            @RequestHeader(value = "X-Auth-Token", required = false) String authToken,
-            HttpSession session,
-            @PathVariable String provider) {
-        User user = currentUserService.requireUserByTokenOrSession(authToken, session);
-        return accountConnectionService.refreshLinkedProfile(user.getId(), provider);
-    }
-
     @GetMapping
     public AccountConnectionsResponseDto getConnections(
-            @RequestHeader(value = "X-Auth-Token", required = false) String authToken,
-            HttpSession session) {
-        User user = currentUserService.requireUserByTokenOrSession(authToken, session);
-        return accountConnectionService.getConnections(user.getId());
+            @RequestHeader(value = "X-Auth-Token", required = false) String authToken) {
+        return accountConnectionService.getConnections(authToken);
     }
 
-    @GetMapping("/user/{userId}")
-    public AccountConnectionsResponseDto getConnectionsForUser(
-            @RequestHeader(value = "X-Auth-Token", required = false) String authToken,
-            @PathVariable Long userId) {
-        return accountConnectionService.getConnectionsForUser(authToken, userId);
+    @GetMapping("/users/{userId}")
+    public AccountConnectionsResponseDto getConnectionsForUser(@PathVariable Long userId) {
+        return accountConnectionService.getConnectionsForUser(userId);
     }
 
     @DeleteMapping("/{provider}")
     public ResponseEntity<Void> unlink(
             @RequestHeader(value = "X-Auth-Token", required = false) String authToken,
-            HttpSession session,
             @PathVariable String provider) {
-        User user = currentUserService.requireUserByTokenOrSession(authToken, session);
-        accountConnectionService.unlink(user.getId(), provider);
+        accountConnectionService.unlink(authToken, provider);
         return ResponseEntity.noContent().build();
     }
 
     @GetMapping("/oauth/{provider}/start")
     public OAuthStartResponseDto startOAuth(
             @RequestHeader(value = "X-Auth-Token", required = false) String authToken,
-            HttpSession session,
             @PathVariable String provider) {
-        User user = currentUserService.requireUserByTokenOrSession(authToken, session);
-        long userId = user.getId();
         return switch (provider.toLowerCase()) {
-            case "discord" -> accountConnectionService.startDiscord(userId);
-            case "steam" -> accountConnectionService.startSteam(userId);
-            case "blizzard" -> accountConnectionService.startBlizzard(userId);
+            case "discord" -> accountConnectionService.startDiscord(authToken);
+            case "steam" -> accountConnectionService.startSteam(authToken);
+            case "blizzard" -> accountConnectionService.startBlizzard(authToken);
             default -> throw new GameApiException(HttpStatus.BAD_REQUEST, "지원하지 않는 연동 제공자입니다: " + provider);
         };
     }
@@ -88,10 +67,9 @@ public class AccountConnectionController {
     @PostMapping("/riot/manual")
     public RiotAccountLinkResponseDto linkRiotManually(
             @RequestHeader(value = "X-Auth-Token", required = false) String authToken,
-            HttpSession session,
             @Valid @RequestBody RiotManualLinkRequestDto request) {
-        User user = currentUserService.requireUserByTokenOrSession(authToken, session);
-        return riotAccountService.linkAccount(user.getId(), request.getGameName(), request.getTagLine());
+        Long userId = currentUserService.requireUser(authToken).getId();
+        return riotAccountService.linkAccount(userId, request.getGameName(), request.getTagLine());
     }
 
     @PostMapping("/riot/verification/start")

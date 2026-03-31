@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { apiFetch } from '../api/client';
 import { checkPhoneAvailable, type AuthUser } from '../api/auth';
 import { useAuth } from '../contexts/AuthContext';
+import { getAuth } from '../firebase';
 import { getFirebaseAuthErrorMessage } from '../lib/firebaseAuthErrorMessages';
 import { clearRecaptchaVerifier, confirmVerificationCode, getRecaptchaVerifier, sendVerificationCode } from '../lib/phoneAuth';
 
@@ -56,7 +57,10 @@ export default function Register() {
     try {
       clearRecaptchaVerifier(RECAPTCHA_CONTAINER_ID, recaptchaVerifierRef.current);
       recaptchaVerifierRef.current = null;
-      recaptchaVerifierRef.current = await getRecaptchaVerifier(RECAPTCHA_CONTAINER_ID) as import('firebase/auth').RecaptchaVerifier;
+      const auth = await getAuth();
+      if (auth) {
+        recaptchaVerifierRef.current = await getRecaptchaVerifier(RECAPTCHA_CONTAINER_ID) as import('firebase/auth').RecaptchaVerifier;
+      }
       const result = await sendVerificationCode(phone.trim(), recaptchaVerifierRef.current);
       confirmationResultRef.current = result;
       setPhoneStep('code');

@@ -173,48 +173,6 @@ public class ValorantApiService {
         return new ArrayList<>(candidates);
     }
 
-    /** Henrik MMR 조회용 샤드 (ap, na, eu, kr, br, latam). */
-    public String mapAccountRegionToHenrikShard(String valorantAccountRegion) {
-        if (valorantAccountRegion == null || valorantAccountRegion.isBlank()) {
-            return "ap";
-        }
-        return REGION_MAP.getOrDefault(valorantAccountRegion.toLowerCase().trim(), "ap");
-    }
-
-    /**
-     * Riot ID(닉·태그)로 Henrik 계정을 찾은 뒤 Henrik puuid로 MMR을 조회한다.
-     * 프로필 연동 화면의 발로란트 티어 요약용.
-     */
-    public ValorantMmrApiResponse fetchMmrForRiotLinkedProfile(String gameName, String tag) {
-        if (!valorantApiProperties.hasApiKey()) {
-            return null;
-        }
-        String name = gameName == null ? "" : gameName.trim();
-        if (name.isBlank() || tag == null || tag.isBlank()) {
-            return null;
-        }
-        try {
-            ValorantPuuidApiResponse acc = getAccountByNameTag(name, tag, false);
-            if (acc == null || acc.getData() == null) {
-                return null;
-            }
-            String henrikPuuid = acc.getData().getPuuid();
-            if (henrikPuuid == null || henrikPuuid.isBlank()) {
-                return null;
-            }
-            String shard = mapAccountRegionToHenrikShard(acc.getData().getRegion());
-            try {
-                return getMmr(henrikPuuid.trim(), shard);
-            } catch (Exception e) {
-                log.debug("Valorant MMR 프로필용 조회 생략: {}", e.getMessage());
-                return null;
-            }
-        } catch (Exception e) {
-            log.debug("Valorant 계정/MMR 프로필용 조회 생략: {}", e.getMessage());
-            return null;
-        }
-    }
-
     /**
      * 1. 계정 정보 조회 (PUUID 확인용)
      * 형식: /valorant/v1/account/{name}/{tag}?api_key={key}

@@ -67,6 +67,7 @@ public class PlayerSearchResponse {
         private Double avgDeaths;
         private Double avgAssists;
         private Double avgKda;
+        private Double avgDamage;
         private String mostUsedChampionOrAgent;
     }
 

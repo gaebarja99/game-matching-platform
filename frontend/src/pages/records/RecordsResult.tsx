@@ -53,6 +53,7 @@ function RecordsResultContent({
   const [nickname, setNickname] = useState('');
   const [tagLine, setTagLine] = useState('');
   const [platform, setPlatform] = useState('');
+  const [region, setRegion] = useState('');
   const [count, setCount] = useState(5);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PlayerSearchResponse | null>(null);
@@ -61,15 +62,16 @@ function RecordsResultContent({
   const game = useMemo(() => GAMES.find((item) => item.id === gameId) || GAMES[0], [gameId]);
 
   useEffect(() => {
-    if (!result?.success || result.game !== 'valorant' || !result.valorantMmrPending) return;
+    if (result?.success !== true || result.game !== 'valorant' || !result.valorantMmrPending) return;
     const puuid = result.playerInfo?.puuid?.trim();
     const raw = result.playerInfo?.rawData as Record<string, unknown> | undefined;
-    const region = typeof raw?.valorantRegion === 'string' ? raw.valorantRegion.trim() : '';
-    if (!puuid || !region) return;
+    const mmrRegion = typeof raw?.valorantRegion === 'string' ? raw.valorantRegion.trim() : '';
+    if (!puuid || !mmrRegion) return;
+
     let cancelled = false;
     void (async () => {
       try {
-        const mmr = await fetchValorantSearchMmr({ puuid, region });
+        const mmr = await fetchValorantSearchMmr({ puuid, region: mmrRegion });
         if (cancelled) return;
         setResult((prev) => {
           if (!prev?.success || prev.game !== 'valorant' || !prev.playerInfo) return prev;
@@ -90,6 +92,7 @@ function RecordsResultContent({
         setResult((prev) => (prev?.success ? { ...prev, valorantMmrPending: false } : prev));
       }
     })();
+
     return () => {
       cancelled = true;
     };
@@ -99,14 +102,28 @@ function RecordsResultContent({
     const parsed = parseProfileSlug(gameId, playerSlug, urlHash);
     setNickname(parsed.nickname);
     setTagLine(parsed.tagLine);
+
     const platQ = searchParams.get('platform');
+    const regionQ = searchParams.get('region');
     const meta = GAMES.find((g) => g.id === gameId);
+
     if (platQ && meta?.platformOptions?.some((o) => o.value === platQ)) {
       setPlatform(platQ);
+    } else {
+      setPlatform('');
     }
+
+    if (regionQ) {
+      setRegion(regionQ);
+    } else {
+      setRegion('');
+    }
+
     const c = searchParams.get('count');
     if (c && VALID_RECORDS_COUNTS.includes(Number(c) as (typeof VALID_RECORDS_COUNTS)[number])) {
       setCount(Number(c));
+    } else {
+      setCount(5);
     }
   }, [gameId, playerSlug, urlHash, searchParams]);
 
@@ -125,18 +142,36 @@ function RecordsResultContent({
     });
   }, [game, searchParams]);
 
+  useEffect(() => {
+    if (!game.regionOptions?.length) {
+      return;
+    }
+    setRegion((prev) => {
+      const regionQ = searchParams.get('region');
+      if (regionQ && game.regionOptions!.some((o) => o.value === regionQ)) {
+        return regionQ;
+      }
+      const valid = game.regionOptions!.some((opt) => opt.value === prev);
+      return valid ? prev : game.regionOptions![0].value;
+    });
+  }, [game, searchParams]);
+
   const performSearch = useCallback(
     async (forceRefresh: boolean, overrides?: SearchFieldOverrides, options?: PerformSearchOptions) => {
       const gid = overrides?.gameId ?? gameId;
       const nick = (overrides?.nickname ?? nickname).trim();
       if (!nick) return;
+
       const tag = overrides?.tagLine ?? tagLine;
       const plat = overrides?.platform ?? platform;
       const cnt = overrides?.count ?? count;
+      const searchRegion = overrides?.region ?? region;
       const g = GAMES.find((item) => item.id === gid) || GAMES[0];
+
       setLoading(true);
       setError(null);
       if (!forceRefresh && !options?.keepPreviousResult) setResult(null);
+
       try {
         const response = await fetchRecordsPlayerSearch(
           gid,
@@ -145,6 +180,7 @@ function RecordsResultContent({
           g.fields.includes('pubg_platform') ? plat : '',
           cnt,
           forceRefresh,
+          searchRegion,
         );
         setResult(response);
         if (!response.success) {
@@ -156,17 +192,20 @@ function RecordsResultContent({
         setLoading(false);
       }
     },
-    [gameId, nickname, tagLine, platform, count],
+    [count, gameId, nickname, platform, region, tagLine],
   );
 
   const handleLoadMore = useCallback(() => {
-    const g = GAMES.find((item) => item.id === gameId)!;
-    if (!g.fields.includes('count')) return;
+    const g = GAMES.find((item) => item.id === gameId);
+    if (!g?.fields.includes('count')) return;
+
     const next = Math.min(count + 5, 20);
     if (next <= count) return;
+
     const params = new URLSearchParams(location.search);
     params.set('count', String(next));
     const qs = params.toString();
+
     navigate(
       {
         pathname: location.pathname,
@@ -180,18 +219,23 @@ function RecordsResultContent({
   useEffect(() => {
     const key = `${gameId}/${playerSlug}${urlHash}?${searchParams.toString()}`;
     if (autoSearchedUrlKey.current === key) return;
+
     const parsed = parseProfileSlug(gameId, playerSlug, urlHash);
     if (!parsed.nickname.trim()) return;
+
     const prevKey = autoSearchedUrlKey.current;
     const keepPrev = isLoadMoreRecordsUrl(prevKey, key);
     autoSearchedUrlKey.current = key;
+
     const platQ = searchParams.get('platform') ?? '';
+    const regionQ = searchParams.get('region') ?? '';
     const cntQ = searchParams.get('count');
     const cnt =
       cntQ && VALID_RECORDS_COUNTS.includes(Number(cntQ) as (typeof VALID_RECORDS_COUNTS)[number])
         ? Number(cntQ)
         : 5;
-    const g = GAMES.find((item) => item.id === gameId)!;
+    const g = GAMES.find((item) => item.id === gameId) || GAMES[0];
+
     void performSearch(
       false,
       {
@@ -199,6 +243,7 @@ function RecordsResultContent({
         nickname: parsed.nickname,
         tagLine: parsed.tagLine,
         platform: g.fields.includes('pubg_platform') && platQ ? platQ : undefined,
+        region: regionQ || undefined,
         count: g.fields.includes('count') ? cnt : undefined,
       },
       { keepPreviousResult: keepPrev },
@@ -228,7 +273,7 @@ function RecordsResultContent({
 
         {loading && !result?.success ? (
           <section className="records-error-box">
-            <p>전적을 불러오는 중…</p>
+            <p>전적을 불러오는 중입니다.</p>
           </section>
         ) : null}
 
@@ -246,6 +291,12 @@ function RecordsResultContent({
             detailContext={{
               puuid: result.playerInfo?.puuid,
               platform: game.fields.includes('pubg_platform') ? platform : undefined,
+              playerName:
+                gameId === 'pubg'
+                  ? result.nickname || nickname
+                  : result.playerInfo?.gameName
+                    ? `${result.playerInfo.gameName}${result.playerInfo.tagLine ? `#${result.playerInfo.tagLine}` : ''}`
+                    : result.nickname || nickname,
             }}
           />
         ) : null}
@@ -261,6 +312,7 @@ export default function RecordsResult() {
   if (!routeGame || !GAMES.some((g) => g.id === routeGame)) {
     return <Navigate to="/records" replace />;
   }
+
   if (!playerSlug?.trim()) {
     return <Navigate to={`/records?game=${encodeURIComponent(routeGame)}`} replace />;
   }

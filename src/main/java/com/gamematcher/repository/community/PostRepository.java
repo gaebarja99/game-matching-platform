@@ -21,6 +21,8 @@ public interface PostRepository extends JpaRepository<Post, Long> {
 
     Page<Post> findByStatusIn(List<PostStatus> statuses, Pageable pageable);
 
+    Page<Post> findByAuthorIdAndStatusIn(Long authorId, List<PostStatus> statuses, Pageable pageable);
+
     @Query("SELECT p FROM Post p WHERE p.boardCategory = :category AND p.status IN :statuses " +
             "AND (:keyword IS NULL OR :keyword = '' OR p.title LIKE CONCAT('%', :keyword, '%') OR p.content LIKE CONCAT('%', :keyword, '%'))")
     Page<Post> searchByBoardCategory(
@@ -37,14 +39,14 @@ public interface PostRepository extends JpaRepository<Post, Long> {
             Pageable pageable);
 
     @Query("SELECT p FROM Post p WHERE p.boardCategory = :category AND p.status IN :statuses " +
-            "ORDER BY p.likeCount DESC, p.viewCount DESC, p.createdAt DESC")
+            "ORDER BY p.recommendCount DESC, p.viewCount DESC, p.createdAt DESC")
     List<Post> findPopularByBoardCategory(
             @Param("category") BoardCategory category,
             @Param("statuses") List<PostStatus> statuses,
             Pageable pageable);
 
     @Query("SELECT p FROM Post p WHERE p.status IN :statuses " +
-            "ORDER BY p.likeCount DESC, p.viewCount DESC, p.createdAt DESC")
+            "ORDER BY p.recommendCount DESC, p.viewCount DESC, p.createdAt DESC")
     List<Post> findPopularAll(
             @Param("statuses") List<PostStatus> statuses,
             Pageable pageable);

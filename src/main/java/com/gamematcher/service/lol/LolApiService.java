@@ -506,33 +506,6 @@ public class LolApiService {
                 if (matchIds == null) matchIds = new ArrayList<>();
             }
 
-            if (Boolean.TRUE.equals(req.getMatchListOnly())) {
-                String queueHint = qId == -1 ? "일반·빠른대전" : QUEUE_LABEL.getOrDefault(qId, "매치");
-                List<MatchInfo> idOnly = new ArrayList<>();
-                for (String mId : matchIds) {
-                    Map<String, Object> ex = new LinkedHashMap<>();
-                    ex.put("listOnly", true);
-                    idOnly.add(MatchInfo.builder().matchId(mId).gameMode(queueHint).extras(ex).build());
-                }
-                Map<String, Object> rawData = new LinkedHashMap<>();
-                rawData.put("summonerId", sumId);
-                rawData.put("rankedWins", rWins);
-                rawData.put("rankedLosses", rLoss);
-                if (rWins + rLoss > 0) {
-                    rawData.put("rankedWinRate", Math.round((double) rWins / (rWins + rLoss) * 1000.0) / 10.0 + "%");
-                }
-                PlayerInfo playerInfo = PlayerInfo.builder()
-                        .puuid(puuid).gameName(req.getGameName()).tagLine(tagLine)
-                        .summonerLevel(String.valueOf(level)).profileIconId(String.valueOf(iconId))
-                        .tier(tier).rank(rank).lp(lp + " LP")
-                        .rawData(rawData).build();
-                return PlayerSearchResponse.builder()
-                        .success(true).game("lol").nickname(nickname).matchListOnly(true)
-                        .playerInfo(playerInfo).matches(idOnly)
-                        .stats(MatchStats.builder().build())
-                        .build();
-            }
-
             List<MatchInfo> matches = new ArrayList<>();
             for (String mId : matchIds) {
                 try {

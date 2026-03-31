@@ -17,10 +17,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
-import org.springframework.web.client.HttpStatusCodeException;
 import org.springframework.web.client.RestTemplate;
 
-import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
@@ -165,29 +163,6 @@ public class PubgApiService {
                     .stats(stats)
                     .build();
 
-        } catch (HttpStatusCodeException e) {
-            String body = e.getResponseBodyAsString(StandardCharsets.UTF_8);
-            int code = e.getStatusCode().value();
-            if (code == 401) {
-                log.warn("PUBG API 401 - nickname={}", nickname);
-                return PlayerSearchResponse.error("pubg", nickname,
-                        "PUBG API 인증 실패(401). application.properties의 pubg.api.key가 올바른지, "
-                                + "https://developer.pubg.com/ 에서 발급한 키가 활성 상태인지 확인하세요.");
-            }
-            if (code == 404 && body != null && body.contains("No Players Found")) {
-                return PlayerSearchResponse.error("pubg", nickname,
-                        "해당 닉네임을 플랫폼 「" + platform + "」에서 찾지 못했습니다. "
-                                + "인게임 닉네임 철자·대소문자를 확인하고, 카카오 배그는 플랫폼을 Kakao로 선택하세요.");
-            }
-            if (code == 429) {
-                return PlayerSearchResponse.error("pubg", nickname,
-                        "PUBG API 요청 한도 초과(429). 잠시 후 다시 시도하세요.");
-            }
-            log.error("PUBG 전적 검색 HTTP 오류 - {} status={}", nickname, code, e);
-            String tail = (body != null && !body.isBlank() && body.length() < 400)
-                    ? body.trim()
-                    : e.getStatusCode().toString();
-            return PlayerSearchResponse.error("pubg", nickname, "PUBG API 오류 (" + code + "): " + tail);
         } catch (Exception e) {
             log.error("PUBG 전적 검색 오류 - {}", nickname, e);
             return PlayerSearchResponse.error("pubg", nickname, e.getMessage());

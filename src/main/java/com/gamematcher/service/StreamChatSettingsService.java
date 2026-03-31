@@ -20,7 +20,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
-/** 방장/매니저: 채팅 얼리기(방장만), BJ 공지, 채팅 금지(타이머 가능), 블랙리스트, 매니저 지정 */
+/** 獄쎻뫗??筌띲끇???: 筌?쑵????겸봺疫?獄쎻뫗?ｏ쭕?, BJ ?⑤벊?, 筌?쑵??疫뀀뜆?(??????揶쎛??, ?됰뗀?볡뵳???? 筌띲끇??? 筌왖??*/
 @Service
 @RequiredArgsConstructor
 public class StreamChatSettingsService {
@@ -45,73 +45,78 @@ public class StreamChatSettingsService {
         return streamManagerRepository.existsByStreamIdAndUserId(streamId, userId);
     }
 
-    /** 방장 또는 매니저면 채팅/블랙/금지 등 관리 가능 */
+    /** 獄쎻뫗???癒?뮉 筌띲끇???筌?筌?쑵???됰뗀??疫뀀뜆? ???온??揶쎛??*/
     private boolean canManage(Long streamId, Long userId) {
         return isStreamOwner(streamId, userId) || isManager(streamId, userId);
     }
 
-    /** 채팅 얼리기 설정 (방장만) */
+    /** 筌?쑵????겸봺疫???쇱젟 (獄쎻뫗?ｏ쭕? */
     @Transactional
     public void setChatFrozen(Long streamId, Long userId, boolean frozen) {
-        if (!isStreamOwner(streamId, userId)) throw new IllegalArgumentException("방장만 설정할 수 있습니다.");
+        if (!isStreamOwner(streamId, userId)) throw new IllegalArgumentException("獄쎻뫗?ｏ쭕???쇱젟??????됰뮸??덈뼄.");
         LiveStream stream = liveStreamRepository.findById(streamId)
-                .orElseThrow(() -> new IllegalArgumentException("방송을 찾을 수 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("獄쎻뫗???筌≪뼚??????곷뮸??덈뼄."));
         stream.setChatFrozen(frozen);
         liveStreamRepository.save(stream);
     }
 
-    /** BJ 공지 설정 (방장만, 최대 200자) */
+    /** BJ ?⑤벊? ??쇱젟 (獄쎻뫗?ｏ쭕? 筌ㅼ뮆? 200?? */
     @Transactional
     public void setStreamNotice(Long streamId, Long userId, String text, Boolean visible) {
-        if (!isStreamOwner(streamId, userId)) throw new IllegalArgumentException("방장만 설정할 수 있습니다.");
+        if (!isStreamOwner(streamId, userId)) throw new IllegalArgumentException("獄쎻뫗?ｏ쭕???쇱젟??????됰뮸??덈뼄.");
         LiveStream stream = liveStreamRepository.findById(streamId)
-                .orElseThrow(() -> new IllegalArgumentException("방송을 찾을 수 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("獄쎻뫗???筌≪뼚??????곷뮸??덈뼄."));
         if (text != null && text.length() > NOTICE_MAX_LENGTH) text = text.substring(0, NOTICE_MAX_LENGTH);
         stream.setStreamNotice(text != null && !text.isBlank() ? text.trim() : null);
         if (visible != null) stream.setStreamNoticeVisible(visible);
         liveStreamRepository.save(stream);
     }
 
-    /** 채팅 금지 추가 (방장/매니저). durationMinutes null이면 영구, 5면 5분 후 만료. */
+    /** 筌?쑵??疫뀀뜆? ?곕떽? (獄쎻뫗??筌띲끇???). durationMinutes null?????怨대럡, 5筌?5????筌띾슢利? */
     @Transactional
     public void addChatBan(Long streamId, Long operatorUserId, Long targetUserId, Integer durationMinutes) {
-        if (!canManage(streamId, operatorUserId)) throw new IllegalArgumentException("방장 또는 매니저만 채팅 금지할 수 있습니다.");
-        if (targetUserId == null) throw new IllegalArgumentException("대상 사용자를 지정해 주세요.");
-        if (isStreamOwner(streamId, targetUserId)) throw new IllegalArgumentException("방송자는 채팅 금지할 수 없습니다.");
-        if (isManager(streamId, targetUserId)) throw new IllegalArgumentException("매니저는 채팅 금지할 수 없습니다.");
-        streamChatBanRepository.findByStreamIdAndUserId(streamId, targetUserId).ifPresent(streamChatBanRepository::delete);
-        StreamChatBan ban = new StreamChatBan();
-        ban.setStreamId(streamId);
-        ban.setUserId(targetUserId);
+        if (!canManage(streamId, operatorUserId)) throw new IllegalArgumentException("諛⑹넚???먮뒗 留ㅻ땲?留?梨꾪똿 湲덉?瑜??ㅼ젙?????덉뒿?덈떎.");
+        if (targetUserId == null) throw new IllegalArgumentException("????ъ슜?먮? 吏?뺥빐 二쇱꽭??");
+        if (isStreamOwner(streamId, targetUserId)) throw new IllegalArgumentException("諛⑹넚?먮뒗 梨꾪똿 湲덉?瑜??ㅼ젙?????놁뒿?덈떎.");
+        if (isManager(streamId, targetUserId)) throw new IllegalArgumentException("留ㅻ땲???梨꾪똿 湲덉?瑜??ㅼ젙?????놁뒿?덈떎.");
+        StreamChatBan ban = streamChatBanRepository.findByStreamIdAndUserId(streamId, targetUserId)
+                .orElseGet(() -> {
+                    StreamChatBan created = new StreamChatBan();
+                    created.setStreamId(streamId);
+                    created.setUserId(targetUserId);
+                    return created;
+                });
         if (durationMinutes != null && durationMinutes > 0) {
             ban.setExpiresAt(LocalDateTime.now().plusMinutes(durationMinutes));
+        } else {
+            ban.setExpiresAt(null);
         }
         streamChatBanRepository.save(ban);
     }
 
-    /** 로그인 아이디(문자열)로 채팅 금지 추가. durationMinutes null=영구, 5=5분 등. */
+    /** 嚥≪뮄????袁⑹뵠???얜챷???嚥?筌?쑵??疫뀀뜆? ?곕떽?. durationMinutes null=?怨대럡, 5=5???? */
     @Transactional
     public void addChatBanByLoginId(Long streamId, Long operatorUserId, String loginId, Integer durationMinutes) {
-        if (loginId == null || loginId.isBlank()) throw new IllegalArgumentException("로그인 아이디를 입력해 주세요.");
+        if (loginId == null || loginId.isBlank()) throw new IllegalArgumentException("嚥≪뮄????袁⑹뵠?遺? ??낆젾??雅뚯눘苑??");
         Long targetUserId = userRepository.findByLoginId(loginId.trim())
                 .map(u -> u.getId())
-                .orElseThrow(() -> new IllegalArgumentException("해당 로그인 아이디의 사용자를 찾을 수 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("????嚥≪뮄????袁⑹뵠?遺우벥 ????癒? 筌≪뼚??????곷뮸??덈뼄."));
         addChatBan(streamId, operatorUserId, targetUserId, durationMinutes);
     }
 
-    /** 채팅 금지 해제 (방장/매니저) */
+    /** 筌?쑵??疫뀀뜆? ??곸젫 (獄쎻뫗??筌띲끇???) */
     @Transactional
     public void removeChatBan(Long streamId, Long operatorUserId, Long targetUserId) {
-        if (!canManage(streamId, operatorUserId)) throw new IllegalArgumentException("방장 또는 매니저만 해제할 수 있습니다.");
+        if (!canManage(streamId, operatorUserId)) throw new IllegalArgumentException("獄쎻뫗???癒?뮉 筌띲끇???筌???곸젫??????됰뮸??덈뼄.");
         streamChatBanRepository.deleteByStreamIdAndUserId(streamId, targetUserId);
     }
 
-    /** 영상 후원 / TTS 최소 팡 설정 (방장만). null 또는 0 이상. */
+    /** ?怨멸맒 ?袁⑹뜚 / TTS 筌ㅼ뮇??????쇱젟 (獄쎻뫗?ｏ쭕?. null ?癒?뮉 0 ??곴맒. */
     @Transactional
     public void setDonationLimits(Long streamId, Long userId, Integer minVideoPang, Integer minTtsPang) {
-        if (!isStreamOwner(streamId, userId)) throw new IllegalArgumentException("방장만 설정할 수 있습니다.");
+        if (!isStreamOwner(streamId, userId)) throw new IllegalArgumentException("獄쎻뫗?ｏ쭕???쇱젟??????됰뮸??덈뼄.");
         LiveStream stream = liveStreamRepository.findById(streamId)
-                .orElseThrow(() -> new IllegalArgumentException("방송을 찾을 수 없습니다."));
+                .orElseThrow(() -> new IllegalArgumentException("獄쎻뫗???筌≪뼚??????곷뮸??덈뼄."));
         if (minVideoPang != null && minVideoPang < 0) minVideoPang = 0;
         if (minTtsPang != null && minTtsPang < 0) minTtsPang = 0;
         stream.setMinVideoPang(minVideoPang != null ? minVideoPang : 0);
@@ -119,7 +124,7 @@ public class StreamChatSettingsService {
         liveStreamRepository.save(stream);
     }
 
-    /** 해당 방송에서 채팅 금지 여부 (만료된 금지는 제거 후 false) */
+    /** ????獄쎻뫗??癒?퐣 筌?쑵??疫뀀뜆? ??? (筌띾슢利??疫뀀뜆?????볤탢 ??false) */
     @Transactional
     public boolean isBanned(Long streamId, Long userId) {
         if (streamId == null || userId == null) return false;
@@ -133,7 +138,23 @@ public class StreamChatSettingsService {
         return true;
     }
 
-    /** 금지 목록 (userId, displayName, loginId, expiresAt) - 방장/매니저용 */
+    @Transactional
+    public boolean hasActiveTimedBan(Long streamId, Long userId) {
+        if (streamId == null || userId == null) return false;
+        Optional<StreamChatBan> opt = streamChatBanRepository.findByStreamIdAndUserId(streamId, userId);
+        if (opt.isEmpty()) return false;
+        StreamChatBan ban = opt.get();
+        if (ban.getExpiresAt() == null) {
+            return false;
+        }
+        if (ban.getExpiresAt().isBefore(LocalDateTime.now())) {
+            streamChatBanRepository.delete(ban);
+            return false;
+        }
+        return true;
+    }
+
+    /** 疫뀀뜆? 筌뤴뫖以?(userId, displayName, loginId, expiresAt) - 獄쎻뫗??筌띲끇?????*/
     @Transactional(readOnly = true)
     public List<Map<String, Object>> getBannedList(Long streamId, Long operatorUserId) {
         if (!canManage(streamId, operatorUserId)) return List.of();
@@ -143,7 +164,7 @@ public class StreamChatSettingsService {
                     var userOpt = userRepository.findById(b.getUserId());
                     String name = userOpt
                             .map(u -> u.getNickname() != null && !u.getNickname().isBlank() ? u.getNickname() : u.getUsername())
-                            .orElse("알 수 없음");
+                            .orElse("??????곸벉");
                     String loginId = userOpt.map(u -> u.getLoginId()).orElse(null);
                     return Map.<String, Object>of(
                             "userId", b.getUserId(),
@@ -155,13 +176,13 @@ public class StreamChatSettingsService {
                 .collect(Collectors.toList());
     }
 
-    // ----- 블랙리스트 (방송 입장 차단) -----
+    // ----- ?됰뗀?볡뵳????(獄쎻뫗????놁삢 筌△뫀?? -----
 
     @Transactional
     public void addBlacklist(Long streamId, Long operatorUserId, Long targetUserId) {
-        if (!canManage(streamId, operatorUserId)) throw new IllegalArgumentException("방장 또는 매니저만 블랙리스트 추가할 수 있습니다.");
-        if (targetUserId == null) throw new IllegalArgumentException("대상 사용자를 지정해 주세요.");
-        if (isStreamOwner(streamId, targetUserId)) throw new IllegalArgumentException("방송자는 블랙리스트에 넣을 수 없습니다.");
+        if (!canManage(streamId, operatorUserId)) throw new IllegalArgumentException("獄쎻뫗???癒?뮉 筌띲끇???筌??됰뗀?볡뵳?????곕떽???????됰뮸??덈뼄.");
+        if (targetUserId == null) throw new IllegalArgumentException("????????癒? 筌왖?類λ퉸 雅뚯눘苑??");
+        if (isStreamOwner(streamId, targetUserId)) throw new IllegalArgumentException("獄쎻뫗??癒?뮉 ?됰뗀?볡뵳???紐꾨퓠 ?節뚯뱽 ????곷뮸??덈뼄.");
         if (streamBlacklistRepository.existsByStreamIdAndUserId(streamId, targetUserId)) return;
         StreamBlacklist b = new StreamBlacklist();
         b.setStreamId(streamId);
@@ -171,7 +192,7 @@ public class StreamChatSettingsService {
 
     @Transactional
     public void removeBlacklist(Long streamId, Long operatorUserId, Long targetUserId) {
-        if (!canManage(streamId, operatorUserId)) throw new IllegalArgumentException("방장 또는 매니저만 블랙리스트에서 제거할 수 있습니다.");
+        if (!canManage(streamId, operatorUserId)) throw new IllegalArgumentException("獄쎻뫗???癒?뮉 筌띲끇???筌??됰뗀?볡뵳???紐꾨퓠????볤탢??????됰뮸??덈뼄.");
         streamBlacklistRepository.deleteByStreamIdAndUserId(streamId, targetUserId);
     }
 
@@ -189,20 +210,20 @@ public class StreamChatSettingsService {
                     var userOpt = userRepository.findById(b.getUserId());
                     String name = userOpt
                             .map(u -> u.getNickname() != null && !u.getNickname().isBlank() ? u.getNickname() : u.getUsername())
-                            .orElse("알 수 없음");
+                            .orElse("??????곸벉");
                     String loginId = userOpt.map(u -> u.getLoginId()).orElse(null);
                     return Map.<String, Object>of("userId", b.getUserId(), "displayName", name, "loginId", loginId != null && !loginId.isBlank() ? loginId : "");
                 })
                 .collect(Collectors.toList());
     }
 
-    // ----- 매니저 (방장만 지정/해제) -----
+    // ----- 筌띲끇??? (獄쎻뫗?ｏ쭕?筌왖????곸젫) -----
 
     @Transactional
     public void addManager(Long streamId, Long ownerUserId, Long targetUserId) {
-        if (!isStreamOwner(streamId, ownerUserId)) throw new IllegalArgumentException("방장만 매니저를 지정할 수 있습니다.");
-        if (targetUserId == null) throw new IllegalArgumentException("대상 사용자를 지정해 주세요.");
-        if (ownerUserId.equals(targetUserId)) throw new IllegalArgumentException("본인은 매니저로 지정할 수 없습니다.");
+        if (!isStreamOwner(streamId, ownerUserId)) throw new IllegalArgumentException("獄쎻뫗?ｏ쭕?筌띲끇?????筌왖?類λ막 ????됰뮸??덈뼄.");
+        if (targetUserId == null) throw new IllegalArgumentException("????????癒? 筌왖?類λ퉸 雅뚯눘苑??");
+        if (ownerUserId.equals(targetUserId)) throw new IllegalArgumentException("癰귣챷??? 筌띲끇???嚥?筌왖?類λ막 ????곷뮸??덈뼄.");
         if (streamManagerRepository.existsByStreamIdAndUserId(streamId, targetUserId)) return;
         StreamManager m = new StreamManager();
         m.setStreamId(streamId);
@@ -212,7 +233,7 @@ public class StreamChatSettingsService {
 
     @Transactional
     public void removeManager(Long streamId, Long ownerUserId, Long targetUserId) {
-        if (!isStreamOwner(streamId, ownerUserId)) throw new IllegalArgumentException("방장만 매니저를 해제할 수 있습니다.");
+        if (!isStreamOwner(streamId, ownerUserId)) throw new IllegalArgumentException("獄쎻뫗?ｏ쭕?筌띲끇???????곸젫??????됰뮸??덈뼄.");
         streamManagerRepository.deleteByStreamIdAndUserId(streamId, targetUserId);
     }
 
@@ -224,7 +245,7 @@ public class StreamChatSettingsService {
                     var userOpt = userRepository.findById(m.getUserId());
                     String name = userOpt
                             .map(u -> u.getNickname() != null && !u.getNickname().isBlank() ? u.getNickname() : u.getUsername())
-                            .orElse("알 수 없음");
+                            .orElse("??????곸벉");
                     String loginId = userOpt.map(u -> u.getLoginId()).orElse(null);
                     return Map.<String, Object>of("userId", m.getUserId(), "displayName", name, "loginId", loginId != null && !loginId.isBlank() ? loginId : "");
                 })

@@ -2,5 +2,6 @@ package com.gamematcher.constant;
 
 public enum PaymentOrderKind {
     PANG_CHARGE,
-    SUBSCRIPTION
+    SUBSCRIPTION,
+    AD_FREE
 }

@@ -215,27 +215,17 @@ public class TftApiService {
 
             List<MatchInfo> matches = new ArrayList<>();
             if (matchIds != null) {
-                if (Boolean.TRUE.equals(req.getMatchListOnly())) {
-                    for (String matchId : matchIds) {
-                        Map<String, Object> ex = new LinkedHashMap<>();
-                        ex.put("listOnly", true);
-                        matches.add(MatchInfo.builder().matchId(matchId).gameMode("TFT").extras(ex).build());
-                    }
-                } else {
-                    for (String matchId : matchIds) {
-                        try {
-                            MatchInfo info = fetchTftMatchDetailWithCache(matchId, puuid, routing, req);
-                            if (info != null) matches.add(info);
-                        } catch (Exception e) {
-                            log.warn("TFT 매치 상세 실패 - {}: {}", matchId, e.getMessage());
-                        }
+                for (String matchId : matchIds) {
+                    try {
+                        MatchInfo info = fetchTftMatchDetailWithCache(matchId, puuid, routing, req);
+                        if (info != null) matches.add(info);
+                    } catch (Exception e) {
+                        log.warn("TFT 매치 상세 실패 - {}: {}", matchId, e.getMessage());
                     }
                 }
             }
 
-            MatchStats stats = Boolean.TRUE.equals(req.getMatchListOnly())
-                    ? MatchStats.builder().build()
-                    : buildStatsForSearch(matches);
+            MatchStats stats = buildStatsForSearch(matches);
             PlayerInfo playerInfo = PlayerInfo.builder()
                     .puuid(puuid != null ? puuid : "")
                     .gameName(req.getGameName()).tagLine(req.getTagLine())
@@ -243,7 +233,6 @@ public class TftApiService {
                     .tier(tier).rank(rank).lp(lp + " LP").build();
             return PlayerSearchResponse.builder()
                     .success(true).game("tft").nickname(nickname)
-                    .matchListOnly(Boolean.TRUE.equals(req.getMatchListOnly()) ? true : null)
                     .playerInfo(playerInfo).matches(matches).stats(stats).build();
         } catch (Exception e) {
             log.error("TFT 전적 검색 오류 - {}", req.getGameName() + "#" + req.getTagLine(), e);

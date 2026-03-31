@@ -5,7 +5,6 @@ import com.gamematcher.dto.auth.MyProfileResponseDto;
 import com.gamematcher.entity.User;
 import com.gamematcher.service.account.AccountConnectionService;
 import com.gamematcher.service.auth.CurrentUserService;
-import jakarta.servlet.http.HttpSession;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -22,10 +21,9 @@ public class MyProfileController {
 
     @GetMapping
     public MyProfileResponseDto getMyProfile(
-            @RequestHeader(value = "X-Auth-Token", required = false) String authToken,
-            HttpSession session) {
-        User user = currentUserService.requireUserByTokenOrSession(authToken, session);
-        AccountConnectionsResponseDto connections = accountConnectionService.getConnections(user.getId());
+            @RequestHeader(value = "X-Auth-Token", required = false) String authToken) {
+        User user = currentUserService.requireUser(authToken);
+        AccountConnectionsResponseDto connections = accountConnectionService.getConnections(authToken);
 
         return new MyProfileResponseDto(
                 user.getId(),

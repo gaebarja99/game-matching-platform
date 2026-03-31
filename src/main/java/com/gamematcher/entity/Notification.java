@@ -34,6 +34,10 @@ public class Notification {
     @Column(name = "actor_user_id")
     private Long actorUserId;
 
+    /** 알림 메시지 */
+    @Column(name = "message", length = 255)
+    private String message;
+
     /** 읽음 여부 */
     @Column(name = "read_at")
     private LocalDateTime readAt;
@@ -43,6 +47,8 @@ public class Notification {
 
     @PrePersist
     protected void onCreate() {
-        createdAt = LocalDateTime.now();
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
     }
 }

@@ -1,4 +1,4 @@
-import StudioLayout from '../components/StudioLayout';
+﻿import StudioLayout from '../components/StudioLayout';
 
 export default function StudioAnalysisVideo() {
   const dateRange = '2026.02.08.-2026.03.10.';

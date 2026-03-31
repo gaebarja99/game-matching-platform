@@ -38,7 +38,7 @@ export default function ProfileAdFree() {
     if (submitting) return;
     setSubmitting(true);
 
-    fetch(apiUrl('api/adfree/orders'), {
+    fetch(apiUrl('api/payment/adfree/orders'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       credentials: 'include',
@@ -74,7 +74,7 @@ export default function ProfileAdFree() {
           },
           (response) => {
             if (response.success && response.imp_uid) {
-              fetch(apiUrl('api/adfree/confirm'), {
+              fetch(apiUrl('api/payment/adfree/confirm'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -131,4 +131,3 @@ export default function ProfileAdFree() {
     </>
   );
 }
-

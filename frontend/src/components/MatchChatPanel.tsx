@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Client } from '@stomp/stompjs';
 import SockJS from 'sockjs-client';
 import { useAuth } from '../contexts/AuthContext';
-import { getWsUrl, resolveProfileImageUrl } from '../api/client';
+import { apiUrl, getWsUrl, resolveProfileImageUrl } from '../api/client';
 import {
   getMatchSession,
   getMatchChatMessages,
@@ -16,14 +16,34 @@ import {
 const GAME_LABELS: Record<string, string> = {
   LEAGUE_OF_LEGENDS: '리그 오브 레전드',
   VALORANT: '발로란트',
-  OVERWATCH: '오버워치2',
+  OVERWATCH: '오버워치 2',
   PUBG: 'PUBG',
   COUNTER_STRIKE_2: 'CS2',
 };
 
+type ReportReason = 'SPAM' | 'HARASSMENT' | 'INAPPROPRIATE_CONTENT' | 'CHEATING' | 'IMPERSONATION' | 'HATE_SPEECH' | 'OTHER';
+
+const REPORT_REASON_OPTIONS: Array<{ value: ReportReason; label: string }> = [
+  { value: 'SPAM', label: '스팸' },
+  { value: 'HARASSMENT', label: '괴롭힘' },
+  { value: 'INAPPROPRIATE_CONTENT', label: '부적절한 콘텐츠' },
+  { value: 'CHEATING', label: '부정행위' },
+  { value: 'IMPERSONATION', label: '사칭' },
+  { value: 'HATE_SPEECH', label: '혐오 발언' },
+  { value: 'OTHER', label: '기타' },
+];
+
+type MatchMemberProfile = {
+  id: number;
+  loginId?: string;
+  nickname?: string;
+  profileImageUrl?: string;
+  bio?: string;
+  error?: string;
+};
+
 export type MatchChatPanelProps = {
   sessionId: number;
-  /** 위젯 등 인라인 표시 시 레이아웃·뒤로가기 동작 분기 */
   embedded?: boolean;
   onBack?: () => void;
 };
@@ -35,65 +55,68 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
   const [messages, setMessages] = useState<MatchChatMessageType[]>([]);
   const [input, setInput] = useState('');
   const [sending, setSending] = useState(false);
+  const [sendError, setSendError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [forbidden, setForbidden] = useState(false);
   const [failedAvatarMsgIds, setFailedAvatarMsgIds] = useState<Set<number>>(new Set());
   const [hasLeftSession, setHasLeftSession] = useState(false);
+  const [selectedMember, setSelectedMember] = useState<MatchSessionMember | null>(null);
+  const [memberActionBusy, setMemberActionBusy] = useState<string | null>(null);
+  const [profileModal, setProfileModal] = useState<MatchMemberProfile | null>(null);
+  const [profileLoading, setProfileLoading] = useState(false);
+  const [reportTarget, setReportTarget] = useState<MatchSessionMember | null>(null);
+  const [reportReason, setReportReason] = useState<ReportReason>('HARASSMENT');
+  const [reportDescription, setReportDescription] = useState('');
+  const [reportSubmitting, setReportSubmitting] = useState(false);
+  const [reportError, setReportError] = useState('');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const stompRef = useRef<Client | null>(null);
 
   const sessionIdStr = String(sessionId);
 
-  /** 프로필에서 닉네임을 바꾼 직후에도 멤버/내 말풍선에 즉시 반영 (세션 스냅샷은 옛 이름일 수 있음) */
-  const displayNameForUser = (serverUserId: number, serverNickname?: string | null) => {
+  const displayNameForUser = useCallback((serverUserId: number, serverNickname?: string | null) => {
     if (user && serverUserId === user.id) {
-      const n = user.nickname?.trim();
-      if (n) return n;
-      const un = user.username?.trim();
-      if (un) return un;
+      const nickname = user.nickname?.trim();
+      if (nickname) return nickname;
+      const username = user.username?.trim();
+      if (username) return username;
     }
-    return serverNickname?.trim() || '—';
-  };
+    return serverNickname?.trim() || '유저';
+  }, [user]);
+
+  const scrollToBottom = useCallback(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, []);
 
   useEffect(() => {
     if (typeof sessionStorage === 'undefined') return;
     try {
-      setHasLeftSession(sessionStorage.getItem('match-left-' + sessionIdStr) === '1');
-    } catch {}
+      setHasLeftSession(sessionStorage.getItem(`match-left-${sessionIdStr}`) === '1');
+    } catch {
+      setHasLeftSession(false);
+    }
   }, [sessionIdStr]);
 
-  const scrollToBottom = () => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-
-  const fetchSession = useCallback(() => {
+  const fetchSession = useCallback(async () => {
     if (!user || !sessionId) return;
-    const delay = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
-    const maxAttempts = 6;
-    (async () => {
-      try {
-        for (let attempt = 0; attempt < maxAttempts; attempt++) {
-          const s = await getMatchSession(sessionId);
-          if (s) {
-            setSession(s);
-            setForbidden(false);
-            return;
-          }
-          if (attempt < maxAttempts - 1) {
-            await delay(100 * (attempt + 1));
-          }
-        }
-        setForbidden(true);
-      } catch {
-        setForbidden(true);
-      } finally {
-        setLoading(false);
+    try {
+      const nextSession = await getMatchSession(sessionId);
+      if (nextSession) {
+        setSession(nextSession);
+        setForbidden(false);
+        return;
       }
-    })();
-  }, [user, sessionId]);
+      setForbidden(true);
+    } finally {
+      setLoading(false);
+    }
+  }, [sessionId, user]);
 
-  const fetchMessages = useCallback(() => {
+  const fetchMessages = useCallback(async () => {
     if (!user || !sessionId) return;
-    getMatchChatMessages(sessionId).then(setMessages);
-  }, [user, sessionId]);
+    const nextMessages = await getMatchChatMessages(sessionId);
+    setMessages(nextMessages);
+  }, [sessionId, user]);
 
   useEffect(() => {
     if (!user || !sessionId) {
@@ -102,13 +125,18 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
     }
     setLoading(true);
     setForbidden(false);
-    fetchSession();
-    fetchMessages();
-  }, [user, sessionId, fetchSession, fetchMessages]);
+    void fetchSession();
+    void fetchMessages();
+  }, [fetchMessages, fetchSession, sessionId, user]);
 
   useEffect(() => {
-    messages.length && scrollToBottom();
-  }, [messages]);
+    if (!user || !sessionId || forbidden) return;
+    const timer = window.setInterval(() => {
+      void fetchSession();
+      void fetchMessages();
+    }, 3000);
+    return () => window.clearInterval(timer);
+  }, [fetchMessages, fetchSession, forbidden, sessionId, user]);
 
   useEffect(() => {
     if (!user?.id || !sessionId || forbidden) return;
@@ -116,10 +144,10 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
       webSocketFactory: () => new SockJS(getWsUrl()) as unknown as WebSocket,
       reconnectDelay: 5000,
       onConnect: () => {
-        client.subscribe('/topic/match/' + sessionId, (message) => {
+        client.subscribe(`/topic/match/${sessionId}`, (message) => {
           if (!message?.body) return;
           try {
-            const d = JSON.parse(message.body) as {
+            const payload = JSON.parse(message.body) as {
               type?: string;
               id?: number;
               fromUserId?: number;
@@ -128,24 +156,29 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
               text?: string;
               createdAt?: string;
             };
-            if (d.type === 'MESSAGE' && d.text != null) {
-              const text = d.text;
-              setMessages((prev) => {
-                if (prev.some((m) => m.id === d.id)) return prev;
-                const msg: MatchChatMessageType = {
-                  id: d.id!,
+            if (payload.type !== 'MESSAGE' || payload.text == null) return;
+            const fromUserId = payload.fromUserId;
+            if (fromUserId === undefined || fromUserId === null) return;
+            const text = payload.text;
+            setMessages((prev) => {
+              if (prev.some((item) => item.id === payload.id)) return prev;
+              return [
+                ...prev,
+                {
+                  id: payload.id ?? Date.now(),
                   sessionId,
-                  fromUserId: d.fromUserId!,
-                  fromNickname: d.fromNickname ?? '',
-                  fromProfileImageUrl: d.fromProfileImageUrl,
+                  fromUserId,
+                  fromNickname: payload.fromNickname ?? '',
+                  fromProfileImageUrl: payload.fromProfileImageUrl,
                   text,
-                  createdAt: d.createdAt ?? '',
-                };
-                return [...prev, msg];
-              });
-              setTimeout(scrollToBottom, 50);
-            }
-          } catch {}
+                  createdAt: payload.createdAt ?? '',
+                },
+              ];
+            });
+            setTimeout(scrollToBottom, 50);
+          } catch {
+            // ignore malformed payload
+          }
         });
       },
     });
@@ -155,27 +188,35 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
       client.deactivate();
       stompRef.current = null;
     };
-  }, [user?.id, sessionId, forbidden]);
+  }, [forbidden, scrollToBottom, sessionId, user?.id]);
 
-  const sendMessage = (e: React.FormEvent) => {
-    e.preventDefault();
+  useEffect(() => {
+    if (messages.length > 0) scrollToBottom();
+  }, [messages.length, scrollToBottom]);
+
+  const sendMessage = async (event: React.FormEvent) => {
+    event.preventDefault();
     const text = input.trim();
     if (!text || !sessionId || sending || hasLeftSession) return;
+    setSendError(null);
     setSending(true);
-    sendMatchChatMessage(sessionId, text).then((ok) => {
-      setSending(false);
-      if (ok) {
-        setInput('');
-        fetchMessages();
-      }
-    });
+    const result = await sendMatchChatMessage(sessionId, text);
+    setSending(false);
+    if (result.ok) {
+      setInput('');
+      void fetchMessages();
+      return;
+    }
+    setSendError(result.message || '채팅 전송에 실패했습니다.');
   };
 
   const handleLeaveRoom = () => {
     if (typeof sessionStorage !== 'undefined') {
       try {
-        sessionStorage.setItem('match-left-' + sessionIdStr, '1');
-      } catch {}
+        sessionStorage.setItem(`match-left-${sessionIdStr}`, '1');
+      } catch {
+        // ignore
+      }
     }
     setHasLeftSession(true);
   };
@@ -183,6 +224,108 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
   const goBack = () => {
     if (onBack) onBack();
     else navigate('/');
+  };
+
+  const openMemberProfile = async (member: MatchSessionMember) => {
+    const targetUserId = member.userId;
+    if (!targetUserId) return;
+    setProfileLoading(true);
+    setProfileModal({
+      id: targetUserId,
+      nickname: displayNameForUser(targetUserId, member.nickname),
+      profileImageUrl: member.profileImageUrl,
+    });
+    try {
+      const response = await fetch(apiUrl(`api/friends/${targetUserId}/public-profile`), { credentials: 'include' });
+      const payload = await response.json().catch(() => ({} as { id?: number; loginId?: string; nickname?: string; profileImageUrl?: string; bio?: string; message?: string }));
+      if (!response.ok) {
+        setProfileModal((current) => current ? { ...current, error: payload.message ?? '프로필 정보를 불러오지 못했습니다.' } : current);
+        return;
+      }
+      setProfileModal({
+        id: payload.id ?? targetUserId,
+        loginId: payload.loginId,
+        nickname: payload.nickname || displayNameForUser(targetUserId, member.nickname),
+        profileImageUrl: payload.profileImageUrl || member.profileImageUrl,
+        bio: payload.bio || '',
+      });
+    } finally {
+      setProfileLoading(false);
+    }
+  };
+
+  const sendFriendRequest = async (targetUserId: number) => {
+    setMemberActionBusy(`friend-${targetUserId}`);
+    try {
+      const response = await fetch(apiUrl('api/friends/requests'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: targetUserId }),
+      });
+      const payload = await response.json().catch(() => ({} as { message?: string }));
+      if (!response.ok) {
+        window.alert(payload.message ?? '친구 추가에 실패했습니다.');
+        return;
+      }
+      window.alert('친구 요청을 보냈습니다.');
+    } finally {
+      setMemberActionBusy(null);
+    }
+  };
+
+  const blockMember = async (targetUserId: number) => {
+    if (!window.confirm('이 사용자를 차단할까요?')) return;
+    setMemberActionBusy(`block-${targetUserId}`);
+    try {
+      const response = await fetch(apiUrl('api/friends/block'), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: targetUserId }),
+      });
+      const payload = await response.json().catch(() => ({} as { message?: string }));
+      if (!response.ok) {
+        window.alert(payload.message ?? '차단에 실패했습니다.');
+        return;
+      }
+      window.alert('차단했습니다.');
+    } finally {
+      setMemberActionBusy(null);
+    }
+  };
+
+  const submitReport = async () => {
+    if (!user?.id || !reportTarget?.userId) return;
+    const detail = reportDescription.trim();
+    if (!detail) {
+      setReportError('상세 내용을 입력해 주세요.');
+      return;
+    }
+    setReportSubmitting(true);
+    setReportError('');
+    try {
+      const response = await fetch(apiUrl(`api/users/${user.id}/reports`), {
+        method: 'POST',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          reportedUserId: reportTarget.userId,
+          reason: reportReason,
+          description: detail,
+        }),
+      });
+      const payload = await response.json().catch(() => ({} as { message?: string }));
+      if (!response.ok) {
+        setReportError(payload.message ?? '신고 접수에 실패했습니다.');
+        return;
+      }
+      window.alert('신고가 접수되었습니다.');
+      setReportTarget(null);
+      setReportDescription('');
+    } finally {
+      setReportSubmitting(false);
+    }
   };
 
   if (!user) {
@@ -199,7 +342,7 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
   if (loading) {
     return (
       <div className={embedded ? 'match-chat-panel-embedded-inner' : ''}>
-        <div className="match-chat-panel-loading">로딩 중…</div>
+        <div className="match-chat-panel-loading">로딩 중...</div>
       </div>
     );
   }
@@ -207,15 +350,16 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
   if (forbidden || !session) {
     return (
       <div className={embedded ? 'match-chat-panel-embedded-inner' : ''}>
-        <p className="match-chat-panel-error">매칭 채팅방에 접근할 수 없습니다.</p>
+        <p className="match-chat-panel-error">랜덤 매칭 채팅방에 접근할 수 없습니다.</p>
         <button type="button" onClick={goBack}>
-          돌아가기
+          목록으로
         </button>
       </div>
     );
   }
 
-  const title = `랜덤 매칭 채팅 — ${GAME_LABELS[session.game] ?? session.game}`;
+  const title = `랜덤 매칭 채팅 - ${GAME_LABELS[session.game] ?? session.game}`;
+  const selectedMemberId = selectedMember?.userId ?? null;
 
   return (
     <div className={`group-chat-room-page ${embedded ? 'match-chat-panel-embedded' : ''}`}>
@@ -227,19 +371,55 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
       </header>
 
       <div className="group-chat-room-body">
-        <aside className="group-chat-members">
+        <aside className="group-chat-members member-sidebar-enhanced">
           <h3>멤버 ({session.members.length})</h3>
           <ul>
-            {session.members.map((m: MatchSessionMember) => {
-              const label = displayNameForUser(m.userId, m.nickname);
+            {session.members.map((member) => {
+              const label = displayNameForUser(member.userId, member.nickname);
+              const isMe = member.userId === user.id;
+              const active = selectedMemberId === member.userId;
               return (
-                <li key={m.userId} className="group-chat-member-item">
-                  {resolveProfileImageUrl(m.profileImageUrl) ? (
-                    <img src={resolveProfileImageUrl(m.profileImageUrl)!} alt="" className="group-chat-member-avatar" />
-                  ) : (
-                    <span className="group-chat-member-initial">{(label === '—' ? '?' : label)[0]}</span>
-                  )}
-                  <span>{label}</span>
+                <li key={member.userId} className={`group-chat-member-entry ${active ? 'is-active' : ''}`}>
+                  <button
+                    type="button"
+                    className="group-chat-member-item group-chat-member-button"
+                    onClick={() => setSelectedMember((current) => (current?.userId === member.userId ? null : member))}
+                  >
+                    {resolveProfileImageUrl(member.profileImageUrl) ? (
+                      <img src={resolveProfileImageUrl(member.profileImageUrl)!} alt="" className="group-chat-member-avatar" />
+                    ) : (
+                      <span className="group-chat-member-initial">{label[0]}</span>
+                    )}
+                    <span>{label}{isMe ? ' (나)' : ''}</span>
+                  </button>
+                  {active && !isMe ? (
+                    <div className="member-action-card">
+                      <button type="button" className="member-action-btn" onClick={() => void openMemberProfile(member)}>
+                        정보 보기
+                      </button>
+                      <button type="button" className="member-action-btn" onClick={() => navigate(`/dm?with=${member.userId}`)}>
+                        1:1 메시지
+                      </button>
+                      <button type="button" className="member-action-btn" disabled={memberActionBusy === `friend-${member.userId}`} onClick={() => void sendFriendRequest(member.userId)}>
+                        친구 추가
+                      </button>
+                      <button type="button" className="member-action-btn" disabled={memberActionBusy === `block-${member.userId}`} onClick={() => void blockMember(member.userId)}>
+                        차단하기
+                      </button>
+                      <button
+                        type="button"
+                        className="member-action-btn danger"
+                        onClick={() => {
+                          setReportTarget(member);
+                          setReportReason('HARASSMENT');
+                          setReportDescription('');
+                          setReportError('');
+                        }}
+                      >
+                        신고하기
+                      </button>
+                    </div>
+                  ) : null}
                 </li>
               );
             })}
@@ -250,7 +430,7 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
                 목록으로
               </button>
             ) : (
-              <button type="button" className="group-chat-leave-btn btn-secondary" onClick={handleLeaveRoom} title="채팅방 나가기">
+              <button type="button" className="group-chat-leave-btn btn-secondary" onClick={handleLeaveRoom}>
                 방 나가기
               </button>
             )}
@@ -259,52 +439,121 @@ export default function MatchChatPanel({ sessionId, embedded, onBack }: MatchCha
 
         <div className="group-chat-messages-wrap">
           <div className="group-chat-messages">
-            {messages.map((m) => {
-              const senderName = displayNameForUser(m.fromUserId, m.fromNickname);
+            {messages.map((message) => {
+              const senderName = displayNameForUser(message.fromUserId, message.fromNickname);
               return (
-              <div key={m.id} className={`group-chat-msg ${m.fromUserId === user.id ? 'mine' : ''}`}>
-                <div className="group-chat-msg-avatar">
-                  {resolveProfileImageUrl(m.fromProfileImageUrl) && !failedAvatarMsgIds.has(m.id) ? (
-                    <img
-                      src={resolveProfileImageUrl(m.fromProfileImageUrl)!}
-                      alt=""
-                      onError={() => setFailedAvatarMsgIds((prev) => new Set(prev).add(m.id))}
-                    />
-                  ) : (
-                    <span className="group-chat-msg-initial">{(senderName === '—' ? '?' : senderName)[0]}</span>
-                  )}
+                <div key={message.id} className={`group-chat-msg ${message.fromUserId === user.id ? 'mine' : ''}`}>
+                  <div className="group-chat-msg-avatar">
+                    {resolveProfileImageUrl(message.fromProfileImageUrl) && !failedAvatarMsgIds.has(message.id) ? (
+                      <img
+                        src={resolveProfileImageUrl(message.fromProfileImageUrl)!}
+                        alt=""
+                        onError={() => setFailedAvatarMsgIds((prev) => new Set(prev).add(message.id))}
+                      />
+                    ) : (
+                      <span className="group-chat-msg-initial">{senderName[0]}</span>
+                    )}
+                  </div>
+                  <div className="group-chat-msg-body">
+                    <span className="group-chat-msg-name">{senderName}</span>
+                    <p className="group-chat-msg-text">{message.text}</p>
+                    <span className="group-chat-msg-time">
+                      {message.createdAt ? new Date(message.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : ''}
+                    </span>
+                  </div>
                 </div>
-                <div className="group-chat-msg-body">
-                  <span className="group-chat-msg-name">{senderName}</span>
-                  <p className="group-chat-msg-text">{m.text}</p>
-                  <span className="group-chat-msg-time">
-                    {m.createdAt ? new Date(m.createdAt).toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' }) : ''}
-                  </span>
-                </div>
-              </div>
-            );
+              );
             })}
             <div ref={messagesEndRef} />
           </div>
           {hasLeftSession ? (
-            <div className="group-chat-readonly-notice">나간 방입니다. 내용만 볼 수 있습니다.</div>
+            <div className="group-chat-readonly-notice">방을 나간 상태입니다. 이전 대화만 볼 수 있습니다.</div>
           ) : (
-            <form className="group-chat-send-form" onSubmit={sendMessage}>
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                placeholder="메시지 입력..."
-                maxLength={2000}
-                className="group-chat-send-input"
-              />
-              <button type="submit" disabled={sending || !input.trim()} className="btn-primary">
-                전송
-              </button>
-            </form>
+            <>
+              <form className="group-chat-send-form" onSubmit={sendMessage}>
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value)}
+                  placeholder="메시지를 입력해 주세요."
+                  maxLength={2000}
+                  className="group-chat-send-input"
+                />
+                <button type="submit" disabled={sending || !input.trim()} className="btn-primary">
+                  전송
+                </button>
+              </form>
+              {sendError && <p className="group-chat-empty" style={{ color: '#dc2626', marginTop: 8 }}>{sendError}</p>}
+            </>
           )}
         </div>
       </div>
+
+      {profileModal && (
+        <div className="main-modal-backdrop show" role="dialog" aria-modal="true" onClick={() => setProfileModal(null)}>
+          <div className="main-modal-box" onClick={(event) => event.stopPropagation()}>
+            <h2 className="modal-title">멤버 정보</h2>
+            <div className="member-profile-modal">
+              {resolveProfileImageUrl(profileModal.profileImageUrl) ? (
+                <img src={resolveProfileImageUrl(profileModal.profileImageUrl)!} alt="" className="member-profile-avatar" />
+              ) : (
+                <div className="member-profile-avatar member-profile-avatar-fallback">{(profileModal.nickname || '유저')[0]}</div>
+              )}
+              <div className="member-profile-copy">
+                <strong>{profileModal.nickname || '유저'}</strong>
+                {profileModal.loginId ? <span>{profileModal.loginId}</span> : null}
+              </div>
+            </div>
+            <div className="modal-desc">
+              {profileLoading ? '프로필을 불러오는 중...' : profileModal.error || profileModal.bio || '공개된 소개가 없습니다.'}
+            </div>
+            <div className="modal-actions">
+              <button type="button" className="btn-secondary" onClick={() => setProfileModal(null)}>
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {reportTarget && (
+        <div className="main-modal-backdrop show" role="dialog" aria-modal="true" onClick={() => setReportTarget(null)}>
+          <div className="main-modal-box" onClick={(event) => event.stopPropagation()}>
+            <h2 className="modal-title">{displayNameForUser(reportTarget.userId, reportTarget.nickname)} 신고하기</h2>
+            <div className="modal-field">
+              <label htmlFor="match-report-reason">신고 사유</label>
+              <select id="match-report-reason" value={reportReason} onChange={(e) => setReportReason(e.target.value as ReportReason)}>
+                {REPORT_REASON_OPTIONS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="modal-field">
+              <label htmlFor="match-report-description">상세 내용</label>
+              <textarea
+                id="match-report-description"
+                className="watch-report-textarea"
+                value={reportDescription}
+                onChange={(e) => setReportDescription(e.target.value)}
+                rows={5}
+                maxLength={500}
+                placeholder="신고 사유를 자세히 입력해 주세요."
+              />
+            </div>
+            {reportError ? <div className="modal-error">{reportError}</div> : null}
+            <div className="modal-actions">
+              <button type="button" className="btn-primary" onClick={() => void submitReport()} disabled={reportSubmitting}>
+                {reportSubmitting ? '접수 중...' : '신고 접수'}
+              </button>
+              <button type="button" className="btn-secondary" onClick={() => setReportTarget(null)} disabled={reportSubmitting}>
+                취소
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

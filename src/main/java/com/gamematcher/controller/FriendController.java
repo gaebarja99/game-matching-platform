@@ -93,8 +93,7 @@ public class FriendController {
             return ResponseEntity.status(401).body(List.of());
         }
         String trimmed = q != null ? q.trim() : "";
-        // 한 글자 검색도 허용 (닉네임/아이디 한 글자에도 대응)
-        if (trimmed.isEmpty()) {
+        if (trimmed.length() < 2) {
             return ResponseEntity.ok(List.of());
         }
         List<User> users = userRepository.searchByLoginIdOrNickname(trimmed, userId);

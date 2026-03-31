@@ -374,3 +374,13 @@ select.sidebar-form-input option {
 .create-room-form { display: block; }
 .create-room-fieldset { border: 1px solid var(--border); border-radius: 8px; padding: 16px; background: var(--hover); margin: 0; }
 .create-room-legend { font-size: 0.85rem; font-weight: 600; color: var(--text-muted); padding: 0 8px; margin-left: -4px; }
+
+.home-demo-room-row--clickable {
+  cursor: pointer;
+}
+.home-demo-room-row--clickable:hover td {
+  background: rgba(46, 204, 113, 0.07);
+}
+.theme-light .home-demo-room-row--clickable:hover td {
+  background: rgba(46, 204, 113, 0.1);
+}

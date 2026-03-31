@@ -2,6 +2,7 @@ package com.gamematcher.controller;
 
 import com.gamematcher.dto.search.*;
 import com.gamematcher.service.PlayerSearchService;
+import com.gamematcher.service.search.RecordsAiEvaluationService;
 import com.gamematcher.service.search.RecordsMatchDetailService;
 import com.gamematcher.service.valorant.ValorantApiService;
 import lombok.RequiredArgsConstructor;
@@ -26,6 +27,7 @@ public class PlayerSearchController {
 
     private final PlayerSearchService playerSearchService;
     private final RecordsMatchDetailService recordsMatchDetailService;
+    private final RecordsAiEvaluationService recordsAiEvaluationService;
     private final ValorantApiService valorantApiService;
 
 
@@ -81,6 +83,17 @@ public class PlayerSearchController {
      *   { "game": "steam", "steamId": "76561198000000000" }
      * ]
      */
+    @PostMapping("/lol/evaluations/match/{matchId}")
+    public ResponseEntity<RecordsAiEvaluationResponse> evaluateLolMatch(
+            @PathVariable String matchId,
+            @RequestParam String puuid,
+            @RequestParam(required = false) String model,
+            @RequestParam(defaultValue = "40") int maxTimelineEvents) {
+        return ResponseEntity.ok(
+                recordsAiEvaluationService.evaluateLolMatch(matchId, puuid, model, maxTimelineEvents)
+        );
+    }
+
     @PostMapping("/batch")
     public ResponseEntity<List<PlayerSearchResponse>> batchSearch(
             @RequestParam("file") MultipartFile file) {

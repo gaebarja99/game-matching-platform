@@ -23,7 +23,7 @@ public class ValorantMmrRecord {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, unique = true, length = 120)
+    @Column(nullable = false, unique = true, length = 36)
     private String puuid;
 
     @Column(length = 20)

@@ -1,6 +1,5 @@
 package com.gamematcher.service.ai;
 
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.gamematcher.dto.ai.evaluation.LlmEvaluationResponseDTO;
 import org.slf4j.Logger;
@@ -63,23 +62,8 @@ public class LlmEvaluationServiceImpl implements LlmEvaluationService {
             }
             try {
                 String cleanJson = extractJsonFromResponse(responseText);
-                LlmEvaluationResponseDTO dto = parseEvaluationDto(cleanJson);
-                if (dto != null && hasText(dto.getSummary(), dto.getDetailedComment())) {
-                    return Optional.of(dto);
-                }
-                String trimmedClean = cleanJson.trim();
-                if (dto != null && !looksLikeJsonObject(trimmedClean)) {
-                    dto = new LlmEvaluationResponseDTO();
-                    dto.setSummary(null);
-                    dto.setDetailedComment(responseText.trim());
-                    return Optional.of(dto);
-                }
-                String head = responseText.length() > 400 ? responseText.substring(0, 400) + "…" : responseText;
-                log.warn("LLM 응답에 요약/상세 텍스트가 없음 (시도 {}/{}). 앞부분: {}",
-                        attempt, maxRetries, head.replaceAll("\\s+", " "));
-                if (attempt == maxRetries) {
-                    return Optional.empty();
-                }
+                LlmEvaluationResponseDTO dto = objectMapper.readValue(cleanJson, LlmEvaluationResponseDTO.class);
+                return Optional.ofNullable(dto);
             } catch (Exception e) {
                 String head = responseText.length() > 400 ? responseText.substring(0, 400) + "…" : responseText;
                 log.warn("LLM 응답 JSON 파싱 실패 (시도 {}/{}): {} | 응답 앞부분: {}",
@@ -123,89 +107,6 @@ public class LlmEvaluationServiceImpl implements LlmEvaluationService {
         if (matcher.find()) {
             return matcher.group(1).trim();
         }
-        String t = raw.trim();
-        int start = t.indexOf('{');
-        if (start >= 0) {
-            String balanced = extractBalancedJsonObject(t, start);
-            if (balanced != null) {
-                return balanced;
-            }
-        }
-        return t;
-    }
-
-    /** 첫 번째 '{'부터 중괄호 균형이 맞는 구간만 잘라 JSON으로 쓴다. */
-    private static String extractBalancedJsonObject(String s, int start) {
-        int depth = 0;
-        boolean inString = false;
-        boolean escape = false;
-        for (int i = start; i < s.length(); i++) {
-            char c = s.charAt(i);
-            if (inString) {
-                if (escape) {
-                    escape = false;
-                } else if (c == '\\') {
-                    escape = true;
-                } else if (c == '"') {
-                    inString = false;
-                }
-                continue;
-            }
-            if (c == '"') {
-                inString = true;
-                continue;
-            }
-            if (c == '{') {
-                depth++;
-            } else if (c == '}') {
-                depth--;
-                if (depth == 0) {
-                    return s.substring(start, i + 1);
-                }
-            }
-        }
-        return null;
-    }
-
-    private static boolean looksLikeJsonObject(String t) {
-        return t.startsWith("{") && t.endsWith("}");
-    }
-
-    private static boolean hasText(String summary, String detailed) {
-        return (summary != null && !summary.isBlank()) || (detailed != null && !detailed.isBlank());
-    }
-
-    /**
-     * DTO 매핑 + 루트에 없으면 흔한 대체 키로 문자열 추출.
-     */
-    private LlmEvaluationResponseDTO parseEvaluationDto(String json) throws Exception {
-        JsonNode root = objectMapper.readTree(json);
-        LlmEvaluationResponseDTO dto = objectMapper.treeToValue(root, LlmEvaluationResponseDTO.class);
-        if (dto == null) {
-            dto = new LlmEvaluationResponseDTO();
-        }
-        if (!hasText(dto.getSummary(), null)) {
-            dto.setSummary(firstNonBlankText(root,
-                    "summary", "요약", "SUMMARY", "short_summary", "shortSummary"));
-        }
-        if (!hasText(null, dto.getDetailedComment())) {
-            dto.setDetailedComment(firstNonBlankText(root,
-                    "detailedComment", "detailed_comment", "comment", "body", "analysis",
-                    "detailed", "long_comment", "longComment", "상세", "상세코멘트"));
-        }
-        return dto;
-    }
-
-    private static String firstNonBlankText(JsonNode root, String... fieldNames) {
-        for (String name : fieldNames) {
-            JsonNode n = root.get(name);
-            if (n != null && n.isTextual()) {
-                String s = n.asText().trim();
-                if (!s.isEmpty()) {
-                    return s;
-                }
-            }
-        }
-        return null;
+        return raw.trim();
     }
 }

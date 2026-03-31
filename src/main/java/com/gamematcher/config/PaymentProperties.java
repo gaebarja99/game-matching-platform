@@ -21,6 +21,9 @@ public class PaymentProperties {
     private String apiSecret = "";
     /** 가맹점 식별자 (프론트 IMP.init용. 포트원 콘솔에서 확인) */
     private String storeId = "";
+    private String customerCode = "";
+    private String channelKey = "";
+    private String signKey = "";
     /** PG사 설정값 (예: html5_inicis.INIpayTest, kakaopay.TC0ONETIME 등) */
     private String pg = "html5_inicis.INIpayTest";
     /** 결제수단 (card, trans, vbank, phone 등) */

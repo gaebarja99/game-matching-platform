@@ -7,6 +7,6 @@
     "start": "node index.js"
   },
   "dependencies": {
-    "node-media-server": "^2.6.4"
+    "node-media-server": "2.6.4"
   }
 }

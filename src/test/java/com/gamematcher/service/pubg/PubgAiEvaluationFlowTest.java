@@ -2,14 +2,15 @@ package com.gamematcher.service.pubg;
 
 import com.gamematcher.constant.ai.evaluation.EvaluationStatus;
 import com.gamematcher.dto.ai.evaluation.LlmEvaluationResponseDTO;
-import com.gamematcher.dto.ai.evaluation.PubgPlayerMatchStatsDTO;
 import com.gamematcher.dto.pubg.PubgAiEvaluationResponseDto;
 import com.gamematcher.dto.pubg.PubgMatchApiResponse;
 import com.gamematcher.entity.match.pubg.PubgMatch;
+import com.gamematcher.entity.match.pubg.PubgMatchAiEvaluation;
+import com.gamematcher.entity.match.pubg.PubgMatchParticipant;
 import com.gamematcher.mapper.PubgMatchMapper;
 import com.gamematcher.repository.match.PubgMatchAiEvaluationRepository;
 import com.gamematcher.repository.match.PubgMatchRepository;
-import com.gamematcher.service.ai.PubgLlmEvaluationService;
+import com.gamematcher.service.ai.LlmEvaluationService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -27,8 +28,8 @@ import java.util.Optional;
 import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.anyInt;
+import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.when;
 
 @SpringBootTest
@@ -59,7 +60,7 @@ class PubgAiEvaluationFlowTest {
     PubgMatchAiEvaluationRepository evaluationRepository;
 
     @MockBean
-    PubgLlmEvaluationService pubgLlmEvaluationService;
+    LlmEvaluationService llmEvaluationService;
 
     private PubgMatch savedMatch;
 
@@ -90,48 +91,42 @@ class PubgAiEvaluationFlowTest {
         mockLlmResponse.setSummary("테스트 AI 요약");
         mockLlmResponse.setDetailedComment("테스트 AI 상세 코멘트");
 
-        when(pubgLlmEvaluationService.evaluate(any(PubgPlayerMatchStatsDTO.class), anyInt(), any()))
-                .thenReturn(Optional.of(mockLlmResponse));
+        when(llmEvaluationService.evaluate(anyString(), isNull())).thenReturn(Optional.of(mockLlmResponse));
 
-        String oneAccount = savedMatch.getParticipants().get(0).getPlayerId();
         List<PubgAiEvaluationResponseDto> results = pubgAiEvaluationService
-                .evaluateMatch(savedMatch.getMatchId(), 30, oneAccount, null);
+                .evaluateMatch(savedMatch.getMatchId(), 30);
 
         assertThat(results).isNotEmpty();
-        assertThat(results).anySatisfy(r -> {
-            assertThat(r.getSummary()).isEqualTo(mockLlmResponse.getSummary());
-            assertThat(r.getDetailedComment()).isEqualTo(mockLlmResponse.getDetailedComment());
-        });
 
-        // @OneToMany 참가자 순서는 보장되지 않으므로 get(0) 대신 DB에서 검증
-        assertThat(evaluationRepository.findAll()).anySatisfy(savedEntity -> {
-            assertThat(savedEntity.getSummary()).isEqualTo(mockLlmResponse.getSummary());
-            assertThat(savedEntity.getDetailedComment()).isEqualTo(mockLlmResponse.getDetailedComment());
-            assertThat(savedEntity.getScore()).isNotNull();
-            assertThat(savedEntity.getGrade()).isNotNull();
-            assertThat(savedEntity.getStatus()).isEqualTo(EvaluationStatus.COMPLETED);
-            assertThat(savedEntity.getLlmModel()).isNotBlank();
-        });
+        PubgMatchParticipant firstParticipant = savedMatch.getParticipants().get(0);
+        PubgMatchAiEvaluation savedEntity = evaluationRepository
+                .findByPubgMatchParticipantId(firstParticipant.getId())
+                .orElseThrow();
+
+        assertThat(savedEntity.getSummary()).isEqualTo(mockLlmResponse.getSummary());
+        assertThat(savedEntity.getDetailedComment()).isEqualTo(mockLlmResponse.getDetailedComment());
+        assertThat(savedEntity.getScore()).isNotNull();
+        assertThat(savedEntity.getGrade()).isNotNull();
+        assertThat(savedEntity.getStatus()).isEqualTo(EvaluationStatus.COMPLETED);
     }
 
     @Test
     @DisplayName("LLM 실패 시 규칙 기반 점수만 저장 (summary/detailedComment는 null)")
     void evaluateAndSave_whenLlmFails_savesRuleBasedScoreOnly() {
-        when(pubgLlmEvaluationService.evaluate(any(PubgPlayerMatchStatsDTO.class), anyInt(), any()))
-                .thenReturn(Optional.empty());
+        when(llmEvaluationService.evaluate(anyString(), isNull())).thenReturn(Optional.empty());
 
-        String oneAccount = savedMatch.getParticipants().get(0).getPlayerId();
-        pubgAiEvaluationService.evaluateMatch(savedMatch.getMatchId(), 30, oneAccount, null);
+        pubgAiEvaluationService.evaluateMatch(savedMatch.getMatchId(), 30);
 
-        assertThat(evaluationRepository.findAll()).isNotEmpty()
-                .allSatisfy(savedEntity -> {
-                    assertThat(savedEntity.getSummary()).isNull();
-                    assertThat(savedEntity.getDetailedComment()).isNull();
-                    assertThat(savedEntity.getScore()).isNotNull();
-                    assertThat(savedEntity.getGrade()).isNotNull();
-                    assertThat(savedEntity.getStatus()).isEqualTo(EvaluationStatus.COMPLETED);
-                    assertThat(savedEntity.getLlmModel()).isNotBlank();
-                });
+        PubgMatchParticipant firstParticipant = savedMatch.getParticipants().get(0);
+        PubgMatchAiEvaluation savedEntity = evaluationRepository
+                .findByPubgMatchParticipantId(firstParticipant.getId())
+                .orElseThrow();
+
+        assertThat(savedEntity.getSummary()).isNull();
+        assertThat(savedEntity.getDetailedComment()).isNull();
+        assertThat(savedEntity.getScore()).isNotNull();
+        assertThat(savedEntity.getGrade()).isNotNull();
+        assertThat(savedEntity.getStatus()).isEqualTo(EvaluationStatus.COMPLETED);
     }
 }
 

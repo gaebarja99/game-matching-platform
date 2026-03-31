@@ -10,6 +10,7 @@ import { filterFriendsExcludingSelf, isDmWithSelf } from '../utils/dmSelf';
 import { fetchUserSummary, type UserSummaryDto } from '../api/userSummary';
 import { fetchAccountConnectionsForUser, type AccountConnectionStatus } from '../api/accountLinks';
 import { formatActivityPeriod } from '../lib/activityPeriod';
+import { resolveNotificationTargetPath } from '../utils/notificationNavigation';
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -23,7 +24,29 @@ type NotificationItem = {
   message: string;
   read: boolean;
   createdAt: string;
+  streamId?: number;
+  actorUserId?: number;
+  actorNickname?: string;
+  targetPath?: string;
 };
+
+function getNotificationMessage(item: NotificationItem): string {
+  const actor = item.actorNickname || '채널 소유자';
+  const type = (item.type || '').toUpperCase();
+  if (type === 'ADMIN_PANG_GIFT') {
+    return '운영자가 이벤트 팡을 지급했습니다.';
+  }
+  if (type === 'ADMIN_MILEAGE_GIFT') {
+    return '운영자가 이벤트 마일리지를 지급했습니다.';
+  }
+  if (type === 'CHANNEL_PERMISSION_GRANTED') {
+    return `${actor}님의 채널 관리 권한이 부여되었습니다.`;
+  }
+  if (type === 'CHANNEL_PERMISSION_REVOKED') {
+    return `${actor}님의 채널 관리 권한이 해제되었습니다.`;
+  }
+  return item.message;
+}
 
 type DmMessageItem = {
   id?: number;
@@ -60,6 +83,7 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
   useMatchCompleteNotification(user?.id);
   const { toggleTheme } = useTheme();
   const navigate = useNavigate();
+  const isAdmin = ['ADMIN', 'ROLE_ADMIN'].includes((user?.role ?? '').toUpperCase());
 
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
@@ -208,9 +232,13 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
           })
           .catch(() => {});
       }
-
-      if (n.type === 'PAYMENT_COMPLETED' || n.type === 'PAYMENT_REFUNDED') navigate('/profile/pang');
-      if (n.type === 'FRIEND_REQUEST') navigate('/profile');
+      const notificationType = (n.type || '').toUpperCase();
+      const targetPath = notificationType === 'ADMIN_MILEAGE_GIFT'
+        ? '/profile/mileage-shop'
+        : resolveNotificationTargetPath(n);
+      if (targetPath) {
+        navigate(targetPath);
+      }
     },
     [fetchNotificationCount, navigate],
   );
@@ -519,7 +547,7 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
       <header className="main-header">
         <Link to="/" className="logo">GameMatcher</Link>
         <nav className="main-nav">
-          <Link to="/streams">전체 방송</Link>
+          <Link to="/streams">방송</Link>
           <Link to="/records">전적검색</Link>
           <Link to="/community">커뮤니티</Link>
         </nav>
@@ -558,7 +586,7 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
                 ) : (
                   notificationList.map((n) => (
                     <button key={n.id} type="button" className={`notification-item ${!n.read ? 'unread' : ''}`} onClick={() => handleNotificationClick(n)}>
-                      <span>{n.message}</span>
+                      <span>{getNotificationMessage(n)}</span>
                       <div className="notification-time">{n.createdAt ? new Date(n.createdAt).toLocaleString('ko-KR') : ''}</div>
                     </button>
                   ))
@@ -612,11 +640,12 @@ export default function Layout({ children, showFriendSidebar = true, topSection 
             </button>
 
             <div className={`header-profile-dropdown ${dropdownOpen ? 'show' : ''}`}>
-              <div className="dropdown-menu">
-                <Link to="/profile" onClick={() => setDropdownOpen(false)}>내 프로필</Link>
-                <Link to="/studio" onClick={() => setDropdownOpen(false)}>스튜디오</Link>
-                <button type="button" onClick={handleLogout}>로그아웃</button>
-              </div>
+                <div className="dropdown-menu">
+                  <Link to="/profile" onClick={() => setDropdownOpen(false)}>내 프로필</Link>
+                  {isAdmin && <Link to="/admin" onClick={() => setDropdownOpen(false)}>관리자</Link>}
+                  <Link to="/studio" onClick={() => setDropdownOpen(false)}>스튜디오</Link>
+                  <button type="button" onClick={handleLogout}>로그아웃</button>
+                </div>
             </div>
           </div>
         </div>

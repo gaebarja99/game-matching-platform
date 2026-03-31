@@ -2,6 +2,7 @@ package com.gamematcher.service;
 
 import org.springframework.stereotype.Service;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -33,5 +34,11 @@ public class StreamViewerCountService {
         if (streamId == null) return 0;
         Map<Long, Boolean> set = viewersByStream.get(streamId);
         return set != null ? set.size() : 0;
+    }
+
+    public List<Long> getViewerUserIds(Long streamId) {
+        if (streamId == null) return List.of();
+        Map<Long, Boolean> set = viewersByStream.get(streamId);
+        return set != null ? List.copyOf(set.keySet()) : List.of();
     }
 }

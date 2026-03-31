@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+﻿import { useEffect, useMemo, useState } from 'react';
 import AdminLayout from '../components/AdminLayout';
 import { useAuth } from '../contexts/AuthContext';
 import { fetchAdminMemberHistory, fetchAdminMembers, giftAdminPang, updateAdminMember } from '../api/admin';
@@ -89,6 +89,7 @@ export default function AdminMembers() {
   const [giftLoginId, setGiftLoginId] = useState('');
   const [giftAmount, setGiftAmount] = useState('');
   const [giftMessage, setGiftMessage] = useState('');
+  const [giftAsMileage, setGiftAsMileage] = useState(false);
   const [modalGiftAmount, setModalGiftAmount] = useState('');
   const [modalGiftMessage, setModalGiftMessage] = useState('');
 
@@ -161,6 +162,16 @@ export default function AdminMembers() {
     setSelectedMember((current) => (current && current.id === memberId ? { ...current, ...patch } : current));
   };
 
+  const mergeMemberRow = (memberId: number, patch: Partial<AdminMemberRow>) => {
+    setResult((current) => {
+      if (!current) return current;
+      return {
+        ...current,
+        content: current.content.map((row) => (row.id === memberId ? { ...row, ...patch } : row)),
+      };
+    });
+  };
+
   const runMemberUpdate = async (member: AdminMemberRow, body: Parameters<typeof updateAdminMember>[1]) => {
     setSubmittingId(member.id);
     const response = await updateAdminMember(member.id, body);
@@ -169,24 +180,42 @@ export default function AdminMembers() {
       window.alert(response.message ?? '회원 정보 변경에 실패했습니다.');
       return false;
     }
-    await load();
     await loadHistory(member.id);
-    mergeSelectedMember(member.id, {
+    const nextPatch = {
       ...('status' in body ? { status: (response.data?.status ?? member.status) as AdminMemberRow['status'] } : {}),
       ...('role' in body ? { role: (response.data?.role ?? member.role) as AdminMemberRow['role'] } : {}),
       ...('nickname' in body ? { nickname: response.data?.nickname ?? nicknameDraft.trim() } : {}),
       suspendedUntil: response.data?.suspendedUntil ?? (body.status === 'ACTIVE' || body.status === 'INACTIVE' ? null : member.suspendedUntil),
       suspensionReason: response.data?.suspensionReason ?? (body.status === 'ACTIVE' || body.status === 'INACTIVE' ? null : member.suspensionReason),
-    });
+    };
+    mergeMemberRow(member.id, nextPatch);
+    mergeSelectedMember(member.id, nextPatch);
+    await load();
     return true;
   };
 
   const handleStatusChange = async (member: AdminMemberRow, status: 'ACTIVE' | 'INACTIVE') => {
-    await runMemberUpdate(member, { status });
+    const ok = await runMemberUpdate(member, { status });
+    if (ok) {
+      window.alert(status === 'ACTIVE' ? '회원이 활성 상태로 변경되었습니다.' : '회원이 비활성 상태로 변경되었습니다.');
+    }
   };
 
   const handleRoleChange = async (member: AdminMemberRow, role: 'ADMIN' | 'USER') => {
-    await runMemberUpdate(member, { role });
+    const ok = await runMemberUpdate(member, { role });
+    if (ok) {
+      window.alert(role === 'ADMIN' ? '관리자 권한으로 변경되었습니다.' : '일반 회원 권한으로 변경되었습니다.');
+    }
+  };
+
+  const handleSuspendRelease = async (member: AdminMemberRow) => {
+    const ok = await runMemberUpdate(member, {
+      status: 'ACTIVE',
+      suspensionReason: '',
+    });
+    if (ok) {
+      window.alert('정지가 해제되었습니다.');
+    }
   };
 
   const handleNicknameSave = async () => {
@@ -217,7 +246,7 @@ export default function AdminMembers() {
     }
   };
 
-  const submitGift = async (loginId: string, amountText: string, messageText: string, onSuccess: () => void) => {
+  const submitGift = async (loginId: string, amountText: string, messageText: string, sendAsMileage: boolean, onSuccess: () => void) => {
     const trimmedLoginId = loginId.trim();
     const pangAmount = Number(amountText);
     const trimmedMessage = messageText.trim();
@@ -229,9 +258,14 @@ export default function AdminMembers() {
       window.alert('지급할 팡 수량을 정확히 입력해 주세요.');
       return;
     }
-    const response = await giftAdminPang({ loginId: trimmedLoginId, pangAmount, message: trimmedMessage || undefined });
+    const response = await giftAdminPang({
+      loginId: trimmedLoginId,
+      pangAmount,
+      message: trimmedMessage || undefined,
+      sendAsMileage,
+    });
     if (!response.ok) {
-      window.alert(response.message ?? '이벤트 팡 지급에 실패했습니다.');
+      window.alert(response.message ?? `이벤트 ${sendAsMileage ? '마일리지' : '팡'} 지급에 실패했습니다.`);
       return;
     }
     await load();
@@ -240,13 +274,13 @@ export default function AdminMembers() {
       await loadHistory(selectedMember.id);
     }
     if (trimmedLoginId === '/all' && response.data?.recipientCount) {
-      window.alert(`${response.data.recipientCount}명에게 팡을 지급했습니다.`);
+      window.alert(`${response.data.recipientCount}명에게 ${sendAsMileage ? '마일리지' : '팡'}을 지급했습니다.`);
       onSuccess();
       return;
     }
-    window.alert(response.message ?? '이벤트 팡 지급이 완료되었습니다.');
+    window.alert(response.message ?? `${sendAsMileage ? '마일리지' : '팡'} 지급이 완료되었습니다.`);
     if (trimmedLoginId === '/all' && response.data?.recipientCount) {
-      window.alert(`${response.data.recipientCount}명에게 팡을 지급했습니다.`);
+      window.alert(`${response.data.recipientCount}명에게 ${sendAsMileage ? '마일리지' : '팡'}을 지급했습니다.`);
       onSuccess();
       return;
     }
@@ -351,10 +385,23 @@ export default function AdminMembers() {
             onChange={(event) => setGiftMessage(event.target.value)}
             placeholder="알림 문구 입력"
           />
+          <label className="admin-subtext" style={{ display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+            <input
+              type="checkbox"
+              checked={giftAsMileage}
+              onChange={(event) => setGiftAsMileage(event.target.checked)}
+            />
+            마일리지로 지급
+          </label>
           <button
             type="button"
             className="admin-action-btn primary"
-            onClick={() => void submitGift(giftLoginId, giftAmount, giftMessage, () => { setGiftLoginId(''); setGiftAmount(''); setGiftMessage(''); })}
+            onClick={() => void submitGift(giftLoginId, giftAmount, giftMessage, giftAsMileage, () => {
+              setGiftLoginId('');
+              setGiftAmount('');
+              setGiftMessage('');
+              setGiftAsMileage(false);
+            })}
           >
             바로 지급
           </button>
@@ -506,12 +553,32 @@ export default function AdminMembers() {
                   </div>
                 </div>
                 <div className="admin-actions-inline admin-actions-wrap">
-                  <button type="button" className="admin-action-btn" disabled={submittingId === selectedMember.id} onClick={() => void handleStatusChange(selectedMember, 'ACTIVE')}>
+                  <button
+                    type="button"
+                    className="admin-action-btn"
+                    disabled={submittingId === selectedMember.id || selectedMember.status === 'ACTIVE'}
+                    onClick={() => void handleStatusChange(selectedMember, 'ACTIVE')}
+                  >
                     활성
                   </button>
-                  <button type="button" className="admin-action-btn" disabled={submittingId === selectedMember.id} onClick={() => void handleStatusChange(selectedMember, 'INACTIVE')}>
+                  <button
+                    type="button"
+                    className="admin-action-btn"
+                    disabled={submittingId === selectedMember.id || selectedMember.status === 'INACTIVE'}
+                    onClick={() => void handleStatusChange(selectedMember, 'INACTIVE')}
+                  >
                     비활성
                   </button>
+                  {selectedMember.status === 'SUSPENDED' ? (
+                    <button
+                      type="button"
+                      className="admin-action-btn"
+                      disabled={submittingId === selectedMember.id}
+                      onClick={() => void handleSuspendRelease(selectedMember)}
+                    >
+                      정지 해제
+                    </button>
+                  ) : null}
                   <button
                     type="button"
                     className="admin-action-btn"
@@ -561,7 +628,7 @@ export default function AdminMembers() {
                 <button
                   type="button"
                   className="admin-action-btn primary"
-                  onClick={() => void submitGift(selectedMember.loginId, modalGiftAmount, modalGiftMessage, () => { setModalGiftAmount(''); setModalGiftMessage(''); })}
+                  onClick={() => void submitGift(selectedMember.loginId, modalGiftAmount, modalGiftMessage, false, () => { setModalGiftAmount(''); setModalGiftMessage(''); })}
                 >
                   팡 지급
                 </button>
@@ -641,3 +708,4 @@ export default function AdminMembers() {
     </AdminLayout>
   );
 }
+

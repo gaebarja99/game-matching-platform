@@ -15,7 +15,4 @@ public interface LolMatchRepository extends JpaRepository<LolMatch, Long> {
 
     @Query("SELECT m FROM LolMatch m LEFT JOIN FETCH m.participants WHERE m.matchId = :matchId")
     Optional<LolMatch> findByMatchIdWithParticipants(@Param("matchId") String matchId);
-
-    @Query("SELECT DISTINCT m FROM LolMatch m LEFT JOIN FETCH m.participants LEFT JOIN FETCH m.timeline WHERE m.matchId = :matchId")
-    Optional<LolMatch> findByMatchIdWithParticipantsAndTimeline(@Param("matchId") String matchId);
 }

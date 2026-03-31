@@ -19,7 +19,7 @@ export const LOL_LANE_LABELS: Record<LolLane, string> = {
   SUPPORT: '서포',
 };
 
-/** 신속 대전 주·부 역할군 (채우기 + 5라인) */
+/** 신속 대전 주·부 포지션 (채우기 + 5라인) */
 export const LOL_QUICK_ROLE_ORDER = ['FILL', 'TOP', 'JUNGLE', 'MID', 'ADC', 'SUPPORT'] as const;
 export type LolQuickRole = (typeof LOL_QUICK_ROLE_ORDER)[number];
 
@@ -91,19 +91,19 @@ export function validateLolRoomForm(input: {
 }): string | null {
   if (input.queue === 'ARAM') return null;
   if (input.queue === 'QUICK') {
-    if (!input.hostPrimary || !isLolQuickRole(input.hostPrimary)) return '주 역할군을 선택해 주세요.';
-    if (!input.hostSecondary || !isLolQuickRole(input.hostSecondary)) return '부 역할군을 선택해 주세요.';
-    if (input.hostPrimary === input.hostSecondary) return '주·부 역할군은 서로 달라야 합니다.';
+    if (!input.hostPrimary || !isLolQuickRole(input.hostPrimary)) return '주 포지션을 선택해 주세요.';
+    if (!input.hostSecondary || !isLolQuickRole(input.hostSecondary)) return '부 포지션을 선택해 주세요.';
+    if (input.hostPrimary === input.hostSecondary) return '주·부 포지션은 서로 달라야 합니다.';
     if (!input.recruitingQuick.length) return '찾는 포지션을 1개 이상 선택해 주세요.';
     const cap = Math.max(0, partySlotsFromSize(input.partySize) - 1);
     if (input.recruitingQuick.length > cap) {
       return `찾는 포지션은 최대 ${cap}개까지 선택할 수 있습니다.`;
     }
     const u = new Set(input.recruitingQuick);
-    if (u.size !== input.recruitingQuick.length) return '같은 역할을 중복 선택할 수 없습니다.';
+    if (u.size !== input.recruitingQuick.length) return '같은 포지션을 중복 선택할 수 없습니다.';
     for (const r of input.recruitingQuick) {
       if (r !== 'FILL' && (r === input.hostPrimary || r === input.hostSecondary)) {
-        return '찾는 포지션에 주·부 역할과 같은 라인(채우기 제외)을 넣을 수 없습니다.';
+        return '찾는 포지션에 주·부 포지션과 같은 라인(채우기 제외)을 넣을 수 없습니다.';
       }
     }
     return null;

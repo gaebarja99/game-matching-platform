@@ -15,10 +15,8 @@ export type ProfileDto = {
   profileImageUrl: string | null;
   bannerImageUrl: string | null;
   preferredGames: string | null;
-  /** 본인 조회 시에만 포함 */
   visibility?: ProfileVisibilityDto | null;
-  /** 연동 계정 요약(본인·타인 조회 시; 타인은 공개로 설정된 연동만) */
-  connections?: AccountConnectionStatus[] | null;
+  connections?: AccountConnectionStatus[];
 };
 
 export type ProfilePatchBody = Partial<{
@@ -27,16 +25,7 @@ export type ProfilePatchBody = Partial<{
   profileImageUrl: string | null;
   bannerImageUrl: string | null;
   preferredGames: string | null;
-  bioVisible: boolean;
-  bannerImageVisible: boolean;
-  profileImageVisible: boolean;
   preferredGamesVisible: boolean;
-  discordLinkVisible: boolean;
-  steamLinkVisible: boolean;
-  blizzardLinkVisible: boolean;
-  riotLinkVisible: boolean;
-  riotLolRankVisible: boolean;
-  riotValorantRankVisible: boolean;
 }>;
 
 /** 닉네임 검색 목록 행 */

@@ -115,6 +115,12 @@ public class User {
     @Column(name = "chat_muted_until")
     private LocalDateTime chatMutedUntil;
 
+    @Column(name = "suspended_until")
+    private LocalDateTime suspendedUntil;
+
+    @Column(name = "suspension_reason", length = 255)
+    private String suspensionReason;
+
     /**
      * 스트리머 등급 정보. 일반 사용자는 null 일 수 있다.
      */

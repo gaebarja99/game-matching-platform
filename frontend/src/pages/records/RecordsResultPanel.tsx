@@ -1,9 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  fetchLolSavedAiEvaluation,
   fetchMatchDetail,
-  fetchPubgSavedAiEvaluation,
-  fetchValorantSavedAiEvaluation,
   runLolMatchAiEvaluation,
   runPubgMatchAiEvaluation,
   runValorantMatchAiEvaluation,
@@ -151,124 +148,87 @@ function RecordsMatchAiTab({
   gameId,
   matchId,
   puuid,
+  playerName,
   savedBlocks,
   onMergeDetailPayload,
   aiModel,
   onAiModelChange,
-  aiModelSwitchLoading,
 }: {
   gameId: string;
   matchId: string;
   puuid?: string;
+  playerName?: string;
   savedBlocks: MatchDetailBlock[];
   onMergeDetailPayload: (patch: Record<string, unknown>) => void;
   aiModel: string;
   onAiModelChange: (model: string) => void;
-  /** 모델만 바꿀 때 저장분만 조회 중(전체 상세 로딩과 구분) */
-  aiModelSwitchLoading?: boolean;
 }) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const isValorantAi = gameId === 'valorant';
-  const isPubgAi = gameId === 'pubg';
-  const isLolAi = gameId === 'lol';
-  const supported = isValorantAi || isPubgAi || isLolAi;
-  const modelBusy = Boolean(aiModelSwitchLoading);
+  const supported = ['valorant', 'lol', 'pubg'].includes(gameId);
   const parsed = useMemo(() => parseAiSavedBlocks(savedBlocks), [savedBlocks]);
   const hasResultContent = Boolean(
     parsed.model || parsed.status || parsed.grade || parsed.score || parsed.summary || parsed.detailed,
   );
 
   const run = async () => {
-    if (!supported || !puuid) return;
+    if (!supported) return;
     setError(null);
     setLoading(true);
     try {
-      if (isValorantAi) {
+      let row:
+        | {
+            llmModel?: string | null;
+            status?: string | null;
+            grade?: string | null;
+            score?: number | null;
+            summary?: string | null;
+            detailedComment?: string | null;
+          }
+        | undefined;
+      if (gameId === 'valorant') {
+        if (!puuid) return;
         const rows = await runValorantMatchAiEvaluation({
           matchId,
           puuid,
           model: aiModel,
+          force: true,
         });
         const pid = puuid.trim().toLowerCase();
-        const row =
-          rows.find((r) => (r.playerPuuid ?? '').trim().toLowerCase() === pid) ?? rows[0];
-        if (!row) {
-          setError(
-            '분석 결과가 없습니다. 매치가 DB에 없거나 대상 플레이어를 찾지 못했습니다. 상세 전적을 한 번 연 뒤(매치 저장) 다시 시도해 주세요.',
-          );
-          onMergeDetailPayload({ records_ai_evaluation: null });
-          return;
-        }
-        onMergeDetailPayload({
-          records_ai_evaluation: {
-            llmModel: row.llmModel ?? aiModel,
-            status: row.status ?? undefined,
-            grade: row.grade ?? undefined,
-            score: row.score ?? undefined,
-            summary: row.summary ?? undefined,
-            detailedComment: row.detailedComment ?? undefined,
-          },
-        });
-        return;
-      }
-
-      if (isLolAi) {
-        const rows = await runLolMatchAiEvaluation({
+        row = rows.find((r) => (r.playerPuuid ?? '').trim().toLowerCase() === pid) ?? rows[0];
+      } else if (gameId === 'lol') {
+        if (!puuid) return;
+        row = await runLolMatchAiEvaluation({
           matchId,
           puuid,
           model: aiModel,
         });
-        const pid = puuid.trim().toLowerCase();
-        const row =
-          rows.find((r) => (r.playerPuuid ?? '').trim().toLowerCase() === pid) ?? rows[0];
-        if (!row) {
-          setError(
-            '분석 결과가 없습니다. 매치가 DB에 없거나 대상 소환사를 찾지 못했습니다. 상세 전적을 한 번 연 뒤(매치 저장) 다시 시도해 주세요.',
-          );
-          onMergeDetailPayload({ records_ai_evaluation: null });
-          return;
-        }
-        onMergeDetailPayload({
-          records_ai_evaluation: {
-            llmModel: row.llmModel ?? aiModel,
-            status: row.status ?? undefined,
-            grade: row.grade ?? undefined,
-            score: row.score ?? undefined,
-            summary: row.summary ?? undefined,
-            detailedComment: row.detailedComment ?? undefined,
-          },
-        });
-        return;
-      }
-
-      if (isPubgAi) {
+      } else if (gameId === 'pubg') {
+        if (!playerName) return;
         const rows = await runPubgMatchAiEvaluation({
           matchId,
-          accountId: puuid,
-          model: aiModel,
+          playerName,
         });
-        const aid = puuid.trim();
-        const row = rows.find((r) => (r.accountId ?? '').trim() === aid) ?? rows[0];
-        if (!row) {
-          setError(
-            '분석 결과가 없습니다. 매치가 DB에 없거나 해당 계정의 참가 기록을 찾지 못했습니다. 상세 전적을 연 뒤(매치 저장) 다시 시도해 주세요.',
-          );
-          onMergeDetailPayload({ records_ai_evaluation: null });
-          return;
-        }
-        onMergeDetailPayload({
-          records_ai_evaluation: {
-            llmModel: row.llmModel ?? aiModel,
-            status: row.status ?? undefined,
-            grade: row.grade ?? undefined,
-            score: row.score ?? undefined,
-            summary: row.summary ?? undefined,
-            detailedComment: row.detailedComment ?? undefined,
-          },
-        });
+        row = rows[0];
       }
+      if (!row) {
+        setError(
+          '분석 결과가 없습니다. 매치가 DB에 없거나 대상 플레이어를 찾지 못했습니다. 상세 전적을 한 번 연 뒤(매치 저장) 다시 시도해 주세요.',
+        );
+        onMergeDetailPayload({ records_ai_evaluation: null });
+        return;
+      }
+      onMergeDetailPayload({
+        records_ai_evaluation: {
+          llmModel: row.llmModel ?? (gameId === 'pubg' ? undefined : aiModel),
+          status: row.status ?? undefined,
+          grade: row.grade ?? undefined,
+          score: row.score ?? undefined,
+          summary: row.summary ?? undefined,
+          detailedComment: row.detailedComment ?? undefined,
+        },
+      });
     } catch (e) {
       setError(e instanceof Error ? e.message : '분석 실패');
       onMergeDetailPayload({ records_ai_evaluation: null });
@@ -282,41 +242,37 @@ function RecordsMatchAiTab({
       {supported ? (
         <>
           <div className="records-match-detail-ai-controls">
-            {isValorantAi || isLolAi || isPubgAi ? (
-              <label className="records-match-detail-ai-model-field">
-                <span className="records-match-detail-ai-model-caption">모델</span>
-                <select
-                  className="records-match-detail-ai-model-select"
-                  value={aiModel}
-                  onChange={(e) => onAiModelChange(e.target.value)}
-                  disabled={loading || modelBusy || !puuid}
-                >
-                  {RECORDS_AI_MODEL_OPTIONS.map((opt) => (
-                    <option key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            ) : null}
+            <label className="records-match-detail-ai-model-field">
+              <span className="records-match-detail-ai-model-caption">모델</span>
+              <select
+                className="records-match-detail-ai-model-select"
+                value={aiModel}
+                onChange={(e) => onAiModelChange(e.target.value)}
+                disabled={loading || gameId === 'pubg'}
+              >
+                {RECORDS_AI_MODEL_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </label>
             <button
               type="button"
               className="records-match-detail-ai-run-btn"
-              disabled={loading || modelBusy || !puuid}
+              disabled={loading || ((gameId === 'valorant' || gameId === 'lol') ? !puuid : !playerName)}
               onClick={() => void run()}
             >
               {loading ? '분석 중…' : '분석'}
             </button>
           </div>
-          {!puuid ? (
+          {!puuid && (gameId === 'valorant' || gameId === 'lol') ? (
             <p className="records-match-detail-ai-hint">
-              {isPubgAi
-                ? 'PUBG 계정 ID를 알 수 없어 분석을 실행할 수 없습니다. 전적 검색이 정상인지 확인해 주세요.'
-                : '플레이어 식별 정보(puuid)가 없어 분석을 실행할 수 없습니다.'}
+              플레이어 식별 정보(puuid)가 없어 분석을 실행할 수 없습니다.
             </p>
           ) : null}
-          {puuid && modelBusy ? (
-            <p className="records-match-detail-ai-hint">선택한 모델의 저장된 분석을 불러오는 중…</p>
+          {!playerName && gameId === 'pubg' ? (
+            <p className="records-match-detail-ai-hint">PUBG 닉네임 정보가 없어 AI 분석을 실행할 수 없습니다.</p>
           ) : null}
           {error ? <p className="records-match-detail-error">{error}</p> : null}
           <div
@@ -446,19 +402,19 @@ function MatchDetailFormattedView({
   gameId,
   matchId,
   puuid,
+  playerName,
   onMergeDetailPayload,
   aiModel,
   onAiModelChange,
-  aiModelSwitchLoading,
 }: {
   detail: FormattedMatchDetail;
   gameId: string;
   matchId: string;
   puuid?: string;
+  playerName?: string;
   onMergeDetailPayload: (patch: Record<string, unknown>) => void;
   aiModel: string;
   onAiModelChange: (model: string) => void;
-  aiModelSwitchLoading?: boolean;
 }) {
   const [tab, setTab] = useState<'match' | 'players' | 'ai'>('match');
 
@@ -518,11 +474,11 @@ function MatchDetailFormattedView({
             gameId={gameId}
             matchId={matchId}
             puuid={puuid}
+            playerName={playerName}
             savedBlocks={detail.aiBlocks ?? []}
             onMergeDetailPayload={onMergeDetailPayload}
             aiModel={aiModel}
             onAiModelChange={onAiModelChange}
-            aiModelSwitchLoading={aiModelSwitchLoading}
           />
         )}
       </div>
@@ -537,18 +493,17 @@ export function MatchRow({
 }: {
   gameId: string;
   match: NonNullable<PlayerSearchResponse['matches']>[number];
-  detailContext: { puuid?: string; platform?: string };
+  detailContext: { puuid?: string; platform?: string; playerName?: string };
 }) {
   const [detailOpen, setDetailOpen] = useState(false);
   const [detailPayload, setDetailPayload] = useState<Record<string, unknown> | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailError, setDetailError] = useState<string | null>(null);
   const [detailAiModel, setDetailAiModel] = useState(RECORDS_AI_MODEL_OPTIONS[0]?.value ?? 'gpt-5-mini');
-  const [detailAiSlotLoading, setDetailAiSlotLoading] = useState(false);
   const lastDetailFetchKey = useRef<string | null>(null);
 
   const buildDetailFetchKey = (model: string) =>
-    `${match.matchId ?? ''}|${gameId}|${gameId === 'valorant' || gameId === 'lol' || gameId === 'pubg' ? model : '-'}|${detailContext.puuid ?? ''}`;
+    `${match.matchId ?? ''}|${gameId}|${gameId === 'valorant' ? model : '-'}|${detailContext.puuid ?? ''}`;
 
   const duration = match.playtime ? `${Math.floor(match.playtime / 60)}m` : null;
   const canDetail = GAMES_WITH_MATCH_DETAIL.has(gameId) && Boolean(match.matchId);
@@ -589,8 +544,7 @@ export function MatchRow({
         matchId: match.matchId!,
         puuid: detailContext.puuid,
         platform: detailContext.platform,
-        llmModel:
-          gameId === 'valorant' || gameId === 'lol' || gameId === 'pubg' ? detailAiModel : undefined,
+        llmModel: gameId === 'valorant' ? detailAiModel : undefined,
       });
       if (!res.success) {
         setDetailError(res.errorMessage || '상세를 불러오지 못했습니다.');
@@ -607,69 +561,28 @@ export function MatchRow({
 
   const handleAiModelChange = async (model: string) => {
     setDetailAiModel(model);
-    if (
-      !detailOpen ||
-      !match.matchId ||
-      (gameId !== 'valorant' && gameId !== 'lol' && gameId !== 'pubg')
-    ) {
-      return;
-    }
-
+    if (!detailOpen || !match.matchId) return;
     const fetchKey = buildDetailFetchKey(model);
-    lastDetailFetchKey.current = fetchKey;
-
-    const puuid = detailContext.puuid;
-    if (!puuid) {
-      setDetailPayload((prev) => (prev ? { ...prev, records_ai_evaluation: null } : prev));
-      return;
-    }
-
-    setDetailAiSlotLoading(true);
+    setDetailLoading(true);
     setDetailError(null);
     try {
-      let row:
-        | Awaited<ReturnType<typeof fetchValorantSavedAiEvaluation>>
-        | Awaited<ReturnType<typeof fetchPubgSavedAiEvaluation>> = null;
-      if (gameId === 'valorant') {
-        row = await fetchValorantSavedAiEvaluation({
-          matchId: match.matchId,
-          puuid,
-          model,
-        });
-      } else if (gameId === 'lol') {
-        row = await fetchLolSavedAiEvaluation({
-          matchId: match.matchId,
-          puuid,
-          model,
-        });
-      } else if (gameId === 'pubg') {
-        row = await fetchPubgSavedAiEvaluation({
-          matchId: match.matchId,
-          accountId: puuid,
-          model,
-        });
-      }
-      setDetailPayload((prev) => {
-        if (!prev) return prev;
-        if (!row) {
-          return { ...prev, records_ai_evaluation: null };
-        }
-        return {
-          ...prev,
-          records_ai_evaluation: {
-            llmModel: row.llmModel ?? model,
-            status: row.status ?? undefined,
-            grade: row.grade ?? undefined,
-            score: row.score ?? undefined,
-            summary: row.summary ?? undefined,
-            detailedComment: row.detailedComment ?? undefined,
-          },
-        };
+      const res = await fetchMatchDetail({
+        game: gameId,
+        matchId: match.matchId,
+        puuid: detailContext.puuid,
+        platform: detailContext.platform,
+        llmModel: gameId === 'valorant' ? model : undefined,
       });
+      if (!res.success) {
+        setDetailError(res.errorMessage || '상세를 불러오지 못했습니다.');
+        return;
+      }
+      lastDetailFetchKey.current = fetchKey;
+      setDetailPayload((res.payload ?? {}) as Record<string, unknown>);
     } catch (e) {
-      setDetailError(e instanceof Error ? e.message : '저장된 분석 불러오기 실패');
+      setDetailError(e instanceof Error ? e.message : '상세 요청 오류');
     } finally {
-      setDetailAiSlotLoading(false);
+      setDetailLoading(false);
     }
   };
 
@@ -774,12 +687,12 @@ export function MatchRow({
               gameId={gameId}
               matchId={match.matchId!}
               puuid={detailContext.puuid}
+              playerName={detailContext.playerName}
               onMergeDetailPayload={(patch) =>
                 setDetailPayload((prev) => (prev ? { ...prev, ...patch } : prev))
               }
               aiModel={detailAiModel}
               onAiModelChange={(m) => void handleAiModelChange(m)}
-              aiModelSwitchLoading={detailAiSlotLoading}
             />
           ) : null}
         </div>
@@ -808,7 +721,7 @@ export function ResultPanel({
   onRefresh: () => void;
   showLoadMore?: boolean;
   onLoadMore?: () => void;
-  detailContext: { puuid?: string; platform?: string };
+  detailContext: { puuid?: string; platform?: string; playerName?: string };
   valorantMmrPending?: boolean;
 }) {
   const info = result.playerInfo ?? {};
@@ -817,7 +730,17 @@ export function ResultPanel({
     { label: '총 게임', value: stats.totalGames ?? '-' },
     { label: '승률', value: formatWinRate(stats.winRate) },
     { label: '승리', value: stats.wins ?? '-' },
-    { label: '평균 KDA', value: stats.avgKda != null ? Number(stats.avgKda).toFixed(2) : '-' },
+    {
+      label: gameId === 'pubg' ? '평균 딜량' : '평균 KDA',
+      value:
+        gameId === 'pubg'
+          ? stats.avgDamage != null
+            ? Number(stats.avgDamage).toFixed(0)
+            : '-'
+          : stats.avgKda != null
+            ? Number(stats.avgKda).toFixed(2)
+            : '-',
+    },
     { label: '주력 픽', value: stats.mostUsedChampionOrAgent || '-' },
   ];
 

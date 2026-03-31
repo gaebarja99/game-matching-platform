@@ -1,12 +1,15 @@
-﻿import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useTheme } from '../contexts/ThemeContext';
 import { apiUrl, resolveProfileImageUrl } from '../api/client';
+import { resolveNotificationTargetPath } from '../utils/notificationNavigation';
 
 interface StreamsLayoutProps {
   children: React.ReactNode;
   sidebarVariant?: 'full' | 'simple';
+  /** false: 왼쪽 방송·랭킹 사이드바 숨김 (스튜디오 전용) */
+  showBroadcastSidebar?: boolean;
 }
 
 type NotificationItem = {
@@ -15,6 +18,10 @@ type NotificationItem = {
   message: string;
   read: boolean;
   createdAt: string;
+  streamId?: number;
+  actorUserId?: number;
+  actorNickname?: string;
+  targetPath?: string;
 };
 
 type RankItem = {
@@ -25,13 +32,13 @@ type RankItem = {
   viewerCount?: number;
 };
 
-export default function StreamsLayout({ children, sidebarVariant = 'full' }: StreamsLayoutProps) {
+export default function StreamsLayout({ children, sidebarVariant = 'full', showBroadcastSidebar = true }: StreamsLayoutProps) {
   const { user, logout, loading: authLoading } = useAuth();
   const { toggleTheme } = useTheme();
   const navigate = useNavigate();
   const location = useLocation();
+  const isAdmin = ['ADMIN', 'ROLE_ADMIN'].includes((user?.role ?? '').toUpperCase());
 
-  const [categoryOpen, setCategoryOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [notificationOpen, setNotificationOpen] = useState(false);
   const [hasUnread, setHasUnread] = useState(false);
@@ -41,25 +48,22 @@ export default function StreamsLayout({ children, sidebarVariant = 'full' }: Str
 
   const [followRank, setFollowRank] = useState<RankItem[]>([]);
   const [pangRank, setPangRank] = useState<RankItem[]>([]);
-  const [viewerRank, setViewerRank] = useState<RankItem[]>([]);
 
   const profileRef = useRef<HTMLDivElement>(null);
   const notificationRef = useRef<HTMLSpanElement>(null);
 
   useEffect(() => {
-    if (authLoading) return;
+    if (authLoading || !showBroadcastSidebar) return;
     Promise.all([
       fetch(apiUrl('api/rank/follow'), { credentials: 'include' }).then((r) => (r.ok ? r.json() : [])),
       fetch(apiUrl('api/rank/pang'), { credentials: 'include' }).then((r) => (r.ok ? r.json() : [])),
-      fetch(apiUrl('api/rank/viewers'), { credentials: 'include' }).then((r) => (r.ok ? r.json() : [])),
     ])
-      .then(([follow, pang, viewers]) => {
+      .then(([follow, pang]) => {
         setFollowRank(Array.isArray(follow) ? follow : []);
         setPangRank(Array.isArray(pang) ? pang : []);
-        setViewerRank(Array.isArray(viewers) ? viewers : []);
       })
       .catch(() => {});
-  }, [authLoading]);
+  }, [authLoading, showBroadcastSidebar]);
 
   const fetchNotificationCount = useCallback(() => {
     fetch(apiUrl('api/notifications/count'), { credentials: 'include' })
@@ -102,6 +106,22 @@ export default function StreamsLayout({ children, sidebarVariant = 'full' }: Str
       .catch(() => {});
   }, []);
 
+  const handleNotificationClick = useCallback((n: NotificationItem) => {
+    setNotificationOpen(false);
+    if (!n.read) {
+      fetch(apiUrl(`api/notifications/${n.id}/read`), { method: 'PATCH', credentials: 'include' })
+        .then(() => {
+          setNotificationList((prev) => prev.map((item) => (item.id === n.id ? { ...item, read: true } : item)));
+          fetchNotificationCount();
+        })
+        .catch(() => {});
+    }
+    const targetPath = resolveNotificationTargetPath(n);
+    if (targetPath) {
+      navigate(targetPath);
+    }
+  }, [fetchNotificationCount, navigate]);
+
   useEffect(() => {
     if (!user) {
       setHasUnread(false);
@@ -130,6 +150,12 @@ export default function StreamsLayout({ children, sidebarVariant = 'full' }: Str
   };
 
   const pangIconUrl = apiUrl('images/pang-sparkle.svg');
+  const isStudioSidebarActive = location.pathname === '/studio' || location.pathname.startsWith('/studio/');
+  const path = location.pathname;
+  const navStreamsActive =
+    path === '/streams' || path === '/categories' || path === '/following' || path === '/history';
+  const navRecordsActive = path.startsWith('/records');
+  const navCommunityActive = path.startsWith('/community');
 
   const rankRow = (name: string | undefined, value: string | number | undefined, idx: number) => (
     <li className="sidebar-rank-item" key={`${name ?? 'user'}-${idx}`}>
@@ -140,26 +166,25 @@ export default function StreamsLayout({ children, sidebarVariant = 'full' }: Str
   );
 
   return (
-    <div className="streams-page">
-      <header className="header">
-        <Link to="/" className="header-logo">GameMatcher</Link>
+    <div className={['streams-page', !showBroadcastSidebar ? 'streams-page--no-broadcast-sidebar' : ''].filter(Boolean).join(' ')}>
+      <header className="main-header">
+        <Link to="/" className="logo">
+          GameMatcher
+        </Link>
 
-        <nav className="header-nav">
-          <Link to="/streams" className={location.pathname === '/streams' ? 'active' : ''}>전체 방송</Link>
-          <Link to="/streams">게임</Link>
-          <Link to="/esports" className={location.pathname === '/esports' ? 'active' : ''}>e스포츠</Link>
+        <nav className="main-nav">
+          <Link to="/streams" className={navStreamsActive ? 'active' : undefined}>
+            방송
+          </Link>
+          <Link to="/records" className={navRecordsActive ? 'active' : undefined}>
+            전적검색
+          </Link>
+          <Link to="/community" className={navCommunityActive ? 'active' : undefined}>
+            커뮤니티
+          </Link>
         </nav>
 
-        <input type="text" className="header-search" placeholder="채널, 라이브 검색" />
-
         <div className="header-right">
-          <Link to="/studio" className="header-icon-btn auth-only" title="스튜디오" aria-label="스튜디오">
-            <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2">
-              <rect x="2" y="4" width="14" height="14" rx="2" />
-              <path d="M17 8v8l5-4z" />
-            </svg>
-          </Link>
-
           <Link to="/profile/pang" className="header-icon-btn auth-only header-icon-pang" title="내 팡" aria-label="내 팡">
             <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2">
               <path d="M12 3l1.7 4.3L18 9l-4.3 1.7L12 15l-1.7-4.3L6 9l4.3-1.7L12 3z" />
@@ -206,17 +231,7 @@ export default function StreamsLayout({ children, sidebarVariant = 'full' }: Str
                       key={n.id}
                       type="button"
                       className={`notification-item ${!n.read ? 'unread' : ''}`}
-                      onClick={() => {
-                        setNotificationOpen(false);
-                        if (!n.read) {
-                          fetch(apiUrl(`api/notifications/${n.id}/read`), { method: 'PATCH', credentials: 'include' })
-                            .then(() => {
-                              setNotificationList((prev) => prev.map((item) => (item.id === n.id ? { ...item, read: true } : item)));
-                              fetchNotificationCount();
-                            })
-                            .catch(() => {});
-                        }
-                      }}
+                      onClick={() => handleNotificationClick(n)}
                     >
                       <span>{n.message}</span>
                       <div className="notification-time">{n.createdAt ? new Date(n.createdAt).toLocaleString('ko-KR') : ''}</div>
@@ -280,6 +295,7 @@ export default function StreamsLayout({ children, sidebarVariant = 'full' }: Str
                 </div>
                 <div className="dropdown-menu">
                   <Link to="/profile" onClick={() => setProfileOpen(false)}>내 프로필</Link>
+                  {isAdmin && <Link to="/admin" onClick={() => setProfileOpen(false)}>관리자</Link>}
                   <Link to="/studio" onClick={() => setProfileOpen(false)}>스튜디오</Link>
                   <Link to="/channel" onClick={() => setProfileOpen(false)}>내 채널</Link>
                   <button type="button" onClick={handleLogout}>로그아웃</button>
@@ -291,52 +307,53 @@ export default function StreamsLayout({ children, sidebarVariant = 'full' }: Str
       </header>
 
       <div className="layout">
-        <aside className="sidebar">
-          <NavLink to="/streams" end className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
-            <span className="icon">📺</span>
-            <span>전체 방송</span>
-          </NavLink>
-          <Link to="/streams?sort=popular" className="sidebar-item"><span className="icon">🔥</span><span>인기 채널</span></Link>
+        {showBroadcastSidebar ? (
+          <aside className="sidebar">
+            <NavLink to="/streams" end className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
+              <span className="icon">📺</span>
+              <span>방송</span>
+            </NavLink>
 
-          {sidebarVariant === 'full' && (
-            <>
-              <div className={`sidebar-category-wrap ${categoryOpen ? 'open' : ''}`}>
-                <button type="button" className="sidebar-category-toggle" onClick={() => setCategoryOpen((o) => !o)}>
+            <NavLink
+              to="/studio"
+              className={`sidebar-item auth-only ${isStudioSidebarActive ? 'active' : ''}`}
+              title="스튜디오"
+            >
+              <span className="icon" aria-hidden>
+                <svg viewBox="0 0 24 24" stroke="currentColor" fill="none" strokeWidth="2">
+                  <rect x="2" y="4" width="14" height="14" rx="2" />
+                  <path d="M17 8v8l5-4z" />
+                </svg>
+              </span>
+              <span>스튜디오</span>
+            </NavLink>
+
+            {sidebarVariant === 'full' && (
+              <>
+                <NavLink to="/categories" className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}>
                   <span className="icon">🎮</span>
                   <span>게임 카테고리</span>
-                  <span className="arrow">▶</span>
-                </button>
-                <ul className="sidebar-sub">
-                  <li><Link to="/streams?game=LEAGUE_OF_LEGENDS" className="sidebar-item sidebar-item-sub">리그 오브 레전드</Link></li>
-                  <li><Link to="/streams?game=VALORANT" className="sidebar-item sidebar-item-sub">발로란트</Link></li>
-                  <li><Link to="/streams?game=OVERWATCH" className="sidebar-item sidebar-item-sub">오버워치2</Link></li>
-                  <li><Link to="/streams?game=PUBG" className="sidebar-item sidebar-item-sub">PUBG</Link></li>
-                </ul>
-              </div>
+                </NavLink>
 
-              <NavLink to="/following" className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}><span className="icon">♥</span><span>팔로잉</span></NavLink>
-              <NavLink to="/history" className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}><span className="icon">🕒</span><span>시청 기록</span></NavLink>
+                <NavLink to="/following" className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}><span className="icon">♥</span><span>팔로잉</span></NavLink>
+                <NavLink to="/history" className={({ isActive }) => `sidebar-item ${isActive ? 'active' : ''}`}><span className="icon">🕒</span><span>시청 기록</span></NavLink>
 
-              <div className="sidebar-divider" />
-              <div className="sidebar-title">RANKING</div>
+                <div className="sidebar-divider" />
+                <div className="sidebar-title">RANKING</div>
 
-              <div className="sidebar-rank-block">
-                <div className="sidebar-rank-title"><span className="icon">👥</span> 팔로워 순위</div>
-                {followRank.length > 0 ? <ul className="sidebar-rank-list">{followRank.slice(0, 5).map((r, i) => rankRow(r.displayName, r.count, i))}</ul> : <div className="sidebar-rank-empty">데이터 없음</div>}
-              </div>
+                <div className="sidebar-rank-block">
+                  <div className="sidebar-rank-title"><span className="icon">👥</span> 팔로워 순위</div>
+                  {followRank.length > 0 ? <ul className="sidebar-rank-list">{followRank.slice(0, 5).map((r, i) => rankRow(r.displayName, r.count, i))}</ul> : <div className="sidebar-rank-empty">데이터 없음</div>}
+                </div>
 
-              <div className="sidebar-rank-block">
-                <div className="sidebar-rank-title"><img src={pangIconUrl} alt="" className="pang-icon" /> 팡 후원 순위</div>
-                {pangRank.length > 0 ? <ul className="sidebar-rank-list">{pangRank.slice(0, 5).map((r, i) => rankRow(r.displayName, r.totalPang, i))}</ul> : <div className="sidebar-rank-empty">데이터 없음</div>}
-              </div>
-
-              <div className="sidebar-rank-block">
-                <div className="sidebar-rank-title"><span className="icon">👁</span> 시청자 순위</div>
-                {viewerRank.length > 0 ? <ul className="sidebar-rank-list">{viewerRank.slice(0, 5).map((r, i) => rankRow(r.displayName, r.viewerCount, i))}</ul> : <div className="sidebar-rank-empty">데이터 없음</div>}
-              </div>
-            </>
-          )}
-        </aside>
+                <div className="sidebar-rank-block">
+                  <div className="sidebar-rank-title"><img src={pangIconUrl} alt="" className="pang-icon" /> 팡 후원 순위</div>
+                  {pangRank.length > 0 ? <ul className="sidebar-rank-list">{pangRank.slice(0, 5).map((r, i) => rankRow(r.displayName, r.totalPang, i))}</ul> : <div className="sidebar-rank-empty">데이터 없음</div>}
+                </div>
+              </>
+            )}
+          </aside>
+        ) : null}
 
         <main className="content">{children}</main>
       </div>

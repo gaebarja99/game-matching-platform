@@ -1,0 +1,874 @@
+﻿<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>GameMatcher Chat Widget</title>
+  <style>
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: "Segoe UI", "Malgun Gothic", sans-serif;
+      background: transparent;
+    }
+    body.overlay-off {
+      background: #1f1f23;
+      color: #efeff1;
+    }
+    .widget-shell {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: stretch;
+      justify-content: stretch;
+      position: relative;
+    }
+    .widget-card {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      background: #1f1f23;
+      color: #efeff1;
+    }
+    .widget-head {
+      padding: 12px 14px;
+      border-bottom: 1px solid #2a2a31;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .widget-title {
+      flex: 1;
+      font-size: 1rem;
+      font-weight: 800;
+    }
+    .status {
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+    .status.live { color: #86efac; }
+    .status.wait { color: #f8fafc; }
+    .status.fail { color: #fca5a5; }
+    .toolbar {
+      display: none;
+      gap: 8px;
+      padding: 10px 14px;
+      border-bottom: 1px solid #2a2a31;
+      background: #202028;
+    }
+    body.manage-mode .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+    }
+    .btn {
+      border: 0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.86rem;
+      font-weight: 800;
+      cursor: pointer;
+      color: #fff;
+      background: #7c3aed;
+    }
+    .btn.secondary { background: #374151; }
+    .btn.danger { background: #dc2626; }
+    .btn.active { background: #16a34a; }
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: default;
+    }
+    .message-list {
+      flex: 1;
+      min-height: 0;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      padding: 10px 14px;
+      gap: 2px;
+    }
+    .message { padding: 3px 0; }
+    .message-body {
+      font-size: 0.94rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      gap: 4px 6px;
+      color: #efeff1;
+      word-break: break-word;
+    }
+    .user {
+      font-weight: 700;
+      margin-right: 2px;
+      color: #00e676;
+    }
+    body.manage-mode .user.clickable {
+      cursor: pointer;
+      text-decoration: underline;
+      text-decoration-color: rgba(255,255,255,0.25);
+      text-underline-offset: 2px;
+    }
+    .message.streamer .user { color: #ef4444; }
+    .message.donor .user { color: #c4b5fd; }
+    .streamer-badge {
+      font-size: 0.75rem;
+      background: #ef4444;
+      color: #fff;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 800;
+    }
+    .manager-badge {
+      font-size: 0.75rem;
+      background: #2563eb;
+      color: #fff;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-weight: 800;
+    }
+    .chat-badge {
+      font-size: 0.72rem;
+      font-weight: 800;
+      padding: 1px 5px;
+      border-radius: 4px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 3px;
+    }
+    .partner-badge {
+      font-size: 0.84rem;
+      color: #10b981;
+      font-weight: 800;
+    }
+    .donor-heart { color: #ef4444; }
+    .level-badge.level-1-999 { background: #6b7280; color: #fff; }
+    .level-badge.level-1000-1999 { background: #3b82f6; color: #fff; }
+    .level-badge.level-2000-2999 { background: #8b5cf6; color: #fff; }
+    .level-badge.level-3000-3999 { background: #ec4899; color: #fff; }
+    .level-badge.level-4000-4999 { background: #ef4444; color: #fff; }
+    .level-badge.level-5000-5999 { background: #f59e0b; color: #0d0d0f; }
+    .level-badge.level-6000-6999 { background: #10b981; color: #fff; }
+    .level-badge.level-7000-7999 { background: #06b6d4; color: #fff; }
+    .level-badge.level-8000-8999 { background: #6366f1; color: #fff; }
+    .level-badge.level-9000-9999 { background: linear-gradient(135deg, #fbbf24, #f59e0b); color: #0d0d0f; }
+    .chat-msg-system .message-body {
+      font-size: 0.86rem;
+      color: #9ca3af;
+    }
+    .message.donation-card {
+      margin: 8px 0;
+      display: block;
+    }
+    .twitch-alert {
+      background: #18181b;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 4px 18px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
+      border-left: 4px solid;
+    }
+    .twitch-alert.tier-pang { border-left-color: #00e676; }
+    .twitch-alert.tier-super { border-left-color: #8b5cf6; }
+    .twitch-alert.tier-mega { border-left-color: #ec4899; }
+    .twitch-alert-header {
+      padding: 6px 12px;
+      font-size: 0.77rem;
+      font-weight: 900;
+      color: #fff;
+    }
+    .twitch-alert.tier-pang .twitch-alert-header { background: linear-gradient(90deg, #00c853 0%, #00a858 100%); }
+    .twitch-alert.tier-super .twitch-alert-header { background: linear-gradient(90deg, #8b5cf6 0%, #7c3aed 100%); }
+    .twitch-alert.tier-mega .twitch-alert-header { background: linear-gradient(90deg, #ec4899 0%, #db2777 100%); }
+    .twitch-alert-body {
+      padding: 12px 14px;
+      color: #fff;
+    }
+    .twitch-alert-donor {
+      font-size: 1rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 4px 7px;
+    }
+    .twitch-alert-msg {
+      margin-top: 8px;
+      padding: 8px 10px;
+      background: rgba(255,255,255,0.1);
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #fff;
+    }
+    .twitch-alert-consecutive {
+      margin-top: 6px;
+      color: #fef08a;
+      font-size: 0.9rem;
+      font-weight: 800;
+    }
+    .empty {
+      color: #8a8a8f;
+      font-size: 0.9rem;
+      padding: 1rem 0;
+      text-align: center;
+    }
+    .drawer {
+      position: absolute;
+      top: 0;
+      right: 0;
+      width: min(300px, 82vw);
+      height: 100%;
+      background: #141419;
+      border-left: 1px solid #2a2a31;
+      box-shadow: -12px 0 28px rgba(0,0,0,0.35);
+      transform: translateX(100%);
+      transition: transform 0.18s ease;
+      display: flex;
+      flex-direction: column;
+      z-index: 20;
+    }
+    .drawer.open { transform: translateX(0); }
+    .drawer-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 12px 14px;
+      border-bottom: 1px solid #2a2a31;
+      font-weight: 800;
+    }
+    .viewer-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 10px;
+    }
+    .viewer-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      border-radius: 8px;
+      background: #202028;
+      margin-bottom: 8px;
+    }
+    .viewer-avatar-btn,
+    .viewer-name-btn {
+      border: 0;
+      background: transparent;
+      padding: 0;
+      margin: 0;
+      cursor: pointer;
+      font: inherit;
+      color: inherit;
+    }
+    .viewer-avatar-btn {
+      width: 38px;
+      height: 38px;
+      border-radius: 999px;
+      overflow: hidden;
+      flex-shrink: 0;
+      background: #374151;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-weight: 800;
+    }
+    .viewer-avatar-btn img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .viewer-body {
+      min-width: 0;
+      flex: 1;
+    }
+    .viewer-name-btn {
+      font-weight: 800;
+      color: #f8fafc;
+      text-align: left;
+    }
+    .viewer-meta {
+      margin-top: 4px;
+      font-size: 0.8rem;
+      color: #a1a1aa;
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 6px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      background: #374151;
+      color: #fff;
+    }
+    .pill.red { background: #dc2626; }
+    .pill.green { background: #16a34a; }
+    .pill.purple { background: #7c3aed; }
+    .menu {
+      position: fixed;
+      min-width: 190px;
+      background: #111827;
+      border: 1px solid #374151;
+      border-radius: 10px;
+      box-shadow: 0 14px 36px rgba(0,0,0,0.45);
+      padding: 6px;
+      z-index: 30;
+      display: none;
+    }
+    .menu.open { display: block; }
+    .menu button {
+      width: 100%;
+      border: 0;
+      background: transparent;
+      color: #f8fafc;
+      text-align: left;
+      padding: 9px 10px;
+      border-radius: 8px;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    .menu button:hover { background: #1f2937; }
+    .menu button.danger { color: #fca5a5; }
+    .toast {
+      position: fixed;
+      left: 14px;
+      bottom: 14px;
+      background: rgba(15,23,42,0.96);
+      color: #fff;
+      padding: 10px 12px;
+      border-radius: 10px;
+      font-size: 0.86rem;
+      font-weight: 700;
+      box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+      display: none;
+      z-index: 40;
+    }
+    .toast.show { display: block; }
+    body.overlay-on .widget-shell {
+      align-items: flex-end;
+      justify-content: flex-start;
+      padding: 0 0 12px 12px;
+    }
+    body.overlay-on .widget-card {
+      width: min(520px, 100%);
+      height: auto;
+      max-height: calc(100vh - 24px);
+      background: transparent;
+    }
+    body.overlay-on .widget-head,
+    body.overlay-on .toolbar,
+    body.overlay-on .drawer,
+    body.overlay-on .menu,
+    body.overlay-on .toast {
+      display: none !important;
+    }
+    body.overlay-on .message-list {
+      flex: 0 1 auto;
+      max-height: calc(100vh - 24px);
+      padding: 0;
+    }
+    body.overlay-on .message { padding: 6px 0; }
+    body.overlay-on .message-body {
+      font-size: 1.02rem;
+      gap: 5px 8px;
+    }
+    body.overlay-on .streamer-badge,
+    body.overlay-on .chat-badge,
+    body.overlay-on .manager-badge {
+      font-size: 0.82rem;
+      padding: 2px 7px;
+    }
+  </style>
+</head>
+<body>
+  <div class="widget-shell">
+    <div class="widget-card">
+      <div class="widget-head">
+        <div class="widget-title">채팅</div>
+        <div id="status" class="status wait">대기 중</div>
+      </div>
+
+      <div id="toolbar" class="toolbar">
+        <button id="freezeBtn" type="button" class="btn secondary">채팅 얼리기</button>
+        <button id="viewersBtn" type="button" class="btn">시청자 목록</button>
+      </div>
+
+      <div id="message-list" class="message-list">
+        <div class="empty">채팅을 불러오는 중입니다.</div>
+      </div>
+    </div>
+  </div>
+
+  <aside id="viewerDrawer" class="drawer">
+    <div class="drawer-head">
+      <span>시청자 목록</span>
+      <button id="closeDrawerBtn" type="button" class="btn secondary">닫기</button>
+    </div>
+    <div id="viewerList" class="viewer-list">
+      <div class="empty">시청자 정보를 불러오는 중입니다.</div>
+    </div>
+  </aside>
+
+  <div id="userMenu" class="menu"></div>
+  <div id="toast" class="toast"></div>
+
+  <script>
+    (function () {
+      const params = new URLSearchParams(window.location.search);
+      const streamId = params.get("streamId");
+      const overlay = params.get("overlay") === "1";
+
+      const messageList = document.getElementById("message-list");
+      const status = document.getElementById("status");
+      const freezeBtn = document.getElementById("freezeBtn");
+      const viewersBtn = document.getElementById("viewersBtn");
+      const viewerDrawer = document.getElementById("viewerDrawer");
+      const viewerList = document.getElementById("viewerList");
+      const closeDrawerBtn = document.getElementById("closeDrawerBtn");
+      const userMenu = document.getElementById("userMenu");
+      const toast = document.getElementById("toast");
+
+      const donorUserIds = new Set();
+      const viewerMap = new Map();
+      const seenKeys = new Set();
+      let weeklyRank = [];
+      let latestTimestamp = 0;
+      let canManage = false;
+      let isOwner = false;
+      let chatFrozen = false;
+      let selectedUser = null;
+      let toastTimer = null;
+
+      document.body.classList.add(overlay ? "overlay-on" : "overlay-off");
+
+      if (!streamId) {
+        status.textContent = "오류";
+        status.className = "status fail";
+        messageList.innerHTML = '<div class="empty">streamId가 없습니다.</div>';
+        return;
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+
+      function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add("show");
+        if (toastTimer) clearTimeout(toastTimer);
+        toastTimer = window.setTimeout(() => toast.classList.remove("show"), 2200);
+      }
+
+      function itemKey(item) {
+        const base = item.type === "donation"
+          ? [item.type, item.donorName, item.amount, item.donorMessage, item.timestamp]
+          : [item.type || "chat", item.userId, item.displayName, item.text, item.timestamp];
+        return base.join("|");
+      }
+
+      function donationTierClass(amount) {
+        const numericAmount = Number(amount) || 0;
+        if (numericAmount >= 100000) return "tier-mega";
+        if (numericAmount >= 10000) return "tier-super";
+        return "tier-pang";
+      }
+
+      function levelBadgeClass(level) {
+        if (level == null || level < 1) return "level-1-999";
+        const tier = Math.min(9, Math.floor(level / 1000));
+        return [
+          "level-1-999",
+          "level-1000-1999",
+          "level-2000-2999",
+          "level-3000-3999",
+          "level-4000-4999",
+          "level-5000-5999",
+          "level-6000-6999",
+          "level-7000-7999",
+          "level-8000-8999",
+          "level-9000-9999"
+        ][tier];
+      }
+
+      function donorRankForUser(userId) {
+        const numericUserId = Number(userId);
+        if (Number.isNaN(numericUserId)) return 0;
+        if (weeklyRank.length >= 1 && Number(weeklyRank[0]?.userId) === numericUserId) return 1;
+        if (weeklyRank.length >= 2 && Number(weeklyRank[1]?.userId) === numericUserId) return 2;
+        if (weeklyRank.length >= 3 && Number(weeklyRank[2]?.userId) === numericUserId) return 3;
+        return 0;
+      }
+
+      async function fetchJson(url, options) {
+        const response = await fetch(url, { credentials: "include", ...options });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+          throw new Error(data.message || "요청에 실패했습니다.");
+        }
+        return data;
+      }
+
+      async function loadDonorIds() {
+        const [donorResponse, rankResponse] = await Promise.all([
+          fetch("/api/streams/" + encodeURIComponent(streamId) + "/donors", { credentials: "include" }),
+          fetch("/api/streams/" + encodeURIComponent(streamId) + "/weekly-donor-rank", { credentials: "include" })
+        ]);
+
+        donorUserIds.clear();
+        if (donorResponse.ok) {
+          const donorList = await donorResponse.json();
+          if (Array.isArray(donorList)) {
+            donorList.forEach((userId) => {
+              const numericId = Number(userId);
+              if (!Number.isNaN(numericId)) donorUserIds.add(numericId);
+            });
+          }
+        }
+
+        if (rankResponse.ok) {
+          const rankList = await rankResponse.json();
+          if (Array.isArray(rankList)) weeklyRank = rankList;
+        }
+      }
+
+      async function loadChatSettings() {
+        try {
+          const settings = await fetchJson("/api/streams/" + encodeURIComponent(streamId) + "/chat-settings");
+          isOwner = !!settings.isOwner;
+          canManage = !overlay && (!!settings.isOwner || !!settings.isManager);
+          chatFrozen = !!settings.chatFrozen;
+          document.body.classList.toggle("manage-mode", canManage);
+          freezeBtn.textContent = chatFrozen ? "채팅 녹이기" : "채팅 얼리기";
+          freezeBtn.className = chatFrozen ? "btn active" : "btn secondary";
+        } catch (_error) {
+          canManage = false;
+          document.body.classList.remove("manage-mode");
+        }
+      }
+
+      function updateStatus(kind, text) {
+        status.textContent = text;
+        status.className = "status " + kind;
+      }
+
+      function openUserMenu(user, x, y) {
+        if (!canManage || !user) return;
+        selectedUser = user;
+
+        const isTargetManager = !!user.manager;
+        const isTargetStreamer = !!user.streamer;
+        const menuItems = [];
+
+        if (!isTargetStreamer) {
+          menuItems.push({ label: "채팅금지", action: () => moderateUser("ban") });
+          menuItems.push({ label: "블랙리스트", action: () => moderateUser("blacklist"), danger: true });
+          menuItems.push({ label: "강제퇴장 (5분)", action: () => moderateUser("kick"), danger: true });
+          if (isOwner) {
+            if (isTargetManager) menuItems.push({ label: "매니저 권한 취소", action: () => moderateUser("unmanager") });
+            else menuItems.push({ label: "매니저 권한 부여", action: () => moderateUser("manager") });
+          }
+        }
+
+        if (!menuItems.length) return;
+
+        userMenu.innerHTML = menuItems.map((item, index) =>
+          '<button type="button" data-index="' + index + '" class="' + (item.danger ? 'danger' : '') + '">' +
+          escapeHtml(item.label) +
+          '</button>'
+        ).join("");
+
+        Array.from(userMenu.querySelectorAll("button")).forEach((button) => {
+          button.addEventListener("click", () => {
+            const item = menuItems[Number(button.dataset.index)];
+            if (item) item.action();
+            closeUserMenu();
+          });
+        });
+
+        userMenu.style.left = Math.min(x, window.innerWidth - 210) + "px";
+        userMenu.style.top = Math.min(y, window.innerHeight - 240) + "px";
+        userMenu.classList.add("open");
+      }
+
+      function closeUserMenu() {
+        userMenu.classList.remove("open");
+        selectedUser = null;
+      }
+
+      async function moderateUser(type) {
+        if (!selectedUser) return;
+        const userId = Number(selectedUser.userId);
+        if (!userId) return;
+
+        const actions = {
+          ban: {
+            url: "/api/streams/" + encodeURIComponent(streamId) + "/chat/ban",
+            method: "POST",
+            body: { userId, durationMinutes: 1 },
+            message: "1분 채팅금지 처리되었습니다."
+          },
+          blacklist: {
+            url: "/api/streams/" + encodeURIComponent(streamId) + "/chat/blacklist",
+            method: "POST",
+            body: { userId },
+            message: "블랙리스트 처리되었습니다."
+          },
+          kick: {
+            url: "/api/streams/" + encodeURIComponent(streamId) + "/chat/kick",
+            method: "POST",
+            body: { userId },
+            message: "5분 강제퇴장 처리되었습니다."
+          },
+          manager: {
+            url: "/api/streams/" + encodeURIComponent(streamId) + "/chat/managers",
+            method: "POST",
+            body: { userId },
+            message: "매니저 권한이 부여되었습니다."
+          },
+          unmanager: {
+            url: "/api/streams/" + encodeURIComponent(streamId) + "/chat/managers/" + encodeURIComponent(userId),
+            method: "DELETE",
+            body: null,
+            message: "매니저 권한이 해제되었습니다."
+          }
+        };
+
+        const action = actions[type];
+        if (!action) return;
+
+        try {
+          await fetchJson(action.url, {
+            method: action.method,
+            headers: action.body ? { "Content-Type": "application/json" } : undefined,
+            body: action.body ? JSON.stringify(action.body) : undefined
+          });
+          showToast(action.message);
+          await Promise.all([loadViewerList(), loadChatSettings()]);
+        } catch (error) {
+          showToast(error.message || "처리에 실패했습니다.");
+        }
+      }
+
+      function renderViewerList(list) {
+        viewerMap.clear();
+        if (!Array.isArray(list) || !list.length) {
+          viewerList.innerHTML = '<div class="empty">현재 시청자가 없습니다.</div>';
+          return;
+        }
+
+        viewerList.innerHTML = "";
+        list.forEach((viewer) => {
+          const numericId = Number(viewer.userId);
+          viewerMap.set(numericId, viewer);
+
+          const row = document.createElement("div");
+          row.className = "viewer-item";
+          const avatarHtml = viewer.profileImageUrl
+            ? '<img src="' + escapeHtml(viewer.profileImageUrl) + '" alt="">'
+            : escapeHtml((viewer.displayName || "?").trim().slice(0, 1) || "?");
+          row.innerHTML =
+            '<button type="button" class="viewer-avatar-btn">' + avatarHtml + '</button>' +
+            '<div class="viewer-body">' +
+              '<button type="button" class="viewer-name-btn">' + escapeHtml(viewer.displayName || "사용자") + '</button>' +
+              '<div class="viewer-meta">' +
+                (viewer.loginId ? '<span>@' + escapeHtml(viewer.loginId) + '</span>' : '') +
+                (viewer.streamer ? '<span class="pill red">방송자</span>' : '') +
+                (viewer.manager ? '<span class="pill purple">매니저</span>' : '') +
+                (viewer.fan ? '<span class="pill green">팬</span>' : '') +
+              '</div>' +
+            '</div>';
+
+          const openMenu = (event) => {
+            event.stopPropagation();
+            openUserMenu(viewer, event.clientX, event.clientY);
+          };
+          row.querySelector(".viewer-avatar-btn")?.addEventListener("click", openMenu);
+          row.querySelector(".viewer-name-btn")?.addEventListener("click", openMenu);
+          row.addEventListener("contextmenu", (event) => {
+            event.preventDefault();
+            openUserMenu(viewer, event.clientX, event.clientY);
+          });
+          viewerList.appendChild(row);
+        });
+      }
+
+      async function loadViewerList() {
+        if (!canManage) return;
+        try {
+          const viewers = await fetchJson("/api/streams/" + encodeURIComponent(streamId) + "/viewers");
+          renderViewerList(viewers);
+        } catch (error) {
+          viewerList.innerHTML = '<div class="empty">' + escapeHtml(error.message || '시청자 정보를 불러오지 못했습니다.') + '</div>';
+        }
+      }
+
+      function renderChatMessage(item) {
+        const donorRank = donorRankForUser(item.userId);
+        const isDonor = donorUserIds.has(Number(item.userId));
+        const viewerInfo = viewerMap.get(Number(item.userId));
+        const classes = ["message"];
+        if (item.streamer) classes.push("streamer");
+        if (isDonor) classes.push("donor");
+
+        let badges = "";
+        if (item.streamer) badges += '<span class="streamer-badge">방송자</span>';
+        if (donorRank === 1) badges += '<span class="chat-badge" title="후원 1등">🥇</span>';
+        if (donorRank === 2) badges += '<span class="chat-badge" title="후원 2등">🥈</span>';
+        if (donorRank === 3) badges += '<span class="chat-badge" title="후원 3등">🥉</span>';
+        if (isDonor && donorRank === 0) badges += '<span class="chat-badge donor-heart" title="팬">♥</span>';
+        if (item.level != null && Number(item.level) >= 1) {
+          badges += '<span class="chat-badge level-badge ' + levelBadgeClass(Number(item.level)) + '">LV.' + escapeHtml(item.level) + '</span>';
+        }
+        if ((item.manager || (viewerInfo && viewerInfo.manager)) && !item.streamer) {
+          badges += '<span class="manager-badge">매니저</span>';
+        }
+        if (item.streamer && item.partner) {
+          badges += '<span class="partner-badge" title="파트너 스트리머">✓</span>';
+        }
+
+        const wrapper = document.createElement("div");
+        wrapper.className = classes.join(" ");
+        wrapper.innerHTML =
+          '<div class="message-body">' +
+            badges +
+            '<span class="user ' + (canManage ? 'clickable' : '') + '">' + escapeHtml(item.displayName || '익명') + '</span>' +
+            escapeHtml(item.text || '') +
+          '</div>';
+
+        const userNode = wrapper.querySelector(".user");
+        if (userNode && canManage) {
+          userNode.addEventListener("click", (event) => {
+            event.stopPropagation();
+            const user = viewerInfo || {
+              userId: item.userId,
+              displayName: item.displayName,
+              loginId: item.loginId || "",
+              streamer: !!item.streamer,
+              manager: !!item.manager,
+              fan: isDonor,
+              profileImageUrl: item.profileImageUrl || ""
+            };
+            openUserMenu(user, event.clientX, event.clientY);
+          });
+        }
+        return wrapper;
+      }
+
+      function renderDonationMessage(item) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "message donation-card";
+        wrapper.innerHTML =
+          '<div class="twitch-alert ' + donationTierClass(item.amount) + '">' +
+            '<div class="twitch-alert-header">' + escapeHtml(item.tier || '팡') + '</div>' +
+            '<div class="twitch-alert-body">' +
+              '<div class="twitch-alert-donor">🎉 <span class="twitch-name">' + escapeHtml((item.donorName || '익명').trim()) + '</span>님이 ' + Number(item.amount || 0).toLocaleString('ko-KR') + '팡 후원!</div>' +
+              (item.donorMessage ? '<div class="twitch-alert-msg">' + escapeHtml(item.donorMessage) + '</div>' : '') +
+              (item.consecutiveDonationDays != null && Number(item.consecutiveDonationDays) >= 1 ? '<div class="twitch-alert-consecutive">연속후원 ' + escapeHtml(item.consecutiveDonationDays) + '일</div>' : '') +
+            '</div>' +
+          '</div>';
+        return wrapper;
+      }
+
+      function renderSystemMessage(item) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "message chat-msg-system";
+        wrapper.innerHTML = '<div class="message-body">' + escapeHtml(item.text || '') + '</div>';
+        return wrapper;
+      }
+
+      function appendMessage(node) {
+        const empty = messageList.querySelector(".empty");
+        if (empty) empty.remove();
+        messageList.appendChild(node);
+        while (messageList.children.length > 30) {
+          messageList.removeChild(messageList.firstChild);
+        }
+        messageList.scrollTop = messageList.scrollHeight;
+      }
+
+      async function loadTimeline() {
+        try {
+          await loadDonorIds();
+          if (canManage) {
+            await loadViewerList();
+          }
+
+          const list = await fetchJson("/api/streams/" + encodeURIComponent(streamId) + "/chat-timeline?limit=40");
+          const items = Array.isArray(list) ? list : [];
+          let appended = false;
+
+          for (const item of items) {
+            const timestamp = Number(item.timestamp || Date.parse(item.createdAt || '') || 0);
+            const normalized = { ...item, timestamp };
+            const key = itemKey(normalized);
+            if (timestamp && timestamp < latestTimestamp) continue;
+            if (seenKeys.has(key)) continue;
+            seenKeys.add(key);
+            if (timestamp > latestTimestamp) latestTimestamp = timestamp;
+
+            if (normalized.type === 'donation') appendMessage(renderDonationMessage(normalized));
+            else if (normalized.type === 'system') appendMessage(renderSystemMessage(normalized));
+            else appendMessage(renderChatMessage(normalized));
+
+            appended = true;
+          }
+
+          updateStatus(appended ? 'live' : 'wait', appended ? '연결 중' : '대기 중');
+        } catch (_error) {
+          updateStatus('fail', '연결 실패');
+          if (!messageList.children.length) {
+            messageList.innerHTML = '<div class="empty">채팅 연결에 실패했습니다.</div>';
+          }
+        }
+      }
+
+      freezeBtn.addEventListener('click', async () => {
+        try {
+          const result = await fetchJson('/api/streams/' + encodeURIComponent(streamId) + '/chat-settings/freeze', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ frozen: !chatFrozen })
+          });
+          chatFrozen = !!result.chatFrozen;
+          freezeBtn.textContent = chatFrozen ? '채팅 녹이기' : '채팅 얼리기';
+          freezeBtn.className = chatFrozen ? 'btn active' : 'btn secondary';
+          showToast(chatFrozen ? '팬, 매니저, 방송자만 채팅할 수 있습니다.' : '모든 시청자가 채팅할 수 있습니다.');
+        } catch (error) {
+          showToast(error.message || '설정 변경에 실패했습니다.');
+        }
+      });
+
+      viewersBtn.addEventListener('click', async () => {
+        viewerDrawer.classList.add('open');
+        await loadViewerList();
+      });
+
+      closeDrawerBtn.addEventListener('click', () => viewerDrawer.classList.remove('open'));
+      document.addEventListener('click', (event) => {
+        if (!userMenu.contains(event.target)) closeUserMenu();
+      });
+
+      loadChatSettings().then(loadTimeline);
+      window.setInterval(async () => {
+        await loadChatSettings();
+        await loadTimeline();
+      }, 1800);
+    })();
+  </script>
+</body>
+</html>

@@ -8,6 +8,7 @@ import {
   getRecaptchaVerifier,
   sendVerificationCode,
 } from '../lib/phoneAuth';
+import { getAuth } from '../firebase';
 import { getFirebaseAuthErrorMessage } from '../lib/firebaseAuthErrorMessages';
 
 const PROFILE_VERIFY_RECAPTCHA_ID = 'profile-verify-recaptcha';
@@ -19,6 +20,8 @@ export default function ProfileMyInfo() {
   const [newPw, setNewPw] = useState('');
   const [newPw2, setNewPw2] = useState('');
   const [pwMsg, setPwMsg] = useState<{ text: string; ok: boolean | null }>({ text: '', ok: null });
+  const [newUsername, setNewUsername] = useState('');
+  const [nameMsg, setNameMsg] = useState<{ text: string; ok: boolean | null }>({ text: '', ok: null });
   const [newEmail, setNewEmail] = useState('');
   const [emailMsg, setEmailMsg] = useState<{ text: string; ok: boolean | null }>({ text: '', ok: null });
   const [newPhone, setNewPhone] = useState('');
@@ -27,6 +30,7 @@ export default function ProfileMyInfo() {
   const [verifyModalOpen, setVerifyModalOpen] = useState(false);
   const [verifyCode, setVerifyCode] = useState('');
   const [verifyMsg, setVerifyMsg] = useState('');
+  const [pendingUsername, setPendingUsername] = useState<string | null>(null);
   const [pendingPhone, setPendingPhone] = useState<string | null>(null);
   const [sendingCode, setSendingCode] = useState(false);
   const [verifyingCode, setVerifyingCode] = useState(false);
@@ -38,9 +42,6 @@ export default function ProfileMyInfo() {
   const [withdrawConfirm, setWithdrawConfirm] = useState('');
   const [withdrawMsg, setWithdrawMsg] = useState<{ text: string; ok: boolean | null }>({ text: '', ok: null });
   const [pendingWithdraw, setPendingWithdraw] = useState<{ password: string } | null>(null);
-  const [newUsername, setNewUsername] = useState('');
-  const [nameMsg, setNameMsg] = useState<{ text: string; ok: boolean | null }>({ text: '', ok: null });
-  const [pendingUsername, setPendingUsername] = useState<string | null>(null);
 
   const handlePassword = () => {
     setPwMsg({ text: '', ok: null });
@@ -114,8 +115,8 @@ export default function ProfileMyInfo() {
     setVerifyModalOpen(false);
     setVerifyCode('');
     setVerifyMsg('');
-    setPendingPhone(null);
     setPendingUsername(null);
+    setPendingPhone(null);
     setPendingWithdraw(null);
     confirmationResultRef.current = null;
     clearRecaptchaVerifier(recaptchaContainerId, recaptchaVerifierRef.current);
@@ -152,10 +153,16 @@ export default function ProfileMyInfo() {
 
     try {
       const sendOnce = async () => {
-        const containerId = await resetRecaptcha();
-        recaptchaVerifierRef.current = await getRecaptchaVerifier(containerId) as import('firebase/auth').RecaptchaVerifier;
-        const result = await sendVerificationCode(phone.trim(), recaptchaVerifierRef.current);
-        confirmationResultRef.current = result;
+        const auth = await getAuth();
+        if (auth) {
+          const containerId = await resetRecaptcha();
+          recaptchaVerifierRef.current = await getRecaptchaVerifier(containerId) as import('firebase/auth').RecaptchaVerifier;
+          const result = await sendVerificationCode(phone.trim(), recaptchaVerifierRef.current);
+          confirmationResultRef.current = result;
+        } else {
+          const result = await sendVerificationCode(phone.trim(), null);
+          confirmationResultRef.current = result;
+        }
       };
 
       try {
@@ -318,7 +325,7 @@ export default function ProfileMyInfo() {
     <>
       <h1 className="profile-page-title">내 정보</h1>
       <p className="profile-bio" style={{ marginBottom: 24 }}>
-        비밀번호, 이름, 전화번호, 이메일을 변경할 수 있습니다. 표시 이름(닉네임)은 프로필 홈의 「프로필 편집」에서 변경할 수 있습니다.
+        비밀번호, 이름, 전화번호, 이메일을 변경할 수 있습니다.
       </p>
 
       <section className="myinfo-section">
@@ -494,9 +501,7 @@ export default function ProfileMyInfo() {
                 ? '계정 탈퇴를 진행하려면 등록된 휴대전화 번호로 인증번호를 받아야 합니다. 아래 버튼으로 인증번호를 요청해 주세요.'
                 : pendingPhone
                   ? '새 휴대전화 번호로 인증번호를 받아야 합니다. 아래 버튼으로 인증번호를 요청해 주세요.'
-                  : pendingUsername
-                    ? '이름 변경을 완료하려면 등록된 휴대전화 번호로 인증번호를 받아야 합니다. 아래 버튼으로 인증번호를 요청해 주세요.'
-                    : '등록된 휴대전화 번호로 인증번호를 받아야 합니다. 아래 버튼으로 인증번호를 요청해 주세요.'}
+                  : '등록된 휴대전화 번호로 인증번호를 받아야 합니다. 아래 버튼으로 인증번호를 요청해 주세요.'}
             </p>
             <div className="profile-edit-field">
               <button

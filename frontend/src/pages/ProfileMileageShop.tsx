@@ -4,10 +4,19 @@ import { apiUrl } from '../api/client';
 
 interface MileagePurchaseRow {
   id?: number;
-  type?: 'PANG' | 'SUBSCRIPTION_TICKET' | 'AD_FREE_30_DAYS' | string;
+  type?:
+    | 'ADMIN_GIFT'
+    | 'PANG_PAYMENT_REWARD'
+    | 'SUBSCRIPTION_PAYMENT_REWARD'
+    | 'AD_FREE_PAYMENT_REWARD'
+    | 'PANG'
+    | 'SUBSCRIPTION_TICKET'
+    | 'AD_FREE_30_DAYS'
+    | string;
   mileageCost?: number;
   pangAmount?: number;
   targetUserId?: number;
+  targetUserNickname?: string;
   createdAt?: string;
 }
 
@@ -44,19 +53,22 @@ export default function ProfileMileageShop() {
   const [streamerQuery, setStreamerQuery] = useState('');
   const [streamerResults, setStreamerResults] = useState<StreamerSearchItem[]>([]);
   const [selectedStreamer, setSelectedStreamer] = useState<StreamerSearchItem | null>(null);
-  const [shopPrices, setShopPrices] = useState<{ subscriptionTicketCost?: number; adFree30DaysCost?: number }>({});
+  const [shopPrices, setShopPrices] = useState<{ pangMileageCostPerPang?: number; subscriptionTicketCost?: number; adFree30DaysCost?: number }>({});
   const [shopHistory, setShopHistory] = useState<MileagePurchaseRow[]>([]);
   const [shopMsg, setShopMsg] = useState('');
   const [shopLoading, setShopLoading] = useState(false);
+  const [historyTab, setHistoryTab] = useState<'charge' | 'usage'>('charge');
   const [page, setPage] = useState(0);
   const [total, setTotal] = useState(0);
 
   const loadPrices = () => {
     fetch(apiUrl('api/mileage-shop/prices'), { credentials: 'include' })
       .then((r) => (r.ok ? r.json() : {}))
-      .then((d: { subscriptionTicketCost?: number; adFree30DaysCost?: number }) => setShopPrices(d))
+      .then((d: { pangMileageCostPerPang?: number; subscriptionTicketCost?: number; adFree30DaysCost?: number }) => setShopPrices(d))
       .catch(() => setShopPrices({}));
   };
+
+  const pangMileageCostPerPang = shopPrices.pangMileageCostPerPang ?? 2;
 
   const loadHistory = (pageIndex: number) => {
     fetch(apiUrl(`api/mileage-shop/history?page=${pageIndex}&size=${PAGE_SIZE}`), { credentials: 'include' })
@@ -71,6 +83,13 @@ export default function ProfileMileageShop() {
         setShopHistory([]);
       });
   };
+
+  const chargeHistory = shopHistory.filter((item) =>
+    ['ADMIN_GIFT', 'PANG_PAYMENT_REWARD', 'SUBSCRIPTION_PAYMENT_REWARD', 'AD_FREE_PAYMENT_REWARD'].includes(item.type ?? ''),
+  );
+  const usageHistory = shopHistory.filter(
+    (item) => !['ADMIN_GIFT', 'PANG_PAYMENT_REWARD', 'SUBSCRIPTION_PAYMENT_REWARD', 'AD_FREE_PAYMENT_REWARD'].includes(item.type ?? ''),
+  );
 
   useEffect(() => {
     loadPrices();
@@ -215,7 +234,7 @@ export default function ProfileMileageShop() {
       <section className="pang-history-section">
         <div className="pang-history-table-wrap mileage-shop-layout">
           <div className="profile-edit-field mileage-shop-item">
-            <label>팡 구매 (1팡 = 2마일리지)</label>
+            <label>팡 구매 (1팡 = {pangMileageCostPerPang}M)</label>
             <p className="pang-charge-desc">최소 1,000팡부터 구매할 수 있습니다.</p>
             <div className="mileage-shop-row">
               <input
@@ -233,7 +252,7 @@ export default function ProfileMileageShop() {
           </div>
 
           <div className="profile-edit-field mileage-shop-item">
-            <label>구독권 구매 ({(shopPrices.subscriptionTicketCost ?? 8000).toLocaleString()} 마일리지)</label>
+            <label>구독권 구매 (8,200M / 30일)</label>
             <p className="pang-charge-desc">스트리머 닉네임/아이디를 검색해서 선택한 뒤 구매할 수 있습니다.</p>
             <div className="mileage-shop-row">
               <input
@@ -280,7 +299,7 @@ export default function ProfileMileageShop() {
           </div>
 
           <div className="profile-edit-field mileage-shop-item">
-            <label>광고 제거권 ({(shopPrices.adFree30DaysCost ?? 14500).toLocaleString()} 마일리지 / 30일)</label>
+            <label>광고 제거권 (14,900M / 30일)</label>
             <p className="pang-charge-desc">
               현재 만료: {user?.adFreeUntil ? formatDate(user.adFreeUntil) : '미적용'}
             </p>
@@ -299,43 +318,90 @@ export default function ProfileMileageShop() {
 
           <div>
             <h3 style={{ margin: '8px 0' }}>마일리지 내역</h3>
-            <table className="pang-history-table" style={{ display: shopHistory.length ? 'table' : 'none' }}>
-              <thead>
-                <tr>
-                  <th>일시</th>
-                  <th>상품</th>
-                  <th>차감 마일리지</th>
-                  <th>상세</th>
-                </tr>
-              </thead>
-              <tbody>
-                {shopHistory.map((h, idx) => (
-                  <tr key={h.id ?? idx}>
-                    <td className="col-date">{formatDate(h.createdAt)}</td>
-                    <td>
-                      {h.type === 'PANG'
-                        ? '팡 구매'
-                        : h.type === 'SUBSCRIPTION_TICKET'
-                          ? '구독권'
-                          : h.type === 'AD_FREE_30_DAYS'
-                            ? '광고 제거 30일'
-                            : h.type}
-                    </td>
-                    <td>{(h.mileageCost ?? 0).toLocaleString()} ML</td>
-                    <td>
-                      {h.type === 'PANG'
-                        ? `${(h.pangAmount ?? 0).toLocaleString()}팡`
-                        : h.type === 'SUBSCRIPTION_TICKET'
-                          ? `스트리머 #${h.targetUserId ?? '-'}`
-                          : '-'}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-            <div className="pang-history-empty" style={{ display: shopHistory.length ? 'none' : 'block' }}>
-              마일리지 내역이 없습니다.
+            <div className="pang-history-tabs">
+              <button type="button" className={historyTab === 'charge' ? 'active' : ''} onClick={() => { setHistoryTab('charge'); setPage(0); }}>
+                충전 내역
+              </button>
+              <button type="button" className={historyTab === 'usage' ? 'active' : ''} onClick={() => { setHistoryTab('usage'); setPage(0); }}>
+                사용 내역
+              </button>
             </div>
+
+            {historyTab === 'charge' ? (
+              <>
+                <table className="pang-history-table" style={{ display: chargeHistory.length ? 'table' : 'none' }}>
+                  <thead>
+                    <tr>
+                      <th>일시</th>
+                      <th>적립 마일리지</th>
+                      <th>상세</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {chargeHistory.map((h, idx) => (
+                      <tr key={h.id ?? idx}>
+                        <td className="col-date">{formatDate(h.createdAt)}</td>
+                        <td>{`+${(h.mileageCost ?? 0).toLocaleString()} M`}</td>
+                        <td>
+                          {h.type === 'ADMIN_GIFT'
+                            ? '운영자 지급'
+                            : h.type === 'PANG_PAYMENT_REWARD'
+                              ? '팡 결제'
+                              : h.type === 'SUBSCRIPTION_PAYMENT_REWARD'
+                                ? '구독권 결제'
+                                : h.type === 'AD_FREE_PAYMENT_REWARD'
+                                  ? '광고제거 결제'
+                                  : '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="pang-history-empty" style={{ display: chargeHistory.length ? 'none' : 'block' }}>
+                  마일리지 충전 내역이 없습니다.
+                </div>
+              </>
+            ) : (
+              <>
+                <table className="pang-history-table" style={{ display: usageHistory.length ? 'table' : 'none' }}>
+                  <thead>
+                    <tr>
+                      <th>일시</th>
+                      <th>상품</th>
+                      <th>사용 마일리지</th>
+                      <th>상세</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {usageHistory.map((h, idx) => (
+                      <tr key={h.id ?? idx}>
+                        <td className="col-date">{formatDate(h.createdAt)}</td>
+                        <td>
+                          {h.type === 'PANG'
+                            ? '팡 구매'
+                            : h.type === 'SUBSCRIPTION_TICKET'
+                              ? '구독권'
+                              : h.type === 'AD_FREE_30_DAYS'
+                                ? '광고 제거 30일'
+                                : h.type}
+                        </td>
+                        <td>{`-${(h.mileageCost ?? 0).toLocaleString()} M`}</td>
+                        <td>
+                          {h.type === 'PANG'
+                            ? `${(h.pangAmount ?? 0).toLocaleString()}팡`
+                            : h.type === 'SUBSCRIPTION_TICKET'
+                              ? h.targetUserNickname || (h.targetUserId ? `스트리머 #${h.targetUserId}` : '-')
+                              : '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                <div className="pang-history-empty" style={{ display: usageHistory.length ? 'none' : 'block' }}>
+                  마일리지 사용 내역이 없습니다.
+                </div>
+              </>
+            )}
             {renderPagination()}
           </div>
         </div>

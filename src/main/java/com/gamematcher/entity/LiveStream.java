@@ -2,17 +2,22 @@ package com.gamematcher.entity;
 
 import com.gamematcher.constant.GameList;
 import com.gamematcher.constant.StreamStatus;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
 
-/**
- * OBS 등으로 송출되는 라이브 스트림 정보.
- * 스트림 키로 RTMP 수신 서버와 연동되고, HLS 재생 URL로 사이트에서 시청 가능.
- */
 @Entity
 @Table(name = "live_streams")
 @Getter
@@ -24,7 +29,6 @@ public class LiveStream {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    /** OBS에 입력할 고유 스트림 키 (간편 모드·외부 연동 시 null) */
     @Column(name = "stream_key", unique = true, length = 64)
     private String streamKey;
 
@@ -42,11 +46,9 @@ public class LiveStream {
     @Column(nullable = false, length = 20)
     private StreamStatus status = StreamStatus.CREATED;
 
-    /** HLS 재생 URL (사이트 뷰어에서 사용). 간편 모드 시 null */
     @Column(name = "playback_url", length = 500)
     private String playbackUrl;
 
-    /** 간편 모드: 트위치/유튜브 방송 URL. 있으면 이걸 임베드해서 재생 */
     @Column(name = "external_url", length = 500)
     private String externalUrl;
 
@@ -62,34 +64,101 @@ public class LiveStream {
     @Column(name = "updated_at")
     private LocalDateTime updatedAt;
 
-    /** 채팅 얼리기: true면 방장만 채팅 가능 */
     @Column(name = "chat_frozen", nullable = false)
     private Boolean chatFrozen = false;
 
-    /** BJ 공지 (최대 200자). 채팅창 상단 노출용 */
     @Column(name = "stream_notice", length = 200)
     private String streamNotice;
 
-    /** BJ 공지 노출 여부 */
     @Column(name = "stream_notice_visible", nullable = false)
     private Boolean streamNoticeVisible = false;
 
-    /** 영상 후원 최소 팡 (이 금액 이상일 때만 영상 URL 첨부 가능, null/0이면 제한 없음) */
     @Column(name = "min_video_pang")
     private Integer minVideoPang;
 
-    /** TTS(후원 메시지) 최소 팡 (이 금액 이상일 때만 메시지/TTS 가능, null/0이면 제한 없음) */
     @Column(name = "min_tts_pang")
     private Integer minTtsPang;
 
+    @Column(name = "chat_scope", nullable = false, length = 20)
+    private String chatScope = "ALL";
+
+    @Column(name = "chat_permission_scope", nullable = false, length = 20)
+    private String chatPermissionScope = "ALL";
+
+    @Column(name = "slow_mode_enabled", nullable = false)
+    private Boolean slowModeEnabled = false;
+
+    @Column(name = "slow_mode_seconds", nullable = false)
+    private Integer slowModeSeconds = 5;
+
+    @Column(name = "chat_rules", length = 2000)
+    private String chatRules;
+
+    @Column(name = "visible_in_recent", nullable = false)
+    private Boolean visibleInRecent = true;
+
+    @Column(name = "warning_count", nullable = false)
+    private Integer warningCount = 0;
+
+    @Column(name = "last_warning_at")
+    private LocalDateTime lastWarningAt;
+
+    @Column(name = "last_warning_message", length = 200)
+    private String lastWarningMessage;
+
+    @Column(name = "admin_warning_count", nullable = false)
+    private Integer adminWarningCount = 0;
+
+    @Column(name = "last_admin_warning_at")
+    private LocalDateTime lastAdminWarningAt;
+
+    @Column(name = "last_admin_warning_message", length = 200)
+    private String lastAdminWarningMessage;
+
+    @Column(name = "last_admin_id")
+    private Long lastAdminId;
+
     @PrePersist
     protected void onCreate() {
+        if (chatScope == null || chatScope.isBlank()) {
+            chatScope = "ALL";
+        }
+        if (chatPermissionScope == null || chatPermissionScope.isBlank()) {
+            chatPermissionScope = chatScope;
+        }
+        if (slowModeEnabled == null) {
+            slowModeEnabled = false;
+        }
+        if (slowModeSeconds == null) {
+            slowModeSeconds = 5;
+        }
+        if (visibleInRecent == null) {
+            visibleInRecent = true;
+        }
+        if (warningCount == null) {
+            warningCount = 0;
+        }
+        if (adminWarningCount == null) {
+            adminWarningCount = 0;
+        }
         createdAt = LocalDateTime.now();
         updatedAt = LocalDateTime.now();
     }
 
     @PreUpdate
     protected void onUpdate() {
+        if (chatScope == null || chatScope.isBlank()) {
+            chatScope = chatPermissionScope != null && !chatPermissionScope.isBlank() ? chatPermissionScope : "ALL";
+        }
+        if (chatPermissionScope == null || chatPermissionScope.isBlank()) {
+            chatPermissionScope = chatScope != null && !chatScope.isBlank() ? chatScope : "ALL";
+        }
+        if (warningCount == null) {
+            warningCount = 0;
+        }
+        if (adminWarningCount == null) {
+            adminWarningCount = 0;
+        }
         updatedAt = LocalDateTime.now();
     }
 }

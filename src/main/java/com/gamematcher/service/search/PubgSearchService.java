@@ -285,12 +285,30 @@ public class PubgSearchService {
         double avgK    = matches.stream().mapToInt(m -> nvl(m.getKills())).average().orElse(0);
         double avgA    = matches.stream().mapToInt(m -> nvl(m.getAssists())).average().orElse(0);
         double avgRank = matches.stream().mapToInt(m -> nvl(m.getDeaths())).average().orElse(0);
+        double avgDamage = matches.stream()
+                .map(MatchInfo::getExtras)
+                .filter(Objects::nonNull)
+                .map(extras -> extras.get("데미지"))
+                .mapToDouble(value -> {
+                    if (value instanceof Number number) return number.doubleValue();
+                    if (value instanceof String text) {
+                        try {
+                            return Double.parseDouble(text.replace(",", "").trim());
+                        } catch (NumberFormatException ignored) {
+                            return 0.0;
+                        }
+                    }
+                    return 0.0;
+                })
+                .average()
+                .orElse(0);
         return MatchStats.builder()
                 .totalGames(matches.size())
                 .wins(wins).losses(matches.size() - wins)
                 .winRate(round1(100.0 * wins / matches.size()))
                 .avgKills(round1(avgK)).avgAssists(round1(avgA))
                 .avgKda(round1(avgRank))  // 평균 순위
+                .avgDamage(round1(avgDamage))
                 .build();
     }
 

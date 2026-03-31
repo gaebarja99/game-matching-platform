@@ -1,7 +1,6 @@
 package com.gamematcher.service;
 
 import com.gamematcher.constant.MileagePurchaseType;
-import com.gamematcher.constant.PangConstants;
 import com.gamematcher.entity.MileagePurchase;
 import com.gamematcher.entity.User;
 import com.gamematcher.repository.MileagePurchaseRepository;
@@ -21,20 +20,22 @@ public class MileageShopService {
 
     private static final int MIN_PANG = 1_000;
     private static final int MAX_PANG = 999_999_999;
-    private static final long SUBSCRIPTION_TICKET_COST = 4_900L;
-    private static final long AD_FREE_30_DAYS_COST = 4_900L;
+    private static final long MILEAGE_COST_PER_PANG = 2L;
+    private static final long SUBSCRIPTION_TICKET_COST = 8_200L;
+    private static final long AD_FREE_30_DAYS_COST = 14_900L;
 
     private final UserRepository userRepository;
     private final PangService pangService;
     private final SubscriptionService subscriptionService;
     private final MileagePurchaseRepository mileagePurchaseRepository;
+    private final NotificationService notificationService;
 
     @Transactional
     public Result buyPang(Long userId, int pangAmount) {
         if (pangAmount < MIN_PANG || pangAmount > MAX_PANG) {
             throw new IllegalArgumentException("구매할 팡은 1,000 이상 입력해 주세요.");
         }
-        long mileageCost = Math.round(pangAmount * PangConstants.PRICE_WON_PER_PANG);
+        long mileageCost = pangAmount * MILEAGE_COST_PER_PANG;
         User user = userRepository.findById(userId).orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다."));
         long mileage = user.getMileage() != null ? user.getMileage() : 0L;
         if (mileage < mileageCost) {
@@ -66,6 +67,7 @@ public class MileageShopService {
         user.setMileage(mileage - SUBSCRIPTION_TICKET_COST);
         userRepository.save(user);
         subscriptionService.grantSubscription(userId, streamerId, false);
+        notificationService.createForNewSubscriber(streamerId, userId);
 
         MileagePurchase p = new MileagePurchase();
         p.setUserId(userId);
@@ -113,6 +115,10 @@ public class MileageShopService {
 
     public long getAdFree30DaysCost() {
         return AD_FREE_30_DAYS_COST;
+    }
+
+    public long getPangMileageCostPerPang() {
+        return MILEAGE_COST_PER_PANG;
     }
 
     public record Result(Long mileageBalance, Long pangBalance, String message) {}

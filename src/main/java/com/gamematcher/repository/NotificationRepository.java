@@ -16,6 +16,8 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
 
     List<Notification> findByUserIdAndTypeAndActorUserIdAndReadAtIsNull(Long userId, String type, Long actorUserId);
 
+    boolean existsByUserIdAndTypeAndCreatedAt(Long userId, String type, java.time.LocalDateTime createdAt);
+
     List<Notification> findByUserIdOrderByCreatedAtDesc(Long userId, Pageable pageable);
 
     void deleteByUserId(Long userId);

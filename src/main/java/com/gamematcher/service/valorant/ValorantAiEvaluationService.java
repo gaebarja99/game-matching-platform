@@ -17,7 +17,6 @@ import com.gamematcher.service.ai.ValorantLlmEvaluationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -133,8 +132,7 @@ public class ValorantAiEvaluationService {
 
         for (ValorantMatchPlayer player : targets) {
             ValorantPlayerMatchStatsDTO playerStats = playerStatsList.stream()
-                    .filter(ps -> player.getPuuid() != null && ps.getPlayerPuuid() != null
-                            && player.getPuuid().trim().equalsIgnoreCase(ps.getPlayerPuuid().trim()))
+                    .filter(ps -> player.getPuuid() != null && player.getPuuid().equals(ps.getPlayerPuuid()))
                     .findFirst()
                     .orElse(null);
 
@@ -161,45 +159,6 @@ public class ValorantAiEvaluationService {
         return d;
     }
 
-    /**
-     * DB에만 조회(LLM 미호출). 전적 매치 상세에 {@code records_ai_evaluation} 을 붙일 때와
-     * 동일한 기준으로 화면에 보여줄 내용이 있을 때만 반환한다.
-     */
-    @Transactional(readOnly = true)
-    public Optional<ValorantAiEvaluationResponseDto> findSavedEvaluation(
-            String matchId, String puuid, String modelOverride) {
-        if (matchId == null || matchId.isBlank() || puuid == null || puuid.isBlank()) {
-            return Optional.empty();
-        }
-        String pid = puuid.trim();
-        Optional<ValorantMatchPlayer> playerOpt = valorantMatchPlayerRepository
-                .findByMatch_MatchIdAndPuuidIgnoreCase(matchId, pid)
-                .or(() -> valorantMatchPlayerRepository.findByMatch_MatchIdAndPuuid(matchId, pid));
-        if (playerOpt.isEmpty()) {
-            return Optional.empty();
-        }
-        ValorantMatchPlayer player = playerOpt.get();
-        String modelKey = effectiveModelKey(modelOverride);
-        Optional<ValorantMatchAiEvaluation> evalOpt = evaluationRepository
-                .findByValorantMatchPlayer_IdAndLlmModel(player.getId(), modelKey);
-        String defaultTrimmed = defaultLlmModel != null ? defaultLlmModel.trim() : "";
-        if (evalOpt.isEmpty() && modelKey.equals(defaultTrimmed)) {
-            evalOpt = evaluationRepository.findByValorantMatchPlayer_IdAndLlmModel(player.getId(), "");
-        }
-        if (evalOpt.isEmpty()) {
-            return Optional.empty();
-        }
-        ValorantMatchAiEvaluation e = evalOpt.get();
-        String summary = e.getSummary();
-        String detailed = e.getDetailedComment();
-        boolean hasText = (summary != null && !summary.isBlank())
-                || (detailed != null && !detailed.isBlank());
-        if (!hasText && e.getGrade() == null && e.getScore() == null) {
-            return Optional.empty();
-        }
-        return Optional.of(evaluationMapper.toDto(e));
-    }
-
     private static List<ValorantMatchPlayer> filterValorantPlayers(
             List<ValorantMatchPlayer> all,
             String filterPuuid,
@@ -212,8 +171,7 @@ public class ValorantAiEvaluationService {
         if (filterPuuid != null && !filterPuuid.isBlank()) {
             String id = filterPuuid.trim();
             return all.stream()
-                    .filter(p -> p != null && p.getPuuid() != null
-                            && id.equalsIgnoreCase(p.getPuuid().trim()))
+                    .filter(p -> p != null && id.equals(p.getPuuid()))
                     .collect(Collectors.toList());
         }
         if (filterGameName != null && !filterGameName.isBlank()
@@ -252,8 +210,7 @@ public class ValorantAiEvaluationService {
         ValorantMatch match = player.getMatch();
         List<ValorantPlayerMatchStatsDTO> playerStatsList = valorantMatchStatsMapper.toPlayerMatchStatsDtos(match);
         ValorantPlayerMatchStatsDTO playerStats = playerStatsList.stream()
-                .filter(ps -> player.getPuuid() != null && ps.getPlayerPuuid() != null
-                        && player.getPuuid().trim().equalsIgnoreCase(ps.getPlayerPuuid().trim()))
+                .filter(ps -> player.getPuuid() != null && player.getPuuid().equals(ps.getPlayerPuuid()))
                 .findFirst()
                 .orElse(null);
         return evaluateAndSaveForPlayer(player, playerStats, null, false);
@@ -314,17 +271,7 @@ public class ValorantAiEvaluationService {
                 summary,
                 detailedComment
         );
-        try {
-            entity = evaluationRepository.save(entity);
-        } catch (DataIntegrityViolationException ex) {
-            Optional<ValorantMatchAiEvaluation> recovered =
-                    evaluationRepository.findByValorantMatchPlayer_IdAndLlmModel(player.getId(), modelKey);
-            if (recovered.isPresent()) {
-                log.debug("AI 평가 INSERT 경합, 기존 행 반환: playerId={}, model={}", player.getId(), modelKey);
-                return recovered.map(evaluationMapper::toDto);
-            }
-            throw ex;
-        }
+        entity = evaluationRepository.save(entity);
 
         return Optional.of(evaluationMapper.toDto(entity));
     }
@@ -343,11 +290,8 @@ public class ValorantAiEvaluationService {
             return Optional.empty();
         }
 
-        String mid = dto.getMatchId();
-        String pp = dto.getPlayerPuuid().trim();
         ValorantMatchPlayer player = valorantMatchPlayerRepository
-                .findByMatch_MatchIdAndPuuidIgnoreCase(mid, pp)
-                .or(() -> valorantMatchPlayerRepository.findByMatch_MatchIdAndPuuid(mid, pp))
+                .findByMatch_MatchIdAndPuuid(dto.getMatchId(), dto.getPlayerPuuid())
                 .orElse(null);
         if (player == null) {
             log.debug("ValorantMatchPlayer 없음: matchId={}, puuid={}", dto.getMatchId(), dto.getPlayerPuuid());
@@ -365,35 +309,18 @@ public class ValorantAiEvaluationService {
             entity.setLlmModel(modelKey);
         }
 
-        applyEvaluationDtoFields(entity, dto);
-
-        try {
-            entity = evaluationRepository.save(entity);
-        } catch (DataIntegrityViolationException ex) {
-            ValorantMatchAiEvaluation attached = evaluationRepository
-                    .findByValorantMatchPlayer_IdAndLlmModel(player.getId(), modelKey)
-                    .orElse(null);
-            if (attached == null) {
-                throw ex;
-            }
-            applyEvaluationDtoFields(attached, dto);
-            entity = evaluationRepository.save(attached);
-        }
-        return Optional.of(evaluationMapper.toDto(entity));
-    }
-
-    private static void applyEvaluationDtoFields(ValorantMatchAiEvaluation entity, ValorantAiEvaluationResponseDto dto) {
         entity.setStatus(dto.getStatus() != null ? dto.getStatus() : EvaluationStatus.COMPLETED);
         entity.setScore(dto.getScore());
-        entity.setGrade(dto.getGrade() != null ? dto.getGrade()
-                : (dto.getScore() != null ? Grade.fromScore(dto.getScore()) : null));
+        entity.setGrade(dto.getGrade() != null ? dto.getGrade() : (dto.getScore() != null ? com.gamematcher.constant.ai.evaluation.Grade.fromScore(dto.getScore()) : null));
         entity.setSummary(dto.getSummary());
         entity.setDetailedComment(dto.getDetailedComment());
         if (dto.getEvaluatedAt() != null) {
             entity.setEvaluatedAt(dto.getEvaluatedAt());
-        } else if (entity.getEvaluatedAt() == null
-                && (dto.getSummary() != null || dto.getDetailedComment() != null)) {
-            entity.setEvaluatedAt(LocalDateTime.now());
+        } else if (entity.getEvaluatedAt() == null && (dto.getSummary() != null || dto.getDetailedComment() != null)) {
+            entity.setEvaluatedAt(java.time.LocalDateTime.now());
         }
+
+        entity = evaluationRepository.save(entity);
+        return Optional.of(evaluationMapper.toDto(entity));
     }
 }

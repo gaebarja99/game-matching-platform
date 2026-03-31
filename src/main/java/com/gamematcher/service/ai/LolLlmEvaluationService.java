@@ -43,20 +43,10 @@ public class LolLlmEvaluationService {
     public Optional<LlmEvaluationResponseDTO> evaluate(
             LolPlayerMatchStatsDTO playerStats,
             int maxTimelineEvents) {
-        return evaluate(playerStats, maxTimelineEvents, null);
-    }
-
-    /**
-     * @param modelOverride 비어 있지 않으면 해당 OpenAI 모델 ID로 호출
-     */
-    public Optional<LlmEvaluationResponseDTO> evaluate(
-            LolPlayerMatchStatsDTO playerStats,
-            int maxTimelineEvents,
-            String modelOverride) {
         if (playerStats == null) {
             return Optional.empty();
         }
         String prompt = promptBuilder.build(playerStats, maxTimelineEvents);
-        return llmService.evaluate(prompt, modelOverride);
+        return llmService.evaluate(prompt);
     }
 }

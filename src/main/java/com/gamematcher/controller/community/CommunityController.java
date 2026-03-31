@@ -169,6 +169,14 @@ public class CommunityController {
         return PageResponseDto.of(communityService.getBookmarks(userId, page, size));
     }
 
+    @GetMapping("/my-posts")
+    public PageResponseDto<PostListResponseDto> getMyPosts(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return PageResponseDto.of(communityService.getMyPosts(userId, page, size));
+    }
+
     // ========== 추천/비추천 ==========
     @PostMapping("/posts/{postId}/recommend")
     @ResponseStatus(HttpStatus.NO_CONTENT)

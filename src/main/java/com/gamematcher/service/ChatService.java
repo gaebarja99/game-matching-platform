@@ -11,6 +11,7 @@ import com.gamematcher.repository.LiveStreamRepository;
 import com.gamematcher.repository.UserRepository;
 import com.gamematcher.service.FollowService;
 import com.gamematcher.service.LevelService;
+import com.gamematcher.service.StreamChatSettingsService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -31,6 +32,7 @@ public class ChatService {
     private final UserRepository userRepository;
     private final LiveStreamRepository liveStreamRepository;
     private final FollowService followService;
+    private final StreamChatSettingsService streamChatSettingsService;
 
     @Transactional
     public void saveMessage(Long streamId, Long userId, String text) {
@@ -77,6 +79,7 @@ public class ChatService {
         String profileImageUrl = u != null ? u.getProfileImageUrl() : null;
         String loginId = u != null ? u.getLoginId() : null;
         boolean streamer = streamOwnerId != null && streamOwnerId.equals(m.getUserId());
+        boolean manager = m.getUserId() != null && streamChatSettingsService.isManager(m.getStreamId(), m.getUserId());
         int level = u != null && u.getTotalExperienceTenths() != null
                 ? LevelService.getLevel(u.getTotalExperienceTenths())
                 : 1;
@@ -87,6 +90,7 @@ public class ChatService {
                 .profileImageUrl(profileImageUrl)
                 .text(m.getText())
                 .streamer(streamer)
+                .manager(manager)
                 .level(level)
                 .timestamp(m.getCreatedAt() != null ? m.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() : 0L)
                 .build();
@@ -111,6 +115,9 @@ public class ChatService {
             Map<String, Object> map = new HashMap<>();
             map.put("type", "chat");
             map.put("createdAt", m.getCreatedAt() != null ? m.getCreatedAt().format(ISO) : null);
+            map.put("timestamp", m.getCreatedAt() != null
+                    ? m.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+                    : 0L);
             User chatUser = userRepository.findById(m.getUserId()).orElse(null);
             String displayName = chatUser != null ? (chatUser.getNickname() != null && !chatUser.getNickname().isBlank() ? chatUser.getNickname() : chatUser.getUsername()) : "알 수 없음";
             map.put("displayName", displayName);
@@ -119,6 +126,7 @@ public class ChatService {
             if (chatUser != null && chatUser.getProfileImageUrl() != null) map.put("profileImageUrl", chatUser.getProfileImageUrl());
             map.put("text", m.getText());
             map.put("streamer", streamOwnerId != null && streamOwnerId.equals(m.getUserId()));
+            map.put("manager", m.getUserId() != null && streamChatSettingsService.isManager(m.getStreamId(), m.getUserId()));
             int level = chatUser != null && chatUser.getTotalExperienceTenths() != null
                     ? LevelService.getLevel(chatUser.getTotalExperienceTenths())
                     : 1;
@@ -129,6 +137,9 @@ public class ChatService {
             Map<String, Object> map = new HashMap<>();
             map.put("type", "donation");
             map.put("createdAt", d.getCreatedAt() != null ? d.getCreatedAt().format(ISO) : null);
+            map.put("timestamp", d.getCreatedAt() != null
+                    ? d.getCreatedAt().atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+                    : 0L);
             User donorUser = userRepository.findById(d.getFromUserId()).orElse(null);
             String donorName = donorUser != null ? (donorUser.getNickname() != null && !donorUser.getNickname().isBlank() ? donorUser.getNickname() : donorUser.getUsername()) : "후원자";
             map.put("donorName", donorName);

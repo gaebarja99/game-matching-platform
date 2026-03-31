@@ -144,24 +144,6 @@ public class LolMatchMapper {
     }
 
     /**
-     * DB에 저장된 타임라인(JSON) → DTO (AI 프롬프트·스탯 매퍼용).
-     */
-    public LolMatchTimelineDetailDto toTimelineDetailDto(LolMatchTimeline entity) {
-        if (entity == null || entity.getTimelineInfo() == null || entity.getTimelineInfo().isBlank()) {
-            return null;
-        }
-        try {
-            LolMatchTimelineDetailDto dto = new LolMatchTimelineDetailDto();
-            LolMatchTimelineDetailDto.Info info = objectMapper.readValue(
-                    entity.getTimelineInfo(), LolMatchTimelineDetailDto.Info.class);
-            dto.setInfo(info);
-            return dto;
-        } catch (Exception e) {
-            return null;
-        }
-    }
-
-    /**
      * LolMatch 엔티티 → DTO (DB → API 응답용)
      */
     public LolMatchDetailDto toMatchDto(LolMatch match) {

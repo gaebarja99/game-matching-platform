@@ -22,6 +22,8 @@ import {
   getMatchQueueStatusDetail,
   getLolMatchQueueStatus,
   leaveLolMatchQueue,
+  getMyMatchSessions,
+  getMatchSession,
 } from '../api/match';
 import {
   TIER_OPTIONS,
@@ -44,6 +46,8 @@ import {
 import { saveRandomMatchPending, clearRandomMatchPending } from '../utils/randomMatchPendingStorage';
 import { isHiddenGameRoomHost } from '../utils/gameRoomVisibility';
 import { getRoomCapacityMeta } from '../utils/gameRoomCapacity';
+import { parseGameOptions } from '../utils/parseGameRoomOptions';
+import GameRoomDetailModal, { type RoomModalOpen } from '../components/GameRoomDetailModal';
 import './Home.css';
 
 function defaultRandomMatchPosition(game: string): string {
@@ -86,46 +90,6 @@ function isRandomMatchPositionValid(game: string, pos: string | null): boolean {
   }
 }
 
-function parseGameOptions(s?: string | null): {
-  tier?: string;
-  mode?: string;
-  position?: string;
-  maxPlayers?: number;
-  myPosition?: string;
-  partnerPosition?: string;
-  primaryRole?: string;
-  secondaryRole?: string;
-  findPosition?: string;
-  preferredMap?: string;
-  preferredMethod?: string;
-  preferredLegend?: string;
-  platform?: string;
-  partySize?: string;
-} {
-  if (!s || !s.trim()) return {};
-  try {
-    const o = JSON.parse(s) as Record<string, unknown>;
-    return {
-      tier: typeof o.tier === 'string' ? o.tier : undefined,
-      mode: typeof o.mode === 'string' ? o.mode : undefined,
-      position: typeof o.position === 'string' ? o.position : undefined,
-      maxPlayers: typeof o.maxPlayers === 'number' ? o.maxPlayers : undefined,
-      myPosition: typeof o.myPosition === 'string' ? o.myPosition : undefined,
-      partnerPosition: typeof o.partnerPosition === 'string' ? o.partnerPosition : undefined,
-      primaryRole: typeof o.primaryRole === 'string' ? o.primaryRole : undefined,
-      secondaryRole: typeof o.secondaryRole === 'string' ? o.secondaryRole : undefined,
-      findPosition: typeof o.findPosition === 'string' ? o.findPosition : undefined,
-      preferredMap: typeof o.preferredMap === 'string' ? o.preferredMap : undefined,
-      preferredMethod: typeof o.preferredMethod === 'string' ? o.preferredMethod : undefined,
-      preferredLegend: typeof o.preferredLegend === 'string' ? o.preferredLegend : undefined,
-      platform: typeof o.platform === 'string' ? o.platform : undefined,
-      partySize: typeof o.partySize === 'string' ? o.partySize : undefined,
-    };
-  } catch {
-    return {};
-  }
-}
-
 function formatDateForRoom(s: string) {
   try {
     return new Date(s).toLocaleString('ko-KR', {
@@ -161,6 +125,14 @@ function formatRelativeCreatedAt(s: string) {
     return s;
   }
 }
+
+type HomeMatchRoomItem = {
+  id: number;
+  game: string;
+  createdAt: string;
+  memberCount: number | null;
+  hostNickname: string;
+};
 
 function UserGlyph({ className = '' }: { className?: string }) {
   return (
@@ -366,16 +338,21 @@ export default function Home() {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
   const [roomList, setRoomList] = useState<GameRoomItem[]>([]);
+  const [matchRoomList, setMatchRoomList] = useState<HomeMatchRoomItem[]>([]);
   const [loadingRooms, setLoadingRooms] = useState(false);
   const [joinRoomId, setJoinRoomId] = useState<number | null>(null);
+  const [roomModal, setRoomModal] = useState<RoomModalOpen>(null);
   const [selectedGame, setSelectedGame] = useState<TeamSearchGameId>('ALL');
 
   // 팀 찾기 테이블 컬럼 표시 규칙
   // - PUBG 탭: 포지션 컬럼 숨김
   // - 전체(ALL) 탭: 삭제 컬럼 숨김
+  // - 오버워치2 탭에서만 랭크 컬럼 표시
+  const showRankColumn = selectedGame === 'OVERWATCH';
   const showPositionColumn = selectedGame !== 'PUBG';
   const showDeleteColumn = selectedGame !== 'ALL';
-  const tableColumnCount = 7 + (showPositionColumn ? 1 : 0) + (showDeleteColumn ? 1 : 0);
+  const tableColumnCount =
+    6 + (showRankColumn ? 1 : 0) + (showPositionColumn ? 1 : 0) + (showDeleteColumn ? 1 : 0);
 
   const fetchRooms = useCallback(() => {
     setLoadingRooms(true);
@@ -384,6 +361,30 @@ export default function Home() {
       .finally(() => setLoadingRooms(false));
   }, []);
 
+  const fetchMatchRooms = useCallback(async () => {
+    if (!user) {
+      setMatchRoomList([]);
+      return;
+    }
+
+    const sessions = await getMyMatchSessions();
+    const detailedSessions = await Promise.all(
+      sessions.map(async (session) => {
+        const detail = await getMatchSession(session.id);
+        return {
+          id: session.id,
+          game: session.game,
+          createdAt: session.createdAt,
+          memberCount: detail?.members?.length ?? null,
+          hostNickname: detail?.members?.[0]?.nickname?.trim() || '랜덤 매칭',
+        };
+      }),
+    );
+
+    detailedSessions.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    setMatchRoomList(detailedSessions);
+  }, [user]);
+
   useEffect(() => {
     if (authLoading) return;
     fetchRooms();
@@ -391,12 +392,18 @@ export default function Home() {
 
   useEffect(() => {
     if (authLoading) return;
+    void fetchMatchRooms();
+  }, [authLoading, fetchMatchRooms]);
+
+  useEffect(() => {
+    if (authLoading) return;
     // 방 목록 인원 현황을 자연스럽게 갱신 (예: 1/5 → 2/5)
     const timer = window.setInterval(() => {
       fetchRooms();
+      void fetchMatchRooms();
     }, 4000);
     return () => window.clearInterval(timer);
-  }, [authLoading, fetchRooms]);
+  }, [authLoading, fetchRooms, fetchMatchRooms]);
 
   const visibleRoomList = useMemo(
     () => roomList.filter((r) => !isHiddenGameRoomHost(r.hostNickname)),
@@ -406,6 +413,11 @@ export default function Home() {
   const filteredRoomList = useMemo(
     () => (selectedGame === 'ALL' ? visibleRoomList : visibleRoomList.filter((r) => r.game === selectedGame)),
     [visibleRoomList, selectedGame],
+  );
+
+  const filteredMatchRoomList = useMemo(
+    () => (selectedGame === 'ALL' ? matchRoomList : matchRoomList.filter((room) => room.game === selectedGame)),
+    [matchRoomList, selectedGame],
   );
 
   useEffect(() => {
@@ -723,6 +735,10 @@ export default function Home() {
     navigate(`/group-chat/room/${r.groupChatRoomId}`, { state: { fromGameRoom: true, gameRoomId: r.id } });
   };
 
+  const goMatchRoomChat = (sessionId: number) => {
+    navigate(`/match-chat/${sessionId}`);
+  };
+
   const handleApiRoomButton = async (r: GameRoomItem) => {
     if (!user) {
       navigate('/login');
@@ -933,9 +949,9 @@ export default function Home() {
               )}
               {createRank === 'QUICK' ? (
                 <>
-                  <label className="sidebar-form-label">주 역할군</label>
+                  <label className="sidebar-form-label">주 포지션</label>
                   <PositionPicker value={createPrimaryRole} onChange={setCreatePrimaryRole} game={createGame} filterMode includeAllOption={false} />
-                  <label className="sidebar-form-label">부 역할군</label>
+                  <label className="sidebar-form-label">부 포지션</label>
                   <PositionPicker value={createSecondaryRole} onChange={setCreateSecondaryRole} game={createGame} filterMode includeAllOption={false} />
                   <label className="sidebar-form-label">찾는 포지션</label>
                   <PositionPicker value={createFindPosition} onChange={setCreateFindPosition} game={createGame} filterMode includeAllOption={false} />
@@ -969,7 +985,7 @@ export default function Home() {
                   </select>
                 </>
               )}
-              <label className="sidebar-form-label">역할</label>
+              <label className="sidebar-form-label">포지션</label>
               <PositionPicker value={createPosition} onChange={setCreatePosition} game={createGame} />
             </>
           )}
@@ -992,7 +1008,7 @@ export default function Home() {
                   </select>
                 </>
               )}
-              <label className="sidebar-form-label">역할</label>
+              <label className="sidebar-form-label">포지션</label>
               <PositionPicker value={createPosition} onChange={setCreatePosition} game={createGame} />
             </>
           )}
@@ -1126,8 +1142,8 @@ export default function Home() {
                     )}
                   </div>
                   <div className="live-card-meta">
-                    <div className="live-card-name">{s.broadcasterNickname || '?'}</div>
-                    <div className="live-card-game">{s.title || '방송 중'}</div>
+                    <div className="live-card-name">{s.title || '방송 중'}</div>
+                    <div className="live-card-game">{s.broadcasterNickname || '?'}</div>
                   </div>
                 </div>
               </Link>
@@ -1198,7 +1214,7 @@ export default function Home() {
                 <thead>
                   <tr>
                     <th>제목</th>
-                    <th>랭크</th>
+                    {showRankColumn ? <th>랭크</th> : null}
                     {showPositionColumn ? <th>포지션</th> : null}
                     <th>메모</th>
                     <th>인원</th>
@@ -1209,19 +1225,55 @@ export default function Home() {
                   </tr>
                 </thead>
                 <tbody>
-                  {loadingRooms && roomList.length === 0 ? (
+                  {loadingRooms && roomList.length === 0 && matchRoomList.length === 0 ? (
                     <tr>
                       <td colSpan={tableColumnCount} className="home-demo-room-loading-cell">방 목록 불러오는 중…</td>
                     </tr>
-                  ) : visibleRoomList.length === 0 ? (
+                  ) : visibleRoomList.length === 0 && matchRoomList.length === 0 ? (
                     <tr>
                       <td colSpan={tableColumnCount} className="home-demo-room-loading-cell">등록된 방이 없습니다.</td>
                     </tr>
-                  ) : filteredRoomList.length === 0 ? (
+                  ) : filteredRoomList.length === 0 && filteredMatchRoomList.length === 0 ? (
                     <tr>
                       <td colSpan={tableColumnCount} className="home-demo-room-loading-cell">선택한 게임에 등록된 방이 없습니다.</td>
                     </tr>
                   ) : null}
+                  {filteredMatchRoomList.map((room) => {
+                    const gameLabel = GAME_OPTIONS.find((option) => option.key === room.game)?.label ?? room.game;
+                    return (
+                      <tr
+                        key={`match-${room.id}`}
+                        className="home-demo-room-row home-demo-room-row--clickable"
+                        onClick={() => setRoomModal({ kind: 'match', room })}
+                      >
+                        <td>[랜덤] {gameLabel}</td>
+                        {showRankColumn ? <td>랜덤 매칭</td> : null}
+                        {showPositionColumn ? <td>-</td> : null}
+                        <td className="home-demo-room-memo-cell" title="내 랜덤 매칭방">내 랜덤 매칭방</td>
+                        <td>{room.memberCount != null ? `${room.memberCount}명` : '-'}</td>
+                        <td>{room.hostNickname}</td>
+                        <td>{formatRelativeCreatedAt(room.createdAt)}</td>
+                        <td>
+                          <button
+                            type="button"
+                            className="home-demo-room-join-btn home-demo-room-join-btn--live"
+                            title="랜덤 매칭 채팅방으로 이동"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              goMatchRoomChat(room.id);
+                            }}
+                          >
+                            입장
+                          </button>
+                        </td>
+                        {showDeleteColumn ? (
+                          <td>
+                            <span className="home-demo-room-closed-label">-</span>
+                          </td>
+                        ) : null}
+                      </tr>
+                    );
+                  })}
                   {filteredRoomList.map((r) => {
                     const op = parseGameOptions(r.gameOptions);
                     const { maxPlayers: maxP, isFull } = getRoomCapacityMeta(r);
@@ -1232,9 +1284,17 @@ export default function Home() {
                     const partyCell = partySizeLabel(op.partySize, r.game);
                     const showPos = r.game !== 'PUBG' && showPositionForRoom(r.game, op.mode) && op.position;
                     return (
-                      <tr key={`api-${r.id}`} className={isFull ? 'home-demo-room-row home-demo-room-row--full' : 'home-demo-room-row'}>
+                      <tr
+                        key={`api-${r.id}`}
+                        className={
+                          isFull
+                            ? 'home-demo-room-row home-demo-room-row--full home-demo-room-row--clickable'
+                            : 'home-demo-room-row home-demo-room-row--clickable'
+                        }
+                        onClick={() => setRoomModal({ kind: 'game', room: r })}
+                      >
                         <td>{r.title}</td>
-                        <td>{rankCell}</td>
+                        {showRankColumn ? <td>{rankCell}</td> : null}
                         {showPositionColumn ? (
                           <td>
                             {showPos ? (
@@ -1276,7 +1336,10 @@ export default function Home() {
                               type="button"
                               className="home-demo-room-join-btn home-demo-room-join-btn--live"
                               title="방 채팅으로 이동"
-                              onClick={() => goGameRoomChat(r)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                goGameRoomChat(r);
+                              }}
                             >
                               입장
                             </button>
@@ -1290,7 +1353,10 @@ export default function Home() {
                               }
                               title={isFull ? '모집 완료' : user ? '참가' : '로그인 후 참가'}
                               disabled={joinRoomId === r.id || isFull}
-                              onClick={() => handleApiRoomButton(r)}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void handleApiRoomButton(r);
+                              }}
                             >
                               {joinRoomId === r.id ? '참가 중…' : isFull ? '모집 완료' : '참가'}
                             </button>
@@ -1303,7 +1369,10 @@ export default function Home() {
                                 type="button"
                                 className="home-demo-room-delete-btn"
                                 disabled={deletingRoomId === r.id}
-                                onClick={() => void handleDeleteRoom(r)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  void handleDeleteRoom(r);
+                                }}
                                 title="방 삭제"
                               >
                                 {deletingRoomId === r.id ? '삭제 중…' : '삭제'}
@@ -1331,6 +1400,25 @@ export default function Home() {
           </aside>
         )}
       </div>
+
+      <GameRoomDetailModal
+        open={roomModal}
+        onClose={() => setRoomModal(null)}
+        onGameRoomAction={(r) => {
+          setRoomModal(null);
+          if (r.closed) return;
+          if (r.isMember && r.groupChatRoomId) {
+            goGameRoomChat(r);
+            return;
+          }
+          void handleApiRoomButton(r);
+        }}
+        onMatchRoomEnter={(id) => {
+          setRoomModal(null);
+          goMatchRoomChat(id);
+        }}
+        joinRoomId={joinRoomId}
+      />
     </Layout>
   );
 }

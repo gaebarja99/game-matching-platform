@@ -47,6 +47,10 @@ function userStatusMeta(status: AdminReportRow['reportedUserStatus']) {
   }
 }
 
+function isWarningRow(row: AdminReportRow) {
+  return row.entryType === 'ADMIN_WARNING' || !row.reportId;
+}
+
 export default function AdminReports() {
   const { user, loading: authLoading } = useAuth();
   const [statusFilter, setStatusFilter] = useState('');
@@ -66,7 +70,7 @@ export default function AdminReports() {
     setRows(nextRows);
     setNoteInputs(
       nextRows.reduce<Record<number, string>>((acc, row) => {
-        acc[row.id] = row.adminNote ?? '';
+        acc[row.reportId ?? row.id] = row.adminNote ?? '';
         return acc;
       }, {})
     );
@@ -111,8 +115,8 @@ export default function AdminReports() {
   if (authLoading) {
     return (
       <AdminLayout
-        title="신고 관리"
-        description="관리자 권한과 신고 데이터를 확인하는 중입니다."
+        title="신고 및 경고 관리"
+        description="관리자 권한과 신고 및 경고 이력을 확인하는 중입니다."
       >
         <section className="admin-panel">
           <p className="admin-subtext">관리자 화면을 불러오는 중...</p>
@@ -151,8 +155,8 @@ export default function AdminReports() {
 
   return (
     <AdminLayout
-      title="신고 관리"
-      description="신고 접수 현황을 검토하고 상태 변경, 계정 제재와 해제를 같은 화면에서 처리합니다."
+      title="신고 및 경고 관리"
+      description="유저 신고 접수와 운영자 경고, 계정 제재 이력을 한 화면에서 확인하고 처리합니다."
     >
       <section className="admin-panel admin-filter-panel">
         <div className="admin-toolbar">
@@ -160,7 +164,7 @@ export default function AdminReports() {
             className="admin-search-input"
             value={queryInput}
             onChange={(event) => setQueryInput(event.target.value)}
-            placeholder="신고자, 대상자, 사유 검색"
+            placeholder="신고자, 대상자, 사유, 운영 메모 검색"
           />
           <select className="admin-filter-select" value={statusFilter} onChange={(event) => { setStatusFilter(event.target.value); setPage(0); }}>
             <option value="">전체 상태</option>
@@ -193,71 +197,97 @@ export default function AdminReports() {
       </section>
 
       <section className="admin-panel admin-table-card">
-        <table className="data-table">
+        <div className="admin-table-scroll">
+        <table className="data-table admin-reports-table">
           <thead>
             <tr>
               <th>ID</th>
-              <th>신고자</th>
+              <th>구분</th>
+              <th>주체</th>
               <th>대상자</th>
-              <th>사유</th>
-              <th>등록일</th>
+              <th>내용</th>
+              <th>시각</th>
               <th>상태</th>
               <th>관리</th>
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={7} className="empty-msg">불러오는 중...</td></tr>
+              <tr><td colSpan={8} className="empty-msg">불러오는 중...</td></tr>
             ) : filteredRows.length === 0 ? (
-              <tr><td colSpan={7} className="empty-msg">조건에 맞는 신고가 없습니다.</td></tr>
+              <tr><td colSpan={8} className="empty-msg">조건에 맞는 신고 또는 경고 이력이 없습니다.</td></tr>
             ) : (
-              filteredRows.map((report) => {
-                const reportMeta = reportStatusMeta(report.status);
-                const userMeta = userStatusMeta(report.reportedUserStatus);
+              filteredRows.map((row) => {
+                const reportMeta = reportStatusMeta(row.status);
+                const userMeta = userStatusMeta(row.reportedUserStatus);
+                const warningRow = isWarningRow(row);
+                const reportId = row.reportId ?? row.id;
                 return (
-                  <tr key={report.id}>
-                    <td>{report.id}</td>
-                    <td>{report.reporterUsername}</td>
+                  <tr key={`${row.entryType ?? 'USER_REPORT'}-${row.id}`}>
+                    <td>{row.id}</td>
                     <td>
-                      <div>{report.reportedUsername}</div>
+                      <span className={`admin-status-badge ${warningRow ? 'tone-danger' : 'tone-accent'}`}>
+                        {warningRow ? '운영 경고' : '유저 신고'}
+                      </span>
+                    </td>
+                    <td>{row.reporterUsername}</td>
+                    <td>
+                      <div>{row.reportedUsername}</div>
                       <div className="admin-top-gap">
                         <span className={`admin-status-badge ${userMeta.tone}`}>{userMeta.label}</span>
                       </div>
                     </td>
                     <td>
-                      <div>{report.reason}</div>
-                      <div className="admin-subtext">{report.description || '설명 없음'}</div>
+                      <div>{row.reason}</div>
+                      <div className="admin-subtext">{row.description || '기록된 상세 내용이 없습니다.'}</div>
                     </td>
                     <td>
-                      <div>{formatDate(report.createdAt)}</div>
-                      <div className="admin-subtext">처리일 {formatDate(report.resolvedAt)}</div>
-                    </td>
-                    <td>
-                      <span className={`admin-status-badge ${reportMeta.tone}`}>{reportMeta.label}</span>
+                      <div>{formatDate(row.createdAt)}</div>
+                      <div className="admin-subtext">
+                        {warningRow ? '경고 발송 시각' : `처리일 ${formatDate(row.resolvedAt)}`}
+                      </div>
                     </td>
                     <td>
                       <div className="admin-actions-inline admin-actions-wrap">
-                        <textarea
-                          className="admin-note-input"
-                          rows={3}
-                          value={noteInputs[report.id] ?? ''}
-                          onChange={(event) => setNoteInputs((current) => ({ ...current, [report.id]: event.target.value }))}
-                          placeholder="관리자 메모 입력"
-                        />
-                        <button type="button" className="admin-action-btn" disabled={submittingId === report.id} onClick={() => handleReportStatus(report.id, 'IN_REVIEW')}>
-                          검토
-                        </button>
-                        <button type="button" className="admin-action-btn" disabled={submittingId === report.id} onClick={() => handleReportStatus(report.id, 'RESOLVED')}>
-                          완료
-                        </button>
-                        <button type="button" className="admin-action-btn" disabled={submittingId === report.id} onClick={() => handleReportStatus(report.id, 'DISMISSED')}>
-                          기각
-                        </button>
-                        <button type="button" className="admin-action-btn" disabled={submittingId === report.id} onClick={() => handleBan(report.id, report.reportedUserStatus !== 'SUSPENDED')}>
-                          {report.reportedUserStatus === 'SUSPENDED' ? '정지 해제' : '계정 정지'}
-                        </button>
+                        <span className={`admin-status-badge ${reportMeta.tone}`}>{reportMeta.label}</span>
+                        {warningRow ? (
+                          <span className={`admin-status-badge ${userMeta.tone}`}>
+                            {row.reportedUserStatus === 'SUSPENDED' ? '제재 사용자' : '경고 완료'}
+                          </span>
+                        ) : null}
                       </div>
-                      {report.adminNote ? <div className="admin-subtext">저장된 메모: {report.adminNote}</div> : null}
+                    </td>
+                    <td>
+                      {warningRow ? (
+                        <div className="admin-subtext">
+                          운영자가 방송에 직접 보낸 경고 이력입니다.
+                          {row.adminNote ? ` 메모: ${row.adminNote}` : ''}
+                        </div>
+                      ) : (
+                        <>
+                          <div className="admin-actions-inline admin-actions-wrap">
+                            <textarea
+                              className="admin-note-input admin-report-note-input"
+                              rows={3}
+                              value={noteInputs[reportId] ?? ''}
+                              onChange={(event) => setNoteInputs((current) => ({ ...current, [reportId]: event.target.value }))}
+                              placeholder="관리자 메모 또는 경고 문구 입력"
+                            />
+                            <button type="button" className="admin-action-btn" disabled={submittingId === reportId} onClick={() => handleReportStatus(reportId, 'RESOLVED')}>
+                              경고
+                            </button>
+                            <button type="button" className="admin-action-btn" disabled={submittingId === reportId} onClick={() => handleReportStatus(reportId, 'DISMISSED')}>
+                              기각
+                            </button>
+                            {row.reportedUserStatus !== 'SUSPENDED' ? (
+                              <button type="button" className="admin-action-btn" disabled={submittingId === reportId} onClick={() => handleBan(reportId, true)}>
+                                계정 정지
+                              </button>
+                            ) : null}
+                          </div>
+                          {row.adminNote ? <div className="admin-subtext">저장된 메모: {row.adminNote}</div> : null}
+                        </>
+                      )}
                     </td>
                   </tr>
                 );
@@ -265,6 +295,7 @@ export default function AdminReports() {
             )}
           </tbody>
         </table>
+        </div>
 
         <div className="admin-pagination">
           <button type="button" className="admin-action-btn" disabled={page === 0} onClick={() => setPage((current) => Math.max(0, current - 1))}>

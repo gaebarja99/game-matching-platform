@@ -10,15 +10,15 @@ import lombok.Setter;
 import java.time.LocalDateTime;
 
 /**
- * PUBG 매치 참가자별 AI 평가. 모델({@code llm_model})마다 별도 행 (발로/롤과 동일 계열).
+ * PUBG 매치(플레이어=participant)별 AI 평가 결과.
+ *
+ * <p>프롬프트 입력에 포함되는 요약/상세 코멘트를 LLM 결과에서 저장하고,
+ * 규칙 기반 점수/등급은 별도 계산하여 함께 보관합니다.</p>
  */
 @Entity
 @Table(
         name = "pubg_match_ai_evaluation",
-        uniqueConstraints = @UniqueConstraint(
-                name = "uk_pubg_ai_eval_participant_model",
-                columnNames = {"pubg_match_participant_id", "llm_model"}
-        )
+        uniqueConstraints = @UniqueConstraint(columnNames = {"pubg_match_participant_id"})
 )
 @Getter
 @Setter
@@ -29,12 +29,9 @@ public class PubgMatchAiEvaluation {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "pubg_match_participant_id", nullable = false)
+    @OneToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "pubg_match_participant_id", nullable = false, unique = true)
     private PubgMatchParticipant pubgMatchParticipant;
-
-    @Column(name = "llm_model", nullable = false, length = 128)
-    private String llmModel = "";
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
@@ -62,21 +59,18 @@ public class PubgMatchAiEvaluation {
 
     public PubgMatchAiEvaluation(PubgMatchParticipant pubgMatchParticipant) {
         this.pubgMatchParticipant = pubgMatchParticipant;
-        this.llmModel = "";
         this.status = EvaluationStatus.PENDING;
         this.createdAt = LocalDateTime.now();
     }
 
     public PubgMatchAiEvaluation(
             PubgMatchParticipant pubgMatchParticipant,
-            String llmModel,
             EvaluationStatus status,
             Integer score,
             String summary,
             String detailedComment
     ) {
         this.pubgMatchParticipant = pubgMatchParticipant;
-        this.llmModel = llmModel != null ? llmModel : "";
         this.status = status;
         this.score = score;
         this.grade = Grade.fromScore(score);
@@ -91,11 +85,9 @@ public class PubgMatchAiEvaluation {
         if (createdAt == null) {
             createdAt = LocalDateTime.now();
         }
-        if (llmModel == null) {
-            llmModel = "";
-        }
         if (evaluatedAt == null && (summary != null || detailedComment != null)) {
             evaluatedAt = LocalDateTime.now();
         }
     }
 }
+
