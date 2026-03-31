@@ -48,6 +48,24 @@ function envHttpsSameHostWrongPublicPort8080(apiBaseEnv: string): boolean {
 }
 
 /**
+ * HTTPS + :8080 조합은 이 프로젝트 배포(nginx 443 → Tomcat 8080 평문)에서 거의 항상 오설정.
+ * 호스트 일치 여부와 무관하게, https 페이지에서는 `https://무엇:8080` 베이스를 `https://무엇`으로 줄여
+ * OAuth 리다이렉트·fetch가 8080에 TLS를 걸지 않게 한다.
+ */
+function stripHttpsApiBasePort8080(base: string): string {
+  if (typeof window === 'undefined') return base;
+  if (window.location.protocol !== 'https:') return base;
+  try {
+    const u = new URL(base);
+    if (u.protocol !== 'https:' || u.port !== '8080') return base;
+    const pathPart = u.pathname === '/' ? '' : `${u.pathname}`;
+    return `https://${u.hostname}${pathPart}${u.search}`;
+  } catch {
+    return base;
+  }
+}
+
+/**
  * 브라우저 주소 기준 API 베이스.
  * - 로컬: Vite(5173 등)에서 열었을 때 백엔드는 보통 :8080 → 호스트:8080.
  * - 배포: https://3.37.67.151.nip.io 처럼 443(포트 생략)으로 열렸으면 API도 같은 호스트·같은 포트만 쓴다(nginx가 8080으로 프록시).
@@ -70,7 +88,7 @@ function apiBaseFromBrowserLocation(): string {
  * - 그 외 호스트(예: EC2)인데 VITE_API_URL이 localhost로 박혀 있으면: 빌드값 대신 현재 창과 같은 오리진 베이스 사용.
  * - 그 밖에는 VITE_API_URL 또는 브라우저 위치 기반.
  */
-function getApiBase(): string {
+function resolveApiBase(): string {
   if (typeof window !== 'undefined') {
     const { hostname } = window.location;
     if (isLoopbackHost(hostname)) {
@@ -98,6 +116,10 @@ function getApiBase(): string {
     return apiBaseFromBrowserLocation();
   }
   return 'https://3.37.67.151.nip.io';
+}
+
+function getApiBase(): string {
+  return stripHttpsApiBasePort8080(resolveApiBase());
 }
 
 /** 외부 전적 API 429 / Rate limit 시 사용자 안내 (백엔드와 동일 문구) */
