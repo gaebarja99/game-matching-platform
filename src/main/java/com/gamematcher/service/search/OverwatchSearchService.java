@@ -218,7 +218,7 @@ public class OverwatchSearchService {
         result.sort((a, b) -> Integer.compare(
                 b.getPlaytime() != null ? b.getPlaytime() : 0,
                 a.getPlaytime() != null ? a.getPlaytime() : 0));
-        return result.stream().limit(20).collect(Collectors.toList());
+        return result.stream().limit(10).collect(Collectors.toList());
     }
 
     private String formatSeconds(int sec) {

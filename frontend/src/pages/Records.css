@@ -170,6 +170,8 @@
 .records-primary-field input, .records-compact-field input, .records-compact-field select { height: 58px; padding: 0 18px; border-radius: 16px; font: inherit; }
 .theme-light .records-primary-field input, .theme-light .records-compact-field input, .theme-light .records-compact-field select { border: 1px solid #d8d8dc; background: #f9f9fb; color: #141418; }
 .theme-dark .records-primary-field input, .theme-dark .records-compact-field input, .theme-dark .records-compact-field select { border: 1px solid #38383c; background: #222226; color: #f0f0f2; }
+.theme-light .records-primary-field select option, .theme-light .records-compact-field select option { background-color: #ffffff; color: #141418; }
+.theme-dark .records-primary-field select option, .theme-dark .records-compact-field select option { background-color: #ffffff; color: #141418; }
 .records-primary-field input:focus, .records-compact-field input:focus, .records-compact-field select:focus { outline: none; border-color: #00d26a; box-shadow: 0 0 0 4px rgba(0, 230, 118, 0.12); }
 .records-actions { display: flex; gap: 10px; align-items: center; }
 .records-search-button, .records-clear-button { height: 52px; padding: 0 22px; border-radius: 16px; font-weight: 800; }
@@ -1077,7 +1079,7 @@
 .theme-light .records-match-detail-table--valorant thead th.records-match-detail-col-player {
   background: #f1f5f9;
 }
-.records-match-detail-error { margin: 0; font-size: 13px; color: #dc2626; }
+.records-match-detail-error { margin: 0; font-size: 13px; color: #dc2626; white-space: pre-line; }
 .theme-dark .records-match-detail-error { color: #f87171; }
 .records-match-detail-status { margin: 0; font-size: 13px; color: #64748b; }
 .theme-dark .records-match-detail-status { color: #a0a0a6; }
@@ -1329,6 +1331,16 @@
 .theme-dark .records-landing-field input,
 .theme-dark .records-landing-field select {
   color: #f0f0f2;
+}
+
+/* 네이티브 <select> 목록: OS/Chrome이 밝은 팝업을 쓰는데 option에 상위 color가 상속되면 흰 글씨+흰 배경이 됨 */
+.theme-light .records-landing-field select option {
+  background-color: #ffffff;
+  color: #22324f;
+}
+.theme-dark .records-landing-field select option {
+  background-color: #ffffff;
+  color: #141418;
 }
 
 .records-landing-field input::placeholder {

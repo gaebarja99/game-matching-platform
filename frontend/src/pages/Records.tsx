@@ -1,6 +1,7 @@
-﻿import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { FormEvent } from 'react';
 import Layout from '../components/Layout';
+import { decodeApiTextNewlines } from '../api/client';
 import { searchPlayer, type PlayerSearchResponse } from '../api/search';
 import './Records.css';
 
@@ -19,7 +20,6 @@ type GameOption = {
   };
   tagLabel?: string;
   needsTag?: boolean;
-  regionOptions?: Array<{ value: string; label: string }>;
   platformOptions?: Array<{ value: string; label: string }>;
 };
 
@@ -32,7 +32,7 @@ const GAMES: GameOption[] = [
     banner: 'banner-lol',
     cardImage: '/images/lol-card-records.png',
     eyebrow: 'Riot Games',
-    summary: '게임명과 태그를 입력하면 최근 20경기 전적을 확인할 수 있습니다.',
+    summary: '게임명과 태그를 입력하면 최근 10경기 전적을 확인할 수 있습니다.',
     placeholders: { nickname: '게임명', tag: 'KR1' },
     tagLabel: '태그',
     needsTag: true,
@@ -58,18 +58,10 @@ const GAMES: GameOption[] = [
     banner: 'banner-valorant',
     cardImage: '/images/valorant-card-records.png',
     eyebrow: 'Valorant',
-    summary: '플레이어명과 태그를 입력하면 최근 20경기 전적을 확인할 수 있습니다.',
+    summary: '플레이어명과 태그를 입력하면 최근 10경기 전적을 확인할 수 있습니다.',
     placeholders: { nickname: '플레이어명', tag: 'KR1' },
     tagLabel: '태그',
     needsTag: true,
-    regionOptions: [
-      { value: 'kr', label: 'Korea' },
-      { value: 'ap', label: 'Asia Pacific' },
-      { value: 'na', label: 'North America' },
-      { value: 'eu', label: 'Europe' },
-      { value: 'latam', label: 'LATAM' },
-      { value: 'br', label: 'Brazil' },
-    ],
   },
   {
     id: 'pubg',
@@ -115,7 +107,7 @@ const GAMES: GameOption[] = [
 const QUICK_HINTS = [
   '게임명과 태그를 정확히 입력해 주세요.',
   '게임별 검색 조건이 조금씩 다를 수 있습니다.',
-  '최근 20경기 기준으로 결과를 보여줍니다.',
+  '최근 10경기 기준으로 결과를 보여줍니다.',
 ];
 
 function formatSearchError(gameLabel: string, message: string) {
@@ -305,7 +297,7 @@ function ResultPanel({ result, accent, title }: { result: PlayerSearchResponse; 
 
         <div className="records-opgg-overview">
           <div className="records-opgg-overview-card">
-            <span>최근 20경기</span>
+            <span>최근 10경기</span>
             <strong>{hasMatches ? `${wins}승 ${losses}패` : '전적 없음'}</strong>
             <em>{hasMatches ? `승률 ${formatWinRate(wins / matches.length)}` : '매치 데이터를 불러오지 못했습니다.'}</em>
           </div>
@@ -348,7 +340,6 @@ export default function Records() {
   const [gameId, setGameId] = useState('lol');
   const [nickname, setNickname] = useState('');
   const [tagLine, setTagLine] = useState('');
-  const [region, setRegion] = useState('kr');
   const [platform, setPlatform] = useState('');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PlayerSearchResponse | null>(null);
@@ -357,18 +348,12 @@ export default function Records() {
   const game = useMemo(() => GAMES.find((item) => item.id === gameId) || GAMES[0], [gameId]);
   const formattedError = useMemo(() => (error ? formatSearchError(game.label, error) : null), [error, game.label]);
   const searchbarClassName = useMemo(() => {
-    const hasRegion = Boolean(game.regionOptions?.length);
     const hasPlatform = Boolean(game.platformOptions?.length);
-    if (hasRegion) {
-      return `records-opgg-searchbar fields-4${game.id === 'valorant' ? ' records-opgg-searchbar--valorant' : ''}`;
-    }
     if (hasPlatform || game.needsTag) return 'records-opgg-searchbar fields-3';
     return 'records-opgg-searchbar fields-2';
   }, [game]);
-  const isValorant = game.id === 'valorant';
 
   useEffect(() => {
-    setRegion(game.regionOptions?.[0]?.value || 'kr');
     setPlatform(game.platformOptions?.[0]?.value || '');
     setTagLine('');
   }, [game]);
@@ -386,9 +371,9 @@ export default function Records() {
         game: gameId,
         gameName: nickname.trim(),
         tagLine: game.needsTag ? tagLine.trim() || undefined : undefined,
-        region: game.regionOptions?.length ? region : 'kr',
+        region: gameId === 'valorant' ? 'kr' : undefined,
         platform: game.platformOptions?.length ? platform : undefined,
-        count: 20,
+        count: 10,
       });
 
       setResult(response);
@@ -400,7 +385,8 @@ export default function Records() {
         }, 120);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : '서버 오류가 발생했습니다.');
+      const raw = err instanceof Error ? err.message : '서버 오류가 발생했습니다.';
+      setError(decodeApiTextNewlines(raw));
     } finally {
       setLoading(false);
     }
@@ -444,23 +430,9 @@ export default function Records() {
                 </label>
 
                 {game.needsTag ? (
-                  <label
-                    className={`records-opgg-field records-opgg-field-tag${isValorant ? ' records-opgg-field-tag--compact' : ''}`}
-                    style={isValorant ? { gridColumn: '3', minWidth: 0 } : undefined}
-                  >
+                  <label className="records-opgg-field records-opgg-field-tag">
                     <span>{game.tagLabel || '태그'}</span>
                     <input type="text" value={tagLine} onChange={(event) => setTagLine(event.target.value)} placeholder={game.placeholders.tag || 'KR1'} autoComplete="off" />
-                  </label>
-                ) : null}
-
-                {game.regionOptions ? (
-                  <label className="records-opgg-field records-opgg-field-small" style={isValorant ? { gridColumn: '4', minWidth: 0 } : undefined}>
-                    <span>지역</span>
-                    <select value={region} onChange={(event) => setRegion(event.target.value)}>
-                      {game.regionOptions.map((option) => (
-                        <option key={option.value} value={option.value}>{option.label}</option>
-                      ))}
-                    </select>
                   </label>
                 ) : null}
 
@@ -475,12 +447,7 @@ export default function Records() {
                   </label>
                 ) : null}
 
-                <button
-                  type="submit"
-                  className={`records-opgg-submit${isValorant ? ' records-opgg-submit--inline' : ''}`}
-                  style={isValorant ? { gridColumn: '5', width: '100%', minWidth: '132px', alignSelf: 'stretch', justifySelf: 'stretch' } : undefined}
-                  disabled={loading}
-                >
+                <button type="submit" className="records-opgg-submit" disabled={loading}>
                   {loading ? '검색 중...' : '검색'}
                 </button>
               </div>

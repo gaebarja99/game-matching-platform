@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
+import { decodeApiTextNewlines } from '../../api/client';
 import {
   fetchMatchDetail,
   runLolMatchAiEvaluation,
@@ -230,7 +231,8 @@ function RecordsMatchAiTab({
         },
       });
     } catch (e) {
-      setError(e instanceof Error ? e.message : '분석 실패');
+      const raw = e instanceof Error ? e.message : '분석 실패';
+      setError(decodeApiTextNewlines(raw));
       onMergeDetailPayload({ records_ai_evaluation: null });
     } finally {
       setLoading(false);
@@ -547,13 +549,14 @@ export function MatchRow({
         llmModel: gameId === 'valorant' ? detailAiModel : undefined,
       });
       if (!res.success) {
-        setDetailError(res.errorMessage || '상세를 불러오지 못했습니다.');
+        setDetailError(decodeApiTextNewlines(res.errorMessage || '상세를 불러오지 못했습니다.'));
         return;
       }
       lastDetailFetchKey.current = fetchKey;
       setDetailPayload((res.payload ?? {}) as Record<string, unknown>);
     } catch (e) {
-      setDetailError(e instanceof Error ? e.message : '상세 요청 오류');
+      const raw = e instanceof Error ? e.message : '상세 요청 오류';
+      setDetailError(decodeApiTextNewlines(raw));
     } finally {
       setDetailLoading(false);
     }
@@ -574,13 +577,14 @@ export function MatchRow({
         llmModel: gameId === 'valorant' ? model : undefined,
       });
       if (!res.success) {
-        setDetailError(res.errorMessage || '상세를 불러오지 못했습니다.');
+        setDetailError(decodeApiTextNewlines(res.errorMessage || '상세를 불러오지 못했습니다.'));
         return;
       }
       lastDetailFetchKey.current = fetchKey;
       setDetailPayload((res.payload ?? {}) as Record<string, unknown>);
     } catch (e) {
-      setDetailError(e instanceof Error ? e.message : '상세 요청 오류');
+      const raw = e instanceof Error ? e.message : '상세 요청 오류';
+      setDetailError(decodeApiTextNewlines(raw));
     } finally {
       setDetailLoading(false);
     }

@@ -120,7 +120,7 @@ public class ValorantSearchService {
                 }
             }
 
-            int count = Math.min(req.getCount() != null ? req.getCount() : 5, 20);
+            int count = Math.min(req.getCount() != null ? req.getCount() : 10, 20);
             List<Map<String, Object>> matchData = List.of();
             List<MatchInfo> matches = List.of();
             for (String candidateRegion : candidateRegions) {

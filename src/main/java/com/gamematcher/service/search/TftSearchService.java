@@ -137,7 +137,7 @@ public class TftSearchService {
             }
 
             // ── STEP 4: TFT 매치 목록 ──
-            int count = Math.min(req.getCount() != null ? req.getCount() : 20, 20);
+            int count = Math.min(req.getCount() != null ? req.getCount() : 10, 20);
             List<String> matchIds = null;
             if (puuid != null) {
                 try {

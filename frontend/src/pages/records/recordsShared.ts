@@ -15,7 +15,6 @@ export type GameOption = {
   hint: string;
   tagLabel?: string;
   platformOptions?: { value: string; label: string }[];
-  regionOptions?: { value: string; label: string }[];
 };
 
 export type SearchFieldOverrides = {
@@ -59,8 +58,8 @@ export const GAMES: GameOption[] = [
     brandLabel: 'RIOT GAMES',
     fields: ['nickname', 'tag', 'count'],
     placeholders: { nickname: '소환사명', tag: 'KR1' },
-    hint: '리그 오브 레전드는 닉네임과 태그 또는 서버 코드로 최근 전적을 조회합니다.',
-    tagLabel: '태그/서버',
+    hint: '리그 오브 레전드는 Riot ID(닉네임#태그)로 최근 전적을 조회합니다.',
+    tagLabel: '태그',
   },
   {
     id: 'tft',
@@ -71,8 +70,8 @@ export const GAMES: GameOption[] = [
     brandLabel: 'RIOT GAMES',
     fields: ['nickname', 'tag', 'count'],
     placeholders: { nickname: '닉네임', tag: 'KR1' },
-    hint: 'TFT는 닉네임과 태그 또는 서버 코드 기준으로 최근 매치를 불러옵니다.',
-    tagLabel: '태그/서버',
+    hint: 'TFT는 Riot ID(닉네임#태그) 기준으로 최근 매치를 불러옵니다.',
+    tagLabel: '태그',
   },
   {
     id: 'valorant',
@@ -81,18 +80,10 @@ export const GAMES: GameOption[] = [
     accent: '#ff4d67',
     cardImage: '/images/valorant-card-records.png',
     brandLabel: 'VALORANT',
-    fields: ['nickname', 'tag', 'count', 'region'],
+    fields: ['nickname', 'tag', 'count'],
     placeholders: { nickname: '플레이어명', tag: 'KR1' },
-    hint: '발로란트는 닉네임, 태그, 서버를 선택해 계정 API 기준으로 최근 전적을 조회합니다.',
+    hint: '발로란트는 플레이어명과 태그로 계정 API 기준 최근 전적을 조회합니다. (리전은 KR 기준)',
     tagLabel: '태그',
-    regionOptions: [
-      { value: 'kr', label: 'KR' },
-      { value: 'ap', label: 'AP' },
-      { value: 'na', label: 'NA' },
-      { value: 'eu', label: 'EU' },
-      { value: 'latam', label: 'LATAM' },
-      { value: 'br', label: 'BR' },
-    ],
   },
   {
     id: 'pubg',
@@ -191,7 +182,7 @@ export function buildRecordsProfileUrl(
   if (region) {
     qs.set('region', region);
   }
-  if (meta?.fields.includes('count') && count !== 5) {
+  if (meta?.fields.includes('count') && count !== 10) {
     qs.set('count', String(count));
   }
 
@@ -241,12 +232,14 @@ export async function fetchRecordsPlayerSearch(
   region?: string,
 ): Promise<PlayerSearchResponse> {
   const game = GAMES.find((item) => item.id === gameId) || GAMES[0];
+  const regionParam =
+    gameId === 'valorant' ? (region?.trim() || 'kr') : region?.trim() || undefined;
   return searchPlayer({
     game: gameId,
     gameName: nickname.trim(),
     tagLine: game.fields.includes('tag') ? tagLine.trim() || undefined : undefined,
     platform: game.fields.includes('pubg_platform') ? platform : undefined,
-    region: region || undefined,
+    region: regionParam,
     count: game.fields.includes('count') ? count : undefined,
     forceRefresh: forceRefresh || undefined,
     matchListOnly: gameId === 'lol' || gameId === 'tft' ? true : undefined,

@@ -1,5 +1,6 @@
 package com.gamematcher.dto.search;
 
+import com.gamematcher.util.RateLimitMessageUtil;
 import lombok.Builder;
 import lombok.Data;
 
@@ -19,11 +20,17 @@ public class MatchDetailResponse {
     private Map<String, Object> payload;
 
     public static MatchDetailResponse error(String game, String matchId, String message) {
+        return error(game, matchId, message, null);
+    }
+
+    public static MatchDetailResponse error(String game, String matchId, String message, Throwable cause) {
+        String m = (message == null || message.isBlank()) ? "매치 정보를 불러오지 못했습니다." : message;
+        m = RateLimitMessageUtil.toUserMessage(m, cause);
         return MatchDetailResponse.builder()
                 .success(false)
                 .game(game)
                 .matchId(matchId)
-                .errorMessage(message)
+                .errorMessage(m)
                 .build();
     }
 }

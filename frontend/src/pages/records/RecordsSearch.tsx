@@ -1,53 +1,14 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
+import { decodeApiTextNewlines } from '../../api/client';
 import { GAMES, buildRecordsProfileUrl, fetchRecordsPlayerSearch, getRecordsLandingCssVars } from './recordsShared';
 import '../Records.css';
 
 const FEATURED_GAMES = ['lol', 'tft', 'valorant', 'pubg', 'overwatch', 'cs2'] as const;
-const REGION_HINTS = new Set([
-  'kr',
-  'kr1',
-  'jp',
-  'jp1',
-  'na',
-  'na1',
-  'euw',
-  'euw1',
-  'eune',
-  'eune1',
-  'br',
-  'br1',
-  'la1',
-  'la2',
-  'tr',
-  'tr1',
-  'ru',
-  'oc1',
-]);
 
 function gameCardClass(gameId: string) {
   return `records-landing-card records-landing-card--${gameId}`;
-}
-
-function normalizeSearchInputs(gameId: string, nickname: string, tagLine: string, region: string) {
-  const trimmedNickname = nickname.trim();
-  const trimmedTag = tagLine.trim();
-  const normalizedTag = trimmedTag.toLowerCase();
-
-  if ((gameId === 'lol' || gameId === 'tft') && REGION_HINTS.has(normalizedTag)) {
-    return {
-      nickname: trimmedNickname,
-      tagLine: trimmedTag,
-      region: normalizedTag,
-    };
-  }
-
-  return {
-    nickname: trimmedNickname,
-    tagLine: trimmedTag,
-    region,
-  };
 }
 
 export default function RecordsSearch() {
@@ -61,8 +22,7 @@ export default function RecordsSearch() {
   const [nickname, setNickname] = useState('');
   const [tagLine, setTagLine] = useState('KR1');
   const [platform, setPlatform] = useState('');
-  const [region, setRegion] = useState('kr');
-  const [count] = useState(20);
+  const [count] = useState(10);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -71,22 +31,12 @@ export default function RecordsSearch() {
     () => FEATURED_GAMES.map((id) => GAMES.find((item) => item.id === id)).filter(Boolean) as typeof GAMES,
     [],
   );
-  const isValorant = gameId === 'valorant';
   const isTwoFieldSearch = gameId === 'cs2';
 
   const recordsLandingFormClass = useMemo(
     () => ['records-landing-form', isTwoFieldSearch ? 'records-landing-form--two-field' : ''].filter(Boolean).join(' '),
     [isTwoFieldSearch],
   );
-
-  const recordsLandingFormStyle = useMemo((): CSSProperties | undefined => {
-    if (isValorant) {
-      return {
-        gridTemplateColumns: 'minmax(160px, 1fr) minmax(0, 2.2fr) minmax(88px, 0.52fr) minmax(96px, 0.62fr) 142px',
-      };
-    }
-    return undefined;
-  }, [isValorant]);
 
   useEffect(() => {
     const g = searchParams.get('game');
@@ -103,17 +53,6 @@ export default function RecordsSearch() {
     setPlatform((prev) => {
       const valid = game.platformOptions!.some((opt) => opt.value === prev);
       return valid ? prev : game.platformOptions![0].value;
-    });
-  }, [game]);
-
-  useEffect(() => {
-    if (!game.regionOptions?.length) {
-      setRegion('');
-      return;
-    }
-    setRegion((prev) => {
-      const valid = game.regionOptions!.some((opt) => opt.value === prev);
-      return valid ? prev : game.regionOptions![0].value;
     });
   }, [game]);
 
@@ -141,8 +80,8 @@ export default function RecordsSearch() {
   };
 
   const runSearch = useCallback(async () => {
-    const normalized = normalizeSearchInputs(gameId, nickname, tagLine, region);
-    if (!normalized.nickname) return;
+    const nick = nickname.trim();
+    if (!nick) return;
 
     setLoading(true);
     setError(null);
@@ -150,12 +89,12 @@ export default function RecordsSearch() {
     try {
       const response = await fetchRecordsPlayerSearch(
         gameId,
-        normalized.nickname,
-        normalized.tagLine,
+        nick,
+        tagLine,
         platform,
         count,
         false,
-        normalized.region,
+        undefined,
       );
 
       if (!response.success) {
@@ -166,19 +105,20 @@ export default function RecordsSearch() {
       navigate(
         buildRecordsProfileUrl(
           gameId,
-          normalized.nickname,
-          normalized.tagLine,
+          nick,
+          tagLine,
           platform,
           count,
-          normalized.region,
+          undefined,
         ),
       );
     } catch (err) {
-      setError(err instanceof Error ? err.message : '서버 오류가 발생했습니다.');
+      const raw = err instanceof Error ? err.message : '서버 오류가 발생했습니다.';
+      setError(decodeApiTextNewlines(raw));
     } finally {
       setLoading(false);
     }
-  }, [count, gameId, navigate, nickname, platform, region, tagLine]);
+  }, [count, gameId, navigate, nickname, platform, tagLine]);
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -202,17 +142,17 @@ export default function RecordsSearch() {
               해보세요
             </h1>
             <p className="records-landing-description">
-              게임명과 태그를 입력하면 최근 {game.fields.includes('count') ? `${count}` : '20'}경기 전적을 확인할 수 있습니다.
+              게임명과 태그를 입력하면 최근 {game.fields.includes('count') ? `${count}` : '10'}경기 전적을 확인할 수 있습니다.
             </p>
           </div>
 
           <div className="records-landing-tips">
             <span>게임명과 태그를 정확히 입력해 주세요.</span>
             <span>게임별 검색 조건이 조금씩 다를 수 있습니다.</span>
-            <span>최근 20경기 기준으로 결과를 보여줍니다.</span>
+            <span>최근 10경기 기준으로 결과를 보여줍니다.</span>
           </div>
 
-          <form className={recordsLandingFormClass} style={recordsLandingFormStyle} onSubmit={handleSearch}>
+          <form className={recordsLandingFormClass} onSubmit={handleSearch}>
             <label className="records-landing-field records-landing-field--game">
               <span>게임</span>
               <select value={gameId} onChange={(event) => selectGame(event.target.value)}>
@@ -237,10 +177,7 @@ export default function RecordsSearch() {
             </label>
 
             {game.fields.includes('tag') ? (
-              <label
-                className="records-landing-field records-landing-field--tag"
-                style={isValorant ? { gridColumn: '3' } : undefined}
-              >
+              <label className="records-landing-field records-landing-field--tag">
                 <span>{game.tagLabel || '태그'}</span>
                 <input
                   type="text"
@@ -249,22 +186,6 @@ export default function RecordsSearch() {
                   placeholder={game.placeholders.tag || 'KR1'}
                   autoComplete="off"
                 />
-              </label>
-            ) : null}
-
-            {game.fields.includes('region') ? (
-              <label
-                className="records-landing-field records-landing-field--tag"
-                style={isValorant ? { gridColumn: '4' } : undefined}
-              >
-                <span>서버</span>
-                <select value={region} onChange={(event) => setRegion(event.target.value)}>
-                  {game.regionOptions?.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
               </label>
             ) : null}
 
@@ -281,12 +202,7 @@ export default function RecordsSearch() {
               </label>
             ) : null}
 
-            <button
-              type="submit"
-              className="records-landing-submit"
-              style={isValorant ? { gridColumn: '5' } : undefined}
-              disabled={loading}
-            >
+            <button type="submit" className="records-landing-submit" disabled={loading}>
               {loading ? '검색 중' : '검색'}
             </button>
           </form>

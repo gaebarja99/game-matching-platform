@@ -25,7 +25,7 @@ import java.util.stream.Collectors;
  * {
  *   "game": "cs2",
  *   "gameName": "76561198000000000",  ← Steam64 ID 또는 Vanity URL
- *   "count": 5
+ *   "count": 10
  * }
  *
  * 주의: Steam API는 최근 매치 상세 정보를 직접 제공하지 않음.

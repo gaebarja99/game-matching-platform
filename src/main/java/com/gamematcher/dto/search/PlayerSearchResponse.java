@@ -1,5 +1,6 @@
 package com.gamematcher.dto.search;
 
+import com.gamematcher.util.RateLimitMessageUtil;
 import lombok.Builder;
 import lombok.Data;
 
@@ -72,11 +73,13 @@ public class PlayerSearchResponse {
     }
 
     public static PlayerSearchResponse error(String game, String nickname, String message) {
+        String m = (message == null || message.isBlank()) ? "오류가 발생했습니다." : message;
+        m = RateLimitMessageUtil.toUserMessage(m, null);
         return PlayerSearchResponse.builder()
                 .success(false)
                 .game(game)
                 .nickname(nickname)
-                .errorMessage(message)
+                .errorMessage(m)
                 .build();
     }
 }

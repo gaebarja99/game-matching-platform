@@ -1,4 +1,11 @@
-import { apiFetch } from './client';
+import { apiFetch, decodeApiTextNewlines, normalizeRateLimitUserMessage } from './client';
+
+function normalizePlayerFacingErrorMessage(msg: string | undefined): string | undefined {
+  if (msg === undefined) return msg;
+  let m = decodeApiTextNewlines(msg);
+  m = normalizeRateLimitUserMessage(m) ?? m;
+  return m;
+}
 
 export interface PlayerSearchRequest {
   game: string;
@@ -78,7 +85,12 @@ export async function searchPlayer(request: PlayerSearchRequest): Promise<Player
     throw new Error(response.message ?? '전적 검색 요청에 실패했습니다.');
   }
 
-  return response.data;
+  const data = response.data;
+  if (!data.success && data.errorMessage) {
+    const em = normalizePlayerFacingErrorMessage(data.errorMessage);
+    return em === data.errorMessage ? data : { ...data, errorMessage: em };
+  }
+  return data;
 }
 
 export interface MatchDetailResponse {
@@ -109,7 +121,12 @@ export async function fetchValorantSearchMmr(request: {
   if (!response.ok || !response.data) {
     throw new Error(response.message ?? 'MMR 요청에 실패했습니다.');
   }
-  return response.data;
+  const data = response.data;
+  if (!data.success && data.errorMessage) {
+    const em = normalizePlayerFacingErrorMessage(data.errorMessage);
+    return em === data.errorMessage ? data : { ...data, errorMessage: em };
+  }
+  return data;
 }
 
 export async function fetchMatchDetail(request: {
@@ -131,7 +148,12 @@ export async function fetchMatchDetail(request: {
     throw new Error(response.message ?? '매치 상세 요청에 실패했습니다.');
   }
 
-  return response.data;
+  const data = response.data;
+  if (!data.success && data.errorMessage) {
+    const em = normalizePlayerFacingErrorMessage(data.errorMessage);
+    return em === data.errorMessage ? data : { ...data, errorMessage: em };
+  }
+  return data;
 }
 
 /** POST /api/valorant/evaluations/match/{matchId} 응답 행 */

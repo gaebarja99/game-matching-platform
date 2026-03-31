@@ -71,9 +71,9 @@ public class PlayerSearchRequest {
     private String region = "kr";
 
     /**
-     * 조회할 매치 수 (기본값: 5, 최대: 20)
+     * 조회할 매치 수 (기본값: 10, 최대: 20)
      */
-    private Integer count = 5;
+    private Integer count = 10;
 
     /**
      * LoL 큐 타입 필터 (선택)
@@ -119,7 +119,7 @@ public class PlayerSearchRequest {
         parseNickname();
         if (region == null || region.isEmpty()) region = "kr";
         // JSON에 count 생략 시 null → NPE 방지 (PUBG·APEX 등 count 필드 없는 전적 화면)
-        if (count == null || count <= 0 || count > 20) count = 5;
+        if (count == null || count <= 0 || count > 20) count = 10;
         if (nickname != null) nickname = normalizeText(nickname);
         if (gameName != null) gameName = normalizeText(gameName);
         if (tagLine != null) tagLine = normalizeText(tagLine);

@@ -40,7 +40,7 @@ public class PlayerSearchController {
      *   "gameName": "hide on bush",
      *   "tagLine": "KR1",       // Riot 계열만 필요 (lol, tft, valorant)
      *   "region": "kr",         // 선택 (기본값: kr)
-     *   "count": 5,             // 조회할 매치 수 (기본값: 5, 최대: 20)
+     *   "count": 10,            // 조회할 매치 수 (기본값: 10, 최대: 20)
      *   "forceRefresh": false, // true면 LoL/TFT/발로/PUBG 매치 DB 캐시 무시 후 API 갱신
      *   "matchListOnly": false, // true면 LoL/TFT는 매치 ID만(상세는 POST /api/search/match-detail)
      *   "deferValorantMmr": false // true면 발로란트는 매치·통계만 먼저, 티어는 POST /api/search/valorant/mmr

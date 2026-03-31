@@ -141,7 +141,7 @@ public class LolSearchService {
                 log.warn("LoL rank lookup failed: {}", e.getMessage());
             }
 
-            int count = Math.min(req.getCount() != null ? req.getCount() : 20, 20);
+            int count = Math.min(req.getCount() != null ? req.getCount() : 10, 20);
             Integer queueId = req.getQueueType() != null ? req.getQueueType() : 420;
             List<String> matchIds = fetchMatchIds(routing, puuid, queueId, count);
             if (matchIds.isEmpty() && queueId == 420) {

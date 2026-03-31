@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
  *   "game": "pubg",
  *   "gameName": "PlayerNickname",   ← PUBG 인게임 닉네임 (#태그 없음)
  *   "platform": "steam",            ← steam | kakao | psn | xbox (기본값: steam)
- *   "count": 5
+ *   "count": 10
  * }
  */
 @Slf4j

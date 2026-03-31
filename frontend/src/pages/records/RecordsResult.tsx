@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import Layout from '../../components/Layout';
+import { decodeApiTextNewlines } from '../../api/client';
 import { fetchValorantSearchMmr, type PlayerSearchResponse } from '../../api/search';
 import { GAMES, parseProfileSlug, fetchRecordsPlayerSearch, type SearchFieldOverrides } from './recordsShared';
 import { ResultPanel } from './RecordsResultPanel';
@@ -20,10 +21,10 @@ function recordsIdentityWithoutCount(fullKey: string): string {
 
 function recordsCountFromUrlKey(fullKey: string): number {
   const qIdx = fullKey.indexOf('?');
-  if (qIdx < 0) return 5;
+  if (qIdx < 0) return 10;
   const c = new URLSearchParams(fullKey.slice(qIdx + 1)).get('count');
   const n = c != null ? Number(c) : NaN;
-  return VALID_RECORDS_COUNTS.includes(n as (typeof VALID_RECORDS_COUNTS)[number]) ? n : 5;
+  return VALID_RECORDS_COUNTS.includes(n as (typeof VALID_RECORDS_COUNTS)[number]) ? n : 10;
 }
 
 function isLoadMoreRecordsUrl(prevKey: string | null, newKey: string): boolean {
@@ -54,7 +55,7 @@ function RecordsResultContent({
   const [tagLine, setTagLine] = useState('');
   const [platform, setPlatform] = useState('');
   const [region, setRegion] = useState('');
-  const [count, setCount] = useState(5);
+  const [count, setCount] = useState(10);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<PlayerSearchResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -123,7 +124,7 @@ function RecordsResultContent({
     if (c && VALID_RECORDS_COUNTS.includes(Number(c) as (typeof VALID_RECORDS_COUNTS)[number])) {
       setCount(Number(c));
     } else {
-      setCount(5);
+      setCount(10);
     }
   }, [gameId, playerSlug, urlHash, searchParams]);
 
@@ -139,20 +140,6 @@ function RecordsResultContent({
       }
       const valid = game.platformOptions!.some((opt) => opt.value === prev);
       return valid ? prev : game.platformOptions![0].value;
-    });
-  }, [game, searchParams]);
-
-  useEffect(() => {
-    if (!game.regionOptions?.length) {
-      return;
-    }
-    setRegion((prev) => {
-      const regionQ = searchParams.get('region');
-      if (regionQ && game.regionOptions!.some((o) => o.value === regionQ)) {
-        return regionQ;
-      }
-      const valid = game.regionOptions!.some((opt) => opt.value === prev);
-      return valid ? prev : game.regionOptions![0].value;
     });
   }, [game, searchParams]);
 
@@ -187,7 +174,8 @@ function RecordsResultContent({
           setError(response.errorMessage || '검색에 실패했습니다.');
         }
       } catch (err) {
-        setError(err instanceof Error ? err.message : '서버 오류가 발생했습니다.');
+        const raw = err instanceof Error ? err.message : '서버 오류가 발생했습니다.';
+        setError(decodeApiTextNewlines(raw));
       } finally {
         setLoading(false);
       }
@@ -233,7 +221,7 @@ function RecordsResultContent({
     const cnt =
       cntQ && VALID_RECORDS_COUNTS.includes(Number(cntQ) as (typeof VALID_RECORDS_COUNTS)[number])
         ? Number(cntQ)
-        : 5;
+        : 10;
     const g = GAMES.find((item) => item.id === gameId) || GAMES[0];
 
     void performSearch(

@@ -67,7 +67,7 @@ public class SteamSearchService {
             // 2) 최근 플레이 게임 목록
             String gamesUrl = String.format(
                     "https://api.steampowered.com/IPlayerService/GetRecentlyPlayedGames/v1/?key=%s&steamid=%s&count=%d",
-                    steamApiKey, steam64Id, Math.min(req.getCount(), 20)
+                    steamApiKey, steam64Id, Math.min(req.getCount(), 10)
             );
             @SuppressWarnings("unchecked")
             Map<String, Object> gamesResp = restTemplate.getForObject(gamesUrl, Map.class);

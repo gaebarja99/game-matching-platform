@@ -236,7 +236,7 @@ public class ChatbotServiceImpl implements ChatbotService {
                     List.of(
                             "입력 예시: 게임 이름 `Hide on bush`, 태그 `KR1`",
                             "태그까지 함께 넣어야 검색이 정확해요.",
-                            "최근 20매치 기준으로 전적과 핵심 지표가 보여요."
+                            "최근 10매치 기준으로 전적과 핵심 지표가 보여요."
                     ),
                     List.of(
                             "전적검색 페이지에서 LoL을 선택하고 이름과 태그를 입력해 보세요.",
@@ -254,7 +254,7 @@ public class ChatbotServiceImpl implements ChatbotService {
                     - 태그
 
                     참고:
-                    - 최근 20매치와 순위 흐름 중심으로 보여요.
+                    - 최근 10매치와 순위 흐름 중심으로 보여요.
                     - 태그가 빠지면 원하는 계정을 찾지 못할 수 있어요.
 
                     다음 행동:

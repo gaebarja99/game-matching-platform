@@ -64,7 +64,7 @@ public class RecordsMatchDetailService {
             };
         } catch (Exception e) {
             log.warn("매치 상세 로드 실패 game={} matchId={}: {}", game, matchId, e.getMessage());
-            return MatchDetailResponse.error(game, matchId, e.getMessage());
+            return MatchDetailResponse.error(game, matchId, e.getMessage(), e);
         }
     }
 

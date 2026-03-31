@@ -21,6 +21,7 @@ import com.gamematcher.dto.search.ValorantSearchMmrResponse;
 import com.gamematcher.entity.match.valorant.ValorantMatch;
 import com.gamematcher.entity.match.valorant.ValorantMatchPlayer;
 import com.gamematcher.repository.match.ValorantMatchDetailRepository;
+import com.gamematcher.util.RateLimitMessageUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpEntity;
@@ -659,7 +660,7 @@ public class ValorantApiService {
             log.error("Valorant 전적 검색 오류 - {}", nickname, e);
             String errorMessage = e.getMessage();
             if (errorMessage != null && errorMessage.contains("429")) {
-                return PlayerSearchResponse.error("valorant", nickname, "발로란트 전적 API 요청이 잠시 많습니다. 잠시 후 다시 시도해 주세요.");
+                return PlayerSearchResponse.error("valorant", nickname, RateLimitMessageUtil.RATE_LIMIT_USER_MESSAGE);
             }
             return PlayerSearchResponse.error(
                     "valorant",

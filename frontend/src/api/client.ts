@@ -1,22 +1,78 @@
+function isLoopbackHost(hostname: string): boolean {
+  return hostname === '127.0.0.1' || hostname === 'localhost';
+}
+
+/** VITE_API_URL이 localhost/127.0.0.1을 가리키는지 (빌드 시 .env 고정값) */
+function envPointsToLoopback(apiBaseEnv: string): boolean {
+  try {
+    const u = new URL(apiBaseEnv);
+    return isLoopbackHost(u.hostname);
+  } catch {
+    return false;
+  }
+}
+
 /**
- * API 베이스 URL. 로컬 개발(127.0.0.1 / localhost)에서는 항상 현재 창 host + 8080 사용해
- * same-site로 세션 쿠키 전송. .env의 VITE_API_URL이 localhost면 127.0.0.1 접속 시 쿠키가 안 붙어
- * 로그인 유지가 안 되므로, 로컬일 때는 hostname 기준으로 통일.
+ * API 베이스 URL.
+ * - localhost/127.0.0.1 로 접속 시: 같은 호스트:8080 (세션 쿠키 same-site).
+ * - 그 외 호스트(예: EC2 공인 IP)인데 VITE_API_URL이 localhost로 박혀 있으면: 빌드값을 쓰지 않고
+ *   현재 창의 호스트:8080 사용 (배포 후에도 localhost로 API 호출되는 문제 방지).
+ * - 그 밖에는 VITE_API_URL 또는 현재 호스트:8080.
  */
 function getApiBase(): string {
   if (typeof window !== 'undefined') {
     const { protocol, hostname } = window.location;
-    if (hostname === '127.0.0.1' || hostname === 'localhost') {
+    if (isLoopbackHost(hostname)) {
       return `${protocol}//${hostname}:8080`;
     }
   }
-  const env = import.meta.env.VITE_API_URL;
-  if (env != null && String(env).trim() !== '') return String(env).trim();
+  const envRaw = import.meta.env.VITE_API_URL;
+  const envTrim = envRaw != null ? String(envRaw).trim() : '';
+  if (envTrim !== '') {
+    if (typeof window !== 'undefined' && envPointsToLoopback(envTrim)) {
+      const { protocol, hostname } = window.location;
+      if (!isLoopbackHost(hostname)) {
+        return `${protocol}//${hostname}:8080`;
+      }
+    }
+    return envTrim.replace(/\/+$/, '');
+  }
   if (typeof window !== 'undefined') {
     const { protocol, hostname } = window.location;
     return `${protocol}//${hostname}:8080`;
   }
   return 'http://localhost:8080';
+}
+
+/** 외부 전적 API 429 / Rate limit 시 사용자 안내 (백엔드와 동일 문구) */
+export const RATE_LIMIT_USER_MESSAGE_KO =
+  '전적 API 요청이 많아 일시적으로 사용할 수 없습니다. 잠시 후 다시 시도해 주세요.';
+
+const RATE_LIMIT_TEXT_PATTERN = /429|too\s*many\s*requests|rate\s*limit/i;
+
+/**
+ * JSON 문자열에 백슬래시+n 이 그대로 들어온 경우(실제 줄바꿈이 아님) 화면 표시용으로 치환.
+ * 이미 진짜 줄바꿈(0x0A)만 있는 문자열은 그대로 둔다.
+ */
+export function decodeApiTextNewlines(text: string): string {
+  return text
+    .replace(/\\r\\n/g, '\n')
+    .replace(/\\n/g, '\n')
+    .replace(/\\r/g, '\n')
+    .replace(/\\t/g, '\t');
+}
+
+export function normalizeRateLimitUserMessage(
+  text: string | undefined | null,
+  httpStatus?: number,
+): string | undefined | null {
+  if (httpStatus === 429) {
+    return RATE_LIMIT_USER_MESSAGE_KO;
+  }
+  if (text != null && text !== '' && RATE_LIMIT_TEXT_PATTERN.test(text)) {
+    return RATE_LIMIT_USER_MESSAGE_KO;
+  }
+  return text;
 }
 
 export function apiUrl(path: string): string {
@@ -68,7 +124,9 @@ export async function apiFetch<T = unknown>(
       // ignore
     }
   }
-  const message = data && typeof data === 'object' && 'message' in data ? (data as { message?: string }).message : undefined;
+  const rawMessage = data && typeof data === 'object' && 'message' in data ? (data as { message?: string }).message : undefined;
+  const decoded = rawMessage != null && rawMessage !== '' ? decodeApiTextNewlines(rawMessage) : rawMessage;
+  const message = normalizeRateLimitUserMessage(decoded, res.status) ?? decoded ?? undefined;
   return {
     ok: res.ok,
     status: res.status,
