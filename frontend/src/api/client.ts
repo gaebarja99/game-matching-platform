@@ -48,13 +48,12 @@ function envHttpsSameHostWrongPublicPort8080(apiBaseEnv: string): boolean {
 }
 
 /**
- * HTTPS + :8080 조합은 이 프로젝트 배포(nginx 443 → Tomcat 8080 평문)에서 거의 항상 오설정.
- * 호스트 일치 여부와 무관하게, https 페이지에서는 `https://무엇:8080` 베이스를 `https://무엇`으로 줄여
- * OAuth 리다이렉트·fetch가 8080에 TLS를 걸지 않게 한다.
+ * `https://…:8080` 은 이 배포(nginx 443 TLS → 내부 8080 평문)에서 거의 항상 오설정이다.
+ * 예전에는 https 페이지에서만 :8080을 뗐는데, Vite(http://5173)·Simple Browser·HTTP로 열면
+ * 조건이 안 걸려 OAuth가 `https://…:8080/oauth2/…` 로 그대로 나가 ERR_SSL_PROTOCOL_ERROR 가 났다.
+ * 페이지 프로토콜과 무관하게 https 베이스의 :8080만 제거한다. (http://localhost:8080 은 그대로 둠)
  */
-function stripHttpsApiBasePort8080(base: string): string {
-  if (typeof window === 'undefined') return base;
-  if (window.location.protocol !== 'https:') return base;
+function stripMisleadingHttpsPort8080FromApiBase(base: string): string {
   try {
     const u = new URL(base);
     if (u.protocol !== 'https:' || u.port !== '8080') return base;
@@ -119,7 +118,7 @@ function resolveApiBase(): string {
 }
 
 function getApiBase(): string {
-  return stripHttpsApiBasePort8080(resolveApiBase());
+  return stripMisleadingHttpsPort8080FromApiBase(resolveApiBase());
 }
 
 /** 외부 전적 API 429 / Rate limit 시 사용자 안내 (백엔드와 동일 문구) */
