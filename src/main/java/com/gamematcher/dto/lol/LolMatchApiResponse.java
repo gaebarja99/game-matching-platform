@@ -1,4 +1,4 @@
-package com.gamematcher.dto.lol;
+spackage com.gamematcher.dto.lol;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

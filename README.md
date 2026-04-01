@@ -133,6 +133,8 @@ npm start
 | **프론트엔드** | React 19, TypeScript, Vite 7, React Router 7, STOMP/SockJS, HLS.js, Firebase(전화번호 인증) |
 | **방송** | Node Media Server(RTMP 수신 → HLS 변환), FFmpeg |
 
+면접·발표용으로 말할 순서와 넣기/빼기 요약은 [docs/기술스택-정리.md](docs/기술스택-정리.md)를 참고하면 됩니다.
+
 ---
 
 ## 프로젝트 구조
