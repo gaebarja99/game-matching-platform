@@ -12,6 +12,7 @@ Spring Boot 백엔드(REST API + WebSocket)와 React(Vite) 프론트엔드로 �
 [![주요 기능](https://img.shields.io/badge/주요%20기능-FF6B6B?style=for-the-badge)](#주요-기능)
 [![기술 스택](https://img.shields.io/badge/기술%20스택-4DABF7?style=for-the-badge)](#기술-스택)
 [![설계](https://img.shields.io/badge/설계-845EF7?style=for-the-badge)](#설계)
+[![주요 화면](https://img.shields.io/badge/주요%20화면-FCC419?style=for-the-badge)](#주요-화면) <!-- 신규 추가된 배지 -->
 [![역할 분담](https://img.shields.io/badge/역할%20분담-FF922B?style=for-the-badge)](#역할-분담)
 [![프로젝트 구조](https://img.shields.io/badge/프로젝트%20구조-ADB5BD?style=for-the-badge)](#프로젝트-구조)
 
@@ -203,6 +204,119 @@ Spring Boot 백엔드(REST API + WebSocket)와 React(Vite) 프론트엔드로 �
 > </details>
 
 </details>
+
+---
+
+## 🖥️ 주요 화면 및 기능 (UI / UX)
+
+> 💡 **Tip:** 각 팀원의 이름을 클릭하면 상세 화면 경로와 설명이 드롭다운으로 펼쳐집니다.
+> (현재는 임시 이미지로 연결되어 있으며, 프로젝트 완료 후 `images/` 폴더의 실제 캡처본 경로로 수정하여 사용하세요.)
+
+<details>
+<summary><b>🏃‍♂️ 임현아 — 조건별 실시간 매칭 (Click)</b></summary>
+<br/>
+
+*   **메인 및 매칭 대기열 (`/`)**
+    <br/>
+    <img src="https://via.placeholder.com/800x400?text=Main+And+Matching+List" alt="게임 탭 및 방 목록" width="100%"/>
+    *   *설명:* 게임 탭 전환, 방 목록 탐색 및 티어/포지션별 랜덤 매칭 조건 설정
+    <br/><br/>
+
+*   **방 생성 모달 (`/`)**
+    <br/>
+    <img src="https://via.placeholder.com/800x400?text=Create+Room+Modal" alt="방 만들기 패널" width="100%"/>
+    *   *설명:* 방 제목, 모드, 인원수 및 매칭 조건을 설정하는 직관적인 모달 레이아웃
+    <br/><br/>
+
+*   **매칭 상태 및 성공 (`/`)**
+    <br/>
+    <img src="https://via.placeholder.com/800x400?text=Matching+Status" alt="매칭 진행 및 성공" width="100%"/>
+    *   *설명:* 실시간 매칭 참여 중 상태 표시 및 매칭 성공 시 수락/거절 인터랙션
+    <br/><br/>
+
+*   **매칭 완료 후 흐름 (`/match-history` 또는 `/match-chat/...`)**
+    <br/>
+    <img src="https://via.placeholder.com/800x400?text=Match+History+And+Chat" alt="매칭 히스토리 및 채팅" width="100%"/>
+    *   *설명:* 매칭 성사 후 팀원과의 실시간 전략 채팅 및 이전 매칭 히스토리 조회
+
+</details>
+
+<details>
+<summary><b>🤖 이도원 — AI 전적 분석 (Click)</b></summary>
+<br/>
+
+*   **전적 검색 (`/records`)**
+    <br/>
+    <img src="https://via.placeholder.com/800x400?text=Record+Search" alt="전적 검색 메인" width="100%"/>
+    *   *설명:* 소환사명 또는 게임 닉네임 검색을 위한 깔끔한 입력 폼
+    <br/><br/>
+
+*   **전적 결과 및 AI 분석 (`/records/lol/...`)**
+    <br/>
+    <img src="https://via.placeholder.com/800x400?text=LoL+Record+And+AI+Analysis" alt="전적 상세 및 AI 분석" width="100%"/>
+    *   *설명:* 매치 상세 정보 펼침 기능 및 소환사 플레이 성향에 대한 AI 자동 피드백 리포트
+
+</details>
+
+<details>
+<summary><b>📺 김주영 — 라이브 스트리밍 (Click)</b></summary>
+<br/>
+
+*   **라이브 스트리밍 목록 (`/streams`)**
+    <br/>
+    <img src="https://via.placeholder.com/800x400?text=Live+Stream+List" alt="스트리밍 목록" width="100%"/>
+    *   *설명:* 현재 방송 중인 플랫폼 스트리머 리스트 및 실시간 썸네일 그리드 뷰
+    <br/><br/>
+
+*   **방송 시청 및 채팅 (`/watch/{streamId}`)**
+    <br/>
+    <img src="https://via.placeholder.com/800x400?text=Stream+Watch+And+Chat" alt="방송 시청 화면" width="100%"/>
+    *   *설명:* 대기 시간 없는 플레이어 스트리밍 화면과 우측 실시간 라이브 채팅 인터랙션
+    <br/><br/>
+
+*   **방송 설정 및 OBS 연동 (`/studio/live`)**
+    <br/>
+    <img src="https://via.placeholder.com/800x400?text=Studio+Live+Settings" alt="방송 설정" width="100%"/>
+    *   *설명:* 스트림 키 발급, 방송 제목 설정 및 OBS 연동을 위한 설정 패널
+    <br/><br/>
+
+*   **스트리머 스튜디오 (`/studio/revenue` 또는 `/studio/chat`)**
+    <br/>
+    <img src="https://via.placeholder.com/800x400?text=Studio+Dashboard" alt="스튜디오 대시보드" width="100%"/>
+    *   *설명:* 누적 후원/수익 통계 그래프 모니터링 및 스트리머 전용 채팅 관리 도구
+
+</details>
+
+<details>
+<summary><b>🔐 유재훈 — 계정 연동 및 통합 프로필 (Click)</b></summary>
+<br/>
+
+*   **외부 계정 연동 목록 (`/profile/account-links`)**
+    <br/>
+    <img src="https://via.placeholder.com/800x400?text=Account+Links+List" alt="연동 목록" width="100%"/>
+    *   *설명:* Steam, Riot 등 플랫폼별 계정 연동 상태 확인 및 연동 해제 관리
+    <br/><br/>
+
+*   **Riot 인증 플로우 (`/profile/account-links`)**
+    <br/>
+    <img src="https://via.placeholder.com/800x400?text=Riot+Authentication" alt="Riot 인증" width="100%"/>
+    *   *설명:* 안전한 데이터 수집을 위한 외부 플랫폼(Riot API) 로그인 및 인증 절차
+    <br/><br/>
+
+*   **통합 프로필 및 스탯 (`/profile`)**
+    <br/>
+    <img src="https://via.placeholder.com/800x400?text=Integrated+Profile" alt="통합 프로필" width="100%"/>
+    *   *설명:* 연동된 모든 게임의 핵심 스탯 및 모스트 챔피언 등을 모아보는 대시보드
+    <br/><br/>
+
+*   **연동 계정 기준 전적 조회 (`/records/lol/...`)**
+    <br/>
+    <img src="https://via.placeholder.com/800x400?text=Connected+Account+Records" alt="연동 계정 전적 흐름" width="100%"/>
+    *   *설명:* 프로필에서 즉시 내 연동 계정의 상세 전적 페이지로 이어지는 유기적 흐름
+
+</details>
+
+---
 
 ## 프로젝트 구조
 
