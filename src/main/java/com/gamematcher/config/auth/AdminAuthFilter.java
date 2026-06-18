@@ -14,7 +14,8 @@ import java.io.IOException;
 
 /**
  * 관리자 API(/api/admin/**) 접근 시 X-Admin-Key 헤더 검증
- * 운영환경에서는 application.properties의 admin.api.key 설정 필수
+ * admin.api.key 가 비어있으면 보안을 위해 기본적으로 차단한다 (fail-safe).
+ * 로컬 개발 시에는 application-local.properties 등에서 admin.api.key 를 명시적으로 설정할 것.
  */
 @Component
 public class AdminAuthFilter extends OncePerRequestFilter {
@@ -31,9 +32,11 @@ public class AdminAuthFilter extends OncePerRequestFilter {
             return;
         }
 
-        // admin.api.key가 비어있으면 개발 모드 (허용)
+        // admin.api.key가 비어있으면 차단 (운영 환경에서 키 설정을 빠뜨려도 관리자 API가 열리지 않도록 fail-safe)
         if (!StringUtils.hasText(adminApiKey)) {
-            filterChain.doFilter(request, response);
+            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+            response.setContentType("application/json; charset=UTF-8");
+            response.getWriter().write("{\"error\":\"관리자 API 키가 설정되지 않았습니다.\",\"status\":403}");
             return;
         }
 

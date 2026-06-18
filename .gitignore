@@ -15,3 +15,17 @@ target/
 
 # Compiled artifacts
 *.class
+
+# Secrets / service account keys (NEVER commit)
+secrets/
+*firebase-service-account*.json
+src/main/resources/application-oauth.properties
+src/main/resources/application.properties
+
+# Runtime logs (should not be committed)
+nohup.out
+*.log
+
+# IDE
+.idea/
+.vscode/
