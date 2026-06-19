@@ -29,3 +29,5 @@ nohup.out
 # IDE
 .idea/
 .vscode/
+
+.env
