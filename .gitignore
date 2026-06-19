@@ -31,3 +31,6 @@ nohup.out
 .vscode/
 
 .env
+
+# Node.js
+node_modules/
